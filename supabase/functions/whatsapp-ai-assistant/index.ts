@@ -195,6 +195,10 @@ const tools = [
           horario: { 
             type: "string", 
             description: "Horário no formato HH:MM" 
+          },
+          confirmacao_massoterapia: {
+            type: "string",
+            description: "Use APENAS quando o profissional for Daniela Sales E o paciente for do sexo masculino. Antes de chamar com este parâmetro, exiba ao paciente o aviso de que Massoterapia com Daniela é somente para mulheres, mas que ela atende outros procedimentos para homens. Só passe 'confirmo' aqui quando o paciente confirmar que o agendamento NÃO é para Massoterapia."
           }
         },
         required: ["patient_id", "nome_profissional", "data", "horario"]
@@ -821,7 +825,11 @@ async function executeTool(
         const professional = foundProfessionals[0];
         const duration = professional.appointment_duration || 30;
 
-        // Regra Daniela Sales: Massoterapia somente para mulheres (sexo feminino).
+        // Regra Daniela Sales: O Serviço de Massoterapia é SOMENTE para mulheres.
+        // Daniela também atende outros procedimentos abertos a homens. Como o
+        // serviço não é capturado no fluxo de agendamento via WhatsApp, exigimos
+        // confirmação explícita do paciente masculino antes de prosseguir, sem
+        // bloqueio categórico.
         if (professional.name && /daniela\s+sales/i.test(professional.name)) {
           const { data: patientGenderRow } = await supabase
             .from('patients')
@@ -829,10 +837,14 @@ async function executeTool(
             .eq('id', patient_id)
             .maybeSingle();
           const g = String(patientGenderRow?.gender || '').toLowerCase().trim();
-          if (g === 'm' || g === 'masculino') {
+          const isMale = g === 'm' || g === 'masculino';
+          const confirmText = String((args as any)?.confirmacao_massoterapia || '').toLowerCase();
+          const confirmed = /confirmo|n(ã|a)o\s+(é|e)\s+massoterapia|outro\s+procedimento/.test(confirmText);
+          if (isMale && !confirmed) {
             return JSON.stringify({
               success: false,
-              message: '⚠️ O Serviço de Massoterapia com Daniela Sales é *somente para mulheres* (sexo feminino). Não é possível concluir este agendamento.'
+              requires_confirmation: true,
+              message: '⚠️ *Atenção:* O Serviço de *Massoterapia* com Daniela Sales é SOMENTE para mulheres (sexo feminino). Daniela também atende outros procedimentos disponíveis para homens.\n\nSe este agendamento *NÃO* for para Massoterapia, responda *"confirmo"* para prosseguir e chame a função novamente incluindo confirmacao_massoterapia="confirmo".'
             });
           }
         }
