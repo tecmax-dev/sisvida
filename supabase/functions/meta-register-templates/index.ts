@@ -51,7 +51,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Lembrete da sua consulta no Sindicato dos Comerciários.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nEm caso de imprevisto, reagende em: https://prosindweb.com.br/sindicato",
+          "Olá, {{1}}. Lembrete da sua consulta no Sindicato dos Comerciários.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nEm caso de imprevisto, reagende em: https://prosindweb.com.br/app",
         example: { body_text: [["Maria Santos", "Dr. Carlos Mendes", "Cardiologia", "15/03/2026", "14:30", "Sede Central - Rua Principal, 100"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -65,7 +65,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://prosindweb.com.br/sindicato",
+          "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://prosindweb.com.br/app",
         example: { body_text: [["Maria Santos", "Dr. Carlos Mendes", "Cardiologia", "15/03/2026", "14:30", "Sede Central - Rua Principal, 100"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -121,7 +121,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua autorização para {{2}} está pronta.\n\nProfissional: {{3}}\nValidade: {{4}}\n\nAcesse o documento em: https://prosindweb.com.br/sindicato",
+          "Olá, {{1}}. Sua autorização para {{2}} está pronta.\n\nProfissional: {{3}}\nValidade: {{4}}\n\nAcesse o documento em: https://prosindweb.com.br/app",
         example: { body_text: [["Maria Santos", "Consulta de Cardiologia", "Dr. Carlos Mendes", "30/04/2026"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -155,7 +155,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua filiação ao Sindicato dos Comerciários foi aprovada.\n\nNúmero de matrícula: {{2}}\nPlano: {{3}}\n\nAcesse o app para visualizar sua carteira digital e benefícios em: https://prosindweb.com.br/sindicato",
+          "Olá, {{1}}. Sua filiação ao Sindicato dos Comerciários foi aprovada.\n\nNúmero de matrícula: {{2}}\nPlano: {{3}}\n\nAcesse o app para visualizar sua carteira digital e benefícios em: https://prosindweb.com.br/app",
         example: { body_text: [["João da Silva", "2026-00123", "Plano Família"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -443,7 +443,7 @@ const templates: TemplatePayload[] = [
        {
          type: "BODY",
          text:
-           "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://prosindweb.com.br/sindicato",
+           "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://prosindweb.com.br/app",
          example: {
            body_text: [[
              "Maria Santos",
@@ -476,7 +476,7 @@ const templates: TemplatePayload[] = [
             {
               type: "URL",
               text: "Acessar Aplicativo",
-              url: "https://prosindweb.com.br/sindicato",
+              url: "https://prosindweb.com.br/app",
             },
           ],
         },
@@ -500,7 +500,7 @@ const templates: TemplatePayload[] = [
             {
               type: "URL",
               text: "Acessar Aplicativo",
-              url: "https://prosindweb.com.br/sindicato",
+              url: "https://prosindweb.com.br/app",
             },
           ],
         },
@@ -524,7 +524,7 @@ const templates: TemplatePayload[] = [
             {
               type: "URL",
               text: "Acessar Aplicativo",
-              url: "https://prosindweb.com.br/sindicato",
+              url: "https://prosindweb.com.br/app",
             },
           ],
         },
