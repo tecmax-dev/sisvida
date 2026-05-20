@@ -203,7 +203,7 @@
         try {
           var host = window.location.hostname;
           var isProsindWeb = host === 'prosindweb.com.br' || host === 'www.prosindweb.com.br';
-          var FLAG = 'prosindweb-cache-cleared-20260517c';
+          var FLAG = 'prosindweb-cache-cleared-20260520a';
           if (isProsindWeb && !localStorage.getItem(FLAG)) {
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.getRegistrations().then(function(regs) {
