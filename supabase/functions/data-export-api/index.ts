@@ -60,158 +60,158 @@ Deno.serve(async (req) => {
 
       case 'clinics': {
         const { data, error, count } = await supabase
-          .from('clinics').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('clinics').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'procedures': {
         const { data, error, count } = await supabase
-          .from('procedures').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('procedures').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'insurance_plans': {
         const { data, error, count } = await supabase
-          .from('insurance_plans').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('insurance_plans').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'specialties': {
         const { data, error, count } = await supabase
-          .from('specialties').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('specialties').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'financial_categories': {
         const { data, error, count } = await supabase
-          .from('financial_categories').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('financial_categories').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'professionals': {
         const { data, error, count } = await supabase
-          .from('professionals').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('professionals').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'professional_procedures': {
         const { data, error, count } = await supabase
-          .from('professional_procedures').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('professional_procedures').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'professional_insurance_plans': {
         const { data, error, count } = await supabase
-          .from('professional_insurance_plans').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('professional_insurance_plans').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'professional_schedules': {
         const { data, error, count } = await supabase
-          .from('professional_schedules').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('professional_schedules').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'patients': {
         const { data, error, count } = await supabase
-          .from('patients').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('patients').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'patient_dependents': {
         const { data, error, count } = await supabase
-          .from('patient_dependents').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('patient_dependents').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'patient_cards': {
         const { data, error, count } = await supabase
-          .from('patient_cards').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('patient_cards').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'appointments': {
-        let query = supabase.from('appointments').select('*', { count: 'exact' })
+        let query = supabase.from('appointments').select('*', { count: 'estimated' })
         if (startDate) query = query.gte('appointment_date', startDate)
         if (endDate) query = query.lte('appointment_date', endDate)
-        const { data, error, count } = await query.range(offset, offset + limit - 1)
+        const { data, error, count } = await query.order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'medical_records': {
         const { data, error, count } = await supabase
-          .from('medical_records').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('medical_records').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'prescriptions': {
         const { data, error, count } = await supabase
-          .from('prescriptions').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('prescriptions').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'financial_transactions': {
-        let query = supabase.from('financial_transactions').select('*', { count: 'exact' })
+        let query = supabase.from('financial_transactions').select('*', { count: 'estimated' })
         if (startDate) query = query.gte('created_at', startDate)
         if (endDate) query = query.lte('created_at', endDate)
-        const { data, error, count } = await query.range(offset, offset + limit - 1)
+        const { data, error, count } = await query.order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'automation_flows': {
         const { data, error, count } = await supabase
-          .from('automation_flows').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('automation_flows').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'access_groups': {
         const { data, error, count } = await supabase
-          .from('access_groups').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('access_groups').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'evolution_configs': {
         const { data, error, count } = await supabase
-          .from('evolution_configs').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+          .from('evolution_configs').select('*', { count: 'estimated' }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'employers': {
         const { data, error, count } = await supabase
-          .from('employers').select('*', { count: 'exact' }).order('name').range(offset, offset + limit - 1)
+          .from('employers').select('*', { count: 'estimated' }).order('name').order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'contribution_types': {
         const { data, error, count } = await supabase
-          .from('contribution_types').select('*', { count: 'exact' }).order('name').range(offset, offset + limit - 1)
+          .from('contribution_types').select('*', { count: 'estimated' }).order('name').order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
 
       case 'employer_contributions': {
         const { data, error, count } = await supabase
-          .from('employer_contributions').select('*', { count: 'exact' }).order('due_date', { ascending: false }).range(offset, offset + limit - 1)
+          .from('employer_contributions').select('*', { count: 'estimated' }).order('due_date', { ascending: false }).order('id').range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
       }
