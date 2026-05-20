@@ -17969,6 +17969,7 @@ export type Database = {
         Args: { p_clinic_id: string }
         Returns: boolean
       }
+      cleanup_whatsapp_incoming_logs: { Args: never; Returns: undefined }
       clinic_has_addon: {
         Args: { _addon_key: string; _clinic_id: string }
         Returns: boolean
