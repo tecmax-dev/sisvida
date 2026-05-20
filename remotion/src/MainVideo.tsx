@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
+import { AbsoluteFill, Img, Sequence, staticFile, useCurrentFrame, interpolate, spring } from "remotion";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 
 const inter = loadInter("normal", { weights: ["400", "600", "700", "800"], subsets: ["latin"] });
@@ -10,14 +10,13 @@ export const HEIGHT = 1920; // vertical 9:16 (mobile tutorial)
 
 // Scene durations (frames)
 const S = [
-  90,  // 0 - intro
-  120, // 1 - abrir app
-  120, // 2 - já sou associado
-  120, // 3 - primeiro acesso
-  150, // 4 - cpf + email
-  150, // 5 - código no email
-  150, // 6 - criar senha
-  90,  // 7 - pronto
+  75,  // 0 - intro
+  105, // 1 - welcome (tap Já sou associado)
+  105, // 2 - login (tap Primeiro acesso?)
+  120, // 3 - CPF
+  120, // 4 - data de nascimento
+  120, // 5 - criar senha
+  90,  // 6 - sucesso
 ];
 export const TOTAL_FRAMES = S.reduce((a, b) => a + b, 0);
 
@@ -38,51 +37,58 @@ const SC = S.map((d) => {
 
 const CAPTIONS: Caption[] = [
   { from: SC[0], dur: S[0], text: "Como criar seu primeiro acesso" },
-  { from: SC[1], dur: S[1], text: "Abra o app do Sindicato" },
-  { from: SC[2], dur: S[2], text: "Toque em \"Já sou associado\"" },
-  { from: SC[3], dur: S[3], text: "Selecione \"Primeiro acesso\"" },
-  { from: SC[4], dur: S[4], text: "Informe seu CPF e e-mail cadastrado" },
-  { from: SC[5], dur: S[5], text: "Digite o código recebido no e-mail" },
-  { from: SC[6], dur: S[6], text: "Crie e confirme sua nova senha" },
-  { from: SC[7], dur: S[7], text: "Pronto! Bem-vindo(a) ao app" },
+  { from: SC[1], dur: S[1], text: "No app, toque em \"Já sou associado\"" },
+  { from: SC[2], dur: S[2], text: "Toque em \"Primeiro acesso\"" },
+  { from: SC[3], dur: S[3], text: "Informe seu CPF e toque em \"Continuar\"" },
+  { from: SC[4], dur: S[4], text: "Confirme sua data de nascimento" },
+  { from: SC[5], dur: S[5], text: "Crie sua senha e confirme" },
+  { from: SC[6], dur: S[6], text: "Pronto! Acesse o app do Sindicato" },
 ];
 
-// ---------- Helpers ----------
+// ---------- Phone Frame ----------
+// Inner area sized to match the captured screenshot aspect ratio 390:844
+const INNER_W = 580;
+const INNER_H = Math.round(INNER_W * (844 / 390)); // 1256
+const PAD = 16;
+
 const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const frame = useCurrentFrame();
   const float = Math.sin(frame / 30) * 6;
   return (
     <div
       style={{
-        width: 620,
-        height: 1260,
+        width: INNER_W + PAD * 2,
+        height: INNER_H + PAD * 2,
         borderRadius: 64,
         background: "#0b0b0b",
-        padding: 14,
+        padding: PAD,
         boxShadow: "0 40px 90px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,255,255,0.06) inset",
         transform: `translateY(${float}px)`,
+        position: "relative",
       }}
     >
       <div
         style={{
           width: "100%",
           height: "100%",
-          borderRadius: 52,
+          borderRadius: 50,
           background: CREAM,
           overflow: "hidden",
           position: "relative",
         }}
       >
-        {/* status bar */}
-        <div style={{ height: 36, background: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", fontFamily: inter.fontFamily, fontSize: 14, fontWeight: 600, color: "#333" }}>
-          <span>9:41</span>
-          <span>●●●●●</span>
-        </div>
         {children}
       </div>
     </div>
   );
 };
+
+const Screen: React.FC<{ src: string; opacity?: number }> = ({ src, opacity = 1 }) => (
+  <Img
+    src={staticFile(src)}
+    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity }}
+  />
+);
 
 const Tap: React.FC<{ x: number; y: number; from: number }> = ({ x, y, from }) => {
   const frame = useCurrentFrame();
@@ -125,158 +131,73 @@ const SceneIntro: React.FC = () => {
   );
 };
 
-const SceneOpenApp: React.FC = () => {
+// Tap positions are based on screenshot coords (390x844) scaled into the
+// phone frame (INNER_W x INNER_H). Use scaleX = INNER_W/390, scaleY = INNER_H/844.
+const sx = (x: number) => (x * INNER_W) / 390;
+const sy = (y: number) => (y * INNER_H) / 844;
+
+const SceneScreenshot: React.FC<{
+  src: string;
+  srcAfter?: string;
+  switchAt?: number; // frame to crossfade to srcAfter
+  tap?: { x: number; y: number; at: number };
+  entry?: boolean;
+}> = ({ src, srcAfter, switchAt = 60, tap, entry = true }) => {
   const frame = useCurrentFrame();
-  const scale = spring({ frame, fps: 30, config: { damping: 14 } });
+  const enter = entry ? spring({ frame, fps: 30, config: { damping: 14 } }) : 1;
+  const scale = 0.92 + enter * 0.08;
+  const op = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
+  const afterOp = srcAfter ? interpolate(frame, [switchAt, switchAt + 14], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" }) : 0;
   return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-      <div style={{ transform: `scale(${0.85 + scale * 0.15})` }}>
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: op }}>
+      <div style={{ transform: `scale(${scale})` }}>
         <PhoneFrame>
-          <div style={{ flex: 1, background: TEAL, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: inter.fontFamily, padding: 32 }}>
-            <div style={{ width: 130, height: 130, borderRadius: 32, background: "#fff", color: TEAL, fontWeight: 800, fontSize: 56, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 32 }}>S</div>
-            <div style={{ fontSize: 38, fontWeight: 800, marginBottom: 8 }}>Bem-vindo(a)</div>
-            <div style={{ fontSize: 20, opacity: 0.9, textAlign: "center", marginBottom: 40, lineHeight: 1.4 }}>Entre em sua conta ou cadastre-se.</div>
-            <div style={{ width: "100%", padding: "20px 0", background: "#fff", color: TEAL_DARK, fontWeight: 700, fontSize: 22, borderRadius: 999, textAlign: "center", marginBottom: 14 }}>Cadastrar-se agora</div>
-            <div style={{ width: "100%", padding: "20px 0", background: TEAL_DARK, color: "#fff", fontWeight: 700, fontSize: 22, borderRadius: 999, textAlign: "center", border: `2px solid ${TEAL}` }}>Já sou associado</div>
-          </div>
+          <Screen src={src} />
+          {srcAfter && <Screen src={srcAfter} opacity={afterOp} />}
+          {tap && <Tap x={PAD + sx(tap.x)} y={PAD + sy(tap.y)} from={tap.at} />}
         </PhoneFrame>
       </div>
     </AbsoluteFill>
   );
 };
 
-const SceneLogin: React.FC = () => {
+// Overlay typed text on top of the empty CPF screenshot
+const SceneCpf: React.FC = () => {
   const frame = useCurrentFrame();
-  const highlight = interpolate(frame, [20, 35], [0, 1], { extrapolateRight: "clamp" });
+  const enter = spring({ frame, fps: 30, config: { damping: 14 } });
+  const scale = 0.92 + enter * 0.08;
+  const op = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
+  const cpfFull = "898.151.305-87";
+  const typed = cpfFull.slice(0, Math.floor(interpolate(frame, [18, 70], [0, cpfFull.length], { extrapolateRight: "clamp" })));
+  // Input position in screenshot: ~y 357-396, x ~30-360, font roughly 17px
+  const inputX = PAD + sx(48);
+  const inputY = PAD + sy(368);
   return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-      <PhoneFrame>
-        <div style={{ flex: 1, background: TEAL, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: inter.fontFamily, padding: 32 }}>
-          <div style={{ width: 130, height: 130, borderRadius: 32, background: "#fff", color: TEAL, fontWeight: 800, fontSize: 56, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 32 }}>S</div>
-          <div style={{ fontSize: 38, fontWeight: 800, marginBottom: 40 }}>Bem-vindo(a)</div>
-          <div style={{ width: "100%", padding: "20px 0", background: "#fff", color: TEAL_DARK, fontWeight: 700, fontSize: 22, borderRadius: 999, textAlign: "center", marginBottom: 14, opacity: 0.6 }}>Cadastrar-se agora</div>
-          <div style={{ width: "100%", padding: "20px 0", background: "#fff", color: TEAL_DEEP, fontWeight: 800, fontSize: 22, borderRadius: 999, textAlign: "center", border: `4px solid #ffd84a`, boxShadow: `0 0 ${20 * highlight}px rgba(255,216,74,${highlight})`, transform: `scale(${1 + highlight * 0.04})` }}>Já sou associado</div>
-        </div>
-        <Tap x={310} y={1040} from={40} />
-      </PhoneFrame>
-    </AbsoluteFill>
-  );
-};
-
-const SceneFirstAccess: React.FC = () => {
-  const frame = useCurrentFrame();
-  const highlight = interpolate(frame, [25, 40], [0, 1], { extrapolateRight: "clamp" });
-  return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-      <PhoneFrame>
-        <div style={{ flex: 1, background: CREAM, height: "100%", padding: 30, fontFamily: inter.fontFamily, color: "#222" }}>
-          <div style={{ fontSize: 28, fontWeight: 800, color: TEAL_DEEP, marginBottom: 28 }}>Entrar</div>
-          <div style={{ background: "#fff", border: "2px solid #e5e7eb", borderRadius: 16, padding: "20px 18px", marginBottom: 14, color: "#9ca3af", fontSize: 20 }}>CPF</div>
-          <div style={{ background: "#fff", border: "2px solid #e5e7eb", borderRadius: 16, padding: "20px 18px", marginBottom: 24, color: "#9ca3af", fontSize: 20 }}>Senha</div>
-          <div style={{ background: TEAL, color: "#fff", padding: "20px 0", borderRadius: 999, fontWeight: 700, fontSize: 22, textAlign: "center", marginBottom: 28 }}>Entrar</div>
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: op }}>
+      <div style={{ transform: `scale(${scale})` }}>
+        <PhoneFrame>
+          <Screen src="screens/03-cpf.png" />
+          {/* white overlay to mask the placeholder */}
           <div style={{
-            textAlign: "center", fontWeight: 800, color: TEAL_DARK, fontSize: 20,
-            padding: 16, borderRadius: 14,
-            background: `rgba(255,216,74,${0.25 * highlight})`,
-            border: `3px solid rgba(255,216,74,${highlight})`,
-            transform: `scale(${1 + highlight * 0.04})`,
-          }}>Primeiro acesso? Cadastre sua senha</div>
-        </div>
-        <Tap x={310} y={930} from={50} />
-      </PhoneFrame>
-    </AbsoluteFill>
-  );
-};
-
-const SceneCpfEmail: React.FC = () => {
-  const frame = useCurrentFrame();
-  const cpf = "898.151.305-87".slice(0, Math.floor(interpolate(frame, [10, 50], [0, 14], { extrapolateRight: "clamp" })));
-  const email = "ricardo@email.com".slice(0, Math.floor(interpolate(frame, [55, 110], [0, 17], { extrapolateRight: "clamp" })));
-  const btn = interpolate(frame, [115, 135], [0, 1], { extrapolateRight: "clamp" });
-  return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-      <PhoneFrame>
-        <div style={{ flex: 1, background: CREAM, height: "100%", padding: 30, fontFamily: inter.fontFamily, color: "#222" }}>
-          <div style={{ fontSize: 26, fontWeight: 800, color: TEAL_DEEP, marginBottom: 8 }}>Primeiro acesso</div>
-          <div style={{ fontSize: 16, color: "#6b7280", marginBottom: 28, lineHeight: 1.4 }}>Informe seu CPF e e-mail cadastrado no sindicato.</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 8 }}>CPF</div>
-          <div style={{ background: "#fff", border: `2px solid ${TEAL}`, borderRadius: 16, padding: "20px 18px", marginBottom: 18, fontSize: 22, color: "#111", minHeight: 28 }}>{cpf}<span style={{ opacity: (frame % 30) < 15 ? 1 : 0 }}>|</span></div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 8 }}>E-mail</div>
-          <div style={{ background: "#fff", border: `2px solid ${TEAL}`, borderRadius: 16, padding: "20px 18px", marginBottom: 28, fontSize: 22, color: "#111", minHeight: 28 }}>{email}<span style={{ opacity: frame > 55 && (frame % 30) < 15 ? 1 : 0 }}>|</span></div>
-          <div style={{ background: TEAL, color: "#fff", padding: "20px 0", borderRadius: 999, fontWeight: 700, fontSize: 22, textAlign: "center", opacity: 0.5 + btn * 0.5, transform: `scale(${1 + btn * 0.03})` }}>Enviar código</div>
-        </div>
-        <Tap x={310} y={1080} from={138} />
-      </PhoneFrame>
-    </AbsoluteFill>
-  );
-};
-
-const SceneEmailCode: React.FC = () => {
-  const frame = useCurrentFrame();
-  const codeStr = "847209";
-  const filled = Math.floor(interpolate(frame, [40, 110], [0, 6], { extrapolateRight: "clamp" }));
-
-  // floating email envelope
-  const envY = interpolate(spring({ frame, fps: 30, config: { damping: 14 } }), [0, 1], [-30, 0]);
-  const envOp = interpolate(frame, [0, 18], [0, 1], { extrapolateRight: "clamp" });
-
-  return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-      <PhoneFrame>
-        <div style={{ flex: 1, background: CREAM, height: "100%", padding: 30, fontFamily: inter.fontFamily, color: "#222" }}>
-          <div style={{ fontSize: 26, fontWeight: 800, color: TEAL_DEEP, marginBottom: 8 }}>Código de verificação</div>
-          <div style={{ fontSize: 15, color: "#6b7280", marginBottom: 26, lineHeight: 1.4 }}>Enviamos um código para seu e-mail.</div>
-
-          {/* email mock card */}
-          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 18, padding: 18, marginBottom: 24, transform: `translateY(${envY}px)`, opacity: envOp, boxShadow: "0 10px 24px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: TEAL, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>✉</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>SECMI — Sindicato</div>
-            </div>
-            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>Seu código:</div>
-            <div style={{ fontSize: 34, fontWeight: 800, color: TEAL_DARK, letterSpacing: 10 }}>{codeStr}</div>
+            position: "absolute",
+            left: PAD + sx(30),
+            top: PAD + sy(355),
+            width: sx(330),
+            height: sy(45),
+            background: "#fff",
+            borderRadius: 8,
+          }} />
+          <div style={{
+            position: "absolute", left: inputX, top: inputY,
+            fontFamily: inter.fontFamily, fontSize: sy(22), fontWeight: 600, color: "#111",
+            letterSpacing: 0.5,
+          }}>
+            {typed}<span style={{ opacity: (frame % 30) < 15 ? 1 : 0, color: TEAL }}>|</span>
           </div>
-
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 20 }}>
-            {codeStr.split("").map((ch, i) => (
-              <div key={i} style={{
-                width: 64, height: 76, borderRadius: 14,
-                border: `2px solid ${i < filled ? TEAL : "#d1d5db"}`,
-                background: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 32, fontWeight: 800, color: TEAL_DEEP,
-              }}>{i < filled ? ch : ""}</div>
-            ))}
-          </div>
-
-          <div style={{ background: TEAL, color: "#fff", padding: "18px 0", borderRadius: 999, fontWeight: 700, fontSize: 20, textAlign: "center", opacity: filled === 6 ? 1 : 0.5 }}>Confirmar</div>
-        </div>
-      </PhoneFrame>
-    </AbsoluteFill>
-  );
-};
-
-const SceneNewPassword: React.FC = () => {
-  const frame = useCurrentFrame();
-  const pwd = "••••••••".slice(0, Math.floor(interpolate(frame, [15, 60], [0, 8], { extrapolateRight: "clamp" })));
-  const pwd2 = "••••••••".slice(0, Math.floor(interpolate(frame, [70, 115], [0, 8], { extrapolateRight: "clamp" })));
-  const btn = interpolate(frame, [118, 138], [0, 1], { extrapolateRight: "clamp" });
-  return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-      <PhoneFrame>
-        <div style={{ flex: 1, background: CREAM, height: "100%", padding: 30, fontFamily: inter.fontFamily, color: "#222" }}>
-          <div style={{ fontSize: 26, fontWeight: 800, color: TEAL_DEEP, marginBottom: 8 }}>Crie sua senha</div>
-          <div style={{ fontSize: 15, color: "#6b7280", marginBottom: 26, lineHeight: 1.4 }}>Mínimo de 6 caracteres.</div>
-
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 8 }}>Nova senha</div>
-          <div style={{ background: "#fff", border: `2px solid ${TEAL}`, borderRadius: 16, padding: "20px 18px", marginBottom: 18, fontSize: 26, color: "#111", letterSpacing: 6, minHeight: 32 }}>{pwd}</div>
-
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 8 }}>Confirmar senha</div>
-          <div style={{ background: "#fff", border: `2px solid ${TEAL}`, borderRadius: 16, padding: "20px 18px", marginBottom: 28, fontSize: 26, color: "#111", letterSpacing: 6, minHeight: 32 }}>{pwd2}</div>
-
-          <div style={{ background: TEAL, color: "#fff", padding: "20px 0", borderRadius: 999, fontWeight: 700, fontSize: 22, textAlign: "center", opacity: 0.5 + btn * 0.5, transform: `scale(${1 + btn * 0.03})` }}>Salvar senha</div>
-        </div>
-        <Tap x={310} y={1080} from={140} />
-      </PhoneFrame>
+          {/* Tap on Continuar button (~y 468) */}
+          <Tap x={PAD + sx(195)} y={PAD + sy(468)} from={85} />
+        </PhoneFrame>
+      </div>
     </AbsoluteFill>
   );
 };
@@ -288,20 +209,22 @@ const SceneDone: React.FC = () => {
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 36 }}>
       <div style={{
-        width: 240, height: 240, borderRadius: "50%",
+        width: 260, height: 260, borderRadius: "50%",
         background: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
         transform: `scale(${checkScale})`,
         boxShadow: "0 30px 70px rgba(0,0,0,0.25)",
       }}>
-        <div style={{ fontSize: 130, color: TEAL, fontWeight: 800, lineHeight: 1 }}>✓</div>
+        <div style={{ fontSize: 150, color: TEAL, fontWeight: 800, lineHeight: 1 }}>✓</div>
       </div>
-      <div style={{ fontFamily: inter.fontFamily, color: "#fff", fontWeight: 800, fontSize: 64, textAlign: "center", opacity: titleOp, letterSpacing: -1 }}>
-        Tudo pronto!
-        <div style={{ fontSize: 28, fontWeight: 600, opacity: 0.9, marginTop: 14 }}>Acesse seus benefícios</div>
+      <div style={{ fontFamily: inter.fontFamily, color: "#fff", fontWeight: 800, fontSize: 68, textAlign: "center", opacity: titleOp, letterSpacing: -1 }}>
+        Senha cadastrada!
+        <div style={{ fontSize: 30, fontWeight: 600, opacity: 0.9, marginTop: 14 }}>Bem-vindo(a) ao App do Sindicato</div>
       </div>
     </AbsoluteFill>
   );
 };
+
+// (SceneDone defined above)
 
 // ---------- Background ----------
 const Background: React.FC = () => {
@@ -348,10 +271,10 @@ const StepBadge: React.FC = () => {
   for (let i = 0; i < SC.length; i++) {
     if (frame >= SC[i] && frame < SC[i] + S[i]) { stepIdx = i; break; }
   }
-  if (stepIdx <= 0 || stepIdx >= 7) return null;
+  if (stepIdx <= 0 || stepIdx >= 6) return null;
   return (
     <div style={{ position: "absolute", top: 80, left: 60, display: "flex", gap: 10, alignItems: "center", fontFamily: inter.fontFamily, color: "#fff", fontWeight: 700 }}>
-      <div style={{ background: "rgba(255,255,255,0.18)", padding: "10px 18px", borderRadius: 999, fontSize: 22, border: "1px solid rgba(255,255,255,0.25)" }}>Passo {stepIdx} de 6</div>
+      <div style={{ background: "rgba(255,255,255,0.18)", padding: "10px 18px", borderRadius: 999, fontSize: 22, border: "1px solid rgba(255,255,255,0.25)" }}>Passo {stepIdx} de 5</div>
     </div>
   );
 };
@@ -363,13 +286,33 @@ export const MainVideo: React.FC = () => {
       <Background />
 
       <Sequence from={SC[0]} durationInFrames={S[0]}><SceneIntro /></Sequence>
-      <Sequence from={SC[1]} durationInFrames={S[1]}><SceneOpenApp /></Sequence>
-      <Sequence from={SC[2]} durationInFrames={S[2]}><SceneLogin /></Sequence>
-      <Sequence from={SC[3]} durationInFrames={S[3]}><SceneFirstAccess /></Sequence>
-      <Sequence from={SC[4]} durationInFrames={S[4]}><SceneCpfEmail /></Sequence>
-      <Sequence from={SC[5]} durationInFrames={S[5]}><SceneEmailCode /></Sequence>
-      <Sequence from={SC[6]} durationInFrames={S[6]}><SceneNewPassword /></Sequence>
-      <Sequence from={SC[7]} durationInFrames={S[7]}><SceneDone /></Sequence>
+
+      {/* Welcome -> tap "Já sou associado" (~y 718) */}
+      <Sequence from={SC[1]} durationInFrames={S[1]}>
+        <SceneScreenshot src="screens/01-welcome.png" tap={{ x: 195, y: 718, at: 60 }} />
+      </Sequence>
+
+      {/* Login -> tap "Primeiro acesso? Clique aqui..." (~y 655) */}
+      <Sequence from={SC[2]} durationInFrames={S[2]}>
+        <SceneScreenshot src="screens/02-login.png" tap={{ x: 195, y: 655, at: 60 }} />
+      </Sequence>
+
+      {/* CPF step with typing overlay */}
+      <Sequence from={SC[3]} durationInFrames={S[3]}>
+        <SceneCpf />
+      </Sequence>
+
+      {/* Birth date: crossfade empty -> filled, tap Validar */}
+      <Sequence from={SC[4]} durationInFrames={S[4]}>
+        <SceneScreenshot src="screens/04-birthdate.png" srcAfter="screens/04b-birthdate-filled.png" switchAt={25} tap={{ x: 195, y: 528, at: 85 }} />
+      </Sequence>
+
+      {/* Password: crossfade empty -> filled, tap Cadastrar senha */}
+      <Sequence from={SC[5]} durationInFrames={S[5]}>
+        <SceneScreenshot src="screens/05-password.png" srcAfter="screens/05b-password-filled.png" switchAt={25} tap={{ x: 195, y: 616, at: 85 }} />
+      </Sequence>
+
+      <Sequence from={SC[6]} durationInFrames={S[6]}><SceneDone /></Sequence>
 
       <StepBadge />
       <CaptionBar />
