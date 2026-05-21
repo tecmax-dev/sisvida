@@ -167,7 +167,8 @@ const SceneCpf: React.FC = () => {
   const enter = spring({ frame, fps: 30, config: { damping: 14 } });
   const scale = 0.92 + enter * 0.08;
   const op = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
-  const cpfFull = "898.151.305-87";
+  // Fictitious CPF (não pertence a nenhuma pessoa real)
+  const cpfFull = "123.456.789-00";
   const typed = cpfFull.slice(0, Math.floor(interpolate(frame, [18, 70], [0, cpfFull.length], { extrapolateRight: "clamp" })));
   // Input position in screenshot: ~y 357-396, x ~30-360, font roughly 17px
   const inputX = PAD + sx(48);
@@ -196,6 +197,54 @@ const SceneCpf: React.FC = () => {
           </div>
           {/* Tap on Continuar button (~y 468) */}
           <Tap x={PAD + sx(195)} y={PAD + sy(468)} from={85} />
+        </PhoneFrame>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// Generic typed-input overlay over a screenshot
+const SceneTyped: React.FC<{
+  src: string;
+  fullText: string;
+  inputBox: { x: number; y: number; w: number; h: number }; // in screenshot coords
+  textOffset?: { x: number; y: number };
+  typeFrom?: number;
+  typeTo?: number;
+  tap?: { x: number; y: number; at: number };
+  fontSize?: number;
+  mask?: boolean;
+}> = ({ src, fullText, inputBox, textOffset = { x: 18, y: 13 }, typeFrom = 18, typeTo = 70, tap, fontSize = 22, mask = false }) => {
+  const frame = useCurrentFrame();
+  const enter = spring({ frame, fps: 30, config: { damping: 14 } });
+  const scale = 0.92 + enter * 0.08;
+  const op = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
+  const count = Math.floor(interpolate(frame, [typeFrom, typeTo], [0, fullText.length], { extrapolateRight: "clamp", extrapolateLeft: "clamp" }));
+  const typed = mask ? "•".repeat(count) : fullText.slice(0, count);
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: op }}>
+      <div style={{ transform: `scale(${scale})` }}>
+        <PhoneFrame>
+          <Screen src={src} />
+          <div style={{
+            position: "absolute",
+            left: PAD + sx(inputBox.x),
+            top: PAD + sy(inputBox.y),
+            width: sx(inputBox.w),
+            height: sy(inputBox.h),
+            background: "#fff",
+            borderRadius: 8,
+          }} />
+          <div style={{
+            position: "absolute",
+            left: PAD + sx(inputBox.x + textOffset.x),
+            top: PAD + sy(inputBox.y + textOffset.y),
+            fontFamily: inter.fontFamily, fontSize: sy(fontSize), fontWeight: 600, color: "#111",
+            letterSpacing: mask ? 2 : 0.5,
+          }}>
+            {typed}<span style={{ opacity: (frame % 30) < 15 ? 1 : 0, color: TEAL }}>|</span>
+          </div>
+          {tap && <Tap x={PAD + sx(tap.x)} y={PAD + sy(tap.y)} from={tap.at} />}
         </PhoneFrame>
       </div>
     </AbsoluteFill>
