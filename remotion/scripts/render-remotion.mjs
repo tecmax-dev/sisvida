@@ -26,7 +26,7 @@ await renderMedia({
   composition,
   serveUrl: bundled,
   codec: "h264",
-  outputLocation: process.argv[2] ?? "/mnt/documents/primeiro-acesso-sindicato.mp4",
+  outputLocation: process.argv[2] ?? "/mnt/documents/primeiro-acesso-sindicato-v3.mp4",
   puppeteerInstance: browser,
   muted: true,
   concurrency: 1,
