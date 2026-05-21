@@ -353,12 +353,23 @@ export const MainVideo: React.FC = () => {
 
       {/* Birth date: crossfade empty -> filled, tap Validar */}
       <Sequence from={SC[4]} durationInFrames={S[4]}>
-        <SceneScreenshot src="screens/04-birthdate.png" srcAfter="screens/04b-birthdate-filled.png" switchAt={25} tap={{ x: 195, y: 528, at: 85 }} />
+        <SceneTyped
+          src="screens/04-birthdate.png"
+          fullText="15/03/1985"
+          inputBox={{ x: 30, y: 355, w: 330, h: 45 }}
+          tap={{ x: 195, y: 528, at: 90 }}
+        />
       </Sequence>
 
       {/* Password: crossfade empty -> filled, tap Cadastrar senha */}
       <Sequence from={SC[5]} durationInFrames={S[5]}>
-        <SceneScreenshot src="screens/05-password.png" srcAfter="screens/05b-password-filled.png" switchAt={25} tap={{ x: 195, y: 616, at: 85 }} />
+        <SceneTyped
+          src="screens/05-password.png"
+          fullText="MinhaSenha@2025"
+          inputBox={{ x: 30, y: 355, w: 330, h: 45 }}
+          tap={{ x: 195, y: 616, at: 95 }}
+          mask
+        />
       </Sequence>
 
       <Sequence from={SC[6]} durationInFrames={S[6]}><SceneDone /></Sequence>
