@@ -11,29 +11,34 @@ interface Prof {
   slug: string;
   nome: string;
   especialidade: string;
+  local: string;
 }
 
+const LOCAL_COMERCIARIOS = "na sede do Sindicato dos Comerciários";
+const LOCAL_RODOVIARIOS =
+  "na sede do Sindicato dos Rodoviários (Av. Antonio Carlos Magalhães, 1062, Bairro Malhado, ao lado da Igreja Testemunhas de Jeová)";
+
 const PROFISSIONAIS: Prof[] = [
-  { slug: "daniela_sales", nome: "Daniela Sales", especialidade: "Terapia Ocupacional / Massagem Relaxante" },
-  { slug: "eliney_silva", nome: "Eliney Silva", especialidade: "Psicologia" },
-  { slug: "jorge_avelar", nome: "Jorge Avelar", especialidade: "Ortopedia" },
-  { slug: "jose_alcides", nome: "José Alcides", especialidade: "Clínica Geral" },
-  { slug: "juliane_leite", nome: "Juliane Leite", especialidade: "Clínica Geral Odontológica" },
-  { slug: "marcelo_aguiar", nome: "Marcelo Aguiar", especialidade: "Clínica Geral Odontológica" },
-  { slug: "pedro_roberto", nome: "Pedro Roberto", especialidade: "Urologia" },
-  { slug: "uiara_tiuba", nome: "Uiara Tiuba", especialidade: "Pediatria" },
+  { slug: "daniela_sales", nome: "Daniela Sales", especialidade: "Terapia Ocupacional / Massagem Relaxante", local: LOCAL_COMERCIARIOS },
+  { slug: "eliney_silva", nome: "Eliney Silva", especialidade: "Psicologia", local: LOCAL_COMERCIARIOS },
+  { slug: "jorge_avelar", nome: "Jorge Avelar", especialidade: "Ortopedia", local: LOCAL_RODOVIARIOS },
+  { slug: "jose_alcides", nome: "José Alcides", especialidade: "Clínica Geral", local: LOCAL_COMERCIARIOS },
+  { slug: "juliane_leite", nome: "Juliane Leite", especialidade: "Clínica Geral Odontológica", local: LOCAL_COMERCIARIOS },
+  { slug: "marcelo_aguiar", nome: "Marcelo Aguiar", especialidade: "Clínica Geral Odontológica", local: LOCAL_RODOVIARIOS },
+  { slug: "pedro_roberto", nome: "Pedro Roberto", especialidade: "Urologia", local: LOCAL_RODOVIARIOS },
+  { slug: "uiara_tiuba", nome: "Uiara Tiuba", especialidade: "Pediatria", local: LOCAL_COMERCIARIOS },
 ];
 
 function buildTemplate(p: Prof) {
   return {
-    name: `vaga_medica_${p.slug}_v3`,
+    name: `vaga_medica_${p.slug}_v4`,
     language: "pt_BR",
     category: "UTILITY",
     components: [
       {
         type: "BODY",
         text:
-          `Olá, {{1}}. Há um horário disponível em sua agenda de ${p.especialidade} com ${p.nome} no dia {{2}} às {{3}}, na sede do Sindicato dos Comerciários.\n\n` +
+          `Olá, {{1}}. Há um horário disponível em sua agenda de ${p.especialidade} com ${p.nome} no dia {{2}} às {{3}}, ${p.local}.\n\n` +
           `Para confirmar ou reagendar, acesse o aplicativo oficial.`,
         example: { body_text: [["Maria", "20/05/2026", "14:30"]] },
       },
