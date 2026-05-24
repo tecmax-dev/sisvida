@@ -174,7 +174,7 @@ export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): 
 }
 
 // Profissionais com local de atendimento no Sindicato dos Rodoviários
-const PROFESSIONALS_RODOVIARIOS = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
+const PROFESSIONALS_RODOVIARIOS = ['jorge avelar', 'pedro roberto'];
 const RODOVIARIOS_CLINIC_NAME = 'Sindicato dos Rodoviários';
 
 function isRodoviariosProfessional(professionalName: string): boolean {
