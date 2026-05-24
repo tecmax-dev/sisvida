@@ -226,12 +226,50 @@ ${linkUrl}
 ${linkUrl}
 ━━━━━━━━━━━━━━━━`;
 
-        const result = await sendWhatsAppMessage({
-          phone: cleanPhone,
-          message,
-          clinicId,
-          type: "custom",
-        });
+        // Para boletos com link Lytex, usar template oficial Meta (boleto_mensalidade)
+        // que funciona mesmo fora da janela de 24h. Senão, cai para texto livre.
+        let result: { success: boolean; error?: string };
+        if (!isAwaitingValue && contrib.lytex_invoice_url) {
+          const empresa =
+            (contrib.employers?.name || "Empresa").split(" ").slice(0, 3).join(" ") ||
+            "Empresa";
+          const ref = `${typeName} ${monthName}`;
+          const { data, error } = await supabase.functions.invoke(
+            "meta-send-template",
+            {
+              body: {
+                to: cleanPhone,
+                template_name: "boleto_mensalidade",
+                language: "pt_BR",
+                variables: [
+                  empresa,
+                  ref,
+                  formatCurrency(contrib.value),
+                  dueDate,
+                  contrib.lytex_invoice_url,
+                ],
+              },
+            }
+          );
+          if (error || !data?.success) {
+            result = {
+              success: false,
+              error:
+                (data as any)?.error ||
+                (error as any)?.message ||
+                "Falha no envio via API Oficial",
+            };
+          } else {
+            result = { success: true };
+          }
+        } else {
+          result = await sendWhatsAppMessage({
+            phone: cleanPhone,
+            message,
+            clinicId,
+            type: "custom",
+          });
+        }
 
         if (result.success) {
           successCount++;
