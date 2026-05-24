@@ -126,6 +126,17 @@ const appointmentTypes = [
   { value: "telemedicine", label: "Telemedicina" },
 ];
 
+const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+const RODOVIARIOS_REMINDER_PROFESSIONALS = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
+const RODOVIARIOS_REMINDER_LOCATION = 'Av. Antonio Carlos Magalhães, 1062, Bairro Malhado — Sede do Sindicato dos Rodoviários, ao lado da Igreja Testemunhas de Jeová';
+
+const getOfficialReminderLocation = (professionalName?: string, fallback = 'Sindicato') => {
+  const normalizedName = String(professionalName || '').toLowerCase();
+  return RODOVIARIOS_REMINDER_PROFESSIONALS.some((name) => normalizedName.includes(name))
+    ? RODOVIARIOS_REMINDER_LOCATION
+    : fallback;
+};
+
 const defaultTimeSlots = [
   "08:00", "09:00", "10:00", "11:00", "12:00",
   "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
