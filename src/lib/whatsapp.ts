@@ -252,6 +252,10 @@ export function formatAppointmentConfirmation(
   time: string,
   professionalName?: string
 ): string {
+  // Override clinic name + endereço para profissionais que atendem na sede do Sindicato dos Rodoviários
+  const isRodoviarios = professionalName ? isRodoviariosProfessional(professionalName) : false;
+  const effectiveClinicName = isRodoviarios ? RODOVIARIOS_CLINIC_NAME : clinicName;
+  const specificLocation = isRodoviarios ? getRodoviariosProfessionalLocation() : null;
   const lines = [
     `Olá ${patientName}! ✅`,
     ``,
@@ -260,12 +264,14 @@ export function formatAppointmentConfirmation(
     `📅 *Data:* ${date}`,
     `🕐 *Horário:* ${time}`,
     professionalName ? `👨‍⚕️ *Profissional:* ${professionalName}` : null,
-    `🏥 *Local:* ${clinicName}`,
+    `🏥 *Local:* ${effectiveClinicName}`,
+    specificLocation ? `` : null,
+    specificLocation,
     ``,
     `Agradecemos a confirmação. Até lá!`,
     ``,
     `Atenciosamente,`,
-    `Equipe ${clinicName}`,
+    `Equipe ${effectiveClinicName}`,
   ].filter(Boolean);
 
   return lines.join('\n');
