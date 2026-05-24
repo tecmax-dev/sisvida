@@ -129,6 +129,17 @@ function responseIndicatesDeliveryFailure(payload: any): string | null {
   return null;
 }
 
+const PROFESSIONALS_RODOVIARIOS_LOCATION = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
+
+function isRodoviariosProfessional(professionalName: string): boolean {
+  const lowerName = String(professionalName || '').toLowerCase();
+  return PROFESSIONALS_RODOVIARIOS_LOCATION.some(name => lowerName.includes(name));
+}
+
+function getRodoviariosTemplateLocation(): string {
+  return 'Av. Antonio Carlos Magalhães, 1062, Bairro Malhado — Sede do Sindicato dos Rodoviários, ao lado da Igreja Testemunhas de Jeová';
+}
+
 function normalizePhoneDigits(value: string): string {
   return value.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
 }
