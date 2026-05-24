@@ -129,7 +129,7 @@ function responseIndicatesDeliveryFailure(payload: any): string | null {
   return null;
 }
 
-const PROFESSIONALS_RODOVIARIOS_LOCATION = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
+const PROFESSIONALS_RODOVIARIOS_LOCATION = ['jorge avelar', 'pedro roberto'];
 
 function isRodoviariosProfessional(professionalName: string): boolean {
   const lowerName = String(professionalName || '').toLowerCase();
