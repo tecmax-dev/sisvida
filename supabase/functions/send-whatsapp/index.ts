@@ -592,7 +592,10 @@ serve(async (req) => {
                 weekday: 'long', day: 'numeric', month: 'long'
               });
               const time = String(apt.start_time).slice(0, 5);
-              templateComponents = [displayName, profName, specialty, dateFormatted, time, 'Sindicato dos Comerciários'];
+              const location = isRodoviariosProfessional(profName)
+                ? getRodoviariosTemplateLocation()
+                : 'Sindicato dos Comerciários';
+              templateComponents = [displayName, profName, specialty, dateFormatted, time, location];
               console.log(`[Clinic ${clinicId}] Sindicato: Built template components from DB:`, templateComponents);
             }
           } catch (e) {
