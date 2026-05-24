@@ -312,6 +312,10 @@ function formatDateTime(dateStr: string, time: string): string {
 const PROFESSIONALS_RODOVIARIOS_LOCATION = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
 const RODOVIARIOS_CLINIC_NAME = 'Sindicato dos Rodoviários';
 
+function getRodoviariosTemplateLocation(): string {
+  return 'Av. Antonio Carlos Magalhães, 1062, Bairro Malhado — Sede do Sindicato dos Rodoviários, ao lado da Igreja Testemunhas de Jeová';
+}
+
 function isRodoviariosProfessional(professionalName: string): boolean {
   const lowerName = professionalName.toLowerCase();
   return PROFESSIONALS_RODOVIARIOS_LOCATION.some(name => lowerName.includes(name));
@@ -319,7 +323,7 @@ function isRodoviariosProfessional(professionalName: string): boolean {
 
 function getProfessionalLocation(professionalName: string): string | null {
   if (isRodoviariosProfessional(professionalName)) {
-    return `*Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
+    return `*Local:* ${getRodoviariosTemplateLocation()}`;
   }
   return null;
 }
@@ -551,7 +555,8 @@ serve(async (req) => {
             phone
           ),
           professional:professionals (
-            name
+            name,
+            specialty
           ),
           dependent:patient_dependents (
             name
@@ -613,6 +618,7 @@ serve(async (req) => {
         // Create message - usar displayName (nome do dependente ou titular)
         const profName = professional?.name || 'Profissional';
         const effectiveClinicName = isRodoviariosProfessional(profName) ? RODOVIARIOS_CLINIC_NAME : clinic.name;
+        const effectiveTemplateLocation = isRodoviariosProfessional(profName) ? getRodoviariosTemplateLocation() : clinic.name;
         const message = formatAppointmentReminder(
           displayName,
           effectiveClinicName,
@@ -629,7 +635,7 @@ serve(async (req) => {
           specialty,          // {{3}} Especialidade
           dateFormatted,      // {{4}} Data
           time,               // {{5}} Hora
-          effectiveClinicName // {{6}} Local
+          effectiveTemplateLocation // {{6}} Local/endereço exibido no template oficial
         ];
 
        let success = false;
