@@ -2755,19 +2755,19 @@ const updateData: Record<string, any> = {
         directReplyEnabled
       );
 
-      // Sindicato (Meta Cloud API) requires approved template outside 24h session window.
-      const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      // Sindicato (API Oficial) requires approved template outside 24h session window.
       const isSindicato = currentClinic?.id === SINDICATO_CLINIC_ID;
+      const professionalName = appointment.professional?.name || 'Profissional';
       const templatePayload = isSindicato ? {
         templateName: 'lembrete_consulta_v2',
         templateLanguage: 'pt_BR',
         templateComponents: [
           displayName,
-          appointment.professional?.name || 'Profissional',
+          professionalName,
           appointment.professional?.specialty || 'Consulta',
           formattedDate,
           appointment.start_time.slice(0, 5),
-          currentClinic?.name || 'Sindicato',
+          getOfficialReminderLocation(professionalName, currentClinic?.name || 'Sindicato'),
         ],
       } : {};
 
@@ -2902,18 +2902,18 @@ const updateData: Record<string, any> = {
         );
 
         console.log(`[BULK REMINDER] [${i+1}] Invoking send-whatsapp for ${phoneToUse}...`);
-        const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         const isSindicato = currentClinic?.id === SINDICATO_CLINIC_ID;
+        const professionalName = appointment.professional?.name || 'Profissional';
         const templatePayload = isSindicato ? {
           templateName: 'lembrete_consulta_v2',
           templateLanguage: 'pt_BR',
           templateComponents: [
             displayName,
-            appointment.professional?.name || 'Profissional',
+            professionalName,
             appointment.professional?.specialty || 'Consulta',
             formattedDate,
             appointment.start_time.slice(0, 5),
-            currentClinic?.name || 'Sindicato',
+            getOfficialReminderLocation(professionalName, currentClinic?.name || 'Sindicato'),
           ],
         } : {};
         const { data, error } = await supabase.functions.invoke('send-whatsapp', {
