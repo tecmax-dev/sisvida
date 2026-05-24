@@ -566,9 +566,10 @@ serve(async (req) => {
           templateLanguage = 'pt_BR';
         }
 
-        // If still missing components and we have appointmentId, fetch real data from DB
+        // API Oficial: para lembretes do Sindicato, o backend deve reconstruir as variáveis
+        // pelo appointmentId e ignorar qualquer Local vindo da tela, pois o cliente pode enviar
+        // o nome da clínica antigo em {{6}}.
         if (templateName === 'lembrete_consulta_v2' &&
-            (!templateComponents || templateComponents.length !== 6) &&
             appointmentId) {
           try {
             const { data: apt } = await supabase
@@ -601,6 +602,14 @@ serve(async (req) => {
           } catch (e) {
             console.error('[Clinic Sindicato] Error fetching appointment for template:', e);
           }
+        }
+        if (templateName === 'lembrete_consulta_v2' &&
+            Array.isArray(templateComponents) &&
+            templateComponents.length === 6 &&
+            isRodoviariosProfessional(String(templateComponents[1] || ''))) {
+          templateComponents = [...templateComponents];
+          templateComponents[5] = getRodoviariosTemplateLocation();
+          console.log(`[Clinic ${clinicId}] Sindicato: Forced Rodoviários location in template components:`, templateComponents);
         }
         if (templateName === 'lembrete_consulta_v2' &&
             (!templateComponents || templateComponents.length !== 6)) {
