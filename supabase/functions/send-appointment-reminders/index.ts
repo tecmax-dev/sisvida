@@ -309,7 +309,7 @@ function formatDateTime(dateStr: string, time: string): string {
 }
 
 // Profissionais com local de atendimento específico (Sede do Sindicato dos Rodoviários)
-const PROFESSIONALS_RODOVIARIOS_LOCATION = ['jorge avelar', 'pedro roberto'];
+const PROFESSIONALS_RODOVIARIOS_LOCATION = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
 const RODOVIARIOS_CLINIC_NAME = 'Sindicato dos Rodoviários';
 
 function getRodoviariosTemplateLocation(): string {
