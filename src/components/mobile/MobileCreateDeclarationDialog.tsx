@@ -493,7 +493,8 @@ export function MobileCreateDeclarationDialog({
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
                     const blockedForDependent = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
-                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent;
+                    const blockedByBiolifeCooldown = isBiolifeBenefit(benefit) && !!biolifeNextAvailableAt;
+                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent || blockedByBiolifeCooldown;
                     
                     return (
                       <Card
