@@ -446,6 +446,12 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
               )}
             />
 
+            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent" && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <strong>Atenção:</strong> O benefício Biolife é exclusivo para titulares. Não é permitido emitir autorização/declaração para dependentes.
+              </div>
+            )}
+
             {/* Validity */}
             <FormField
               control={form.control}
