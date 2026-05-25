@@ -96,8 +96,6 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     const haystack = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
     return haystack.includes("biolife");
   };
-  const selectedBenefit = benefits.find((b) => b.id === benefitId);
-  const biolifeBlocked = isBiolifeBenefit(selectedBenefit) && beneficiaryType === "dependent";
 
   // Fetch patients (union members)
   const { data: patients = [] } = useQuery({
