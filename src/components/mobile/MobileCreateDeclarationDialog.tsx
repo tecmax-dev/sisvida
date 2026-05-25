@@ -191,6 +191,36 @@ export function MobileCreateDeclarationDialog({
     return haystack.includes("biolife");
   };
 
+  // IDs dos benefícios Biolife disponíveis nesta entidade
+  const biolifeBenefitIds = benefits.filter((b) => isBiolifeBenefit(b)).map((b) => b.id);
+
+  // Última autorização Biolife deste titular (limite: 1 a cada 12 meses)
+  const { data: lastBiolifeAuth } = useQuery({
+    queryKey: ["mobile-last-biolife-authorization", patientId, biolifeBenefitIds.join(",")],
+    queryFn: async () => {
+      if (!patientId || biolifeBenefitIds.length === 0) return null;
+      const { data } = await supabase
+        .from("union_authorizations")
+        .select("issued_at, benefit_id")
+        .eq("patient_id", patientId)
+        .in("benefit_id", biolifeBenefitIds)
+        .neq("status", "revoked")
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!patientId && biolifeBenefitIds.length > 0 && open,
+  });
+
+  const biolifeNextAvailableAt = (() => {
+    if (!lastBiolifeAuth?.issued_at) return null;
+    const issued = new Date(lastBiolifeAuth.issued_at);
+    const next = new Date(issued);
+    next.setFullYear(next.getFullYear() + 1);
+    return next > new Date() ? next : null;
+  })();
+
   // Get union entity
   const { data: unionEntity } = useQuery({
     queryKey: ["mobile-union-entity", clinicId],
@@ -303,6 +333,16 @@ export function MobileCreateDeclarationDialog({
       toast({
         title: "Benefício exclusivo para titulares",
         description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir declaração para dependentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Bloqueio: Biolife limitado a 1 autorização a cada 12 meses
+    if (isBiolifeBenefit(benefit) && biolifeNextAvailableAt) {
+      toast({
+        title: "Biolife já utilizado nos últimos 12 meses",
+        description: `Limite: 1 autorização a cada 12 meses. Nova emissão disponível a partir de ${format(biolifeNextAvailableAt, "dd/MM/yyyy")}.`,
         variant: "destructive",
       });
       return;
@@ -453,7 +493,8 @@ export function MobileCreateDeclarationDialog({
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
                     const blockedForDependent = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
-                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent;
+                    const blockedByBiolifeCooldown = isBiolifeBenefit(benefit) && !!biolifeNextAvailableAt;
+                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent || blockedByBiolifeCooldown;
                     
                     return (
                       <Card

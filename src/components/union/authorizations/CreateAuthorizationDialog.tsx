@@ -183,6 +183,39 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     enabled: !!currentClinic?.id && open,
   });
 
+  // IDs dos benefícios Biolife na entidade atual (para checagem de cooldown de 12 meses)
+  const biolifeBenefitIds = (benefits as Array<{ id: string; name: string | null; partner_name: string | null }>)
+    .filter((b) => isBiolifeBenefit(b))
+    .map((b) => b.id);
+
+  // Última autorização Biolife do titular (qualquer benefício Biolife, qualquer status exceto revogada)
+  const { data: lastBiolifeAuth } = useQuery({
+    queryKey: ["last-biolife-authorization", patientId, biolifeBenefitIds.join(",")],
+    queryFn: async () => {
+      if (!patientId || biolifeBenefitIds.length === 0) return null;
+      const { data } = await supabase
+        .from("union_authorizations")
+        .select("issued_at, benefit_id")
+        .eq("patient_id", patientId)
+        .in("benefit_id", biolifeBenefitIds)
+        .neq("status", "revoked")
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!patientId && biolifeBenefitIds.length > 0 && open,
+  });
+
+  // Data em que pode emitir nova Biolife, ou null se pode emitir agora
+  const biolifeNextAvailableAt = (() => {
+    if (!lastBiolifeAuth?.issued_at) return null;
+    const issued = new Date(lastBiolifeAuth.issued_at);
+    const next = new Date(issued);
+    next.setFullYear(next.getFullYear() + 1);
+    return next > new Date() ? next : null;
+  })();
+
   // Update validity_days when benefit changes
   useEffect(() => {
     if (benefitId) {
@@ -265,6 +298,14 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
       toast({
         title: "Benefício exclusivo para titulares",
         description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir autorização para dependentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isBiolifeBenefit(benefit) && biolifeNextAvailableAt) {
+      toast({
+        title: "Biolife já utilizado nos últimos 12 meses",
+        description: `Este associado só poderá emitir nova autorização Biolife a partir de ${format(biolifeNextAvailableAt, "dd/MM/yyyy")}. Limite: 1 autorização a cada 12 meses.`,
         variant: "destructive",
       });
       return;
@@ -449,6 +490,12 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
             {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent" && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
                 <strong>Atenção:</strong> O benefício Biolife é exclusivo para titulares. Não é permitido emitir autorização/declaração para dependentes.
+              </div>
+            )}
+
+            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "titular" && biolifeNextAvailableAt && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <strong>Limite anual atingido:</strong> O benefício Biolife pode ser emitido apenas <strong>1 vez a cada 12 meses</strong>. Próxima emissão disponível em <strong>{format(biolifeNextAvailableAt, "dd/MM/yyyy")}</strong>.
               </div>
             )}
 
