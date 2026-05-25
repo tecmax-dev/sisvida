@@ -191,6 +191,28 @@ export function MobileCreateDeclarationDialog({
     return haystack.includes("biolife");
   };
 
+  // Biolife é restrito a associadas do sexo feminino
+  const isFemaleGender = (g?: string | null) => {
+    if (!g) return false;
+    const v = g.trim().toLowerCase();
+    return v === "f" || v.startsWith("fem");
+  };
+
+  const { data: titularPatient } = useQuery({
+    queryKey: ["mobile-patient-gender", patientId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("patients")
+        .select("gender")
+        .eq("id", patientId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!patientId && open,
+  });
+
+  const titularIsFemale = isFemaleGender(titularPatient?.gender);
+
   // IDs dos benefícios Biolife disponíveis nesta entidade
   const biolifeBenefitIds = benefits.filter((b) => isBiolifeBenefit(b)).map((b) => b.id);
 
@@ -333,6 +355,16 @@ export function MobileCreateDeclarationDialog({
       toast({
         title: "Benefício exclusivo para titulares",
         description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir declaração para dependentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Bloqueio: Biolife restrito a associadas do sexo feminino
+    if (isBiolifeBenefit(benefit) && !titularIsFemale) {
+      toast({
+        title: "Benefício exclusivo para associadas",
+        description: "O Biolife é destinado apenas a associadas do sexo feminino.",
         variant: "destructive",
       });
       return;
@@ -494,7 +526,8 @@ export function MobileCreateDeclarationDialog({
                   {benefits.map((benefit) => {
                     const blockedForDependent = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
                     const blockedByBiolifeCooldown = isBiolifeBenefit(benefit) && !!biolifeNextAvailableAt;
-                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent || blockedByBiolifeCooldown;
+                    const blockedByGender = isBiolifeBenefit(benefit) && !titularIsFemale;
+                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent || blockedByBiolifeCooldown || blockedByGender;
                     
                     return (
                       <Card
