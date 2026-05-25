@@ -490,7 +490,13 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                disabled={
+                  mutation.isPending ||
+                  (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent")
+                }
+              >
                 {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Gerar Autorização
               </Button>
