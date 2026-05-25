@@ -360,6 +360,16 @@ export function MobileCreateDeclarationDialog({
       return;
     }
 
+    // Bloqueio: Biolife restrito a associadas do sexo feminino
+    if (isBiolifeBenefit(benefit) && !titularIsFemale) {
+      toast({
+        title: "Benefício exclusivo para associadas",
+        description: "O Biolife é destinado apenas a associadas do sexo feminino.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Bloqueio: Biolife limitado a 1 autorização a cada 12 meses
     if (isBiolifeBenefit(benefit) && biolifeNextAvailableAt) {
       toast({
@@ -516,7 +526,8 @@ export function MobileCreateDeclarationDialog({
                   {benefits.map((benefit) => {
                     const blockedForDependent = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
                     const blockedByBiolifeCooldown = isBiolifeBenefit(benefit) && !!biolifeNextAvailableAt;
-                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent || blockedByBiolifeCooldown;
+                    const blockedByGender = isBiolifeBenefit(benefit) && !titularIsFemale;
+                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent || blockedByBiolifeCooldown || blockedByGender;
                     
                     return (
                       <Card
