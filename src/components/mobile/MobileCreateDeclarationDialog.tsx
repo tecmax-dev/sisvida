@@ -185,6 +185,12 @@ export function MobileCreateDeclarationDialog({
     });
   };
 
+  // Biolife é exclusivo para titulares — bloquear emissão para dependentes
+  const isBiolifeBenefit = (benefit: { name?: string | null; category?: string | null; partner_name?: string | null }) => {
+    const haystack = `${benefit.name ?? ""} ${benefit.category ?? ""} ${benefit.partner_name ?? ""}`.toLowerCase();
+    return haystack.includes("biolife");
+  };
+
   // Get union entity
   const { data: unionEntity } = useQuery({
     queryKey: ["mobile-union-entity", clinicId],
@@ -292,6 +298,16 @@ export function MobileCreateDeclarationDialog({
   });
 
   const handleSelectBenefit = (benefit: Benefit) => {
+    // Bloqueio: Biolife não pode ser emitida para dependentes
+    if (isBiolifeBenefit(benefit) && beneficiaryType === "dependent") {
+      toast({
+        title: "Benefício exclusivo para titulares",
+        description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir declaração para dependentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate dependent selection if beneficiaryType is "dependent"
     if (beneficiaryType === "dependent" && !selectedDependentId) {
       toast({
@@ -436,7 +452,8 @@ export function MobileCreateDeclarationDialog({
               <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
-                    const isDisabled = hasActiveAuthorization(benefit.id);
+                    const blockedForDependent = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
+                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent;
                     
                     return (
                       <Card
@@ -452,13 +469,22 @@ export function MobileCreateDeclarationDialog({
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                {isDisabled && (
+                                {hasActiveAuthorization(benefit.id) && (
                                   <Badge
                                     variant="secondary"
                                     className="text-xs bg-amber-100 text-amber-700"
                                   >
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Já possui
+                                  </Badge>
+                                )}
+                                {blockedForDependent && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs bg-red-100 text-red-700"
+                                  >
+                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                    Somente titular
                                   </Badge>
                                 )}
                                 {benefit.category && (

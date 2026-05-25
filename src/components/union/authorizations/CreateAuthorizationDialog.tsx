@@ -90,6 +90,13 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
   const patientId = form.watch("patient_id");
   const benefitId = form.watch("benefit_id");
 
+  // Biolife é exclusivo para titulares
+  const isBiolifeBenefit = (b?: { name?: string | null; partner_name?: string | null } | null) => {
+    if (!b) return false;
+    const haystack = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
+    return haystack.includes("biolife");
+  };
+
   // Fetch patients (union members)
   const { data: patients = [] } = useQuery({
     queryKey: ["union-members-search", currentClinic?.id, patientSearch],
@@ -251,6 +258,15 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
   const onSubmit = (data: FormData) => {
     if (data.beneficiary_type === "dependent" && !data.dependent_id) {
       toast({ title: "Selecione um dependente", variant: "destructive" });
+      return;
+    }
+    const benefit = benefits.find((b) => b.id === data.benefit_id);
+    if (isBiolifeBenefit(benefit) && data.beneficiary_type === "dependent") {
+      toast({
+        title: "Benefício exclusivo para titulares",
+        description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir autorização para dependentes.",
+        variant: "destructive",
+      });
       return;
     }
     mutation.mutate(data);
@@ -430,6 +446,12 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
               )}
             />
 
+            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent" && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <strong>Atenção:</strong> O benefício Biolife é exclusivo para titulares. Não é permitido emitir autorização/declaração para dependentes.
+              </div>
+            )}
+
             {/* Validity */}
             <FormField
               control={form.control}
@@ -468,7 +490,13 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                disabled={
+                  mutation.isPending ||
+                  (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent")
+                }
+              >
                 {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Gerar Autorização
               </Button>
