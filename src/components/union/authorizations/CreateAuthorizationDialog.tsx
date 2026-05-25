@@ -561,7 +561,9 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
                 type="submit"
                 disabled={
                   mutation.isPending ||
-                  (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent")
+                  (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent") ||
+                  (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "titular" && !!selectedPatient && !isFemaleGender(selectedPatient?.gender)) ||
+                  (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && !!biolifeNextAvailableAt)
                 }
               >
                 {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
