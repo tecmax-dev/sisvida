@@ -90,6 +90,12 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
   const patientId = form.watch("patient_id");
   const benefitId = form.watch("benefit_id");
 
+  const isFemaleGender = (g?: string | null) => {
+    if (!g) return false;
+    const v = g.trim().toLowerCase();
+    return v === "f" || v.startsWith("fem");
+  };
+
   // Biolife é exclusivo para titulares
   const isBiolifeBenefit = (b?: { name?: string | null; partner_name?: string | null } | null) => {
     if (!b) return false;
@@ -104,7 +110,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
       if (!currentClinic?.id) return [];
       let query = supabase
         .from("patients")
-        .select("id, name, cpf, registration_number")
+        .select("id, name, cpf, registration_number, gender")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
         .order("name")
@@ -232,7 +238,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
       form.setValue("patient_id", preselectedPatientId);
       supabase
         .from("patients")
-        .select("id, name, cpf")
+        .select("id, name, cpf, gender")
         .eq("id", preselectedPatientId)
         .single()
         .then(({ data }) => {
@@ -298,6 +304,14 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
       toast({
         title: "Benefício exclusivo para titulares",
         description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir autorização para dependentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isBiolifeBenefit(benefit) && !isFemaleGender(selectedPatient?.gender)) {
+      toast({
+        title: "Benefício exclusivo para associadas",
+        description: "O benefício Biolife é destinado apenas a associadas do sexo feminino.",
         variant: "destructive",
       });
       return;
