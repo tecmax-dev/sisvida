@@ -468,6 +468,13 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
   const presidentName = presidentSignature?.president_name || unionEntityBranding?.president_name;
   const presidentTitle = presidentSignature?.president_title || "Presidente";
 
+  const isBiolife = (() => {
+    const b: any = authorization.benefit;
+    if (!b) return false;
+    const hay = `${b.name ?? ""} ${b.partner_name ?? ""} ${b.category ?? ""}`.toLowerCase();
+    return hay.includes("biolife");
+  })();
+
   return (
     <div className="space-y-4">
       {/* Status Badge */}
@@ -537,6 +544,15 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
           <div className="flex justify-between">
             <span className="text-gray-500">Parceiro:</span>
             <span className="text-gray-700">{authorization.benefit.partner_name}</span>
+          </div>
+        )}
+
+        {isBiolife && (
+          <div className="flex justify-between gap-2">
+            <span className="text-gray-500 shrink-0">Procedimento:</span>
+            <span className="text-gray-700 text-right">
+              Citologia vertical (Exame preventivo ginecológico)
+            </span>
           </div>
         )}
         

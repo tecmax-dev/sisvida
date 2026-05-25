@@ -55,6 +55,13 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
   const printRef = useRef<HTMLDivElement>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
+  const isBiolife = (() => {
+    const b = authorization?.benefit;
+    if (!b) return false;
+    const hay = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
+    return hay.includes("biolife");
+  })();
+
   // Fetch union entity data (includes logo, president name, and signature)
   const { data: unionEntity } = useQuery({
     queryKey: ["union-entity", currentClinic?.id],
@@ -310,6 +317,14 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
                 <div className="field">
                   <p className="label text-xs text-muted-foreground">Convênio</p>
                   <p className="value font-medium text-sm">{authorization.benefit.partner_name}</p>
+                </div>
+              )}
+              {isBiolife && (
+                <div className="field col-span-2">
+                  <p className="label text-xs text-muted-foreground">Procedimento</p>
+                  <p className="value font-medium text-sm">
+                    Citologia vertical (Exame preventivo ginecológico)
+                  </p>
                 </div>
               )}
               <div className="field">
