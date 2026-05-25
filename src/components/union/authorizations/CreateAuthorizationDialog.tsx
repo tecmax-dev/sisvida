@@ -493,6 +493,12 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
               </div>
             )}
 
+            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "titular" && biolifeNextAvailableAt && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <strong>Limite anual atingido:</strong> O benefício Biolife pode ser emitido apenas <strong>1 vez a cada 12 meses</strong>. Próxima emissão disponível em <strong>{format(biolifeNextAvailableAt, "dd/MM/yyyy")}</strong>.
+              </div>
+            )}
+
             {/* Validity */}
             <FormField
               control={form.control}
