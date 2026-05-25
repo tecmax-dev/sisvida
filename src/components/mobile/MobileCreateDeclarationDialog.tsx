@@ -191,6 +191,28 @@ export function MobileCreateDeclarationDialog({
     return haystack.includes("biolife");
   };
 
+  // Biolife é restrito a associadas do sexo feminino
+  const isFemaleGender = (g?: string | null) => {
+    if (!g) return false;
+    const v = g.trim().toLowerCase();
+    return v === "f" || v.startsWith("fem");
+  };
+
+  const { data: titularPatient } = useQuery({
+    queryKey: ["mobile-patient-gender", patientId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("patients")
+        .select("gender")
+        .eq("id", patientId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!patientId && open,
+  });
+
+  const titularIsFemale = isFemaleGender(titularPatient?.gender);
+
   // IDs dos benefícios Biolife disponíveis nesta entidade
   const biolifeBenefitIds = benefits.filter((b) => isBiolifeBenefit(b)).map((b) => b.id);
 
