@@ -338,6 +338,16 @@ export function MobileCreateDeclarationDialog({
       return;
     }
 
+    // Bloqueio: Biolife limitado a 1 autorização a cada 12 meses
+    if (isBiolifeBenefit(benefit) && biolifeNextAvailableAt) {
+      toast({
+        title: "Biolife já utilizado nos últimos 12 meses",
+        description: `Limite: 1 autorização a cada 12 meses. Nova emissão disponível a partir de ${format(biolifeNextAvailableAt, "dd/MM/yyyy")}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate dependent selection if beneficiaryType is "dependent"
     if (beneficiaryType === "dependent" && !selectedDependentId) {
       toast({
