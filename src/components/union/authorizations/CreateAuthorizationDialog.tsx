@@ -97,39 +97,6 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     return haystack.includes("biolife");
   };
 
-  // IDs dos benefícios Biolife na entidade atual (para checagem de cooldown de 12 meses)
-  const biolifeBenefitIds = (benefits as Array<{ id: string; name: string | null; partner_name: string | null }>)
-    .filter((b) => isBiolifeBenefit(b))
-    .map((b) => b.id);
-
-  // Última autorização Biolife do titular (qualquer benefício Biolife, qualquer status exceto revogada)
-  const { data: lastBiolifeAuth } = useQuery({
-    queryKey: ["last-biolife-authorization", patientId, biolifeBenefitIds.join(",")],
-    queryFn: async () => {
-      if (!patientId || biolifeBenefitIds.length === 0) return null;
-      const { data } = await supabase
-        .from("union_authorizations")
-        .select("issued_at, benefit_id")
-        .eq("patient_id", patientId)
-        .in("benefit_id", biolifeBenefitIds)
-        .neq("status", "revoked")
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!patientId && biolifeBenefitIds.length > 0 && open,
-  });
-
-  // Retorna data em que pode emitir nova Biolife, ou null se pode emitir agora
-  const biolifeNextAvailableAt = (() => {
-    if (!lastBiolifeAuth?.issued_at) return null;
-    const issued = new Date(lastBiolifeAuth.issued_at);
-    const next = new Date(issued);
-    next.setFullYear(next.getFullYear() + 1);
-    return next > new Date() ? next : null;
-  })();
-
   // Fetch patients (union members)
   const { data: patients = [] } = useQuery({
     queryKey: ["union-members-search", currentClinic?.id, patientSearch],
@@ -215,6 +182,39 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     },
     enabled: !!currentClinic?.id && open,
   });
+
+  // IDs dos benefícios Biolife na entidade atual (para checagem de cooldown de 12 meses)
+  const biolifeBenefitIds = (benefits as Array<{ id: string; name: string | null; partner_name: string | null }>)
+    .filter((b) => isBiolifeBenefit(b))
+    .map((b) => b.id);
+
+  // Última autorização Biolife do titular (qualquer benefício Biolife, qualquer status exceto revogada)
+  const { data: lastBiolifeAuth } = useQuery({
+    queryKey: ["last-biolife-authorization", patientId, biolifeBenefitIds.join(",")],
+    queryFn: async () => {
+      if (!patientId || biolifeBenefitIds.length === 0) return null;
+      const { data } = await supabase
+        .from("union_authorizations")
+        .select("issued_at, benefit_id")
+        .eq("patient_id", patientId)
+        .in("benefit_id", biolifeBenefitIds)
+        .neq("status", "revoked")
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!patientId && biolifeBenefitIds.length > 0 && open,
+  });
+
+  // Data em que pode emitir nova Biolife, ou null se pode emitir agora
+  const biolifeNextAvailableAt = (() => {
+    if (!lastBiolifeAuth?.issued_at) return null;
+    const issued = new Date(lastBiolifeAuth.issued_at);
+    const next = new Date(issued);
+    next.setFullYear(next.getFullYear() + 1);
+    return next > new Date() ? next : null;
+  })();
 
   // Update validity_days when benefit changes
   useEffect(() => {
