@@ -90,6 +90,15 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
   const patientId = form.watch("patient_id");
   const benefitId = form.watch("benefit_id");
 
+  // Biolife é exclusivo para titulares
+  const isBiolifeBenefit = (b?: { name?: string | null; partner_name?: string | null } | null) => {
+    if (!b) return false;
+    const haystack = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
+    return haystack.includes("biolife");
+  };
+  const selectedBenefit = benefits.find((b) => b.id === benefitId);
+  const biolifeBlocked = isBiolifeBenefit(selectedBenefit) && beneficiaryType === "dependent";
+
   // Fetch patients (union members)
   const { data: patients = [] } = useQuery({
     queryKey: ["union-members-search", currentClinic?.id, patientSearch],
@@ -251,6 +260,15 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
   const onSubmit = (data: FormData) => {
     if (data.beneficiary_type === "dependent" && !data.dependent_id) {
       toast({ title: "Selecione um dependente", variant: "destructive" });
+      return;
+    }
+    const benefit = benefits.find((b) => b.id === data.benefit_id);
+    if (isBiolifeBenefit(benefit) && data.beneficiary_type === "dependent") {
+      toast({
+        title: "Benefício exclusivo para titulares",
+        description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir autorização para dependentes.",
+        variant: "destructive",
+      });
       return;
     }
     mutation.mutate(data);
