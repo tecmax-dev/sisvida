@@ -185,6 +185,12 @@ export function MobileCreateDeclarationDialog({
     });
   };
 
+  // Biolife é exclusivo para titulares — bloquear emissão para dependentes
+  const isBiolifeBenefit = (benefit: { name?: string | null; category?: string | null; partner_name?: string | null }) => {
+    const haystack = `${benefit.name ?? ""} ${benefit.category ?? ""} ${benefit.partner_name ?? ""}`.toLowerCase();
+    return haystack.includes("biolife");
+  };
+
   // Get union entity
   const { data: unionEntity } = useQuery({
     queryKey: ["mobile-union-entity", clinicId],
@@ -292,6 +298,16 @@ export function MobileCreateDeclarationDialog({
   });
 
   const handleSelectBenefit = (benefit: Benefit) => {
+    // Bloqueio: Biolife não pode ser emitida para dependentes
+    if (isBiolifeBenefit(benefit) && beneficiaryType === "dependent") {
+      toast({
+        title: "Benefício exclusivo para titulares",
+        description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir declaração para dependentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate dependent selection if beneficiaryType is "dependent"
     if (beneficiaryType === "dependent" && !selectedDependentId) {
       toast({
