@@ -128,6 +128,13 @@ export default function AuthorizationValidationPage() {
   const isValid = data.status === "active" && new Date(data.valid_until) >= new Date();
   const isExpired = data.status === "expired" || new Date(data.valid_until) < new Date();
   const isRevoked = data.status === "revoked";
+
+  const isBiolife = (() => {
+    const b = data.benefit;
+    if (!b) return false;
+    const hay = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
+    return hay.includes("biolife");
+  })();
   
   const unionEntity = data.union_entity as any;
   const entityName = unionEntity?.nome_fantasia || unionEntity?.razao_social || data.clinic?.name;
@@ -213,6 +220,12 @@ export default function AuthorizationValidationPage() {
                 <p className="text-sm text-muted-foreground">Convênio</p>
                 <p>{data.benefit?.partner_name || "-"}</p>
               </div>
+              {isBiolife && (
+                <div className="sm:col-span-2">
+                  <p className="text-sm text-muted-foreground">Procedimento</p>
+                  <p className="font-medium">Citologia vertical (Exame preventivo ginecológico)</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Emitido em</p>
                 <p>{format(new Date(data.issued_at), "dd/MM/yyyy", { locale: ptBR })}</p>
