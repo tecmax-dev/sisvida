@@ -1,28 +1,22 @@
 <!doctype html>
 <html lang="pt-BR">
    <head>
-     <script>
-       // Redirect /instalar as early as possible to bypass cache if it's the specific Play Store redirect
-       (function() {
-         // Log para debug
-         console.log('[Redirect] Checking redirect for:', window.location.hostname, window.location.pathname);
-         
-         // Normalizamos o pathname para garantir que funcione com ou sem barra no final
+      <script>
+        // Redirecionamento crítico do QR/links antigos antes do React e antes do Service Worker.
+        (function() {
+          var FILIACAO_REDIRECT_URL = "https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
           var path = window.location.pathname.replace(/\/$/, "");
+          var host = window.location.hostname;
           var domains = ["app.eclini.com.br", "www.app.eclini.com.br", "prosindweb.com.br", "www.prosindweb.com.br"];
-          if (domains.indexOf(window.location.hostname) > -1 && (path === "/instalar" || path === "/app/instalar")) {
-           var userAgent = window.navigator.userAgent.toLowerCase();
-           console.log('[Redirect] Host and path match. UserAgent:', userAgent);
-           
-           if (userAgent.indexOf("android") > -1) {
-             console.log('[Redirect] Android detected. Redirecting...');
-             window.location.replace("https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app&hl=pt_BR");
-           } else {
-             console.log('[Redirect] Not an Android device.');
-           }
-         }
-       })();
-     </script>
+          var mustRedirect =
+            domains.indexOf(host) > -1 &&
+            (path === "/instalar" || path === "/app/instalar" || path === "/sindicato/instalar");
+
+          if (mustRedirect) {
+            window.location.replace(FILIACAO_REDIRECT_URL);
+          }
+        })();
+      </script>
      <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
