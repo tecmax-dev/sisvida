@@ -23,11 +23,9 @@ export default function InstallPage() {
      const isAndroidUA = userAgent.indexOf("android") > -1;
      setIsAndroid(isAndroidUA);
 
-     // QR Code impresso (app.eclini.com.br) deve direcionar para a página de filiação do SECMI.
-     if (window.location.hostname === "app.eclini.com.br") {
-       window.location.replace("https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28");
-       return;
-     }
+     // /app/instalar deve sempre direcionar para a página de filiação do SECMI.
+     window.location.replace("https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28");
+     return;
 
      setIsDesktop(window.innerWidth >= 1024);
     // Verificar se já está instalado como PWA
