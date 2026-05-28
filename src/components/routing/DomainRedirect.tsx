@@ -79,24 +79,12 @@ export function DomainRedirect() {
       return;
     }
 
-      // Se tentar acessar /instalar ou /app/instalar em outros domínios customizados
+      // Para outros domínios customizados, redireciona para a rota padrão do domínio
       if (normalizedPath === "/instalar" || normalizedPath === "/app/instalar") {
-        const redirectDomains = ["app.eclini.com.br", "prosindweb.com.br"];
-        if (redirectDomains.some(domain => window.location.hostname.includes(domain))) {
-          // Se o script no index.html não pegou (ex: navegação SPA), forçamos aqui
-         const userAgent = window.navigator.userAgent.toLowerCase();
-         if (userAgent.indexOf("android") > -1) {
-           console.info("[DomainRedirect] Android detectado no /instalar do app.eclini.com.br. Redirecionando...");
-           window.location.replace("https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app&hl=pt_BR");
-           return;
-         }
-       } else {
-         // Para outros domínios customizados, redireciona para a rota padrão do domínio
-         console.info(`[DomainRedirect] Redirecionando /instalar para ${customDomain.defaultRoute}`);
-         navigate(customDomain.defaultRoute, { replace: true });
-         return;
-       }
-     }
+        console.info(`[DomainRedirect] Redirecionando /instalar para ${customDomain.defaultRoute}`);
+        navigate(customDomain.defaultRoute, { replace: true });
+        return;
+      }
   }, [customDomain, location.pathname, navigate]);
 
   return null;

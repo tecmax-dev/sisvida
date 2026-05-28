@@ -23,9 +23,9 @@ export default function InstallPage() {
      const isAndroidUA = userAgent.indexOf("android") > -1;
      setIsAndroid(isAndroidUA);
 
-     // Se estiver no domínio app.eclini.com.br e for Android, redirecionar para Play Store
-     if (window.location.hostname === "app.eclini.com.br" && isAndroidUA) {
-       window.location.href = "https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app&hl=pt_BR";
+     // QR Code impresso (app.eclini.com.br) deve direcionar para a página de filiação do SECMI.
+     if (window.location.hostname === "app.eclini.com.br") {
+       window.location.replace("https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28");
        return;
      }
 
