@@ -47,13 +47,41 @@ export default function MobileHomePage() {
   const loadPatientData = async (id: string) => {
     try {
       console.log("[MobileHome] Carregando dados do paciente:", id);
-      
-      // Fetch patient data
-      const { data: patientData, error: patientError } = await supabase
-        .from("patients")
-        .select("id, name, email, phone, photo_url, registration_number, is_active, no_show_blocked_until")
-        .eq("id", id)
-        .single();
+
+      // Aguardar a sessão Supabase estar disponível antes de consultar (RLS exige JWT).
+      // Ao reabrir o app, pode haver uma corrida: patientId já foi restaurado do localStorage,
+      // mas o auto-refresh do token Supabase ainda não terminou.
+      let session = (await supabase.auth.getSession()).data.session;
+      if (!session) {
+        try {
+          await supabase.auth.refreshSession();
+        } catch (e) {
+          console.warn("[MobileHome] refreshSession falhou:", e);
+        }
+        // Pequeno polling para aguardar o cliente sincronizar
+        for (let i = 0; i < 10 && !session; i++) {
+          await new Promise((r) => setTimeout(r, 200));
+          session = (await supabase.auth.getSession()).data.session;
+        }
+      }
+
+      // Fetch patient data com 1 retry em caso de erro transitório
+      let patientData: PatientData | null = null;
+      let patientError: any = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await supabase
+          .from("patients")
+          .select("id, name, email, phone, photo_url, registration_number, is_active, no_show_blocked_until")
+          .eq("id", id)
+          .maybeSingle();
+        patientData = res.data as PatientData | null;
+        patientError = res.error;
+        if (patientData && !patientError) break;
+        if (attempt === 0) {
+          try { await supabase.auth.refreshSession(); } catch {}
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      }
 
       if (patientError || !patientData) {
         console.error("[MobileHome] Erro ao carregar paciente:", patientError);
