@@ -398,6 +398,8 @@ function App() {
                 <Route path="/sindicato/exclusao-de-conta" element={<SindicatoExclusaoConta />} />
                 <Route path="/excluir-conta" element={<SindicatoExclusaoConta />} />
                 <Route path="/sindicato/instalar" element={<InstallPage />} />
+                {/* Novo link dedicado para instalação do PWA do Sindicato */}
+                <Route path="/sindicato/baixar-app" element={<MobileInstallPage />} />
                 <Route path="/sindicato/app/*" element={<Navigate to="/app" replace />} />
                 <Route path="/sindicato/recuperar-senha" element={<MobilePasswordResetPage />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
@@ -689,7 +691,10 @@ function App() {
                   <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
                   <Route path="primeiro-acesso" element={<MobileFirstAccessPage />} />
                   <Route path="home-publico" element={<MobilePublicHomePage />} />
-                  <Route path="instalar" element={<MobileInstallPage />} />
+                  {/* /app/instalar foi convertido em redirect para filiação.
+                      A página real de instalação do PWA agora está em /app/baixar-app */}
+                  <Route path="instalar" element={<InstallPage />} />
+                  <Route path="baixar-app" element={<MobileInstallPage />} />
                   <Route path="faq" element={<MobileFAQPage />} />
                   <Route path="sobre" element={<MobileAboutPage />} />
                   <Route path="filiacao" element={<MobileFiliacaoPage />} />
