@@ -43,11 +43,35 @@ export function DomainRedirect() {
   const location = useLocation();
   const customDomain = useCustomDomain();
 
+  // Link de filiação ao qual o QR Code impresso (app.eclini.com.br/app/instalar)
+  // deve redirecionar. Solicitação do sindicato: SECMI.
+  const FILIACAO_REDIRECT_URL =
+    "https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
+
   useEffect(() => {
     if (!customDomain) return;
 
     const currentPath = location.pathname;
-    
+    const hostname = window.location.hostname;
+    const isEcliniDomain = hostname === "app.eclini.com.br";
+
+    // QR Code impresso aponta para app.eclini.com.br (/, /instalar ou /app/instalar)
+    // → redirecionar diretamente para a página de filiação do SECMI.
+    const normalizedPath = currentPath.replace(/\/$/, "");
+    if (
+      isEcliniDomain &&
+      (normalizedPath === "" ||
+        normalizedPath === "/" ||
+        normalizedPath === "/instalar" ||
+        normalizedPath === "/app/instalar")
+    ) {
+      console.info(
+        `[DomainRedirect] QR app.eclini.com.br → redirecionando para ${FILIACAO_REDIRECT_URL}`
+      );
+      window.location.replace(FILIACAO_REDIRECT_URL);
+      return;
+    }
+
     // Se estiver na raiz ou em rotas que não pertencem ao módulo, redireciona
     if (currentPath === "/" || currentPath === "") {
       console.info(`[DomainRedirect] Redirecionando de ${currentPath} para ${customDomain.defaultRoute}`);
@@ -55,8 +79,7 @@ export function DomainRedirect() {
       return;
     }
 
-      // Se tentar acessar /instalar ou /app/instalar, verificamos se é o caso especial do app.eclini.com.br
-      const normalizedPath = currentPath.replace(/\/$/, "");
+      // Se tentar acessar /instalar ou /app/instalar em outros domínios customizados
       if (normalizedPath === "/instalar" || normalizedPath === "/app/instalar") {
         const redirectDomains = ["app.eclini.com.br", "prosindweb.com.br"];
         if (redirectDomains.some(domain => window.location.hostname.includes(domain))) {
