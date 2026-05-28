@@ -44,15 +44,15 @@ export default defineConfig(({ mode }) => ({
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260517-prosindweb-final-favicon', revision: null },
+          { url: '/cache-bust-v20260528-final-filiacao-no-play-store', revision: null },
           { url: '/favicon.ico', revision: 'prosindweb-final-20260517c' },
           { url: '/favicon.png', revision: 'prosindweb-final-20260517c' },
           { url: '/favicon-prosindweb.png', revision: 'prosindweb-final-20260517c' },
           { url: '/prosindweb-apple-touch-icon.png', revision: 'prosindweb-final-20260517c' },
           { url: '/manifest-prosindweb.webmanifest', revision: 'prosindweb-final-20260517c' },
-          { url: '/manifest.json', revision: 'sindicato-20260517c' },
+          { url: '/manifest.json', revision: 'sindicato-20260528-no-play' },
           { url: '/site.webmanifest', revision: 'prosindweb-final-20260517c' },
-          { url: '/manifest-sindicato.webmanifest', revision: 'sindicato-20260517c' },
+          { url: '/manifest-sindicato.webmanifest', revision: 'sindicato-20260528-no-play' },
         ],
         runtimeCaching: [
           // Disponibilidade/agendamento mobile - nunca usar cache para evitar slots fantasmas
