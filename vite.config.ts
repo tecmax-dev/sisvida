@@ -40,7 +40,9 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [
           /^\/~oauth/,
           /^\/auth\/callback/,
-          /^\/sindicato\/instalar/,
+          /^\/+sindicato\/instalar/,
+          /^\/+app\/instalar/,
+          /^\/+instalar/,
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
