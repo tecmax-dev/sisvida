@@ -57,7 +57,7 @@ export function DomainRedirect() {
 
     // QR Code impresso aponta para app.eclini.com.br (/, /instalar ou /app/instalar)
     // → redirecionar diretamente para a página de filiação do SECMI.
-    const normalizedPath = currentPath.replace(/\/$/, "");
+    const normalizedPath = currentPath.replace(/\/+$/, "").replace(/\/+/g, "/");
     if (
       isEcliniDomain &&
       (normalizedPath === "" ||

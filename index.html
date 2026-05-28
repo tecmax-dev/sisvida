@@ -5,7 +5,7 @@
         // Redirecionamento crítico do QR/links antigos antes do React e antes do Service Worker.
         (function() {
           var FILIACAO_REDIRECT_URL = "https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
-          var path = window.location.pathname.replace(/\/$/, "");
+          var path = window.location.pathname.replace(/\/+$/, "").replace(/\/+/g, "/");
           var host = window.location.hostname;
           var domains = ["app.eclini.com.br", "www.app.eclini.com.br", "prosindweb.com.br", "www.prosindweb.com.br"];
           var mustRedirect =
