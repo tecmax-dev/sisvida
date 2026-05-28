@@ -154,7 +154,7 @@ export default function MobileAboutPage() {
                 Adicione o app à sua tela inicial para acesso rápido
               </p>
               <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
-                <Link to="/app/instalar">
+                <Link to="/app/baixar-app">
                   <Download className="h-4 w-4 mr-2" />
                   Como Instalar
                 </Link>
