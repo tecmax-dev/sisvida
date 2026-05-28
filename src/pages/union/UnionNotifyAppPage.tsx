@@ -36,7 +36,7 @@ import {
   RefreshCw
 } from "lucide-react";
 
-const APP_URL_SINDICATO = "https://prosindweb.com.br/sindicato/instalar";
+const APP_URL_SINDICATO = "https://prosindweb.com.br/sindicato/baixar-app";
 
 function generateAppUpdateMessage(): string {
   return `📲 *NOVIDADES NO APP DO SINDICATO!*

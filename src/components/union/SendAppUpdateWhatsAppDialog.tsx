@@ -21,7 +21,7 @@ interface SendAppUpdateWhatsAppDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const APP_URL_SINDICATO = "https://prosindweb.com.br/sindicato/instalar";
+const APP_URL_SINDICATO = "https://prosindweb.com.br/sindicato/baixar-app";
 
 function generateAppUpdateMessage(): string {
   return `📲 *NOVIDADES NO APP DO SINDICATO!*
