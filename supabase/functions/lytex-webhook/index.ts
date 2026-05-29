@@ -115,12 +115,19 @@ Deno.serve(async (req) => {
     const referenceId = payload.data?.referenceId;
     console.log("[Lytex Webhook] Recebido:", payload.webhookType, invoiceId, referenceId);
 
-    // Validar assinatura se secret estiver configurado
-    if (webhookSecret && payload.signature && payload.data) {
+    // Validar assinatura: quando o secret está configurado, a assinatura é OBRIGATÓRIA
+    if (webhookSecret) {
+      if (!payload.signature || !payload.data) {
+        console.error("[Lytex Webhook] Requisição sem assinatura - rejeitada");
+        return new Response(JSON.stringify({ error: "Signature required" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const isValid = await verifySignature(payload.data, payload.signature, webhookSecret);
       if (!isValid) {
         console.error("[Lytex Webhook] Assinatura inválida");
-        return new Response(JSON.stringify({ error: "Assinatura inválida" }), {
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
