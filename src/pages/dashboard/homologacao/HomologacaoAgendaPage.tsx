@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, addDays, isSameDay, addMonths, subMonths } from "date-fns";
@@ -128,6 +129,8 @@ const toDateKey = (date: Date): string => {
 
 export default function HomologacaoAgendaPage() {
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canManageSlotBlocks = hasPermission("manage_homologacao_slot_blocks");
   const clinicId = currentClinic?.id || SINDICATO_CLINIC_ID;
   const queryClient = useQueryClient();
   
