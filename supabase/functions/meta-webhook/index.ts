@@ -1060,30 +1060,38 @@ serve(async (req) => {
 
       const boletoData = await boletoFlowRes.json();
       if (boletoData.success) {
-        const payload: any = {
-          type: boletoData.buttons?.length > 0 ? "interactive" : "text",
-        };
-
-        if (payload.type === "interactive") {
-          payload.interactive = {
-            type: "button",
-            body: { text: boletoData.response },
-            action: {
-              buttons: boletoData.buttons.map((b: any) => ({
-                type: "reply",
-                reply: { id: b.id, title: b.title }
-              }))
-            }
-          };
+        const incomingButtons: Array<{ id: string; title: string }> = boletoData.buttons || [];
+        const hasMenuAlready = incomingButtons.some((b) => b.id === "menu_principal");
+        if (incomingButtons.length === 0) {
+          await sendResponse(withMenuTextPayload(boletoData.response));
+        } else if (hasMenuAlready) {
+          // Respeita os botões já montados pelo fluxo de boleto (que já inclui Menu Principal).
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: { text: boletoData.response },
+              action: {
+                buttons: incomingButtons.slice(0, 3).map((b) => ({
+                  type: "reply",
+                  reply: { id: b.id, title: (b.title || "").slice(0, 20) },
+                })),
+              },
+            },
+          });
         } else {
-          payload.text = { body: boletoData.response };
+          await sendResponse(withMenuButtonsPayload(boletoData.response, incomingButtons));
         }
-
-        await sendResponse(payload);
         return new Response(JSON.stringify({ ok: true, action: "boleto_step" }));
       }
     }
 
+    // Fallback: opção inválida ou mensagem não compreendida — sempre oferece Menu Principal.
+    await sendResponse(
+      withMenuTextPayload(
+        "Não entendi sua mensagem. 🤔\n\nToque em *Menu Principal* abaixo para ver as opções disponíveis ou envie *Oi* a qualquer momento.",
+      ),
+    );
     return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
