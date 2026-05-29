@@ -105,6 +105,66 @@ const unavailableSupportMessage = (reason: string) =>
   `O atendimento humano funciona de *segunda a sexta-feira, das 09h às 16h*, exceto feriados.\n\n` +
   `Posso ajudar por aqui como assistente virtual. Se preferir, envie seu assunto que deixaremos registrado para retorno assim que o atendimento estiver disponível. 📋`;
 
+// ---------- HELPERS: Menu Principal sempre disponível ----------
+// Garante que toda mensagem ofereça uma forma rápida de voltar ao menu principal,
+// inclusive em mensagens de texto, erros e opções inválidas.
+const MENU_BUTTON = { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } } as const;
+const MENU_LIST_ROW = { id: "menu_principal", title: "Menu Principal", description: "Voltar ao início" } as const;
+
+function withMenuTextPayload(text: string) {
+  return {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: (text || "").slice(0, 1024) },
+      action: { buttons: [MENU_BUTTON] },
+    },
+  };
+}
+
+function withMenuButtonsPayload(text: string, buttons: Array<{ id: string; title: string }>) {
+  // Limite WhatsApp: 3 botões reply no total. Reservamos 1 para "Menu Principal".
+  const usable = buttons.slice(0, 2);
+  const final = [
+    ...usable.map((b) => ({ type: "reply", reply: { id: b.id, title: (b.title || "").slice(0, 20) } })),
+    MENU_BUTTON,
+  ];
+  return {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: (text || "").slice(0, 1024) },
+      action: { buttons: final },
+    },
+  };
+}
+
+function withMenuListPayload(
+  text: string,
+  sectionTitle: string,
+  rows: Array<{ id: string; title: string; description?: string }>,
+) {
+  const truncated = rows.slice(0, 10).map((r) => ({
+    id: r.id,
+    title: (r.title || "").slice(0, 24),
+    ...(r.description ? { description: (r.description || "").slice(0, 72) } : {}),
+  }));
+  return {
+    type: "interactive",
+    interactive: {
+      type: "list",
+      body: { text: (text || "").slice(0, 1024) },
+      action: {
+        button: "Escolher",
+        sections: [
+          { title: (sectionTitle || "Opções").slice(0, 24), rows: truncated },
+          { title: "Navegação", rows: [MENU_LIST_ROW] },
+        ],
+      },
+    },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -415,45 +475,19 @@ serve(async (req) => {
         }
 
         if (options.length === 0) {
-          await sendResponse({ type: "text", text: { body: replyText } });
-        } else if (options.length <= 3) {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "button",
-              body: { text: truncate(stripNumberedList(replyText), 1024) },
-              action: {
-                buttons: options.map((o) => ({
-                  type: "reply",
-                  reply: { id: o.id, title: truncate(o.title, 20) },
-                })),
-              },
-            },
-          });
+          await sendResponse(withMenuTextPayload(replyText));
+        } else if (options.length <= 2) {
+          await sendResponse(
+            withMenuButtonsPayload(stripNumberedList(replyText), options),
+          );
         } else {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "list",
-              body: {
-                text: truncate(
-                  replyState === "CANCEL_SELECT_APPT" ? replyText : stripNumberedList(replyText),
-                  1024,
-                ),
-              },
-              action: {
-                button: "Escolher",
-                sections: [{
-                  title: truncate(listSectionTitle, 24),
-                  rows: options.map((o) => ({
-                    id: o.id,
-                    title: truncate(o.title, 24),
-                    ...(o.description ? { description: truncate(o.description, 72) } : {}),
-                  })),
-                }],
-              },
-            },
-          });
+          await sendResponse(
+            withMenuListPayload(
+              replyState === "CANCEL_SELECT_APPT" ? replyText : stripNumberedList(replyText),
+              listSectionTitle,
+              options,
+            ),
+          );
         }
 
         return new Response(
@@ -590,42 +624,15 @@ serve(async (req) => {
         }
 
         if (options.length === 0) {
-          await sendResponse({ type: "text", text: { body: replyText } });
-        } else if (options.length <= 3) {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "button",
-              body: { text: truncate(stripNumberedList(replyText), 1024) },
-              action: {
-                buttons: options.map((o) => ({
-                  type: "reply",
-                  reply: { id: o.id, title: truncate(o.title, 20) },
-                })),
-              },
-            },
-          });
+          await sendResponse(withMenuTextPayload(replyText));
+        } else if (options.length <= 2) {
+          await sendResponse(
+            withMenuButtonsPayload(stripNumberedList(replyText), options),
+          );
         } else {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "list",
-              body: { text: truncate(stripNumberedList(replyText), 1024) },
-              action: {
-                button: "Escolher",
-                sections: [
-                  {
-                    title: truncate(listSectionTitle, 24),
-                    rows: options.map((o) => ({
-                      id: o.id,
-                      title: truncate(o.title, 24),
-                      ...(o.description ? { description: truncate(o.description, 72) } : {}),
-                    })),
-                  },
-                ],
-              },
-            },
-          });
+          await sendResponse(
+            withMenuListPayload(stripNumberedList(replyText), listSectionTitle, options),
+          );
         }
 
         return new Response(
@@ -699,18 +706,17 @@ serve(async (req) => {
             ? "Obrigado! Sua consulta foi *confirmada* com sucesso. ✅"
             : "Entendido. Sua consulta foi *cancelada*. Se precisar reagendar, entre em contato. ❌";
           
-          await sendResponse({
-            type: "text",
-            text: { body: msg }
-          });
+          await sendResponse(withMenuTextPayload(msg));
           
           return new Response(JSON.stringify({ ok: true, action: `appointment_${newStatus}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         } else {
           console.log('[APT_NOT_FOUND] for variants:', variants);
-          await sendResponse({
-            type: "text",
-            text: { body: "Não encontramos um agendamento pendente para este número. Por favor, fale com um atendente." }
-          });
+          await sendResponse(
+            withMenuButtonsPayload(
+              "Não encontramos um agendamento pendente para este número. Se preferir, fale com um atendente.",
+              [{ id: "falar_atendente", title: "Falar c/ Atendente" }],
+            ),
+          );
         }
       } catch (err) {
         console.error('[APT_ACTION_ERROR]', err);
@@ -745,10 +751,11 @@ serve(async (req) => {
     }
 
     if (extractedButtonId === "encerrar_atendimento" || (isNo && !extractedButtonId)) {
-      await sendResponse({
-        type: "text",
-        text: { body: "Perfeito! Atendimento encerrado. Se precisar de algo no futuro, é só mandar um 'Oi'. Tenha um ótimo dia! 👋" }
-      });
+      await sendResponse(
+        withMenuTextPayload(
+          "Perfeito! Atendimento encerrado. Se precisar de algo no futuro, é só mandar um 'Oi' ou toque em *Menu Principal* abaixo. Tenha um ótimo dia! 👋",
+        ),
+      );
       return new Response(JSON.stringify({ ok: true, action: "terminate" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1007,17 +1014,15 @@ serve(async (req) => {
 
       if (!supportStatus.available) {
         console.log(`[HUMAN_SUPPORT_BLOCKED] ${supportStatus.dayName}, ${supportStatus.date} ${supportStatus.time} - ${supportStatus.reason}`);
-        await sendResponse({
-          type: "text",
-          text: { body: unavailableSupportMessage(supportStatus.reason) }
-        });
+        await sendResponse(withMenuTextPayload(unavailableSupportMessage(supportStatus.reason)));
         return new Response(JSON.stringify({ ok: true, action: "human_support_unavailable", reason: supportStatus.reason }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      await sendResponse({
-        type: "text",
-        text: { body: "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳" }
-      });
+      await sendResponse(
+        withMenuTextPayload(
+          "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳\n\nSe preferir voltar ao menu, toque em *Menu Principal*.",
+        ),
+      );
       // Here you would typically trigger a handoff to human (Whazing/ZapResponder)
       return new Response(JSON.stringify({ ok: true, action: "handoff" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -1055,30 +1060,38 @@ serve(async (req) => {
 
       const boletoData = await boletoFlowRes.json();
       if (boletoData.success) {
-        const payload: any = {
-          type: boletoData.buttons?.length > 0 ? "interactive" : "text",
-        };
-
-        if (payload.type === "interactive") {
-          payload.interactive = {
-            type: "button",
-            body: { text: boletoData.response },
-            action: {
-              buttons: boletoData.buttons.map((b: any) => ({
-                type: "reply",
-                reply: { id: b.id, title: b.title }
-              }))
-            }
-          };
+        const incomingButtons: Array<{ id: string; title: string }> = boletoData.buttons || [];
+        const hasMenuAlready = incomingButtons.some((b) => b.id === "menu_principal");
+        if (incomingButtons.length === 0) {
+          await sendResponse(withMenuTextPayload(boletoData.response));
+        } else if (hasMenuAlready) {
+          // Respeita os botões já montados pelo fluxo de boleto (que já inclui Menu Principal).
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: { text: boletoData.response },
+              action: {
+                buttons: incomingButtons.slice(0, 3).map((b) => ({
+                  type: "reply",
+                  reply: { id: b.id, title: (b.title || "").slice(0, 20) },
+                })),
+              },
+            },
+          });
         } else {
-          payload.text = { body: boletoData.response };
+          await sendResponse(withMenuButtonsPayload(boletoData.response, incomingButtons));
         }
-
-        await sendResponse(payload);
         return new Response(JSON.stringify({ ok: true, action: "boleto_step" }));
       }
     }
 
+    // Fallback: opção inválida ou mensagem não compreendida — sempre oferece Menu Principal.
+    await sendResponse(
+      withMenuTextPayload(
+        "Não entendi sua mensagem. 🤔\n\nToque em *Menu Principal* abaixo para ver as opções disponíveis ou envie *Oi* a qualquer momento.",
+      ),
+    );
     return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
