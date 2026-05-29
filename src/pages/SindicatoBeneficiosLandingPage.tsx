@@ -39,6 +39,7 @@ import perfilAlcides from "@/assets/sindicato/perfil-dalcides.jpg";
 const LOGO_URL = "/apple-touch-icon-sindicato.png";
 
 const OG_IMAGE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-hero-dashboard.png";
+const PERFIL_ELINEY_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/union-app-content/convenios/eliney-silva-v2.jpg?v=20260529-landing";
 
 const FILIACAO_URL = `/sindical/filiacao/${SINDICATO_UNION_ENTITY_ID}`;
 const WHATSAPP_URL = "https://wa.me/557332311784?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
@@ -65,6 +66,7 @@ const benefits: Benefit[] = [
   { name: "Clínica OftalmoSul", description: "Desconto em consultas e exames oftalmológicos", icon: Eye, category: "saude" },
   { name: "Clínica Medico Center", description: "Desconto em consultas e exames", icon: Stethoscope, category: "saude" },
   { name: "Clínica Pensar", description: "Desconto em consultas — Saúde mental", icon: Brain, category: "saude" },
+  { name: "Dr. Eliney Silva", description: "Médico Psicólogo — Atende pelo convênio do sindicato", icon: Brain, category: "saude", photo: PERFIL_ELINEY_URL },
   { name: "Faculdade de Ilhéus", description: "Desconto para titular e dependentes", icon: GraduationCap, category: "estudos" },
   { name: "Uniasselvi", description: "Desconto para titular e dependentes", icon: GraduationCap, category: "estudos" },
   { name: "CCAA", description: "Desconto na mensalidade de idiomas", icon: GraduationCap, category: "estudos" },
