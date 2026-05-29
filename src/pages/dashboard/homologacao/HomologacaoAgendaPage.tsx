@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, addDays, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,9 @@ import {
   Send,
   Loader2,
   Bell,
+  Lock,
+  Unlock,
+  Ban,
 } from "lucide-react";
 import { NovoAgendamentoDialog } from "@/components/homologacao/NovoAgendamentoDialog";
 import { HomologacaoEditDialog } from "@/components/homologacao/HomologacaoEditDialog";
@@ -67,6 +71,38 @@ import {
   filterProfessionalsByDayOfWeek,
   getProfessionalScheduleForDay,
 } from "@/hooks/useHomologacaoProfessionalsWithSchedules";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+
+interface SlotBlock {
+  id: string;
+  block_date: string;
+  professional_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  reason: string | null;
+}
+
+// Generate time slots from a schedule (HH:mm strings)
+const generateSlotsFromSchedule = (
+  startTime: string,
+  endTime: string,
+  intervalMin = 30,
+): string[] => {
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
+  const slots: string[] = [];
+  let h = sh;
+  let m = sm;
+  while (h < eh || (h === eh && m < em)) {
+    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    m += intervalMin;
+    if (m >= 60) {
+      h += Math.floor(m / 60);
+      m = m % 60;
+    }
+  }
+  return slots;
+};
 
 type ViewMode = "day" | "week" | "month";
 
