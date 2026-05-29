@@ -5382,7 +5382,7 @@ const updateData: Record<string, any> = {
                                           <Ban className="h-3.5 w-3.5" />
                                           {slot.block.reason || 'Horário bloqueado'}
                                         </div>
-                                        {hasPermission('manage_calendar') && (
+                                        {hasPermission('manage_calendar_slot_blocks') && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
