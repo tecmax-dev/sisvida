@@ -438,9 +438,17 @@ export default function HomologacaoPublicBooking() {
         apt.start_time?.slice(0, 5) === timeStr
       ).length || 0;
 
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const isSlotBlocked = blocks?.some((b: any) =>
+        b.block_date === dateStr &&
+        (b.professional_id === null || b.professional_id === professional?.id) &&
+        b.start_time &&
+        (b.start_time as string).slice(0, 5) === timeStr
+      );
+
       slots.push({
         time: timeStr,
-        available: bookedCount < daySchedule.capacity,
+        available: !isSlotBlocked && bookedCount < daySchedule.capacity,
         capacity: daySchedule.capacity,
         booked: bookedCount,
       });
