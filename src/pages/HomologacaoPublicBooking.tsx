@@ -337,7 +337,7 @@ export default function HomologacaoPublicBooking() {
       if (!professional?.clinic_id) return [];
       const { data, error } = await supabase
         .from("homologacao_blocks")
-        .select("block_date, professional_id")
+        .select("block_date, professional_id, start_time, end_time")
         .eq("clinic_id", professional.clinic_id);
       
       if (error) throw error;
