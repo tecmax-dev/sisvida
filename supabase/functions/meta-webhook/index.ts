@@ -706,18 +706,17 @@ serve(async (req) => {
             ? "Obrigado! Sua consulta foi *confirmada* com sucesso. ✅"
             : "Entendido. Sua consulta foi *cancelada*. Se precisar reagendar, entre em contato. ❌";
           
-          await sendResponse({
-            type: "text",
-            text: { body: msg }
-          });
+          await sendResponse(withMenuTextPayload(msg));
           
           return new Response(JSON.stringify({ ok: true, action: `appointment_${newStatus}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         } else {
           console.log('[APT_NOT_FOUND] for variants:', variants);
-          await sendResponse({
-            type: "text",
-            text: { body: "Não encontramos um agendamento pendente para este número. Por favor, fale com um atendente." }
-          });
+          await sendResponse(
+            withMenuButtonsPayload(
+              "Não encontramos um agendamento pendente para este número. Se preferir, fale com um atendente.",
+              [{ id: "falar_atendente", title: "Falar c/ Atendente" }],
+            ),
+          );
         }
       } catch (err) {
         console.error('[APT_ACTION_ERROR]', err);
@@ -752,10 +751,11 @@ serve(async (req) => {
     }
 
     if (extractedButtonId === "encerrar_atendimento" || (isNo && !extractedButtonId)) {
-      await sendResponse({
-        type: "text",
-        text: { body: "Perfeito! Atendimento encerrado. Se precisar de algo no futuro, é só mandar um 'Oi'. Tenha um ótimo dia! 👋" }
-      });
+      await sendResponse(
+        withMenuTextPayload(
+          "Perfeito! Atendimento encerrado. Se precisar de algo no futuro, é só mandar um 'Oi' ou toque em *Menu Principal* abaixo. Tenha um ótimo dia! 👋",
+        ),
+      );
       return new Response(JSON.stringify({ ok: true, action: "terminate" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1014,17 +1014,15 @@ serve(async (req) => {
 
       if (!supportStatus.available) {
         console.log(`[HUMAN_SUPPORT_BLOCKED] ${supportStatus.dayName}, ${supportStatus.date} ${supportStatus.time} - ${supportStatus.reason}`);
-        await sendResponse({
-          type: "text",
-          text: { body: unavailableSupportMessage(supportStatus.reason) }
-        });
+        await sendResponse(withMenuTextPayload(unavailableSupportMessage(supportStatus.reason)));
         return new Response(JSON.stringify({ ok: true, action: "human_support_unavailable", reason: supportStatus.reason }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      await sendResponse({
-        type: "text",
-        text: { body: "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳" }
-      });
+      await sendResponse(
+        withMenuTextPayload(
+          "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳\n\nSe preferir voltar ao menu, toque em *Menu Principal*.",
+        ),
+      );
       // Here you would typically trigger a handoff to human (Whazing/ZapResponder)
       return new Response(JSON.stringify({ ok: true, action: "handoff" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
