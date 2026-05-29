@@ -1015,16 +1015,18 @@ export default function HomologacaoAgendaPage() {
                               {block.reason || "Horário bloqueado"}
                             </span>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            disabled={unblockSlotMutation.isPending}
-                            onClick={() => unblockSlotMutation.mutate(block.id)}
-                          >
-                            <Unlock className="h-3 w-3 mr-1" />
-                            Desbloquear
-                          </Button>
+                          {canManageSlotBlocks && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              disabled={unblockSlotMutation.isPending}
+                              onClick={() => unblockSlotMutation.mutate(block.id)}
+                            >
+                              <Unlock className="h-3 w-3 mr-1" />
+                              Desbloquear
+                            </Button>
+                          )}
                         </div>
                       );
                     }
@@ -1059,23 +1061,25 @@ export default function HomologacaoAgendaPage() {
                         </div>
                         {!fullDayBlocked && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                              disabled={blockSlotMutation.isPending}
-                              onClick={() =>
-                                blockSlotMutation.mutate({
-                                  professionalId: group.professional.id,
-                                  time,
-                                  endTime,
-                                })
-                              }
-                              title="Bloquear este horário"
-                            >
-                              <Lock className="h-3 w-3 mr-1" />
-                              Bloquear
-                            </Button>
+                            {canManageSlotBlocks && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={blockSlotMutation.isPending}
+                                onClick={() =>
+                                  blockSlotMutation.mutate({
+                                    professionalId: group.professional.id,
+                                    time,
+                                    endTime,
+                                  })
+                                }
+                                title="Bloquear este horário"
+                              >
+                                <Lock className="h-3 w-3 mr-1" />
+                                Bloquear
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
