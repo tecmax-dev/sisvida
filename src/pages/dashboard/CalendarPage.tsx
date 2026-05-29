@@ -5389,7 +5389,7 @@ const updateData: Record<string, any> = {
                                             className="h-7 px-2 text-xs"
                                             onClick={() => handleUnblockSlot(slot.block!.id)}
                                           >
-                                            <Unlock className="h-3 w-3 mr-1" />
+                                            <UnlockIcon className="h-3 w-3 mr-1" />
                                             Desbloquear
                                           </Button>
                                         )}
@@ -5439,7 +5439,7 @@ const updateData: Record<string, any> = {
                                             onClick={() => handleBlockSlot(profId, slotTime, slot.duration)}
                                             title="Bloquear este horário"
                                           >
-                                            <Lock className="h-3 w-3 mr-1" />
+                                            <LockIcon className="h-3 w-3 mr-1" />
                                             Bloquear
                                           </Button>
                                           <Button
