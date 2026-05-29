@@ -54,7 +54,7 @@ import {
   CalendarCheck,
   MessageCircle,
   Lock as LockIcon,
-  Unlock as UnlockIcon,
+  LockOpen as UnlockIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
