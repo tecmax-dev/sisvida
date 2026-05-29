@@ -962,17 +962,132 @@ export default function HomologacaoAgendaPage() {
               
               {/* Appointments List */}
               <div className="divide-y divide-border/30">
-                {group.appointments.length > 0 ? (
-                  group.appointments
-                    .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""))
-                    .map((apt) => (
-                      <AppointmentCard key={apt.id} apt={apt} />
-                    ))
-                ) : (
-                  <div className="p-6 text-center text-muted-foreground">
-                    <p className="text-sm">Nenhum agendamento</p>
-                  </div>
-                )}
+                {(() => {
+                  const dayOfWeek = selectedDate.getDay();
+                  const sched = getProfessionalScheduleForDay(group.professional as any, dayOfWeek);
+                  if (!sched) {
+                    // No schedule: show only appointments
+                    return group.appointments.length > 0 ? (
+                      group.appointments
+                        .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""))
+                        .map((apt) => <AppointmentCard key={apt.id} apt={apt} />)
+                    ) : (
+                      <div className="p-6 text-center text-muted-foreground">
+                        <p className="text-sm">Sem expediente neste dia</p>
+                      </div>
+                    );
+                  }
+                  const interval = 30;
+                  const slots = generateSlotsFromSchedule(sched.start_time, sched.end_time, interval);
+                  const profBlocks = dayBlocks.filter(
+                    (b) =>
+                      (b.professional_id === null || b.professional_id === group.professional.id) &&
+                      b.start_time !== null,
+                  );
+                  const fullDayBlocked = dayBlocks.some(
+                    (b) =>
+                      (b.professional_id === null || b.professional_id === group.professional.id) &&
+                      b.start_time === null,
+                  );
+                  return slots.map((time) => {
+                    const slotApts = group.appointments.filter(
+                      (a) => (a.start_time || "").slice(0, 5) === time,
+                    );
+                    const block = profBlocks.find((b) => (b.start_time || "").slice(0, 5) === time);
+                    if (slotApts.length > 0) {
+                      return slotApts.map((apt) => <AppointmentCard key={apt.id} apt={apt} />);
+                    }
+                    if (block) {
+                      return (
+                        <div
+                          key={`blk-${time}`}
+                          className="flex items-center gap-3 px-3 py-2 bg-destructive/5 border-l-2 border-destructive/40"
+                        >
+                          <div className="w-14 text-center py-1 rounded text-xs font-medium bg-destructive/10 text-destructive">
+                            {time}
+                          </div>
+                          <div className="flex-1 text-sm text-destructive/80 flex items-center gap-2">
+                            <Ban className="h-3.5 w-3.5" />
+                            <span className="italic">
+                              {block.reason || "Horário bloqueado"}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={unblockSlotMutation.isPending}
+                            onClick={() => unblockSlotMutation.mutate(block.id)}
+                          >
+                            <Unlock className="h-3 w-3 mr-1" />
+                            Desbloquear
+                          </Button>
+                        </div>
+                      );
+                    }
+                    // Free slot
+                    const [h, m] = time.split(":").map(Number);
+                    const endMin = m + interval;
+                    const endH = h + Math.floor(endMin / 60);
+                    const endM = endMin % 60;
+                    const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+                    return (
+                      <div
+                        key={`free-${time}`}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 border-l-2",
+                          fullDayBlocked
+                            ? "bg-muted/30 border-muted opacity-60"
+                            : "bg-success/5 border-success/40",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-14 text-center py-1 rounded text-xs font-medium",
+                            fullDayBlocked
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-success/10 text-success",
+                          )}
+                        >
+                          {time}
+                        </div>
+                        <div className="flex-1 text-sm text-muted-foreground italic">
+                          {fullDayBlocked ? "Dia bloqueado" : "Horário disponível"}
+                        </div>
+                        {!fullDayBlocked && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={blockSlotMutation.isPending}
+                              onClick={() =>
+                                blockSlotMutation.mutate({
+                                  professionalId: group.professional.id,
+                                  time,
+                                  endTime,
+                                })
+                              }
+                              title="Bloquear este horário"
+                            >
+                              <Lock className="h-3 w-3 mr-1" />
+                              Bloquear
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
+                              onClick={() => setIsNovoDialogOpen(true)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Agendar
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           );
