@@ -146,8 +146,9 @@ const defaultTimeSlots = [
 const calculateProfessionalSlots = (
   professional: { id: string; schedule?: any; appointment_duration?: number | null },
   appointments: { id?: string; start_time: string; end_time: string; status: string }[],
-  selectedDate: Date
-): { time: string; type: 'free' | 'booked'; duration: number; appointment?: any }[] => {
+  selectedDate: Date,
+  slotBlocks: { id: string; professional_id: string; start_time: string; end_time: string; reason: string | null }[] = []
+): { time: string; type: 'free' | 'booked' | 'blocked'; duration: number; appointment?: any; block?: { id: string; reason: string | null } }[] => {
   if (!professional.schedule) return [];
 
   const dayOfWeek = selectedDate.getDay();
@@ -219,7 +220,9 @@ const calculateProfessionalSlots = (
 
   const uniqueSlots = Array.from(new Set(allTimeSlots)).sort();
 
-  const result: { time: string; type: 'free' | 'booked'; duration: number; appointment?: any }[] = [];
+  const result: { time: string; type: 'free' | 'booked' | 'blocked'; duration: number; appointment?: any; block?: { id: string; reason: string | null } }[] = [];
+
+  const profBlocks = slotBlocks.filter(b => b.professional_id === professional.id);
 
   for (const timeStr of uniqueSlots) {
     const [h, m] = timeStr.split(':').map(Number);
@@ -244,7 +247,17 @@ const calculateProfessionalSlots = (
         appointment: timeStr === aptStart ? appointment : undefined,
       });
     } else {
-      result.push({ time: timeStr, type: 'free', duration: defaultDuration });
+      const block = profBlocks.find(b => b.start_time.substring(0, 5) === timeStr);
+      if (block) {
+        result.push({
+          time: timeStr,
+          type: 'blocked',
+          duration: defaultDuration,
+          block: { id: block.id, reason: block.reason },
+        });
+      } else {
+        result.push({ time: timeStr, type: 'free', duration: defaultDuration });
+      }
     }
   }
 
