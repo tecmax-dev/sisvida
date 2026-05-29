@@ -15,6 +15,8 @@ export type Permission =
   | "scheduling"
   | "view_calendar"
   | "manage_calendar"
+  | "manage_calendar_slot_blocks"
+  | "manage_homologacao_slot_blocks"
   | "manage_waiting_list"
   | "view_waiting_list"
   | "view_schedules"

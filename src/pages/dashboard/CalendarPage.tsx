@@ -5382,7 +5382,7 @@ const updateData: Record<string, any> = {
                                           <Ban className="h-3.5 w-3.5" />
                                           {slot.block.reason || 'Horário bloqueado'}
                                         </div>
-                                        {hasPermission('manage_calendar') && (
+                                        {hasPermission('manage_calendar_slot_blocks') && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -5430,19 +5430,20 @@ const updateData: Record<string, any> = {
                                       <div className="flex-1 text-sm text-muted-foreground italic">
                                         Horário disponível
                                       </div>
+                                      {profId && slotTime && hasPermission('manage_calendar_slot_blocks') && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                          onClick={() => handleBlockSlot(profId, slotTime, slot.duration)}
+                                          title="Bloquear este horário"
+                                        >
+                                          <LockIcon className="h-3 w-3 mr-1" />
+                                          Bloquear
+                                        </Button>
+                                      )}
                                       {hasPermission('manage_calendar') && profId && slotTime && (
-                                        <>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => handleBlockSlot(profId, slotTime, slot.duration)}
-                                            title="Bloquear este horário"
-                                          >
-                                            <LockIcon className="h-3 w-3 mr-1" />
-                                            Bloquear
-                                          </Button>
-                                          <Button
+                                        <Button
                                             variant="ghost"
                                             size="sm"
                                             className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
@@ -5455,7 +5456,6 @@ const updateData: Record<string, any> = {
                                             <Plus className="h-3 w-3 mr-1" />
                                             Agendar
                                           </Button>
-                                        </>
                                       )}
                                     </div>
                                   );
