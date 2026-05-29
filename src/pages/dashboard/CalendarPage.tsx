@@ -5324,7 +5324,7 @@ const updateData: Record<string, any> = {
                             {(() => {
                               const fullProfessional = professionals.find(p => p.id === group.professional.id);
                               const timeline = fullProfessional
-                                ? calculateProfessionalSlots(fullProfessional, group.appointments, selectedDate)
+                                ? calculateProfessionalSlots(fullProfessional, group.appointments, selectedDate, slotBlocks.filter(b => b.block_date === toDateKey(selectedDate)))
                                 : [];
 
                               if (timeline.length === 0) {
