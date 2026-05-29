@@ -475,45 +475,19 @@ serve(async (req) => {
         }
 
         if (options.length === 0) {
-          await sendResponse({ type: "text", text: { body: replyText } });
-        } else if (options.length <= 3) {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "button",
-              body: { text: truncate(stripNumberedList(replyText), 1024) },
-              action: {
-                buttons: options.map((o) => ({
-                  type: "reply",
-                  reply: { id: o.id, title: truncate(o.title, 20) },
-                })),
-              },
-            },
-          });
+          await sendResponse(withMenuTextPayload(replyText));
+        } else if (options.length <= 2) {
+          await sendResponse(
+            withMenuButtonsPayload(stripNumberedList(replyText), options),
+          );
         } else {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "list",
-              body: {
-                text: truncate(
-                  replyState === "CANCEL_SELECT_APPT" ? replyText : stripNumberedList(replyText),
-                  1024,
-                ),
-              },
-              action: {
-                button: "Escolher",
-                sections: [{
-                  title: truncate(listSectionTitle, 24),
-                  rows: options.map((o) => ({
-                    id: o.id,
-                    title: truncate(o.title, 24),
-                    ...(o.description ? { description: truncate(o.description, 72) } : {}),
-                  })),
-                }],
-              },
-            },
-          });
+          await sendResponse(
+            withMenuListPayload(
+              replyState === "CANCEL_SELECT_APPT" ? replyText : stripNumberedList(replyText),
+              listSectionTitle,
+              options,
+            ),
+          );
         }
 
         return new Response(
@@ -650,42 +624,15 @@ serve(async (req) => {
         }
 
         if (options.length === 0) {
-          await sendResponse({ type: "text", text: { body: replyText } });
-        } else if (options.length <= 3) {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "button",
-              body: { text: truncate(stripNumberedList(replyText), 1024) },
-              action: {
-                buttons: options.map((o) => ({
-                  type: "reply",
-                  reply: { id: o.id, title: truncate(o.title, 20) },
-                })),
-              },
-            },
-          });
+          await sendResponse(withMenuTextPayload(replyText));
+        } else if (options.length <= 2) {
+          await sendResponse(
+            withMenuButtonsPayload(stripNumberedList(replyText), options),
+          );
         } else {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "list",
-              body: { text: truncate(stripNumberedList(replyText), 1024) },
-              action: {
-                button: "Escolher",
-                sections: [
-                  {
-                    title: truncate(listSectionTitle, 24),
-                    rows: options.map((o) => ({
-                      id: o.id,
-                      title: truncate(o.title, 24),
-                      ...(o.description ? { description: truncate(o.description, 72) } : {}),
-                    })),
-                  },
-                ],
-              },
-            },
-          });
+          await sendResponse(
+            withMenuListPayload(stripNumberedList(replyText), listSectionTitle, options),
+          );
         }
 
         return new Response(
