@@ -5366,6 +5366,35 @@ const updateData: Record<string, any> = {
                                     );
                                   }
 
+                                  // Slot bloqueado manualmente
+                                  if (slot.type === 'blocked' && slot.block) {
+                                    return (
+                                      <div
+                                        key={`blocked-${slot.time || index}-${index}`}
+                                        className="flex items-center gap-3 px-3 py-2 bg-destructive/5 border-l-2 border-destructive/40"
+                                      >
+                                        <div className="w-14 text-center py-1 rounded text-xs font-medium bg-destructive/10 text-destructive">
+                                          {slot.time || '--:--'}
+                                        </div>
+                                        <div className="flex-1 text-sm text-destructive/80 italic flex items-center gap-2">
+                                          <Ban className="h-3.5 w-3.5" />
+                                          {slot.block.reason || 'Horário bloqueado'}
+                                        </div>
+                                        {hasPermission('manage_calendar') && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs"
+                                            onClick={() => handleUnblockSlot(slot.block!.id)}
+                                          >
+                                            <Unlock className="h-3 w-3 mr-1" />
+                                            Desbloquear
+                                          </Button>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+
                                   // Slot livre
                                   const slotTime = slot.time || '';
                                   const profId = group?.professional?.id || '';
@@ -5400,19 +5429,31 @@ const updateData: Record<string, any> = {
                                         Horário disponível
                                       </div>
                                       {hasPermission('manage_calendar') && profId && slotTime && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
-                                          onClick={() => {
-                                            setFormProfessional(profId);
-                                            setFormTime(slotTime);
-                                            setDialogOpen(true);
-                                          }}
-                                        >
-                                          <Plus className="h-3 w-3 mr-1" />
-                                          Agendar
-                                        </Button>
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleBlockSlot(profId, slotTime, slot.duration)}
+                                            title="Bloquear este horário"
+                                          >
+                                            <Lock className="h-3 w-3 mr-1" />
+                                            Bloquear
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
+                                            onClick={() => {
+                                              setFormProfessional(profId);
+                                              setFormTime(slotTime);
+                                              setDialogOpen(true);
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Agendar
+                                          </Button>
+                                        </>
                                       )}
                                     </div>
                                   );
