@@ -3998,9 +3998,11 @@ export type Database = {
           clinic_id: string
           created_at: string | null
           created_by: string | null
+          end_time: string | null
           id: string
           professional_id: string | null
           reason: string | null
+          start_time: string | null
         }
         Insert: {
           block_date: string
@@ -4008,9 +4010,11 @@ export type Database = {
           clinic_id: string
           created_at?: string | null
           created_by?: string | null
+          end_time?: string | null
           id?: string
           professional_id?: string | null
           reason?: string | null
+          start_time?: string | null
         }
         Update: {
           block_date?: string
@@ -4018,9 +4022,11 @@ export type Database = {
           clinic_id?: string
           created_at?: string | null
           created_by?: string | null
+          end_time?: string | null
           id?: string
           professional_id?: string | null
           reason?: string | null
+          start_time?: string | null
         }
         Relationships: [
           {
