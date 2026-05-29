@@ -549,6 +549,7 @@ export default function CalendarPage() {
   }, [selectedDate, currentDate, toast]);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [slotBlocks, setSlotBlocks] = useState<{ id: string; professional_id: string; block_date: string; start_time: string; end_time: string; reason: string | null }[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map()); // date -> holiday name
