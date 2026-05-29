@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, addDays, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,9 @@ import {
   Send,
   Loader2,
   Bell,
+  Lock,
+  Unlock,
+  Ban,
 } from "lucide-react";
 import { NovoAgendamentoDialog } from "@/components/homologacao/NovoAgendamentoDialog";
 import { HomologacaoEditDialog } from "@/components/homologacao/HomologacaoEditDialog";
@@ -67,6 +71,38 @@ import {
   filterProfessionalsByDayOfWeek,
   getProfessionalScheduleForDay,
 } from "@/hooks/useHomologacaoProfessionalsWithSchedules";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+
+interface SlotBlock {
+  id: string;
+  block_date: string;
+  professional_id: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  reason: string | null;
+}
+
+// Generate time slots from a schedule (HH:mm strings)
+const generateSlotsFromSchedule = (
+  startTime: string,
+  endTime: string,
+  intervalMin = 30,
+): string[] => {
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
+  const slots: string[] = [];
+  let h = sh;
+  let m = sm;
+  while (h < eh || (h === eh && m < em)) {
+    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    m += intervalMin;
+    if (m >= 60) {
+      h += Math.floor(m / 60);
+      m = m % 60;
+    }
+  }
+  return slots;
+};
 
 type ViewMode = "day" | "week" | "month";
 
@@ -92,6 +128,7 @@ const toDateKey = (date: Date): string => {
 
 export default function HomologacaoAgendaPage() {
   const { currentClinic } = useAuth();
+  const clinicId = currentClinic?.id || SINDICATO_CLINIC_ID;
   const queryClient = useQueryClient();
   
   // State
@@ -141,6 +178,56 @@ export default function HomologacaoAgendaPage() {
   const { data: allProfessionals = [] } = useHomologacaoProfessionalsWithSchedules({
     clinicId: currentClinic?.id,
     enabled: !!currentClinic?.id,
+  });
+
+  // Fetch slot blocks for the selected day
+  const selectedDateStr = useMemo(() => toDateKey(selectedDate), [selectedDate]);
+  const { data: dayBlocks = [], refetch: refetchBlocks } = useQuery({
+    queryKey: ["homologacao-blocks-day", clinicId, selectedDateStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("homologacao_blocks")
+        .select("id, block_date, professional_id, start_time, end_time, reason")
+        .eq("clinic_id", clinicId)
+        .eq("block_date", selectedDateStr);
+      if (error) throw error;
+      return (data || []) as SlotBlock[];
+    },
+    enabled: !!clinicId,
+  });
+
+  const blockSlotMutation = useMutation({
+    mutationFn: async (p: { professionalId: string; time: string; endTime: string }) => {
+      const { error } = await supabase.from("homologacao_blocks").insert({
+        clinic_id: clinicId,
+        professional_id: p.professionalId,
+        block_date: selectedDateStr,
+        block_type: "block",
+        start_time: p.time,
+        end_time: p.endTime,
+        reason: "Bloqueio manual de horário",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Horário bloqueado");
+      refetchBlocks();
+      queryClient.invalidateQueries({ queryKey: ["homologacao-blocks"] });
+    },
+    onError: (err: any) => toast.error("Erro ao bloquear: " + (err?.message || "")),
+  });
+
+  const unblockSlotMutation = useMutation({
+    mutationFn: async (blockId: string) => {
+      const { error } = await supabase.from("homologacao_blocks").delete().eq("id", blockId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Bloqueio removido");
+      refetchBlocks();
+      queryClient.invalidateQueries({ queryKey: ["homologacao-blocks"] });
+    },
+    onError: (err: any) => toast.error("Erro ao desbloquear: " + (err?.message || "")),
   });
 
   // Filter professionals for the selected day (used in DayView)
@@ -875,17 +962,132 @@ export default function HomologacaoAgendaPage() {
               
               {/* Appointments List */}
               <div className="divide-y divide-border/30">
-                {group.appointments.length > 0 ? (
-                  group.appointments
-                    .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""))
-                    .map((apt) => (
-                      <AppointmentCard key={apt.id} apt={apt} />
-                    ))
-                ) : (
-                  <div className="p-6 text-center text-muted-foreground">
-                    <p className="text-sm">Nenhum agendamento</p>
-                  </div>
-                )}
+                {(() => {
+                  const dayOfWeek = selectedDate.getDay();
+                  const sched = getProfessionalScheduleForDay(group.professional as any, dayOfWeek);
+                  if (!sched) {
+                    // No schedule: show only appointments
+                    return group.appointments.length > 0 ? (
+                      group.appointments
+                        .sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""))
+                        .map((apt) => <AppointmentCard key={apt.id} apt={apt} />)
+                    ) : (
+                      <div className="p-6 text-center text-muted-foreground">
+                        <p className="text-sm">Sem expediente neste dia</p>
+                      </div>
+                    );
+                  }
+                  const interval = 30;
+                  const slots = generateSlotsFromSchedule(sched.start_time, sched.end_time, interval);
+                  const profBlocks = dayBlocks.filter(
+                    (b) =>
+                      (b.professional_id === null || b.professional_id === group.professional.id) &&
+                      b.start_time !== null,
+                  );
+                  const fullDayBlocked = dayBlocks.some(
+                    (b) =>
+                      (b.professional_id === null || b.professional_id === group.professional.id) &&
+                      b.start_time === null,
+                  );
+                  return slots.map((time) => {
+                    const slotApts = group.appointments.filter(
+                      (a) => (a.start_time || "").slice(0, 5) === time,
+                    );
+                    const block = profBlocks.find((b) => (b.start_time || "").slice(0, 5) === time);
+                    if (slotApts.length > 0) {
+                      return slotApts.map((apt) => <AppointmentCard key={apt.id} apt={apt} />);
+                    }
+                    if (block) {
+                      return (
+                        <div
+                          key={`blk-${time}`}
+                          className="flex items-center gap-3 px-3 py-2 bg-destructive/5 border-l-2 border-destructive/40"
+                        >
+                          <div className="w-14 text-center py-1 rounded text-xs font-medium bg-destructive/10 text-destructive">
+                            {time}
+                          </div>
+                          <div className="flex-1 text-sm text-destructive/80 flex items-center gap-2">
+                            <Ban className="h-3.5 w-3.5" />
+                            <span className="italic">
+                              {block.reason || "Horário bloqueado"}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={unblockSlotMutation.isPending}
+                            onClick={() => unblockSlotMutation.mutate(block.id)}
+                          >
+                            <Unlock className="h-3 w-3 mr-1" />
+                            Desbloquear
+                          </Button>
+                        </div>
+                      );
+                    }
+                    // Free slot
+                    const [h, m] = time.split(":").map(Number);
+                    const endMin = m + interval;
+                    const endH = h + Math.floor(endMin / 60);
+                    const endM = endMin % 60;
+                    const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+                    return (
+                      <div
+                        key={`free-${time}`}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 border-l-2",
+                          fullDayBlocked
+                            ? "bg-muted/30 border-muted opacity-60"
+                            : "bg-success/5 border-success/40",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-14 text-center py-1 rounded text-xs font-medium",
+                            fullDayBlocked
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-success/10 text-success",
+                          )}
+                        >
+                          {time}
+                        </div>
+                        <div className="flex-1 text-sm text-muted-foreground italic">
+                          {fullDayBlocked ? "Dia bloqueado" : "Horário disponível"}
+                        </div>
+                        {!fullDayBlocked && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={blockSlotMutation.isPending}
+                              onClick={() =>
+                                blockSlotMutation.mutate({
+                                  professionalId: group.professional.id,
+                                  time,
+                                  endTime,
+                                })
+                              }
+                              title="Bloquear este horário"
+                            >
+                              <Lock className="h-3 w-3 mr-1" />
+                              Bloquear
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
+                              onClick={() => setIsNovoDialogOpen(true)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Agendar
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           );

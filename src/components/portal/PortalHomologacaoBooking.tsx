@@ -52,6 +52,8 @@ interface Schedule {
 interface Block {
   block_date: string;
   professional_id: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
 }
 
 interface ServiceType {
@@ -152,7 +154,7 @@ export function PortalHomologacaoBooking({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("homologacao_blocks")
-        .select("block_date, professional_id")
+        .select("block_date, professional_id, start_time, end_time")
         .eq("clinic_id", clinicId);
       
       if (error) throw error;
@@ -258,9 +260,17 @@ export function PortalHomologacaoBooking({
         appointments?.filter((apt) => apt.start_time?.slice(0, 5) === timeStr)
           .length || 0;
 
+      const dateStr = format(date, "yyyy-MM-dd");
+      const isSlotBlocked = blocks?.some((b) =>
+        b.block_date === dateStr &&
+        (b.professional_id === null || b.professional_id === selectedProfessional?.id) &&
+        b.start_time &&
+        (b.start_time as string).slice(0, 5) === timeStr
+      );
+
       slots.push({
         time: timeStr,
-        available: bookedCount < daySchedule.capacity,
+        available: !isSlotBlocked && bookedCount < daySchedule.capacity,
         capacity: daySchedule.capacity,
         booked: bookedCount,
       });
@@ -294,9 +304,10 @@ export function PortalHomologacaoBooking({
 
     // Check if date is blocked
     const dateStr = format(date, "yyyy-MM-dd");
-    const isBlocked = blocks?.some(b => 
-      b.block_date === dateStr && 
-      (b.professional_id === null || b.professional_id === selectedProfessional.id)
+    const isBlocked = blocks?.some(b =>
+      b.block_date === dateStr &&
+      (b.professional_id === null || b.professional_id === selectedProfessional.id) &&
+      !b.start_time
     );
     if (isBlocked) return false;
 

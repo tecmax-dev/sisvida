@@ -337,7 +337,7 @@ export default function HomologacaoPublicBooking() {
       if (!professional?.clinic_id) return [];
       const { data, error } = await supabase
         .from("homologacao_blocks")
-        .select("block_date, professional_id")
+        .select("block_date, professional_id, start_time, end_time")
         .eq("clinic_id", professional.clinic_id);
       
       if (error) throw error;
@@ -438,9 +438,17 @@ export default function HomologacaoPublicBooking() {
         apt.start_time?.slice(0, 5) === timeStr
       ).length || 0;
 
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const isSlotBlocked = blocks?.some((b: any) =>
+        b.block_date === dateStr &&
+        (b.professional_id === null || b.professional_id === professional?.id) &&
+        b.start_time &&
+        (b.start_time as string).slice(0, 5) === timeStr
+      );
+
       slots.push({
         time: timeStr,
-        available: bookedCount < daySchedule.capacity,
+        available: !isSlotBlocked && bookedCount < daySchedule.capacity,
         capacity: daySchedule.capacity,
         booked: bookedCount,
       });
@@ -468,9 +476,10 @@ export default function HomologacaoPublicBooking() {
     if (date < today) return false;
 
     const dateStr = format(date, "yyyy-MM-dd");
-    const isBlocked = blocks?.some(b => 
-      b.block_date === dateStr && 
-      (b.professional_id === null || b.professional_id === professional.id)
+    const isBlocked = blocks?.some((b: any) =>
+      b.block_date === dateStr &&
+      (b.professional_id === null || b.professional_id === professional.id) &&
+      !b.start_time
     );
     if (isBlocked) return false;
 
