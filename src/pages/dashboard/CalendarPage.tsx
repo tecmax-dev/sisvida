@@ -5456,7 +5456,6 @@ const updateData: Record<string, any> = {
                                             <Plus className="h-3 w-3 mr-1" />
                                             Agendar
                                           </Button>
-                                        </>
                                       )}
                                     </div>
                                   );
