@@ -105,6 +105,66 @@ const unavailableSupportMessage = (reason: string) =>
   `O atendimento humano funciona de *segunda a sexta-feira, das 09h às 16h*, exceto feriados.\n\n` +
   `Posso ajudar por aqui como assistente virtual. Se preferir, envie seu assunto que deixaremos registrado para retorno assim que o atendimento estiver disponível. 📋`;
 
+// ---------- HELPERS: Menu Principal sempre disponível ----------
+// Garante que toda mensagem ofereça uma forma rápida de voltar ao menu principal,
+// inclusive em mensagens de texto, erros e opções inválidas.
+const MENU_BUTTON = { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } } as const;
+const MENU_LIST_ROW = { id: "menu_principal", title: "Menu Principal", description: "Voltar ao início" } as const;
+
+function withMenuTextPayload(text: string) {
+  return {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: (text || "").slice(0, 1024) },
+      action: { buttons: [MENU_BUTTON] },
+    },
+  };
+}
+
+function withMenuButtonsPayload(text: string, buttons: Array<{ id: string; title: string }>) {
+  // Limite WhatsApp: 3 botões reply no total. Reservamos 1 para "Menu Principal".
+  const usable = buttons.slice(0, 2);
+  const final = [
+    ...usable.map((b) => ({ type: "reply", reply: { id: b.id, title: (b.title || "").slice(0, 20) } })),
+    MENU_BUTTON,
+  ];
+  return {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: (text || "").slice(0, 1024) },
+      action: { buttons: final },
+    },
+  };
+}
+
+function withMenuListPayload(
+  text: string,
+  sectionTitle: string,
+  rows: Array<{ id: string; title: string; description?: string }>,
+) {
+  const truncated = rows.slice(0, 10).map((r) => ({
+    id: r.id,
+    title: (r.title || "").slice(0, 24),
+    ...(r.description ? { description: (r.description || "").slice(0, 72) } : {}),
+  }));
+  return {
+    type: "interactive",
+    interactive: {
+      type: "list",
+      body: { text: (text || "").slice(0, 1024) },
+      action: {
+        button: "Escolher",
+        sections: [
+          { title: (sectionTitle || "Opções").slice(0, 24), rows: truncated },
+          { title: "Navegação", rows: [MENU_LIST_ROW] },
+        ],
+      },
+    },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
