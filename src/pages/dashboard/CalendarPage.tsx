@@ -53,6 +53,8 @@ import {
   UserX,
   CalendarCheck,
   MessageCircle,
+  Lock as LockIcon,
+  Unlock as UnlockIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -146,8 +148,9 @@ const defaultTimeSlots = [
 const calculateProfessionalSlots = (
   professional: { id: string; schedule?: any; appointment_duration?: number | null },
   appointments: { id?: string; start_time: string; end_time: string; status: string }[],
-  selectedDate: Date
-): { time: string; type: 'free' | 'booked'; duration: number; appointment?: any }[] => {
+  selectedDate: Date,
+  slotBlocks: { id: string; professional_id: string; start_time: string; end_time: string; reason: string | null }[] = []
+): { time: string; type: 'free' | 'booked' | 'blocked'; duration: number; appointment?: any; block?: { id: string; reason: string | null } }[] => {
   if (!professional.schedule) return [];
 
   const dayOfWeek = selectedDate.getDay();
@@ -219,7 +222,9 @@ const calculateProfessionalSlots = (
 
   const uniqueSlots = Array.from(new Set(allTimeSlots)).sort();
 
-  const result: { time: string; type: 'free' | 'booked'; duration: number; appointment?: any }[] = [];
+  const result: { time: string; type: 'free' | 'booked' | 'blocked'; duration: number; appointment?: any; block?: { id: string; reason: string | null } }[] = [];
+
+  const profBlocks = slotBlocks.filter(b => b.professional_id === professional.id);
 
   for (const timeStr of uniqueSlots) {
     const [h, m] = timeStr.split(':').map(Number);
@@ -244,7 +249,17 @@ const calculateProfessionalSlots = (
         appointment: timeStr === aptStart ? appointment : undefined,
       });
     } else {
-      result.push({ time: timeStr, type: 'free', duration: defaultDuration });
+      const block = profBlocks.find(b => b.start_time.substring(0, 5) === timeStr);
+      if (block) {
+        result.push({
+          time: timeStr,
+          type: 'blocked',
+          duration: defaultDuration,
+          block: { id: block.id, reason: block.reason },
+        });
+      } else {
+        result.push({ time: timeStr, type: 'free', duration: defaultDuration });
+      }
     }
   }
 
@@ -536,6 +551,7 @@ export default function CalendarPage() {
   }, [selectedDate, currentDate, toast]);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [slotBlocks, setSlotBlocks] = useState<{ id: string; professional_id: string; block_date: string; start_time: string; end_time: string; reason: string | null }[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [holidays, setHolidays] = useState<Map<string, string>>(new Map()); // date -> holiday name
@@ -1049,6 +1065,62 @@ export default function CalendarPage() {
       fetchAppointments();
     }
   }, [currentClinic, selectedDate, viewMode, fetchAppointments]);
+
+  // Fetch slot blocks for the date range
+  const fetchSlotBlocks = useCallback(async () => {
+    if (!currentClinic) return;
+    try {
+      const { startDate, endDate } = getDateRange();
+      const { data, error } = await supabase
+        .from('appointment_slot_blocks')
+        .select('id, professional_id, block_date, start_time, end_time, reason')
+        .eq('clinic_id', currentClinic.id)
+        .gte('block_date', startDate)
+        .lte('block_date', endDate);
+      if (error) throw error;
+      setSlotBlocks((data || []) as any);
+    } catch (err) {
+      console.error('[CalendarPage] Error fetching slot blocks:', err);
+    }
+  }, [currentClinic, getDateRange]);
+
+  useEffect(() => {
+    if (currentClinic) fetchSlotBlocks();
+  }, [currentClinic, selectedDate, viewMode, fetchSlotBlocks]);
+
+  const handleBlockSlot = async (professionalId: string, time: string, durationMinutes: number) => {
+    if (!currentClinic) return;
+    const [h, m] = time.split(':').map(Number);
+    const endMin = m + (durationMinutes || 30);
+    const endH = h + Math.floor(endMin / 60);
+    const endM = endMin % 60;
+    const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    const { error } = await supabase.from('appointment_slot_blocks').insert({
+      clinic_id: currentClinic.id,
+      professional_id: professionalId,
+      block_date: toDateKey(selectedDate),
+      start_time: time,
+      end_time: endTime,
+      reason: 'Bloqueio manual de horário',
+      created_by: user?.id || null,
+    });
+    if (error) {
+      toast({ title: 'Erro ao bloquear horário', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Horário bloqueado' });
+    fetchSlotBlocks();
+  };
+
+  const handleUnblockSlot = async (blockId: string) => {
+    const { error } = await supabase.from('appointment_slot_blocks').delete().eq('id', blockId);
+    if (error) {
+      toast({ title: 'Erro ao desbloquear', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Bloqueio removido' });
+    fetchSlotBlocks();
+  };
 
   const fetchData = async () => {
     if (!currentClinic) {
@@ -5254,7 +5326,7 @@ const updateData: Record<string, any> = {
                             {(() => {
                               const fullProfessional = professionals.find(p => p.id === group.professional.id);
                               const timeline = fullProfessional
-                                ? calculateProfessionalSlots(fullProfessional, group.appointments, selectedDate)
+                                ? calculateProfessionalSlots(fullProfessional, group.appointments, selectedDate, slotBlocks.filter(b => b.block_date === toDateKey(selectedDate)))
                                 : [];
 
                               if (timeline.length === 0) {
@@ -5296,6 +5368,35 @@ const updateData: Record<string, any> = {
                                     );
                                   }
 
+                                  // Slot bloqueado manualmente
+                                  if (slot.type === 'blocked' && slot.block) {
+                                    return (
+                                      <div
+                                        key={`blocked-${slot.time || index}-${index}`}
+                                        className="flex items-center gap-3 px-3 py-2 bg-destructive/5 border-l-2 border-destructive/40"
+                                      >
+                                        <div className="w-14 text-center py-1 rounded text-xs font-medium bg-destructive/10 text-destructive">
+                                          {slot.time || '--:--'}
+                                        </div>
+                                        <div className="flex-1 text-sm text-destructive/80 italic flex items-center gap-2">
+                                          <Ban className="h-3.5 w-3.5" />
+                                          {slot.block.reason || 'Horário bloqueado'}
+                                        </div>
+                                        {hasPermission('manage_calendar') && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs"
+                                            onClick={() => handleUnblockSlot(slot.block!.id)}
+                                          >
+                                            <UnlockIcon className="h-3 w-3 mr-1" />
+                                            Desbloquear
+                                          </Button>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+
                                   // Slot livre
                                   const slotTime = slot.time || '';
                                   const profId = group?.professional?.id || '';
@@ -5330,19 +5431,31 @@ const updateData: Record<string, any> = {
                                         Horário disponível
                                       </div>
                                       {hasPermission('manage_calendar') && profId && slotTime && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
-                                          onClick={() => {
-                                            setFormProfessional(profId);
-                                            setFormTime(slotTime);
-                                            setDialogOpen(true);
-                                          }}
-                                        >
-                                          <Plus className="h-3 w-3 mr-1" />
-                                          Agendar
-                                        </Button>
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleBlockSlot(profId, slotTime, slot.duration)}
+                                            title="Bloquear este horário"
+                                          >
+                                            <LockIcon className="h-3 w-3 mr-1" />
+                                            Bloquear
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
+                                            onClick={() => {
+                                              setFormProfessional(profId);
+                                              setFormTime(slotTime);
+                                              setDialogOpen(true);
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Agendar
+                                          </Button>
+                                        </>
                                       )}
                                     </div>
                                   );
