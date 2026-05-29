@@ -1064,6 +1064,62 @@ export default function CalendarPage() {
     }
   }, [currentClinic, selectedDate, viewMode, fetchAppointments]);
 
+  // Fetch slot blocks for the date range
+  const fetchSlotBlocks = useCallback(async () => {
+    if (!currentClinic) return;
+    try {
+      const { startDate, endDate } = getDateRange();
+      const { data, error } = await supabase
+        .from('appointment_slot_blocks')
+        .select('id, professional_id, block_date, start_time, end_time, reason')
+        .eq('clinic_id', currentClinic.id)
+        .gte('block_date', startDate)
+        .lte('block_date', endDate);
+      if (error) throw error;
+      setSlotBlocks((data || []) as any);
+    } catch (err) {
+      console.error('[CalendarPage] Error fetching slot blocks:', err);
+    }
+  }, [currentClinic, getDateRange]);
+
+  useEffect(() => {
+    if (currentClinic) fetchSlotBlocks();
+  }, [currentClinic, selectedDate, viewMode, fetchSlotBlocks]);
+
+  const handleBlockSlot = async (professionalId: string, time: string, durationMinutes: number) => {
+    if (!currentClinic) return;
+    const [h, m] = time.split(':').map(Number);
+    const endMin = m + (durationMinutes || 30);
+    const endH = h + Math.floor(endMin / 60);
+    const endM = endMin % 60;
+    const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    const { error } = await supabase.from('appointment_slot_blocks').insert({
+      clinic_id: currentClinic.id,
+      professional_id: professionalId,
+      block_date: toDateKey(selectedDate),
+      start_time: time,
+      end_time: endTime,
+      reason: 'Bloqueio manual de horário',
+      created_by: user?.id || null,
+    });
+    if (error) {
+      toast({ title: 'Erro ao bloquear horário', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Horário bloqueado' });
+    fetchSlotBlocks();
+  };
+
+  const handleUnblockSlot = async (blockId: string) => {
+    const { error } = await supabase.from('appointment_slot_blocks').delete().eq('id', blockId);
+    if (error) {
+      toast({ title: 'Erro ao desbloquear', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Bloqueio removido' });
+    fetchSlotBlocks();
+  };
+
   const fetchData = async () => {
     if (!currentClinic) {
       console.log('[DEBUG CalendarPage] fetchData - currentClinic is null');
