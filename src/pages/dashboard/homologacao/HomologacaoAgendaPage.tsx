@@ -128,6 +128,7 @@ const toDateKey = (date: Date): string => {
 
 export default function HomologacaoAgendaPage() {
   const { currentClinic } = useAuth();
+  const clinicId = currentClinic?.id || SINDICATO_CLINIC_ID;
   const queryClient = useQueryClient();
   
   // State
@@ -177,6 +178,56 @@ export default function HomologacaoAgendaPage() {
   const { data: allProfessionals = [] } = useHomologacaoProfessionalsWithSchedules({
     clinicId: currentClinic?.id,
     enabled: !!currentClinic?.id,
+  });
+
+  // Fetch slot blocks for the selected day
+  const selectedDateStr = useMemo(() => toDateKey(selectedDate), [selectedDate]);
+  const { data: dayBlocks = [], refetch: refetchBlocks } = useQuery({
+    queryKey: ["homologacao-blocks-day", clinicId, selectedDateStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("homologacao_blocks")
+        .select("id, block_date, professional_id, start_time, end_time, reason")
+        .eq("clinic_id", clinicId)
+        .eq("block_date", selectedDateStr);
+      if (error) throw error;
+      return (data || []) as SlotBlock[];
+    },
+    enabled: !!clinicId,
+  });
+
+  const blockSlotMutation = useMutation({
+    mutationFn: async (p: { professionalId: string; time: string; endTime: string }) => {
+      const { error } = await supabase.from("homologacao_blocks").insert({
+        clinic_id: clinicId,
+        professional_id: p.professionalId,
+        block_date: selectedDateStr,
+        block_type: "block",
+        start_time: p.time,
+        end_time: p.endTime,
+        reason: "Bloqueio manual de horário",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Horário bloqueado");
+      refetchBlocks();
+      queryClient.invalidateQueries({ queryKey: ["homologacao-blocks"] });
+    },
+    onError: (err: any) => toast.error("Erro ao bloquear: " + (err?.message || "")),
+  });
+
+  const unblockSlotMutation = useMutation({
+    mutationFn: async (blockId: string) => {
+      const { error } = await supabase.from("homologacao_blocks").delete().eq("id", blockId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Bloqueio removido");
+      refetchBlocks();
+      queryClient.invalidateQueries({ queryKey: ["homologacao-blocks"] });
+    },
+    onError: (err: any) => toast.error("Erro ao desbloquear: " + (err?.message || "")),
   });
 
   // Filter professionals for the selected day (used in DayView)
