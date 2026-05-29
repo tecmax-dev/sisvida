@@ -476,9 +476,10 @@ export default function HomologacaoPublicBooking() {
     if (date < today) return false;
 
     const dateStr = format(date, "yyyy-MM-dd");
-    const isBlocked = blocks?.some(b => 
-      b.block_date === dateStr && 
-      (b.professional_id === null || b.professional_id === professional.id)
+    const isBlocked = blocks?.some((b: any) =>
+      b.block_date === dateStr &&
+      (b.professional_id === null || b.professional_id === professional.id) &&
+      !b.start_time
     );
     if (isBlocked) return false;
 
