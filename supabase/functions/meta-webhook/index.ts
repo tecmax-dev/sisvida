@@ -144,7 +144,10 @@ function withMenuListPayload(
   sectionTitle: string,
   rows: Array<{ id: string; title: string; description?: string }>,
 ) {
-  const truncated = rows.slice(0, 10).map((r) => ({
+  // Meta WhatsApp limita o TOTAL de rows (somando todas as sections) a 10.
+  // Reservamos 1 slot para a row "Menu Principal" da seção Navegação.
+  const deduped = rows.filter((r) => r.id !== MENU_LIST_ROW.id);
+  const truncated = deduped.slice(0, 9).map((r) => ({
     id: r.id,
     title: (r.title || "").slice(0, 24),
     ...(r.description ? { description: (r.description || "").slice(0, 72) } : {}),
