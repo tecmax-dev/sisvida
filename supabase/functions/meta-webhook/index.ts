@@ -8,26 +8,8 @@ const corsHeaders = {
 // ID da clínica do Sindicato (mesmo usado no fluxo de boleto)
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-// Whitelist para teste do fluxo de agendamento de consulta via WhatsApp.
-// Aceita variantes com/sem DDI 55 e com/sem 9 adicional.
-const BOOKING_WHITELIST_RAW = ["5573988633535"];
-
-const _normalizeBookingPhone = (raw: string) => {
-  let d = (raw || "").replace(/\D/g, "");
-  if (d.startsWith("55") && d.length > 11) d = d.slice(2);
-  // remove 9 extra para celulares (ex: 73988633535 -> 73988633535 / 7388633535)
-  const variants = new Set<string>([d]);
-  if (d.length === 11 && d[2] === "9") variants.add(d.slice(0, 2) + d.slice(3));
-  if (d.length === 10) variants.add(d.slice(0, 2) + "9" + d.slice(2));
-  return Array.from(variants).flatMap((v) => [v, "55" + v]);
-};
-
-const BOOKING_WHITELIST = new Set<string>(
-  BOOKING_WHITELIST_RAW.flatMap(_normalizeBookingPhone)
-);
-
-const isBookingWhitelisted = (phone: string) =>
-  _normalizeBookingPhone(phone).some((v) => BOOKING_WHITELIST.has(v));
+// Fluxo de agendamento liberado para todos os usuários do WhatsApp /sindicato.
+const isBookingWhitelisted = (_phone: string) => true;
 
 const SUPPORT_START_MINUTES = 9 * 60;
 const SUPPORT_END_MINUTES = 16 * 60;
@@ -835,7 +817,7 @@ serve(async (req) => {
               {
                 title: "Serviços Associado",
                 rows: [
-                  { id: "agendar_consulta", title: "Agendar Consulta", description: "Disponível a partir de 30/05/2026" },
+                  { id: "agendar_consulta", title: "Agendar Consulta", description: "Marcar nova consulta" },
                   { id: "cancelar_consulta", title: "Cancelar Consulta", description: "Desmarcar consulta agendada" },
                   { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
                   { id: "whazing_sub_app", title: "Aplicativo", description: "Baixar app na Play Store" },
@@ -936,11 +918,6 @@ serve(async (req) => {
     if (extractedButtonId === "whazing_sub_carteirinha") {
       await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
       return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
-    }
-
-    if (extractedButtonId === "agendar_consulta" || (isAgendarConsulta && !isGreeting)) {
-      await sendResponse(followUpAction("O agendamento de consultas pelo WhatsApp estará disponível a partir do dia *30/05/2026*."));
-      return new Response(JSON.stringify({ ok: true, action: "agendar_consulta_indisponivel" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (extractedButtonId === "whazing_sub_app") {
