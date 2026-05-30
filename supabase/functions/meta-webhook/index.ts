@@ -168,6 +168,25 @@ function withMenuListPayload(
   };
 }
 
+function mainMenuPayload() {
+  return {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      header: { type: "text", text: "Sindicato dos Comerciários" },
+      body: { text: "Olá! Bem-vindo ao nosso canal oficial. Como podemos ajudar hoje? Escolha uma opção abaixo:" },
+      footer: { text: "Atendimento Automático" },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
+          { type: "reply", reply: { id: "whazing_empresa", title: "Sou Empresa" } },
+          { type: "reply", reply: { id: "whazing_contabilidade", title: "Contabilidade" } },
+        ],
+      },
+    },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -306,6 +325,24 @@ serve(async (req) => {
       const isCancelarConsultaTrigger =
         extractedButtonId === "cancelar_consulta" ||
         /\b(cancelar|desmarcar)\s+(a\s+|minha\s+|uma\s+)?consulta\b/i.test(text);
+
+      const isDirectMenuRequest =
+        extractedButtonId === "menu_principal" ||
+        /\b(menu principal|menu|in[ií]cio|começar|comecar)\b/i.test(text);
+
+      if (isDirectMenuRequest) {
+        await supabase
+          .from("whatsapp_booking_sessions")
+          .delete()
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .eq("phone", from)
+          .neq("state", "FINISHED");
+
+        await sendResponse(mainMenuPayload());
+        return new Response(JSON.stringify({ ok: true, action: "main_menu" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       // ---------- EXPIRAÇÃO DE SESSÃO ----------
       // Detecta sessões abandonadas (expires_at < now) e avisa o usuário.
