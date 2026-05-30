@@ -817,7 +817,7 @@ serve(async (req) => {
               {
                 title: "Serviços Associado",
                 rows: [
-                  { id: "agendar_consulta", title: "Agendar Consulta", description: "Disponível a partir de 30/05/2026" },
+                  { id: "agendar_consulta", title: "Agendar Consulta", description: "Marcar nova consulta" },
                   { id: "cancelar_consulta", title: "Cancelar Consulta", description: "Desmarcar consulta agendada" },
                   { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
                   { id: "whazing_sub_app", title: "Aplicativo", description: "Baixar app na Play Store" },
@@ -918,11 +918,6 @@ serve(async (req) => {
     if (extractedButtonId === "whazing_sub_carteirinha") {
       await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
       return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
-    }
-
-    if (extractedButtonId === "agendar_consulta" || (isAgendarConsulta && !isGreeting)) {
-      await sendResponse(followUpAction("O agendamento de consultas pelo WhatsApp estará disponível a partir do dia *30/05/2026*."));
-      return new Response(JSON.stringify({ ok: true, action: "agendar_consulta_indisponivel" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (extractedButtonId === "whazing_sub_app") {
