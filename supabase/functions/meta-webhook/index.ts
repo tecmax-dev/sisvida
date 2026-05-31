@@ -11,6 +11,40 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 // Fluxo de agendamento liberado para todos os usuários do WhatsApp /sindicato.
 const isBookingWhitelisted = (_phone: string) => true;
 
+// =====================================================================
+// Mirror do webhook WABA → Chatgoo (apisistema.chatgoo.app)
+// O Chatgoo recebe uma cópia idêntica do payload Meta para sincronizar
+// templates, status e mensagens. Fire-and-forget: nunca bloqueia a
+// resposta ao Meta (precisa retornar 200 em <5s).
+// =====================================================================
+const CHATGOO_WEBHOOK_URL = Deno.env.get("CHATGOO_WEBHOOK_URL")
+  || "https://apisistema.chatgoo.app/waba-webhook/2";
+const CHATGOO_WEBHOOK_TOKEN = Deno.env.get("CHATGOO_WEBHOOK_TOKEN")
+  || "AORpxXNEBtdxyZeq31xSInEo4UU7jn";
+
+function mirrorToChatgoo(rawBody: unknown, originalHeaders: Headers) {
+  if (!CHATGOO_WEBHOOK_URL) return;
+  // Fire-and-forget: não aguardamos a resposta para não atrasar o Meta.
+  (async () => {
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${CHATGOO_WEBHOOK_TOKEN}`,
+        "X-Hub-Signature-256": originalHeaders.get("x-hub-signature-256") || "",
+        "X-Webhook-Token": CHATGOO_WEBHOOK_TOKEN,
+      };
+      const res = await fetch(CHATGOO_WEBHOOK_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(rawBody),
+      });
+      console.log(`[CHATGOO_MIRROR] ${res.status}`);
+    } catch (err) {
+      console.error("[CHATGOO_MIRROR_ERROR]", err);
+    }
+  })();
+}
+
 const SUPPORT_START_MINUTES = 9 * 60;
 const SUPPORT_END_MINUTES = 16 * 60;
 
