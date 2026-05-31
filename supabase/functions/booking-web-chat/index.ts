@@ -1190,12 +1190,26 @@ serve(async (req) => {
           
           // Parse specific error messages from database triggers
           const errMsg = insertError.message || "";
-          
+
+          // Read clinic config to render the period label correctly (weekly/monthly/daily)
+          let periodLabel = "neste período";
+          try {
+            const { data: clinicCfg } = await supabase
+              .from("clinics")
+              .select("dependent_booking_period")
+              .eq("id", clinic_id)
+              .maybeSingle();
+            const p = (clinicCfg as any)?.dependent_booking_period || "monthly";
+            if (p === "weekly") periodLabel = "nesta semana";
+            else if (p === "daily") periodLabel = "neste dia";
+            else if (p === "monthly") periodLabel = "neste mês";
+          } catch (_) { /* ignore */ }
+
           if (errMsg.includes("LIMITE_AGENDAMENTO_CPF")) {
             await updateSession(supabase, session.id, { state: "FINISHED" });
             return new Response(
               JSON.stringify({
-                response: "❌ Você já atingiu o limite de agendamentos com este profissional neste mês.",
+                response: `❌ Você já atingiu o limite de agendamentos com este profissional ${periodLabel}.`,
                 state: "FINISHED",
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1207,13 +1221,25 @@ serve(async (req) => {
             await updateSession(supabase, session.id, { state: "FINISHED" });
             return new Response(
               JSON.stringify({
-                response: `❌ ${depName} já atingiu o limite de agendamentos com este profissional neste mês.`,
+                response: `❌ ${depName} já atingiu o limite de agendamentos com este profissional ${periodLabel}.`,
                 state: "FINISHED",
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
-          
+
+          if (errMsg.includes("CARTEIRINHA_DEPENDENTE_VENCIDA")) {
+            const match = errMsg.match(/CARTEIRINHA_DEPENDENTE_VENCIDA:\s*(.+)/);
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: `❌ ${match ? match[1].trim() : "A carteirinha do dependente está vencida. Renove para poder agendar."}`,
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
           if (errMsg.includes("CARTEIRINHA_VENCIDA")) {
             await updateSession(supabase, session.id, { state: "FINISHED" });
             return new Response(
