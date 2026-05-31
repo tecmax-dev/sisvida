@@ -25,10 +25,16 @@ const CHATGOO_WEBHOOK_TOKEN = Deno.env.get("CHATGOO_WEBHOOK_TOKEN")
 function mirrorToChatgoo(rawBody: any, originalHeaders: Headers) {
   if (!CHATGOO_WEBHOOK_URL) return;
 
-  // Espelhar TODOS os payloads (mensagens recebidas, status e templates) para o Chatgoo,
-  // para que o Chatgoo possa acompanhar o fluxo do usuário em paralelo.
-  // A auto-reply do Chatgoo deve ser desativada/ajustada no painel do Chatgoo,
-  // não aqui no mirror.
+  // Espelhar TODOS os payloads para o Chatgoo. Como o parser do Chatgoo
+  // não entende `type: "button"` (resposta a botão de template) nem
+  // `type: "interactive"`, sintetizamos uma mensagem de texto equivalente
+  // para que o bubble apareça com o texto da escolha do usuário.
+  let bodyToSend = rawBody;
+  try {
+    bodyToSend = transformInteractiveToText(rawBody);
+  } catch (_) {
+    bodyToSend = rawBody;
+  }
 
   // Fire-and-forget: não aguardamos a resposta para não atrasar o Meta.
   (async () => {
@@ -42,13 +48,39 @@ function mirrorToChatgoo(rawBody: any, originalHeaders: Headers) {
       const res = await fetch(CHATGOO_WEBHOOK_URL, {
         method: "POST",
         headers,
-        body: JSON.stringify(rawBody),
+        body: JSON.stringify(bodyToSend),
       });
       console.log(`[CHATGOO_MIRROR] ${res.status}`);
     } catch (err) {
       console.error("[CHATGOO_MIRROR_ERROR]", err);
     }
   })();
+}
+
+// Converte respostas de botão / interactive em mensagens type=text para o Chatgoo
+function transformInteractiveToText(rawBody: any): any {
+  if (!rawBody?.entry) return rawBody;
+  const clone = JSON.parse(JSON.stringify(rawBody));
+  for (const entry of clone.entry || []) {
+    for (const change of entry.changes || []) {
+      const messages = change?.value?.messages;
+      if (!Array.isArray(messages)) continue;
+      for (const msg of messages) {
+        if (msg.type === "button" && msg.button) {
+          const txt = msg.button.text || msg.button.payload || "[botão]";
+          msg.type = "text";
+          msg.text = { body: `🔘 ${txt}` };
+        } else if (msg.type === "interactive" && msg.interactive) {
+          const br = msg.interactive.button_reply;
+          const lr = msg.interactive.list_reply;
+          const txt = br?.title || br?.id || lr?.title || lr?.id || "[interactive]";
+          msg.type = "text";
+          msg.text = { body: `🔘 ${txt}` };
+        }
+      }
+    }
+  }
+  return clone;
 }
 
 // =====================================================================
