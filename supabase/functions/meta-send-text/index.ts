@@ -9,6 +9,69 @@ const corsHeaders = {
 const META_GRAPH_VERSION = "v21.0";
 const WINDOW_HOURS = 24;
 
+// Mirror outgoing oficial Meta sends para o painel Chatgoo (não bloqueia o envio)
+const CHATGOO_WEBHOOK_URL = Deno.env.get("CHATGOO_WEBHOOK_URL")
+  || "https://apisistema.chatgoo.app/waba-webhook/2";
+const CHATGOO_WEBHOOK_TOKEN = Deno.env.get("CHATGOO_WEBHOOK_TOKEN")
+  || Deno.env.get("CHATGOO_TOKEN")
+  || "";
+
+function mirrorOutgoingToChatgoo(params: {
+  to: string;
+  phoneId: string;
+  displayPhone: string;
+  payload: any;
+  metaResponse?: any;
+}) {
+  if (!CHATGOO_WEBHOOK_URL) return;
+  const { to, phoneId, displayPhone, payload, metaResponse } = params;
+  const messageId = metaResponse?.messages?.[0]?.id
+    || `synthetic.outgoing.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
+  const ts = Math.floor(Date.now() / 1000).toString();
+  const outgoingMessage: any = {
+    from: displayPhone,
+    to,
+    id: messageId,
+    timestamp: ts,
+    _outgoing_echo: true,
+    type: payload?.type || "text",
+  };
+  if (payload?.text) outgoingMessage.text = payload.text;
+  if (payload?.template) outgoingMessage.template = payload.template;
+  const synthetic = {
+    object: "whatsapp_business_account",
+    entry: [{
+      id: Deno.env.get("META_WABA_ID") || "0",
+      changes: [{
+        value: {
+          messaging_product: "whatsapp",
+          metadata: { display_phone_number: displayPhone, phone_number_id: phoneId },
+          _outgoing_echo: true,
+          messages: [outgoingMessage],
+        },
+        field: "messages",
+      }],
+    }],
+  };
+  (async () => {
+    try {
+      const res = await fetch(CHATGOO_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${CHATGOO_WEBHOOK_TOKEN}`,
+          "X-Webhook-Token": CHATGOO_WEBHOOK_TOKEN,
+          "X-Outgoing-Echo": "true",
+        },
+        body: JSON.stringify(synthetic),
+      });
+      console.log(`[CHATGOO_MIRROR_OUT_TEXT] ${res.status}`);
+    } catch (err) {
+      console.error("[CHATGOO_MIRROR_OUT_TEXT_ERROR]", err);
+    }
+  })();
+}
+
 interface SendBody {
   to: string;
   text: string;
@@ -134,6 +197,19 @@ serve(async (req) => {
     }
 
     const messageId = json.messages?.[0]?.id ?? null;
+
+    // Espelhar envio para o painel Chatgoo (não-bloqueante)
+    try {
+      mirrorOutgoingToChatgoo({
+        to: phone,
+        phoneId: PHONE_ID,
+        displayPhone: Deno.env.get("META_DISPLAY_PHONE_NUMBER") || "557332311784",
+        payload,
+        metaResponse: json,
+      });
+    } catch (mirrorErr) {
+      console.error("[meta-send-text] mirror error (ignored):", mirrorErr);
+    }
 
     if (ticket_id) {
       await supabase.from("whatsapp_ticket_messages").insert({
