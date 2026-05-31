@@ -31,6 +31,56 @@ function calculateEndTime(time: string, durationMinutes: number) {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
+function mapAppointmentError(message: string) {
+  if (message.includes("LIMITE_AGENDAMENTO_DEPENDENTE")) {
+    return "Limite de agendamentos de dependentes atingido para este profissional neste período.";
+  }
+
+  if (message.includes("LIMITE_AGENDAMENTO_CPF")) {
+    return "Você já possui agendamento para este profissional neste mês.";
+  }
+
+  if (message.includes("booking_window_exceeded") || message.includes("Agendamento indisponível")) {
+    return "Agendamento indisponível para este período.";
+  }
+
+  if (message.includes("HORARIO_BLOQUEADO")) {
+    return "Este horário foi bloqueado na agenda e não está mais disponível.";
+  }
+
+  if (message.includes("HORARIO_INVALIDO")) {
+    const match = message.match(/HORARIO_INVALIDO:\s*(.+)/);
+    return match ? match[1].trim() : "O profissional não atende neste horário.";
+  }
+
+  if (message.includes("FERIADO")) {
+    const match = message.match(/FERIADO:\s*(.+)/);
+    return match ? match[1].trim() : "Não é possível agendar nesta data.";
+  }
+
+  if (message.includes("CARTEIRINHA_DEPENDENTE_VENCIDA")) {
+    const match = message.match(/CARTEIRINHA_DEPENDENTE_VENCIDA:\s*(.+)/);
+    return match ? match[1].trim() : "A carteirinha do dependente está vencida.";
+  }
+
+  if (message.includes("CARTEIRINHA_VENCIDA")) {
+    const match = message.match(/CARTEIRINHA_VENCIDA:\s*(.+)/);
+    return match ? match[1].trim() : "Sua carteirinha está vencida.";
+  }
+
+  if (message.includes("PACIENTE_BLOQUEADO_NO_SHOW")) {
+    const match = message.match(/PACIENTE_BLOQUEADO_NO_SHOW:\s*(.+)/);
+    return match ? match[1].trim() : "Paciente bloqueado por não comparecimento.";
+  }
+
+  if (message.includes("DEPENDENTE_INVALIDO")) {
+    const match = message.match(/DEPENDENTE_INVALIDO:\s*(.+)/);
+    return match ? match[1].trim() : "Dependente inválido.";
+  }
+
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
