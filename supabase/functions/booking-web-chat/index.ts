@@ -59,6 +59,15 @@ function formatTime(time: string): string {
   return time.substring(0, 5);
 }
 
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = String(time).substring(0, 5).split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function timeRangesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
+  return timeToMinutes(startA) < timeToMinutes(endB) && timeToMinutes(startB) < timeToMinutes(endA);
+}
+
 function validateCpf(cpf: string): boolean {
   const cleanCpf = cpf.replace(/\D/g, "");
   if (cleanCpf.length !== 11) return false;
@@ -159,16 +168,28 @@ async function hasAvailableSlotsOnDate(
   stepMinutes: number,
   currentTimeForToday?: Date | null
 ): Promise<boolean> {
-  const { data: appointments } = await supabase
-    .from("appointments")
-    .select("start_time")
-    .eq("clinic_id", clinicId)
-    .eq("professional_id", professionalId)
-    .eq("appointment_date", date)
-    .in("status", ["scheduled", "confirmed"]);
+  const [{ data: appointments }, { data: slotBlocks }] = await Promise.all([
+    supabase
+      .from("appointments")
+      .select("start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("professional_id", professionalId)
+      .eq("appointment_date", date)
+      .in("status", ["scheduled", "confirmed", "in_progress", "arrived"]),
+    supabase
+      .from("appointment_slot_blocks")
+      .select("start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("professional_id", professionalId)
+      .eq("block_date", date),
+  ]);
 
-  const bookedTimes = new Set<string>();
-  (appointments || []).forEach((apt: any) => bookedTimes.add(String(apt.start_time).substring(0, 5)));
+  const busyRanges = [...(appointments || []), ...(slotBlocks || [])]
+    .map((item: any) => ({
+      start: String(item.start_time).substring(0, 5),
+      end: String(item.end_time).substring(0, 5),
+    }))
+    .filter((item) => item.start && item.end);
 
   const { data: professional } = await supabase
     .from("professionals")
@@ -194,7 +215,8 @@ async function hasAvailableSlotsOnDate(
       const h = Math.floor(m / 60);
       const min = m % 60;
       const timeStr = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      if (!bookedTimes.has(timeStr)) return true;
+      const slotEnd = `${String(Math.floor((m + duration) / 60)).padStart(2, "0")}:${String((m + duration) % 60).padStart(2, "0")}`;
+      if (!busyRanges.some((busy) => timeRangesOverlap(timeStr, slotEnd, busy.start, busy.end))) return true;
     }
   }
 
@@ -448,16 +470,28 @@ async function getAvailableTimes(
 
   if (!slots.length) return times;
 
-  const { data: appointments } = await supabase
-    .from("appointments")
-    .select("start_time")
-    .eq("clinic_id", clinicId)
-    .eq("professional_id", professionalId)
-    .eq("appointment_date", date)
-    .in("status", ["scheduled", "confirmed"]);
+  const [{ data: appointments }, { data: slotBlocks }] = await Promise.all([
+    supabase
+      .from("appointments")
+      .select("start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("professional_id", professionalId)
+      .eq("appointment_date", date)
+      .in("status", ["scheduled", "confirmed", "in_progress", "arrived"]),
+    supabase
+      .from("appointment_slot_blocks")
+      .select("start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("professional_id", professionalId)
+      .eq("block_date", date),
+  ]);
 
-  const bookedTimes = new Set<string>();
-  (appointments || []).forEach((apt: any) => bookedTimes.add(String(apt.start_time).substring(0, 5)));
+  const busyRanges = [...(appointments || []), ...(slotBlocks || [])]
+    .map((item: any) => ({
+      start: String(item.start_time).substring(0, 5),
+      end: String(item.end_time).substring(0, 5),
+    }))
+    .filter((item) => item.start && item.end);
 
   const now = new Date();
   const brazilOffset = -3 * 60;
@@ -480,8 +514,11 @@ async function getAvailableTimes(
       const h = Math.floor(m / 60);
       const min = m % 60;
       const timeStr = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      const slotEnd = `${String(Math.floor((m + duration) / 60)).padStart(2, "0")}:${String((m + duration) % 60).padStart(2, "0")}`;
 
-      if (!bookedTimes.has(timeStr)) times.push({ time: timeStr, formatted: formatTime(timeStr) });
+      if (!busyRanges.some((busy) => timeRangesOverlap(timeStr, slotEnd, busy.start, busy.end))) {
+        times.push({ time: timeStr, formatted: formatTime(timeStr) });
+      }
     }
   }
 
@@ -1256,6 +1293,17 @@ serve(async (req) => {
             return new Response(
               JSON.stringify({
                 response: "❌ Este horário não está mais disponível. Por favor, tente novamente.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          if (errMsg.includes("HORARIO_BLOQUEADO")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Este horário foi bloqueado na agenda e não está mais disponível. Por favor, tente novamente.",
                 state: "FINISHED",
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }

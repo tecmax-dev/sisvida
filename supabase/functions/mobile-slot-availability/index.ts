@@ -85,24 +85,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Medical appointments (default)
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("start_time, end_time, status")
-      .eq("professional_id", professionalId)
-      .eq("appointment_date", date)
-      .not("status", "in", '("cancelled","no_show")');
+    // Medical appointments (default) + manual slot blocks from the admin agenda
+    const [{ data, error }, { data: blocks, error: blocksError }] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("start_time, end_time, status")
+        .eq("professional_id", professionalId)
+        .eq("appointment_date", date)
+        .not("status", "in", '("cancelled","completed","no_show")'),
+      supabase
+        .from("appointment_slot_blocks")
+        .select("start_time, end_time")
+        .eq("professional_id", professionalId)
+        .eq("block_date", date),
+    ]);
 
-    if (error) {
-      console.error("[mobile-slot-availability] Error fetching appointments:", error);
+    if (error || blocksError) {
+      console.error("[mobile-slot-availability] Error fetching appointments/blocks:", error || blocksError);
       return new Response(
         JSON.stringify({ error: "query_failed", appointments: [] }),
         { status: 500, headers: jsonHeaders }
       );
     }
 
+    const blockedSlots = (blocks || []).map((block) => ({
+      start_time: block.start_time,
+      end_time: block.end_time,
+      status: "blocked",
+    }));
+
     return new Response(
-      JSON.stringify({ appointments: data || [] }),
+      JSON.stringify({ appointments: [...(data || []), ...blockedSlots] }),
       { headers: jsonHeaders }
     );
   } catch (err) {
