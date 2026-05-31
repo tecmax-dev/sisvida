@@ -59,6 +59,15 @@ function formatTime(time: string): string {
   return time.substring(0, 5);
 }
 
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = String(time).substring(0, 5).split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function timeRangesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
+  return timeToMinutes(startA) < timeToMinutes(endB) && timeToMinutes(startB) < timeToMinutes(endA);
+}
+
 function validateCpf(cpf: string): boolean {
   const cleanCpf = cpf.replace(/\D/g, "");
   if (cleanCpf.length !== 11) return false;
