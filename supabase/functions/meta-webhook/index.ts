@@ -343,12 +343,65 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    let body = await req.json();
     console.log('[WEBHOOK_ENTRY] Meta Webhook');
     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
 
-    // Espelha o payload para o Chatgoo (fire-and-forget).
-    mirrorToChatgoo(body, req.headers);
+    // ============ DETECÇÃO DE PAYLOAD ENCAPSULADO DO CHATGOO ============
+    // O Chatgoo pode estar configurado para postar de volta no nosso webhook,
+    // enviando um envelope próprio ({messageId, messageBody, dataJson, fromMe,
+    // sendType, ticket, contact, whatsapp}) em vez do formato Meta padrão
+    // ({object: "whatsapp_business_account", entry:[...]}). Quando isso
+    // acontece, o parser nativo falha (entry undefined) e o menu nunca é
+    // enviado. Aqui detectamos e desembrulhamos.
+    const isChatgooEnvelope =
+      !body?.object &&
+      !body?.entry &&
+      (body?.dataJson !== undefined ||
+        body?.messageBody !== undefined ||
+        body?.Type !== undefined);
+
+    if (isChatgooEnvelope) {
+      // 1) Mensagens fromMe=true são ECOS do bot/atendente humano voltando
+      //    para nós via Chatgoo. Não devem disparar processamento de fluxo
+      //    nem ser re-espelhadas (evita loop infinito de mirror).
+      if (body?.fromMe === true) {
+        console.log('[CHATGOO_LOOPBACK_IGNORED] fromMe=true');
+        return new Response(JSON.stringify({ ok: true, ignored: 'chatgoo_loopback' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+
+      // 2) Tenta desembrulhar dataJson (string JSON com o payload Meta original).
+      try {
+        if (typeof body?.dataJson === 'string' && body.dataJson.trim().startsWith('{')) {
+          const inner = JSON.parse(body.dataJson);
+          if (inner?.object === 'whatsapp_business_account' && inner?.entry) {
+            console.log('[CHATGOO_UNWRAPPED] usando dataJson como payload Meta');
+            body = inner;
+          }
+        }
+      } catch (unwrapErr) {
+        console.error('[CHATGOO_UNWRAP_ERROR]', unwrapErr);
+      }
+
+      // 3) Se mesmo após desembrulhar não temos formato Meta, ignora
+      //    silenciosamente (evento de sistema do Chatgoo, ex: NewTicket).
+      if (!body?.object || !body?.entry) {
+        console.log('[CHATGOO_SYSTEM_EVENT_IGNORED]');
+        return new Response(JSON.stringify({ ok: true, ignored: 'chatgoo_system_event' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+    }
+
+    // Espelha o payload para o Chatgoo (fire-and-forget). Só espelha payloads
+    // genuínos da Meta — nunca os que já vieram do próprio Chatgoo.
+    if (!isChatgooEnvelope) {
+      mirrorToChatgoo(body, req.headers);
+    }
 
     // Minimalist Parser
     const entry = body.entry?.[0];
