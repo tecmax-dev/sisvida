@@ -89,7 +89,7 @@ function transformInteractiveToText(rawBody: any): any {
 // do bot como `from` para que o Chatgoo exiba o histórico completo do
 // fluxo (menu enviado + clique do usuário).
 // =====================================================================
-function mirrorOutgoingToChatgoo(params: {
+async function mirrorOutgoingToChatgoo(params: {
   to: string;
   phoneId: string;
   displayPhone: string;
@@ -105,8 +105,13 @@ function mirrorOutgoingToChatgoo(params: {
 
   // Monta um message object compatível com a estrutura WABA
   const outgoingMessage: any = {
-    from: displayPhone,
-    to,
+    // O Chatgoo usa `messages[].from` para decidir em qual contato/ticket
+    // colocar a mensagem. Se enviarmos `from` como número oficial, o espelho
+    // cai no contato do próprio sindicato e o operador não vê no atendimento
+    // do associado. Por isso, no espelho para Chatgoo usamos o número do
+    // associado como `from` e marcamos `_outgoing_echo` para não reprocessar.
+    from: to,
+    to: displayPhone,
     id: messageId,
     timestamp: ts,
     _outgoing_echo: true, // marca para Chatgoo identificar e NÃO auto-responder
@@ -144,6 +149,7 @@ function mirrorOutgoingToChatgoo(params: {
             phone_number_id: phoneId,
           },
           _outgoing_echo: true,
+          contacts: [{ wa_id: to, profile: { name: "Associado" } }],
           messages: [outgoingMessage],
         },
         field: "messages",
@@ -151,7 +157,9 @@ function mirrorOutgoingToChatgoo(params: {
     }],
   };
 
-  (async () => {
+  const mirrorTasks: Promise<void>[] = [];
+
+  mirrorTasks.push((async () => {
     try {
       const res = await fetch(CHATGOO_WEBHOOK_URL, {
         method: "POST",
@@ -163,11 +171,12 @@ function mirrorOutgoingToChatgoo(params: {
         },
         body: JSON.stringify(synthetic),
       });
-      console.log(`[CHATGOO_MIRROR_OUT] ${res.status}`);
+      const responseText = await res.text();
+      console.log(`[CHATGOO_MIRROR_OUT] ${res.status} ${responseText.slice(0, 300)}`);
     } catch (err) {
       console.error("[CHATGOO_MIRROR_OUT_ERROR]", err);
     }
-  })();
+  })());
 
   // ========= ESPELHO DE TEXTO COMPLEMENTAR PARA INTERATIVOS =========
   // O Chatgoo não renderiza o corpo de mensagens "interactive" (botões/listas),
@@ -219,9 +228,10 @@ function mirrorOutgoingToChatgoo(params: {
                   phone_number_id: phoneId,
                 },
                 _outgoing_echo: true,
+                contacts: [{ wa_id: to, profile: { name: "Associado" } }],
                 messages: [{
-                  from: displayPhone,
-                  to,
+                  from: to,
+                  to: displayPhone,
                   id: textMessageId,
                   timestamp: ts,
                   _outgoing_echo: true,
@@ -233,7 +243,7 @@ function mirrorOutgoingToChatgoo(params: {
             }],
           }],
         };
-        (async () => {
+        mirrorTasks.push((async () => {
           try {
             const res = await fetch(CHATGOO_WEBHOOK_URL, {
               method: "POST",
@@ -245,16 +255,19 @@ function mirrorOutgoingToChatgoo(params: {
               },
               body: JSON.stringify(textSynthetic),
             });
-            console.log(`[CHATGOO_MIRROR_OUT_TXT] ${res.status}`);
+            const responseText = await res.text();
+            console.log(`[CHATGOO_MIRROR_OUT_TXT] ${res.status} ${responseText.slice(0, 300)}`);
           } catch (err) {
             console.error("[CHATGOO_MIRROR_OUT_TXT_ERROR]", err);
           }
-        })();
+        })());
       }
     } catch (err) {
       console.error("[CHATGOO_MIRROR_TEXT_BUILD_ERROR]", err);
     }
   }
+
+  await Promise.allSettled(mirrorTasks);
 }
 
 const SUPPORT_START_MINUTES = 9 * 60;
@@ -603,7 +616,7 @@ serve(async (req) => {
       try {
         let parsed: any = null;
         try { parsed = JSON.parse(result); } catch { /* ignore */ }
-        mirrorOutgoingToChatgoo({
+        await mirrorOutgoingToChatgoo({
           to,
           phoneId: String(PHONE_ID || ''),
           displayPhone: String(value?.metadata?.display_phone_number || ''),
