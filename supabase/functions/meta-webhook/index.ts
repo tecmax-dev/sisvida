@@ -168,6 +168,93 @@ function mirrorOutgoingToChatgoo(params: {
       console.error("[CHATGOO_MIRROR_OUT_ERROR]", err);
     }
   })();
+
+  // ========= ESPELHO DE TEXTO COMPLEMENTAR PARA INTERATIVOS =========
+  // O Chatgoo não renderiza o corpo de mensagens "interactive" (botões/listas),
+  // então o operador não vê o link do boleto, instruções etc. Aqui enviamos
+  // um segundo evento, agora como text/plain, contendo:
+  //   - cabeçalho (se houver)
+  //   - corpo (body.text) — onde fica o link do boleto
+  //   - rodapé (se houver)
+  //   - rótulos das opções (botões ou itens da lista)
+  if (payload?.type === "interactive") {
+    try {
+      const itx = payload.interactive || {};
+      const headerText = itx?.header?.text || "";
+      const bodyText = itx?.body?.text || "";
+      const footerText = itx?.footer?.text || "";
+
+      const optionLines: string[] = [];
+      if (itx?.type === "button" && Array.isArray(itx?.action?.buttons)) {
+        for (const b of itx.action.buttons) {
+          const t = b?.reply?.title;
+          if (t) optionLines.push(`▫️ ${t}`);
+        }
+      } else if (itx?.type === "list" && Array.isArray(itx?.action?.sections)) {
+        for (const sec of itx.action.sections) {
+          for (const row of (sec?.rows || [])) {
+            if (row?.title) optionLines.push(`▫️ ${row.title}`);
+          }
+        }
+      }
+
+      const compositeText = [
+        headerText,
+        bodyText,
+        optionLines.length ? `\n*Opções:*\n${optionLines.join("\n")}` : "",
+        footerText,
+      ].filter(Boolean).join("\n").trim();
+
+      if (compositeText) {
+        const textMessageId = `synthetic.outgoing.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.txt`;
+        const textSynthetic = {
+          object: "whatsapp_business_account",
+          entry: [{
+            id: Deno.env.get("META_WABA_ID") || "0",
+            changes: [{
+              value: {
+                messaging_product: "whatsapp",
+                metadata: {
+                  display_phone_number: displayPhone,
+                  phone_number_id: phoneId,
+                },
+                _outgoing_echo: true,
+                messages: [{
+                  from: displayPhone,
+                  to,
+                  id: textMessageId,
+                  timestamp: ts,
+                  _outgoing_echo: true,
+                  type: "text",
+                  text: { body: compositeText },
+                }],
+              },
+              field: "messages",
+            }],
+          }],
+        };
+        (async () => {
+          try {
+            const res = await fetch(CHATGOO_WEBHOOK_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${CHATGOO_WEBHOOK_TOKEN}`,
+                "X-Webhook-Token": CHATGOO_WEBHOOK_TOKEN,
+                "X-Outgoing-Echo": "true",
+              },
+              body: JSON.stringify(textSynthetic),
+            });
+            console.log(`[CHATGOO_MIRROR_OUT_TXT] ${res.status}`);
+          } catch (err) {
+            console.error("[CHATGOO_MIRROR_OUT_TXT_ERROR]", err);
+          }
+        })();
+      }
+    } catch (err) {
+      console.error("[CHATGOO_MIRROR_TEXT_BUILD_ERROR]", err);
+    }
+  }
 }
 
 const SUPPORT_START_MINUTES = 9 * 60;
