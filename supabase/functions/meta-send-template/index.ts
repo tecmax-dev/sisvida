@@ -15,28 +15,64 @@ const CHATGOO_WEBHOOK_TOKEN = Deno.env.get("CHATGOO_WEBHOOK_TOKEN")
   || Deno.env.get("CHATGOO_TOKEN")
   || "";
 
+function renderTemplateBody(components: any[], variables: string[]): string {
+  if (!Array.isArray(components)) return "";
+  let headerText = "";
+  let bodyText = "";
+  let footerText = "";
+  let varIdx = 0;
+  const substitute = (text: string, count: number) => {
+    let out = text;
+    for (let i = 0; i < count; i++) {
+      const val = variables[varIdx++] ?? "";
+      out = out.replace(/\{\{\d+\}\}/, String(val));
+    }
+    return out;
+  };
+  for (const comp of components) {
+    const text = comp.text || "";
+    const matches = text.match(/\{\{\d+\}\}/g);
+    const numVars = matches ? matches.length : 0;
+    if (comp.type === "HEADER") {
+      headerText = numVars > 0 ? substitute(text, numVars) : text;
+    } else if (comp.type === "BODY") {
+      bodyText = numVars > 0 ? substitute(text, numVars) : text;
+    } else if (comp.type === "FOOTER") {
+      footerText = text;
+    } else if (comp.type === "BUTTONS") {
+      const btns = (comp.buttons || []).map((b: any) => `▸ ${b.text || b.url || ""}`).join("\n");
+      if (btns) footerText = (footerText ? footerText + "\n\n" : "") + btns;
+    }
+  }
+  return [headerText, bodyText, footerText].filter(Boolean).join("\n\n");
+}
+
 function mirrorOutgoingToChatgoo(params: {
   to: string;
   phoneId: string;
   displayPhone: string;
-  payload: any;
+  templateName: string;
+  components: any[];
+  variables: string[];
   metaResponse?: any;
 }) {
   if (!CHATGOO_WEBHOOK_URL) return;
-  const { to, phoneId, displayPhone, payload, metaResponse } = params;
+  const { to, phoneId, displayPhone, templateName, components, variables, metaResponse } = params;
   const messageId = metaResponse?.messages?.[0]?.id
     || `synthetic.outgoing.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
   const ts = Math.floor(Date.now() / 1000).toString();
+  const rendered = renderTemplateBody(components, variables)
+    || `[Template: ${templateName}]`;
+  const bodyWithMarker = `📤 *Enviado pelo sistema (Meta Oficial)*\n\n${rendered}`;
   const outgoingMessage: any = {
     from: displayPhone,
     to,
     id: messageId,
     timestamp: ts,
     _outgoing_echo: true,
-    type: payload?.type || "template",
+    type: "text",
+    text: { body: bodyWithMarker },
   };
-  if (payload?.template) outgoingMessage.template = payload.template;
-  if (payload?.text) outgoingMessage.text = payload.text;
   const synthetic = {
     object: "whatsapp_business_account",
     entry: [{
