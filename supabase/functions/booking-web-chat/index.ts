@@ -1298,6 +1298,17 @@ serve(async (req) => {
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
+
+          if (errMsg.includes("HORARIO_BLOQUEADO")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Este horário foi bloqueado na agenda e não está mais disponível. Por favor, tente novamente.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
           
           if (errMsg.includes("FERIADO")) {
             await updateSession(supabase, session.id, { state: "FINISHED" });
