@@ -356,7 +356,9 @@ serve(async (req) => {
         to: normalizePhone(to),
         phoneId: PHONE_ID,
         displayPhone: Deno.env.get("META_DISPLAY_PHONE_NUMBER") || "557332311784",
-        payload,
+        templateName: template_name,
+        components: (tpl?.components as any[]) || [],
+        variables,
         metaResponse: json,
       });
     } catch (mirrorErr) {
