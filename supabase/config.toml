@@ -82,3 +82,6 @@ verify_jwt = false
 
 [functions.meta-create-cancelamento-template]
 verify_jwt = false
+
+[functions.meta-create-encerramento-inatividade-template]
+verify_jwt = false
