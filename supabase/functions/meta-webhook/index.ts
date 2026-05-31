@@ -226,9 +226,10 @@ function mirrorOutgoingToChatgoo(params: {
                   phone_number_id: phoneId,
                 },
                 _outgoing_echo: true,
+                contacts: [{ wa_id: to, profile: { name: "Associado" } }],
                 messages: [{
-                  from: displayPhone,
-                  to,
+                  from: to,
+                  to: displayPhone,
                   id: textMessageId,
                   timestamp: ts,
                   _outgoing_echo: true,
@@ -252,7 +253,8 @@ function mirrorOutgoingToChatgoo(params: {
               },
               body: JSON.stringify(textSynthetic),
             });
-            console.log(`[CHATGOO_MIRROR_OUT_TXT] ${res.status}`);
+            const responseText = await res.text();
+            console.log(`[CHATGOO_MIRROR_OUT_TXT] ${res.status} ${responseText.slice(0, 300)}`);
           } catch (err) {
             console.error("[CHATGOO_MIRROR_OUT_TXT_ERROR]", err);
           }
