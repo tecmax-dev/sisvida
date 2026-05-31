@@ -89,7 +89,7 @@ function transformInteractiveToText(rawBody: any): any {
 // do bot como `from` para que o Chatgoo exiba o histórico completo do
 // fluxo (menu enviado + clique do usuário).
 // =====================================================================
-function mirrorOutgoingToChatgoo(params: {
+async function mirrorOutgoingToChatgoo(params: {
   to: string;
   phoneId: string;
   displayPhone: string;
@@ -157,7 +157,9 @@ function mirrorOutgoingToChatgoo(params: {
     }],
   };
 
-  (async () => {
+  const mirrorTasks: Promise<void>[] = [];
+
+  mirrorTasks.push((async () => {
     try {
       const res = await fetch(CHATGOO_WEBHOOK_URL, {
         method: "POST",
@@ -174,7 +176,7 @@ function mirrorOutgoingToChatgoo(params: {
     } catch (err) {
       console.error("[CHATGOO_MIRROR_OUT_ERROR]", err);
     }
-  })();
+  })());
 
   // ========= ESPELHO DE TEXTO COMPLEMENTAR PARA INTERATIVOS =========
   // O Chatgoo não renderiza o corpo de mensagens "interactive" (botões/listas),
@@ -241,7 +243,7 @@ function mirrorOutgoingToChatgoo(params: {
             }],
           }],
         };
-        (async () => {
+        mirrorTasks.push((async () => {
           try {
             const res = await fetch(CHATGOO_WEBHOOK_URL, {
               method: "POST",
@@ -258,12 +260,14 @@ function mirrorOutgoingToChatgoo(params: {
           } catch (err) {
             console.error("[CHATGOO_MIRROR_OUT_TXT_ERROR]", err);
           }
-        })();
+        })());
       }
     } catch (err) {
       console.error("[CHATGOO_MIRROR_TEXT_BUILD_ERROR]", err);
     }
   }
+
+  await Promise.allSettled(mirrorTasks);
 }
 
 const SUPPORT_START_MINUTES = 9 * 60;
