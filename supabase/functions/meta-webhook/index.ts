@@ -22,8 +22,28 @@ const CHATGOO_WEBHOOK_URL = Deno.env.get("CHATGOO_WEBHOOK_URL")
 const CHATGOO_WEBHOOK_TOKEN = Deno.env.get("CHATGOO_WEBHOOK_TOKEN")
   || "AORpxXNEBtdxyZeq31xSInEo4UU7jn";
 
-function mirrorToChatgoo(rawBody: unknown, originalHeaders: Headers) {
+function mirrorToChatgoo(rawBody: any, originalHeaders: Headers) {
   if (!CHATGOO_WEBHOOK_URL) return;
+
+  // IMPORTANTE: NÃO espelhar mensagens recebidas (incoming `messages`) para o Chatgoo.
+  // O Chatgoo possui auto-reply próprio ("Olá! Fantástico receber seu contato...") que dispara
+  // sempre que recebe uma mensagem, conflitando com o nosso fluxo automático oficial.
+  // Espelhamos apenas eventos de STATUS (sent/delivered/read/failed) e mudanças de TEMPLATE,
+  // que é o que o Chatgoo precisa para manter sincronização.
+  try {
+    const changes = rawBody?.entry?.[0]?.changes || [];
+    const hasIncomingMessage = changes.some(
+      (c: any) => Array.isArray(c?.value?.messages) && c.value.messages.length > 0,
+    );
+    if (hasIncomingMessage) {
+      console.log('[CHATGOO_MIRROR_SKIPPED] incoming user message — avoid Chatgoo auto-reply');
+      return;
+    }
+  } catch (_) {
+    // Em caso de payload inesperado, prefere não espelhar a espelhar uma mensagem indevida.
+    return;
+  }
+
   // Fire-and-forget: não aguardamos a resposta para não atrasar o Meta.
   (async () => {
     try {
