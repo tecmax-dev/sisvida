@@ -222,6 +222,9 @@ serve(async (req) => {
     console.log('[WEBHOOK_ENTRY] Meta Webhook');
     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
 
+    // Espelha o payload para o Chatgoo (fire-and-forget).
+    mirrorToChatgoo(body, req.headers);
+
     // Minimalist Parser
     const entry = body.entry?.[0];
     const change = entry?.changes?.[0];
