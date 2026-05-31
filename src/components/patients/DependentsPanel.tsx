@@ -407,7 +407,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
           <h3 className="text-lg font-semibold">Dependentes</h3>
           <Badge variant="secondary">{dependents.length}</Badge>
         </div>
-         {!isAdding && !hasUnionEntity && (
+         {!isAdding && (!hasUnionEntity || canPermanentDelete) && (
           <Button onClick={() => setIsAdding(true)} size="sm">
             <Plus className="h-4 w-4 mr-1" />
             Adicionar Dependente
