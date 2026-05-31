@@ -32,6 +32,7 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 | `homologacao_lembrete_profissional_v3` | UTILITY | QUICK_REPLY: Confirmar, Cancelar | 5: profissional, funcionário, empresa, data, hora | v3 corrigido para profissional |
 | `vaga_medica_<slug>` (8 templates) | UTILITY* | URL: Acessar Aplicativo (https://prosindweb.com.br/) | 3: nome, data, hora | Notificação de vaga social disponível por profissional ativo do sindicato. Um template por profissional: daniela_sales, eliney_silva, jorge_avelar, jose_alcides, juliane_leite, marcelo_aguiar, pedro_roberto, uiara_tiuba. Edge function `meta-create-vaga-templates` registra todos. *jorge_avelar foi reclassificado como MARKETING pela Meta na revisão — recriar com texto mais utilitário se rejeitado. |
 | `cancelamento_consulta_profissional` | UTILITY | nenhum | 6: nome, profissional, especialidade, data, hora, motivo | Notifica associado quando o profissional/clínica cancela a consulta. Registrado via edge function `meta-create-cancelamento-template`. |
+| `atendimento_encerrado_inatividade` | UTILITY | nenhum | 1: nome | Encerramento automático de atendimento (Chatgoo/Whazing) por inatividade do contato. Registrado via edge function `meta-create-encerramento-inatividade-template`. |
 
 ## Templates pendentes de criação manual no painel Meta
 
