@@ -616,7 +616,7 @@ serve(async (req) => {
       try {
         let parsed: any = null;
         try { parsed = JSON.parse(result); } catch { /* ignore */ }
-        mirrorOutgoingToChatgoo({
+        await mirrorOutgoingToChatgoo({
           to,
           phoneId: String(PHONE_ID || ''),
           displayPhone: String(value?.metadata?.display_phone_number || ''),
