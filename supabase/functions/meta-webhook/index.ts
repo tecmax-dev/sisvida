@@ -51,6 +51,93 @@ function mirrorToChatgoo(rawBody: any, originalHeaders: Headers) {
   })();
 }
 
+// =====================================================================
+// Espelha mensagens ENVIADAS pelo bot (menus de botões, listas, textos)
+// para o Chatgoo, sintetizando um payload no formato WABA com o número
+// do bot como `from` para que o Chatgoo exiba o histórico completo do
+// fluxo (menu enviado + clique do usuário).
+// =====================================================================
+function mirrorOutgoingToChatgoo(params: {
+  to: string;
+  phoneId: string;
+  displayPhone: string;
+  payload: any;
+  metaResponse?: any;
+}) {
+  if (!CHATGOO_WEBHOOK_URL) return;
+  const { to, phoneId, displayPhone, payload, metaResponse } = params;
+
+  const messageId = metaResponse?.messages?.[0]?.id
+    || `synthetic.outgoing.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
+  const ts = Math.floor(Date.now() / 1000).toString();
+
+  // Monta um message object compatível com a estrutura WABA
+  const outgoingMessage: any = {
+    from: displayPhone,
+    to,
+    id: messageId,
+    timestamp: ts,
+    _outgoing_echo: true, // marca para Chatgoo identificar e NÃO auto-responder
+  };
+
+  if (payload?.type === "interactive") {
+    outgoingMessage.type = "interactive";
+    outgoingMessage.interactive = payload.interactive;
+  } else if (payload?.type === "text") {
+    outgoingMessage.type = "text";
+    outgoingMessage.text = payload.text;
+  } else if (payload?.type === "template") {
+    outgoingMessage.type = "template";
+    outgoingMessage.template = payload.template;
+  } else if (payload?.type === "document") {
+    outgoingMessage.type = "document";
+    outgoingMessage.document = payload.document;
+  } else if (payload?.type === "image") {
+    outgoingMessage.type = "image";
+    outgoingMessage.image = payload.image;
+  } else {
+    outgoingMessage.type = payload?.type || "unknown";
+    outgoingMessage.raw = payload;
+  }
+
+  const synthetic = {
+    object: "whatsapp_business_account",
+    entry: [{
+      id: Deno.env.get("META_WABA_ID") || "0",
+      changes: [{
+        value: {
+          messaging_product: "whatsapp",
+          metadata: {
+            display_phone_number: displayPhone,
+            phone_number_id: phoneId,
+          },
+          _outgoing_echo: true,
+          messages: [outgoingMessage],
+        },
+        field: "messages",
+      }],
+    }],
+  };
+
+  (async () => {
+    try {
+      const res = await fetch(CHATGOO_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${CHATGOO_WEBHOOK_TOKEN}`,
+          "X-Webhook-Token": CHATGOO_WEBHOOK_TOKEN,
+          "X-Outgoing-Echo": "true",
+        },
+        body: JSON.stringify(synthetic),
+      });
+      console.log(`[CHATGOO_MIRROR_OUT] ${res.status}`);
+    } catch (err) {
+      console.error("[CHATGOO_MIRROR_OUT_ERROR]", err);
+    }
+  })();
+}
+
 const SUPPORT_START_MINUTES = 9 * 60;
 const SUPPORT_END_MINUTES = 16 * 60;
 
@@ -316,6 +403,21 @@ serve(async (req) => {
       });
       const result = await res.text();
       console.log('[MESSAGE_SENT]', result);
+      // Espelha a mensagem ENVIADA (menu de botões, listas, textos) para o Chatgoo,
+      // para que o painel mostre o fluxo completo: bot → usuário e usuário → bot.
+      try {
+        let parsed: any = null;
+        try { parsed = JSON.parse(result); } catch { /* ignore */ }
+        mirrorOutgoingToChatgoo({
+          to,
+          phoneId: String(PHONE_ID || ''),
+          displayPhone: String(value?.metadata?.display_phone_number || ''),
+          payload,
+          metaResponse: parsed,
+        });
+      } catch (err) {
+        console.error('[MIRROR_OUT_WRAP_ERROR]', err);
+      }
       return result;
     };
 
