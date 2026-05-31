@@ -395,6 +395,29 @@ serve(async (req) => {
           status: 200,
         });
       }
+
+      // 4) Se o payload desembrulhado é um ECO de saída (mirror que nós mesmos
+      //    enviamos antes para o Chatgoo), NÃO reprocessar — caso contrário o
+      //    bot tenta responder à própria mensagem e a Meta retorna #100
+      //    Invalid parameter (from == to == número oficial).
+      try {
+        const _v = body?.entry?.[0]?.changes?.[0]?.value;
+        const _msg = _v?.messages?.[0];
+        const isOutgoingEcho =
+          _v?._outgoing_echo === true ||
+          _msg?._outgoing_echo === true ||
+          (typeof _msg?.id === 'string' && _msg.id.startsWith('synthetic.outgoing.')) ||
+          (_msg?.from && _v?.metadata?.display_phone_number &&
+            String(_msg.from).replace(/\D/g, '') ===
+              String(_v.metadata.display_phone_number).replace(/\D/g, ''));
+        if (isOutgoingEcho) {
+          console.log('[CHATGOO_OUTGOING_ECHO_IGNORED]');
+          return new Response(JSON.stringify({ ok: true, ignored: 'outgoing_echo' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          });
+        }
+      } catch (_) { /* noop */ }
     }
 
     // Espelha o payload para o Chatgoo (fire-and-forget). Só espelha payloads
