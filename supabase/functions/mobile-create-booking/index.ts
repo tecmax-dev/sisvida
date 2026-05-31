@@ -163,23 +163,37 @@ Deno.serve(async (req) => {
 
     const endTime = calculateEndTime(time, durationMinutes);
 
-    const { data: existingAppointments, error: existingAppointmentsError } = await supabase
-      .from("appointments")
-      .select("id, start_time, end_time")
-      .eq("clinic_id", clinicId)
-      .eq("professional_id", professionalId)
-      .eq("appointment_date", date)
-      .in("status", ["scheduled", "confirmed", "in_progress", "arrived"])
-      .lt("start_time", endTime)
-      .gt("end_time", time);
+    const [{ data: existingAppointments, error: existingAppointmentsError }, { data: slotBlocks, error: slotBlocksError }] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("id, start_time, end_time")
+        .eq("clinic_id", clinicId)
+        .eq("professional_id", professionalId)
+        .eq("appointment_date", date)
+        .in("status", ["scheduled", "confirmed", "in_progress", "arrived"])
+        .lt("start_time", endTime)
+        .gt("end_time", time),
+      supabase
+        .from("appointment_slot_blocks")
+        .select("id, start_time, end_time")
+        .eq("clinic_id", clinicId)
+        .eq("professional_id", professionalId)
+        .eq("block_date", date)
+        .lt("start_time", endTime)
+        .gt("end_time", time),
+    ]);
 
-    if (existingAppointmentsError) {
-      console.error("[mobile-create-booking] Error checking conflicts:", existingAppointmentsError);
+    if (existingAppointmentsError || slotBlocksError) {
+      console.error("[mobile-create-booking] Error checking conflicts/blocks:", existingAppointmentsError || slotBlocksError);
       return errorResponse("Não foi possível validar o horário. Tente novamente.", 500);
     }
 
     if (existingAppointments && existingAppointments.length > 0) {
       return errorResponse("Este horário já está ocupado. Por favor, escolha outro horário.");
+    }
+
+    if (slotBlocks && slotBlocks.length > 0) {
+      return errorResponse("Este horário foi bloqueado na agenda e não está mais disponível.");
     }
 
     const { data: appointment, error: appointmentError } = await supabase
@@ -203,48 +217,8 @@ Deno.serve(async (req) => {
       console.error("[mobile-create-booking] Error creating appointment:", appointmentError);
 
       const message = appointmentError.message || "";
-
-      if (message.includes("LIMITE_AGENDAMENTO_DEPENDENTE")) {
-        return errorResponse("Limite de agendamentos de dependentes atingido para este profissional neste período.");
-      }
-
-      if (message.includes("LIMITE_AGENDAMENTO_CPF")) {
-        return errorResponse("Você já possui agendamento para este profissional neste mês.");
-      }
-
-      if (message.includes("booking_window_exceeded") || message.includes("Agendamento indisponível")) {
-        return errorResponse("Agendamento indisponível para este período.");
-      }
-
-      if (message.includes("HORARIO_INVALIDO")) {
-        const match = message.match(/HORARIO_INVALIDO:\s*(.+)/);
-        return errorResponse(match ? match[1].trim() : "O profissional não atende neste horário.");
-      }
-
-      if (message.includes("FERIADO")) {
-        const match = message.match(/FERIADO:\s*(.+)/);
-        return errorResponse(match ? match[1].trim() : "Não é possível agendar nesta data.");
-      }
-
-      if (message.includes("CARTEIRINHA_DEPENDENTE_VENCIDA")) {
-        const match = message.match(/CARTEIRINHA_DEPENDENTE_VENCIDA:\s*(.+)/);
-        return errorResponse(match ? match[1].trim() : "A carteirinha do dependente está vencida.");
-      }
-
-      if (message.includes("CARTEIRINHA_VENCIDA")) {
-        const match = message.match(/CARTEIRINHA_VENCIDA:\s*(.+)/);
-        return errorResponse(match ? match[1].trim() : "Sua carteirinha está vencida.");
-      }
-
-      if (message.includes("PACIENTE_BLOQUEADO_NO_SHOW")) {
-        const match = message.match(/PACIENTE_BLOQUEADO_NO_SHOW:\s*(.+)/);
-        return errorResponse(match ? match[1].trim() : "Paciente bloqueado por não comparecimento.");
-      }
-
-      if (message.includes("DEPENDENTE_INVALIDO")) {
-        const match = message.match(/DEPENDENTE_INVALIDO:\s*(.+)/);
-        return errorResponse(match ? match[1].trim() : "Dependente inválido.");
-      }
+      const friendlyMessage = mapAppointmentError(message);
+      if (friendlyMessage) return errorResponse(friendlyMessage);
 
       return errorResponse("Não foi possível realizar o agendamento.", 500);
     }
