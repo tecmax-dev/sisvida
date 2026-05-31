@@ -403,6 +403,21 @@ serve(async (req) => {
       });
       const result = await res.text();
       console.log('[MESSAGE_SENT]', result);
+      // Espelha a mensagem ENVIADA (menu de botões, listas, textos) para o Chatgoo,
+      // para que o painel mostre o fluxo completo: bot → usuário e usuário → bot.
+      try {
+        let parsed: any = null;
+        try { parsed = JSON.parse(result); } catch { /* ignore */ }
+        mirrorOutgoingToChatgoo({
+          to,
+          phoneId: String(PHONE_ID || ''),
+          displayPhone: String(value?.metadata?.display_phone_number || ''),
+          payload,
+          metaResponse: parsed,
+        });
+      } catch (err) {
+        console.error('[MIRROR_OUT_WRAP_ERROR]', err);
+      }
       return result;
     };
 
