@@ -104,6 +104,15 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     console.log('[STATE_BEFORE_CLICK]', session.state);
     console.log('[BUTTON_CLICKED]', message);
 
+    // Global escape hatch: "Menu Principal" clears session and exits flow
+    if (text === 'menu_principal') {
+      await supabase.from('whatsapp_boleto_sessions').delete().eq('id', session.id);
+      return new Response(
+        JSON.stringify({ success: true, response: '👋 Voltando ao menu principal...', buttons: [], newState: null }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     let responseText = "";
     let buttons: any[] = [];
     
