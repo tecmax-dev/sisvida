@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
  import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -68,6 +69,10 @@ const formatCPF = (value: string): string => {
 export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenForm = false }: DependentsPanelProps) {
   const { userRoles, isSuperAdmin } = useAuth();
    const { hasUnionEntity } = useClinicHasUnionEntity();
+  const { hasAnyPermission } = usePermissions();
+  const canManageDependents =
+    isSuperAdmin ||
+    hasAnyPermission(["manage_patient_dependents", "union_manage_member_dependents"]);
   const canPermanentDelete = isSuperAdmin || userRoles.some((r) => r.role === "owner" || r.role === "admin");
 
   const [searchParams] = useSearchParams();
@@ -407,7 +412,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
           <h3 className="text-lg font-semibold">Dependentes</h3>
           <Badge variant="secondary">{dependents.length}</Badge>
         </div>
-         {!isAdding && (!hasUnionEntity || canPermanentDelete) && (
+         {!isAdding && (!hasUnionEntity || canPermanentDelete) && canManageDependents && (
           <Button onClick={() => setIsAdding(true)} size="sm">
             <Plus className="h-4 w-4 mr-1" />
             Adicionar Dependente
@@ -534,10 +539,12 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
             <p className="text-muted-foreground mb-4">
               Nenhum dependente cadastrado ainda.
             </p>
-            <Button variant="outline" onClick={() => setIsAdding(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Adicionar Primeiro Dependente
-            </Button>
+            {canManageDependents && (
+              <Button variant="outline" onClick={() => setIsAdding(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Primeiro Dependente
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -595,7 +602,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                     </div>
 
                     <div className="flex gap-1 ml-4">
-                      {!dependent.card_number && (
+                      {!dependent.card_number && canManageDependents && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -611,6 +618,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                           )}
                         </Button>
                       )}
+                      {canManageDependents && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -619,6 +627,8 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
+                      )}
+                      {canManageDependents && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -638,6 +648,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                           <UserX className="h-4 w-4" />
                         )}
                       </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
