@@ -2101,6 +2101,43 @@ export default function CalendarPage() {
     }
   };
 
+  const handleReactivateBlockedAppointment = async (appointment: Appointment) => {
+    if (!isAdmin) {
+      toast({
+        title: "Permissão negada",
+        description: "Apenas administradores podem reativar agendamentos bloqueados.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          status: 'scheduled',
+          cancellation_reason: null,
+          cancelled_at: null,
+        })
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento reativado",
+        description: "O agendamento voltou para o status agendado.",
+      });
+
+      await fetchAppointments();
+    } catch (error: any) {
+      console.error('Erro ao reativar agendamento:', error);
+      toast({
+        title: "Erro ao reativar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
     try {
 const updateData: Record<string, any> = {
@@ -3683,6 +3720,23 @@ const updateData: Record<string, any> = {
             )}
           </div>
         </div>
+
+        {/* Reativar agendamento bloqueado por cancelamento profissional (somente admin) */}
+        {isBlocked && isAdmin && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReactivateBlockedAppointment(appointment);
+            }}
+            title="Reativar agendamento"
+          >
+            <UnlockIcon className="h-3 w-3 mr-1" />
+            Reativar
+          </Button>
+        )}
 
         {/* Menu de ações - três pontos sempre visível */}
         {canModify && (
