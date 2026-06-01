@@ -661,6 +661,85 @@ export default function UnionContributionsPageRedesign() {
     }
   };
 
+  const handleAuditPaidLytex = async () => {
+    if (!currentClinic) return;
+
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+
+    const confirmed = window.confirm(
+      "Auditoria Lytex de Pagamentos\n\n" +
+        "Esta ação irá consultar TODOS os boletos marcados como PAGOS no sistema contra a Lytex. " +
+        "Quando a Lytex disser que o boleto NÃO está pago (ou não existe), o registro local será revertido para pendente/vencido.\n\n" +
+        "A operação roda em lotes e pode demorar alguns minutos. Deseja continuar?"
+    );
+    if (!confirmed) return;
+
+    setAuditingPaid(true);
+    const toastId = toast.loading("Iniciando auditoria Lytex...");
+    let offset = 0;
+    const limit = 100;
+    let totalChecked = 0;
+    let totalReverted = 0;
+    let totalErrors = 0;
+    let totalCount: number | null = null;
+    const allMismatches: any[] = [];
+
+    try {
+      // Loop paginado até concluir
+      // Limite de segurança: 200 iterações = 20.000 contribuições
+      for (let i = 0; i < 200; i++) {
+        const { data, error } = await supabase.functions.invoke("audit-lytex-paid-contributions", {
+          body: {
+            clinicId: currentClinic.id,
+            offset,
+            limit,
+            dryRun: false,
+          },
+        });
+
+        if (error) {
+          const { message } = extractFunctionsError(error);
+          throw new Error(message);
+        }
+
+        totalChecked += data?.checked || 0;
+        totalReverted += data?.reverted || 0;
+        totalErrors += (data?.errors?.length || 0);
+        if (data?.totalCount != null) totalCount = data.totalCount;
+        if (Array.isArray(data?.mismatches)) allMismatches.push(...data.mismatches);
+
+        const pct = totalCount ? Math.min(100, Math.round((totalChecked / totalCount) * 100)) : 0;
+        toast.loading(
+          `Auditando Lytex... ${totalChecked}${totalCount ? `/${totalCount}` : ""} verificados (${pct}%) • ${totalReverted} revertidos`,
+          { id: toastId }
+        );
+
+        if (data?.nextOffset == null) break;
+        offset = data.nextOffset;
+      }
+
+      toast.success(
+        `Auditoria concluída: ${totalChecked} verificados, ${totalReverted} revertidos${totalErrors ? `, ${totalErrors} erros` : ""}.`,
+        { id: toastId, duration: 8000 }
+      );
+
+      if (allMismatches.length > 0) {
+        console.group(`[Auditoria Lytex] ${allMismatches.length} divergências encontradas`);
+        console.table(allMismatches);
+        console.groupEnd();
+      }
+
+      fetchData();
+    } catch (err) {
+      const { message } = extractFunctionsError(err);
+      console.error("Erro auditoria Lytex:", err);
+      toast.error(`Erro na auditoria: ${message}`, { id: toastId });
+    } finally {
+      setAuditingPaid(false);
+    }
+  };
+
   if (loading && !yearDetectionDone) {
     return (
       <div className="flex items-center justify-center h-64">
