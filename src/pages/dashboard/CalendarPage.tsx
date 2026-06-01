@@ -2101,6 +2101,43 @@ export default function CalendarPage() {
     }
   };
 
+  const handleReactivateBlockedAppointment = async (appointment: Appointment) => {
+    if (!isAdmin) {
+      toast({
+        title: "Permissão negada",
+        description: "Apenas administradores podem reativar agendamentos bloqueados.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          status: 'scheduled',
+          cancellation_reason: null,
+          cancelled_at: null,
+        })
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento reativado",
+        description: "O agendamento voltou para o status agendado.",
+      });
+
+      await fetchAppointments();
+    } catch (error: any) {
+      console.error('Erro ao reativar agendamento:', error);
+      toast({
+        title: "Erro ao reativar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
     try {
 const updateData: Record<string, any> = {
