@@ -80,7 +80,7 @@ serve(async (req) => {
   }
 
   try {
-    const { file_base64, file_name, file_type, member_name, clinic_id } = await req.json();
+    const { file_base64, file_name, file_type, member_name, employer_name, employer_cnpj, clinic_id } = await req.json();
 
     if (!file_base64) {
       return new Response(
@@ -121,6 +121,11 @@ IMPORTANTE - VALIDAÇÃO DO NOME:
 O nome do associado/titular é: "${member_name || "NÃO INFORMADO"}"
 ${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/FUNCIONÁRIO corresponde (total ou parcialmente) ao nome "${member_name}". Considere que o nome pode estar abreviado, em ordem diferente, ou parcialmente visível. Se houver correspondência parcial significativa (ex: pelo menos nome e sobrenome), considere como match. Se o nome no documento for COMPLETAMENTE diferente do nome do associado, retorne is_payslip como false.` : ""}
 
+IMPORTANTE - VALIDAÇÃO DA EMPRESA/EMPREGADOR (ANTIFRAUDE):
+O nome da empresa/empregador cadastrado para o associado é: "${employer_name || "NÃO INFORMADO"}"
+${employer_cnpj ? `CNPJ cadastrado: "${employer_cnpj}".` : ""}
+${employer_name ? `Verifique se o nome da EMPRESA/EMPREGADOR que aparece no cabeçalho do contracheque corresponde (total ou parcialmente, considerando razão social, nome fantasia, abreviações, acentos, sufixos LTDA/S.A./EIRELI/ME/EPP, e variações comuns) ao nome "${employer_name}". Se também houver CNPJ no documento e o CNPJ cadastrado foi informado, compare apenas os dígitos. Se houver correspondência significativa de nome OU de CNPJ, marque employer_match=true. Se a empresa no documento for CLARAMENTE diferente da cadastrada (nomes/CNPJ totalmente distintos, sem qualquer sobreposição), marque employer_match=false e retorne is_payslip=false (possível fraude).` : "Como não há empresa cadastrada, retorne employer_match=true."}
+
 IMPORTANTE - VALIDAÇÃO DA COMPETÊNCIA/MÊS DE REFERÊNCIA:
 A data atual é: ${String(currentMonth).padStart(2, '0')}/${currentYear}
 ${competencePrompt}
@@ -137,7 +142,7 @@ ATENÇÃO: Seja FLEXÍVEL na identificação. O documento pode ter diferentes la
 Se o documento NÃO é um contracheque (por exemplo: foto pessoal, documento genérico, imagem aleatória, selfie, paisagem, etc.), retorne is_payslip como false.
 
 Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
-{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "competence_month": número 1-12 ou null, "competence_year": número YYYY ou null, "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
+{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "employer_match": true ou false, "employer_found_in_document": "nome da empresa encontrado no documento ou null", "employer_cnpj_found_in_document": "CNPJ encontrado no documento ou null", "competence_month": número 1-12 ou null, "competence_year": número YYYY ou null, "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
 IMPORTANTE: Antes de retornar is_payslip=false por falta de item sindical, REVISE LINHA POR LINHA do documento procurando as palavras "SINDICAL", "SINDICATO", "ASSISTENCIAL", "NEGOCIAL" (com ou sem acentos, em qualquer caixa, mesmo abreviadas). Só rejeite se realmente NENHUMA dessas palavras aparecer no documento.
@@ -183,6 +188,9 @@ Nome do arquivo: ${file_name}`;
     let foundItems = { mensalidade_sindical: false, taxa_assistencial: false, taxa_negocial: false };
     let nameMatch = false;
     let nameFoundInDocument: string | null = null;
+    let employerMatch = false;
+    let employerFoundInDocument: string | null = null;
+    let employerCnpjFoundInDocument: string | null = null;
     let competenceMonth: number | null = null;
     let competenceYear: number | null = null;
 
@@ -195,6 +203,9 @@ Nome do arquivo: ${file_name}`;
         reason = parsed.reason || reason;
         nameMatch = !!parsed.name_match;
         nameFoundInDocument = parsed.name_found_in_document || null;
+        employerMatch = !!parsed.employer_match;
+        employerFoundInDocument = parsed.employer_found_in_document || null;
+        employerCnpjFoundInDocument = parsed.employer_cnpj_found_in_document || null;
 
         if (parsed.found_items) {
           foundItems = {
@@ -215,6 +226,11 @@ Nome do arquivo: ${file_name}`;
         if (isPayslip && member_name && !nameMatch) {
           isPayslip = false;
           reason = `O nome no contracheque (${nameFoundInDocument || "não identificado"}) não corresponde ao nome do associado (${member_name}).`;
+        }
+
+        if (isPayslip && employer_name && !employerMatch) {
+          isPayslip = false;
+          reason = `A empresa no contracheque (${employerFoundInDocument || "não identificada"}) não corresponde à empresa cadastrada para o associado (${employer_name}). Para sua segurança, não foi possível validar o documento.`;
         }
 
         // Validate competence using configurable acceptance days
@@ -243,7 +259,7 @@ Nome do arquivo: ${file_name}`;
       : `❌ ${reason} Por favor, envie um contracheque válido com os descontos sindicais.`;
 
     return new Response(
-      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems, name_match: nameMatch, name_found_in_document: nameFoundInDocument, competence_month: competenceMonth, competence_year: competenceYear }),
+      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems, name_match: nameMatch, name_found_in_document: nameFoundInDocument, employer_match: employerMatch, employer_found_in_document: employerFoundInDocument, employer_cnpj_found_in_document: employerCnpjFoundInDocument, competence_month: competenceMonth, competence_year: competenceYear }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
