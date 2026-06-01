@@ -520,24 +520,33 @@ serve(async (req) => {
       // 7) localiza/atualiza patient_cards
       const { data: existingCard } = await supabase
         .from("patient_cards")
-        .select("id")
+        .select("id, expires_at")
         .eq("patient_id", session.patient_id)
         .eq("is_active", true)
         .maybeSingle();
 
       let cardId: string | null = existingCard?.id || null;
+      let finalExpiresAt = newExpiresAt;
+      let keptCurrent = false;
+      if (existingCard?.expires_at && existingCard.expires_at > newExpiresAt) {
+        // Nunca retroceder a validade: mantém a validade atual se já for maior.
+        finalExpiresAt = existingCard.expires_at;
+        keptCurrent = true;
+      }
       if (cardId) {
-        await supabase
-          .from("patient_cards")
-          .update({ expires_at: newExpiresAt })
-          .eq("id", cardId);
+        if (!keptCurrent) {
+          await supabase
+            .from("patient_cards")
+            .update({ expires_at: finalExpiresAt })
+            .eq("id", cardId);
+        }
       } else {
         const { data: newCard, error: cardErr } = await supabase
           .from("patient_cards")
           .insert({
             patient_id: session.patient_id,
             clinic_id: SINDICATO_CLINIC_ID,
-            expires_at: newExpiresAt,
+            expires_at: finalExpiresAt,
             is_active: true,
             card_number: `CARD-${Date.now()}`,
           })
@@ -559,7 +568,11 @@ serve(async (req) => {
         received_at: nowIso,
         reviewed_at: nowIso,
         attachment_path: filePath,
-        notes: `Aprovado automaticamente via WhatsApp. Competência: ${String(compMonth).padStart(2, "0")}/${compYear}.`,
+        notes:
+          `Aprovado automaticamente via WhatsApp. Competência: ${String(compMonth).padStart(2, "0")}/${compYear}.` +
+          (keptCurrent
+            ? ` Validade atual (${existingCard?.expires_at}) é maior que a calculada (${newExpiresAt}); mantida a vigente.`
+            : ""),
       });
 
       // 9) finaliza sessão
@@ -572,11 +585,16 @@ serve(async (req) => {
       return json({
         success: true,
         response:
-          `✅ *Carteirinha renovada com sucesso, ${firstName}!*\n\n` +
-          `📅 Nova validade: *${formatBR(newExpiresAt)}*\n` +
-          `📄 Competência considerada: ${String(compMonth).padStart(2, "0")}/${compYear}\n\n` +
-          `Os dependentes vinculados também foram atualizados automaticamente.\n\n` +
-          `Obrigado!`,
+          (keptCurrent
+            ? `✅ *Contracheque validado, ${firstName}!*\n\n` +
+              `📄 Competência considerada: ${String(compMonth).padStart(2, "0")}/${compYear}\n` +
+              `📅 Sua carteirinha já está válida até *${formatBR(finalExpiresAt)}*, uma data posterior à gerada por este contracheque (${formatBR(newExpiresAt)}).\n\n` +
+              `Mantivemos sua validade atual — não houve retrocesso.\n\nObrigado!`
+            : `✅ *Carteirinha renovada com sucesso, ${firstName}!*\n\n` +
+              `📅 Nova validade: *${formatBR(finalExpiresAt)}*\n` +
+              `📄 Competência considerada: ${String(compMonth).padStart(2, "0")}/${compYear}\n\n` +
+              `Os dependentes vinculados também foram atualizados automaticamente.\n\n` +
+              `Obrigado!`),
         finished: true,
       });
     }
