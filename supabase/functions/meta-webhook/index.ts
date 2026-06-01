@@ -737,8 +737,8 @@ serve(async (req) => {
                 text:
                   "🪪 *Atualizar Carteirinha*\n\n" +
                   "Como você prefere atualizar sua carteirinha hoje?\n\n" +
-                  "• *Pelo App*: rápido, com câmera e validação na hora\n" +
-                  "• *Pelo WhatsApp*: digite seu CPF e envie a foto do contracheque",
+                  "• *Pelo WhatsApp*: o mais rápido! Digite seu CPF e envie a foto do contracheque\n" +
+                  "• *Pelo App*: envie pelo app e aguarde a validação do sindicato",
               },
               action: {
                 buttons: [
