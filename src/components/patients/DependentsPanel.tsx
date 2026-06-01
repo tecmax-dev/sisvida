@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
  import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -68,6 +69,10 @@ const formatCPF = (value: string): string => {
 export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenForm = false }: DependentsPanelProps) {
   const { userRoles, isSuperAdmin } = useAuth();
    const { hasUnionEntity } = useClinicHasUnionEntity();
+  const { hasAnyPermission } = usePermissions();
+  const canManageDependents =
+    isSuperAdmin ||
+    hasAnyPermission(["manage_patient_dependents", "union_manage_member_dependents"]);
   const canPermanentDelete = isSuperAdmin || userRoles.some((r) => r.role === "owner" || r.role === "admin");
 
   const [searchParams] = useSearchParams();
