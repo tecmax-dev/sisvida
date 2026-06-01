@@ -505,10 +505,8 @@ serve(async (req) => {
         });
       }
 
-      // 5) determina competência. Se a função não devolveu, tenta extrair do raw.
-      // Para simplificar, reaproveitamos verify e exigimos competência presente.
-      // O verify atual valida internamente; se passou is_payslip=true, é seguro.
-      // Usamos data atual como fallback (mês anterior) caso a Meta-IA não devolva.
+      // 5) determina competência. Exige mês/ano real do contracheque;
+      // nunca usa mês atual como fallback para evitar validade indevida.
       let compMonth: number | null = null;
       let compYear: number | null = null;
       // tentativa: campos opcionais no payload
@@ -656,7 +654,7 @@ serve(async (req) => {
         notes:
           `Aprovado automaticamente via WhatsApp. Competência: ${String(compMonth).padStart(2, "0")}/${compYear}.` +
           (keptCurrent
-            ? ` Validade atual (${existingCard?.expires_at}) é maior que a calculada (${newExpiresAt}); mantida a vigente.`
+            ? ` Validade atual (${finalExpiresAt}) é igual ou maior que a calculada (${newExpiresAt}); mantida a vigente.`
             : ""),
       });
 
@@ -673,7 +671,7 @@ serve(async (req) => {
           (keptCurrent
             ? `✅ *Contracheque validado, ${firstName}!*\n\n` +
               `📄 Competência considerada: ${String(compMonth).padStart(2, "0")}/${compYear}\n` +
-              `📅 Sua carteirinha já está válida até *${formatBR(finalExpiresAt)}*, uma data posterior à gerada por este contracheque (${formatBR(newExpiresAt)}).\n\n` +
+              `📅 Sua carteirinha já está válida até *${formatBR(finalExpiresAt)}*, uma data igual ou posterior à gerada por este contracheque (${formatBR(newExpiresAt)}).\n\n` +
               `Mantivemos sua validade atual — não houve retrocesso.\n\nObrigado!`
             : `✅ *Carteirinha renovada com sucesso, ${firstName}!*\n\n` +
               `📅 Nova validade: *${formatBR(finalExpiresAt)}*\n` +
