@@ -69,9 +69,15 @@ export function DocumentUpload({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Bucket é privado: gerar signed URL de longa duração (10 anos)
+      const { data: signed, error: signedError } = await supabase.storage
         .from("sindical-documentos")
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365 * 10);
+
+      if (signedError || !signed?.signedUrl) {
+        throw signedError || new Error("Falha ao gerar URL assinada");
+      }
+      const publicUrl = signed.signedUrl;
 
       if (mountedRef.current) {
         onUpload(publicUrl);
