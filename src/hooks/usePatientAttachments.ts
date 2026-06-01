@@ -83,7 +83,20 @@ export function usePatientAttachments(patientId: string, clinicIdOverride?: stri
       // attachment, including items saved inside subfolders such as
       // "Contra cheques > Aprovados" by the WhatsApp card-renewal flow.
       if (folderId) {
-        query = query.eq("folder_id", folderId);
+        const folderIds = new Set<string>([folderId]);
+        let changed = true;
+
+        while (changed) {
+          changed = false;
+          folders.forEach((folder) => {
+            if (folder.parent_folder_id && folderIds.has(folder.parent_folder_id) && !folderIds.has(folder.id)) {
+              folderIds.add(folder.id);
+              changed = true;
+            }
+          });
+        }
+
+        query = query.in("folder_id", Array.from(folderIds));
       }
 
       const { data, error } = await query;
@@ -116,7 +129,7 @@ export function usePatientAttachments(patientId: string, clinicIdOverride?: stri
     } finally {
       setLoading(false);
     }
-  }, [effectiveClinicId, patientId]);
+  }, [effectiveClinicId, patientId, folders]);
 
   const createFolder = async (name: string, parentFolderId?: string | null) => {
     if (!effectiveClinicId || !patientId || !user?.id) return null;
