@@ -79,9 +79,10 @@ export function usePatientAttachments(patientId: string, clinicIdOverride?: stri
         .eq("patient_id", patientId)
         .order("uploaded_at", { ascending: false });
 
-      if (folderId === null) {
-        query = query.is("folder_id", null);
-      } else if (folderId) {
+      // No folder selected means "Todos os Arquivos" and must show every
+      // attachment, including items saved inside subfolders such as
+      // "Contra cheques > Aprovados" by the WhatsApp card-renewal flow.
+      if (folderId) {
         query = query.eq("folder_id", folderId);
       }
 
