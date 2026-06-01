@@ -2427,12 +2427,26 @@ const updateData: Record<string, any> = {
           );
 
           try {
+            const displayName = (apt as any).dependent?.name || apt.patient.name;
+            const specialty = (apt.professional as any)?.specialty || 'Consulta';
+            const motivo = batchCancelReason.trim() || 'Indisponibilidade do profissional';
+
             await sendWhatsAppMessage({
               phone: apt.patient.phone,
               message,
               clinicId: currentClinic.id,
               type: 'custom',
-            });
+              templateName: 'cancelamento_consulta_profissional',
+              templateLanguage: 'pt_BR',
+              templateComponents: [
+                displayName,
+                apt.professional?.name || 'o profissional',
+                specialty,
+                formattedDate,
+                apt.start_time.slice(0, 5),
+                motivo,
+              ],
+            } as any);
           } catch (err) {
             console.error('[BatchCancel] WhatsApp error for', apt.patient.name, err);
           }
