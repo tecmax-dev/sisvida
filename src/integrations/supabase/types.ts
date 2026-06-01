@@ -2817,6 +2817,7 @@ export type Database = {
           paid_value: number | null
           payment_method: string | null
           portal_reissue_count: number
+          portal_value_change_count: number
           public_access_token: string | null
           reconciled_at: string | null
           reconciled_by: string | null
@@ -2866,6 +2867,7 @@ export type Database = {
           paid_value?: number | null
           payment_method?: string | null
           portal_reissue_count?: number
+          portal_value_change_count?: number
           public_access_token?: string | null
           reconciled_at?: string | null
           reconciled_by?: string | null
@@ -2915,6 +2917,7 @@ export type Database = {
           paid_value?: number | null
           payment_method?: string | null
           portal_reissue_count?: number
+          portal_value_change_count?: number
           public_access_token?: string | null
           reconciled_at?: string | null
           reconciled_by?: string | null
@@ -18244,6 +18247,7 @@ export type Database = {
           paid_value: number | null
           payment_method: string | null
           portal_reissue_count: number
+          portal_value_change_count: number
           public_access_token: string | null
           reconciled_at: string | null
           reconciled_by: string | null
