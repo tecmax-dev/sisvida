@@ -446,6 +446,57 @@ const [showTutorial, setShowTutorial] = useState(false);
     }
   };
 
+  const handleChangeValue = async () => {
+    if (!selectedContribution || !employer || !changeValue) {
+      toast.error("Informe o novo valor do boleto");
+      return;
+    }
+
+    setIsChangingValue(true);
+    try {
+      const valueInCents = Math.round(parseFloat(changeValue.replace(",", ".")) * 100);
+      if (isNaN(valueInCents) || valueInCents <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("change-contribution-value", {
+        body: {
+          contribution_id: selectedContribution.id,
+          value: valueInCents,
+          portal_type: "employer",
+          portal_id: employer.id,
+        },
+      });
+
+      if (error) {
+        const errorMessage = error.message || "Erro ao alterar valor";
+        console.error("[EmployerPortal] Change value error:", error);
+        toast.error(`Erro ao alterar valor: ${errorMessage}`);
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success(data.message || "Valor alterado e novo boleto gerado!");
+      setShowChangeValueDialog(false);
+      setChangeValue("");
+      setSelectedContribution(null);
+      loadContributions(employer.id);
+
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsChangingValue(false);
+    }
+  };
+
   const handleGenerateInvoice = async (contrib: Contribution) => {
     if (!employer) {
       toast.error("Sessão expirada. Faça login novamente.");
