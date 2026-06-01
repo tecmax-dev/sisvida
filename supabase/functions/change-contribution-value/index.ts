@@ -9,110 +9,6 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-const LYTEX_API_URL =
-  Deno.env.get("LYTEX_API_URL") || "https://api-pay.lytex.com.br/v2";
-
-let accessToken: string | null = null;
-let tokenExpiresAt = 0;
-
-async function getAccessToken(): Promise<string> {
-  const now = Date.now();
-  if (accessToken && tokenExpiresAt > now + 300000) return accessToken;
-
-  const clientId = Deno.env.get("LYTEX_CLIENT_ID");
-  const clientSecret = Deno.env.get("LYTEX_CLIENT_SECRET");
-  if (!clientId || !clientSecret) {
-    throw new Error("Credenciais Lytex não configuradas");
-  }
-
-  const response = await fetch(`${LYTEX_API_URL}/auth/obtain_token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ clientId, clientSecret }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[ChangeValue] Erro ao autenticar Lytex:", errorText);
-    throw new Error(`Erro de autenticação Lytex: ${response.status}`);
-  }
-
-  const data = await response.json();
-  accessToken = data.accessToken;
-  tokenExpiresAt = now + data.expiresIn * 1000;
-  return accessToken!;
-}
-
-async function cancelInvoice(invoiceId: string) {
-  try {
-    const token = await getAccessToken();
-    const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status: "cancelled" }),
-    });
-    if (!response.ok) {
-      const txt = await response.text();
-      console.error("[ChangeValue] Erro ao cancelar boleto antigo:", txt);
-    }
-  } catch (e) {
-    console.error("[ChangeValue] Falha ao cancelar boleto antigo:", e);
-  }
-}
-
-async function createInvoice(params: {
-  employer: { cnpj: string; name: string; email?: string; phone?: string };
-  value: number;
-  dueDate: string;
-  description: string;
-  contributionId: string;
-}) {
-  const token = await getAccessToken();
-  const cleanCnpj = params.employer.cnpj.replace(/\D/g, "");
-
-  const payload = {
-    client: {
-      type: cleanCnpj.length === 14 ? "pj" : "pf",
-      name: params.employer.name,
-      cpfCnpj: cleanCnpj,
-      email: params.employer.email || undefined,
-      cellphone: params.employer.phone?.replace(/\D/g, "") || undefined,
-    },
-    items: [
-      { name: params.description, quantity: 1, value: params.value },
-    ],
-    dueDate: params.dueDate,
-    paymentMethods: {
-      pix: { enable: true },
-      boleto: { enable: true },
-      creditCard: { enable: false },
-    },
-    referenceId: params.contributionId,
-  };
-
-  const response = await fetch(`${LYTEX_API_URL}/invoices`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    console.error("[ChangeValue] Erro ao criar nova cobranca:", JSON.stringify(data));
-    throw new Error(data.message || `Erro ao criar cobrança: ${response.status}`);
-  }
-
-  const invoiceUrl =
-    data.linkCheckout || data.linkBoleto || data.invoiceUrl || null;
-  return { ...data, invoiceUrl };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -230,52 +126,69 @@ serve(async (req) => {
       }
     }
 
-    // Dados do pagador
-    const employer = contribution.employer as {
-      cnpj?: string; name?: string; email?: string; phone?: string;
-    } | null;
-    if (!employer?.cnpj || !employer?.name) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Dados da empresa estão incompletos para reemitir o boleto. Verifique o cadastro (CNPJ e Razão Social).",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // Cancelar boleto antigo
-    if (contribution.lytex_invoice_id) {
-      await cancelInvoice(contribution.lytex_invoice_id);
-    }
-
     const monthNames = [
       "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
       "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
     ];
     const typeName = contribution.contribution_type?.name || "Contribuição";
     const description = `${typeName} - ${monthNames[contribution.competence_month - 1]}/${contribution.competence_year}`;
+    const dueDateStr = String(contribution.due_date).slice(0, 10);
 
-    let invoice: any = null;
-    try {
-      invoice = await createInvoice({
-        employer: {
-          cnpj: employer.cnpj,
-          name: employer.name,
-          email: employer.email,
-          phone: employer.phone,
-        },
-        value: valueInCents,
-        dueDate: String(contribution.due_date).slice(0, 10),
-        description,
-        contributionId: contribution.id,
-      });
-    } catch (lytexError: any) {
-      console.error("[ChangeValue] Erro Lytex:", lytexError);
-      return new Response(
-        JSON.stringify({ error: lytexError.message || "Erro ao reemitir boleto" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    // Atualizar valor na Lytex via lytex-api (mantém mesmo invoice_id)
+    let lytexUpdated = false;
+    let lytexError: string | null = null;
+
+    if (contribution.lytex_invoice_id) {
+      try {
+        const { data: lytexResp, error: invokeErr } = await supabase.functions.invoke(
+          "lytex-api",
+          {
+            body: {
+              action: "update_invoice",
+              invoiceId: contribution.lytex_invoice_id,
+              contributionId: contribution.id,
+              value: valueInCents,
+              dueDate: dueDateStr,
+              description,
+            },
+          },
+        );
+
+        if (invokeErr) {
+          lytexError = invokeErr.message || "Falha ao invocar lytex-api";
+          console.error("[ChangeValue] Erro ao invocar lytex-api:", invokeErr);
+        } else if (lytexResp?.lytexUpdated === false) {
+          lytexError = lytexResp?.lytexError || "Lytex recusou a atualização";
+          console.warn("[ChangeValue] Lytex não atualizado:", lytexError);
+        } else {
+          lytexUpdated = true;
+        }
+      } catch (e: any) {
+        lytexError = e?.message || "Erro inesperado ao atualizar Lytex";
+        console.error("[ChangeValue] Exceção ao atualizar Lytex:", e);
+      }
+
+      // Se Lytex falhou, abortar para não deixar boleto fora de sincronia
+      if (!lytexUpdated) {
+        return new Response(
+          JSON.stringify({
+            error: `Não foi possível atualizar o boleto na Lytex: ${lytexError}. Nenhuma alteração foi aplicada.`,
+          }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      // Sem boleto Lytex vinculado: atualiza apenas valor no banco
+      const { error: vErr } = await supabase
+        .from("employer_contributions")
+        .update({ value: valueInCents })
+        .eq("id", contribution_id);
+      if (vErr) {
+        return new Response(
+          JSON.stringify({ error: "Erro ao salvar novo valor" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     const newCount = isPortal
@@ -286,27 +199,17 @@ serve(async (req) => {
     const oldNotes = contribution.notes || "";
     const changeNote = `Valor alterado em ${new Date().toLocaleDateString("pt-BR")} de R$ ${(oldValue / 100).toFixed(2)} para R$ ${(valueInCents / 100).toFixed(2)}${isPortal ? ` (portal ${portal_type})` : " (gestor)"}.`;
 
+    // Atualizar contador e notas (lytex-api já atualizou value no banco)
     const { error: updateError } = await supabase
       .from("employer_contributions")
       .update({
-        value: valueInCents,
-        lytex_invoice_id: invoice._id,
-        lytex_invoice_url: invoice.invoiceUrl,
-        lytex_boleto_barcode: invoice.boleto?.barCode || null,
-        lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
-        lytex_pix_code: invoice.pix?.code || null,
-        lytex_pix_qrcode: invoice.pix?.qrCode || null,
         portal_value_change_count: newCount,
         notes: oldNotes ? `${oldNotes}\n${changeNote}` : changeNote,
       })
       .eq("id", contribution_id);
 
     if (updateError) {
-      console.error("[ChangeValue] Erro ao atualizar contribuicao:", updateError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao salvar dados" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      console.error("[ChangeValue] Erro ao atualizar metadados:", updateError);
     }
 
     // Log de portal
@@ -335,11 +238,19 @@ serve(async (req) => {
       }
     }
 
+    // Buscar URL atualizada do boleto
+    const { data: refreshed } = await supabase
+      .from("employer_contributions")
+      .select("lytex_invoice_url")
+      .eq("id", contribution_id)
+      .maybeSingle();
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Valor alterado e novo boleto gerado com sucesso!",
-        lytex_invoice_url: invoice.invoiceUrl,
+        message: "Valor do boleto atualizado com sucesso na Lytex!",
+        lytex_invoice_url: refreshed?.lytex_invoice_url || contribution.lytex_invoice_url || null,
+        lytex_updated: lytexUpdated,
         portal_value_change_count: newCount,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
