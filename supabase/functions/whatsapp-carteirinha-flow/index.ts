@@ -254,6 +254,13 @@ serve(async (req) => {
         });
       }
 
+      // Carrega dados de empregador do titular para validação antifraude
+      const { data: patientEmployer } = await supabase
+        .from("patients")
+        .select("employer_name, employer_cnpj")
+        .eq("id", session.patient_id)
+        .maybeSingle();
+
       const mediaId = body.media_id;
       if (!mediaId) {
         return json({ success: false, response: "Mídia inválida." });
@@ -333,6 +340,8 @@ serve(async (req) => {
             file_name: body.media_filename || `contracheque-${Date.now()}.jpg`,
             file_type: mimeType,
             member_name: session.patient_name,
+            employer_name: patientEmployer?.employer_name || null,
+            employer_cnpj: patientEmployer?.employer_cnpj || null,
             clinic_id: SINDICATO_CLINIC_ID,
           }),
         },
