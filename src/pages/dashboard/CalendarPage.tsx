@@ -2102,6 +2102,7 @@ export default function CalendarPage() {
   };
 
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
+    // (handler abaixo)
     try {
 const updateData: Record<string, any> = {
         status: newStatus as "scheduled" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show" | "in_progress" | "blocked",
