@@ -52,6 +52,8 @@ export function CardExpiryWithPayslipDialog({
   const [saving, setSaving] = useState(false);
   const [foundItems, setFoundItems] = useState<FoundItems>({});
   const [memberName, setMemberName] = useState<string | null>(null);
+  const [employerName, setEmployerName] = useState<string | null>(null);
+  const [employerCnpj, setEmployerCnpj] = useState<string | null>(null);
   const [nameMatch, setNameMatch] = useState<boolean | null>(null);
   const [nameFoundInDoc, setNameFoundInDoc] = useState<string | null>(null);
 
@@ -60,11 +62,20 @@ export function CardExpiryWithPayslipDialog({
     if (!open || !entityId) return;
     const fetchName = async () => {
       if (entityType === "patient") {
-        const { data } = await supabase.from("patients").select("name").eq("id", entityId).single();
+        const { data } = await supabase.from("patients").select("name, employer_name, employer_cnpj").eq("id", entityId).single();
         setMemberName(data?.name || null);
+        setEmployerName(data?.employer_name || null);
+        setEmployerCnpj(data?.employer_cnpj || null);
       } else {
-        const { data } = await supabase.from("patient_dependents").select("name").eq("id", entityId).single();
+        const { data } = await supabase
+          .from("patient_dependents")
+          .select("name, patient_id, patients:patient_id(employer_name, employer_cnpj)")
+          .eq("id", entityId)
+          .single();
         setMemberName(data?.name || null);
+        const titular = (data as any)?.patients;
+        setEmployerName(titular?.employer_name || null);
+        setEmployerCnpj(titular?.employer_cnpj || null);
       }
     };
     fetchName();
@@ -137,6 +148,8 @@ export function CardExpiryWithPayslipDialog({
           file_name: fileToVerify.name,
           file_type: fileToVerify.type,
           member_name: memberName,
+          employer_name: employerName,
+          employer_cnpj: employerCnpj,
           clinic_id: currentClinic?.id,
         },
       });
