@@ -545,6 +545,24 @@ serve(async (req) => {
       }
 
       const newExpiresAt = calcNewExpiry(compMonth, compYear);
+      const todayIso = new Date().toISOString().slice(0, 10);
+      if (compareDateOnly(newExpiresAt, todayIso) < 0) {
+        await archivePayslipToMember(supabase, {
+          clinicId: SINDICATO_CLINIC_ID,
+          patientId: session.patient_id,
+          bytes,
+          mimeType,
+          status: "rejected",
+          originalFileName: body.media_filename,
+          rejectionReason: `Competência ${String(compMonth).padStart(2, "0")}/${compYear} gera validade vencida em ${formatBR(newExpiresAt)}.`,
+        });
+        return json({
+          success: true,
+          response:
+            `❌ Esse contracheque não pode renovar a carteirinha, pois a competência ${String(compMonth).padStart(2, "0")}/${compYear} gera validade somente até ${formatBR(newExpiresAt)}. Envie um contracheque mais recente.`,
+          buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
+        });
+      }
 
       // 6) arquiva o contracheque aprovado (upload + anexo na pasta Aprovados)
       const filePath = await archivePayslipToMember(supabase, {
@@ -619,6 +637,12 @@ serve(async (req) => {
           cardId = newCard?.id || null;
         }
       }
+
+      await supabase
+        .from("patient_dependents")
+        .update({ card_expires_at: finalExpiresAt })
+        .eq("patient_id", session.patient_id)
+        .eq("is_active", true);
 
       // 8) registra payslip_request como approved (auto, via whatsapp)
       await supabase.from("payslip_requests").insert({
