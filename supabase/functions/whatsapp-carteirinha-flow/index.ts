@@ -11,7 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  *  2) text (CPF)    → valida CPF, localiza associado titular, state='AWAITING_PAYSLIP'
  *  3) image/doc     → baixa mídia da Meta, chama verify-payslip-document,
  *                     se válido atualiza patient_cards.expires_at = último dia da
- *                     competência + 30 dias, registra payslip_request approved,
+ *                     competência + 60 dias, registra payslip_request approved,
  *                     finaliza sessão.
  *
  * Chamadas vêm SEMPRE do meta-webhook (service role). Não exposto ao público.
@@ -63,8 +63,28 @@ function isValidCPF(cpf: string): boolean {
 }
 
 function formatBR(iso: string): string {
-  const [y, m, d] = iso.split("-");
+  const [y, m, d] = iso.slice(0, 10).split("-");
   return `${d}/${m}/${y}`;
+}
+
+function toDateOnly(value?: string | null): string | null {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const [, y, m, d] = match;
+  const month = Number(m);
+  const day = Number(d);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return `${y}-${m}-${d}`;
+}
+
+function compareDateOnly(a?: string | null, b?: string | null): number {
+  const da = toDateOnly(a);
+  const db = toDateOnly(b);
+  if (!da && !db) return 0;
+  if (!da) return -1;
+  if (!db) return 1;
+  return da.localeCompare(db);
 }
 
 /**
