@@ -16,6 +16,7 @@ import {
   Hash,
   Handshake,
   Users,
+  ShieldCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -161,6 +162,7 @@ export default function UnionContributionsPageRedesign() {
   const [fetchingPaid, setFetchingPaid] = useState(false);
   const [importingExternal, setImportingExternal] = useState(false);
   const [resolvingDuplicates, setResolvingDuplicates] = useState(false);
+  const [auditingPaid, setAuditingPaid] = useState(false);
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
   const [currentActionType, setCurrentActionType] = useState<LytexActionType>("import");
 
