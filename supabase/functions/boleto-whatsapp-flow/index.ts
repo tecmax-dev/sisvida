@@ -259,8 +259,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
          { id: 'reuse_cnpj_nao', title: '🔄 Outro CNPJ' },
          { id: 'menu_principal', title: 'Menu Principal' }
        ];
-     } else if (nextState === 'WAITING_CNPJ' && session.state !== 'WAITING_CNPJ') {
-       responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
+     } else if (nextState === 'WAITING_CNPJ' && (session.state !== 'WAITING_CNPJ' || isStartAction || isNewSession)) {
+       responseText = "📋 Para continuar, informe o *CNPJ* da empresa (apenas números, 14 dígitos):";
      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
        responseText = "📝 Qual o *tipo de contribuição*?";
        buttons = [
