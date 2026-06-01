@@ -21,6 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
  import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -72,6 +73,10 @@ export function PatientDependentsDialog({
  }: PatientDependentsDialogProps) {
    const { userRoles, isSuperAdmin } = useAuth();
    const { hasUnionEntity } = useClinicHasUnionEntity();
+  const { hasAnyPermission } = usePermissions();
+  const canManageDependents =
+    isSuperAdmin ||
+    hasAnyPermission(["manage_patient_dependents", "union_manage_member_dependents"]);
   const canPermanentDelete = isSuperAdmin || userRoles.some((r) => r.role === "owner" || r.role === "admin");
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -222,7 +227,7 @@ export function PatientDependentsDialog({
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
                 <p>Nenhum dependente ativo.</p>
-                 {!hasUnionEntity && (
+                 {!hasUnionEntity && canManageDependents && (
                    <Button 
                      variant="outline" 
                      className="mt-3"
@@ -278,6 +283,7 @@ export function PatientDependentsDialog({
                     </div>
 
                     <div className="flex items-center gap-1 ml-2">
+                      {canManageDependents && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -287,6 +293,8 @@ export function PatientDependentsDialog({
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
+                      )}
+                      {canManageDependents && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -303,6 +311,7 @@ export function PatientDependentsDialog({
                           <UserX className="h-4 w-4" />
                         )}
                       </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -310,7 +319,7 @@ export function PatientDependentsDialog({
             )}
           </div>
 
-           {dependents.length > 0 && !hasUnionEntity && (
+           {dependents.length > 0 && !hasUnionEntity && canManageDependents && (
             <div className="flex justify-end mt-4 pt-4 border-t">
               <Button
                 variant="outline"
