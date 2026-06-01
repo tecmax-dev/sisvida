@@ -70,6 +70,7 @@ interface Contribution {
   lytex_invoice_id: string | null;
   paid_at: string | null;
   portal_reissue_count: number;
+  portal_value_change_count?: number;
   contribution_type: { name: string } | null;
   negotiation_id: string | null;
   negotiation?: {
@@ -150,6 +151,9 @@ export default function EmployerPortal() {
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
+  const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
+  const [changeValue, setChangeValue] = useState("");
+  const [isChangingValue, setIsChangingValue] = useState(false);
   const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("home");
   const [activeTab, setActiveTab] = useState<ContributionTab>("pending");
@@ -442,6 +446,57 @@ const [showTutorial, setShowTutorial] = useState(false);
     }
   };
 
+  const handleChangeValue = async () => {
+    if (!selectedContribution || !employer || !changeValue) {
+      toast.error("Informe o novo valor do boleto");
+      return;
+    }
+
+    setIsChangingValue(true);
+    try {
+      const valueInCents = Math.round(parseFloat(changeValue.replace(",", ".")) * 100);
+      if (isNaN(valueInCents) || valueInCents <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("change-contribution-value", {
+        body: {
+          contribution_id: selectedContribution.id,
+          value: valueInCents,
+          portal_type: "employer",
+          portal_id: employer.id,
+        },
+      });
+
+      if (error) {
+        const errorMessage = error.message || "Erro ao alterar valor";
+        console.error("[EmployerPortal] Change value error:", error);
+        toast.error(`Erro ao alterar valor: ${errorMessage}`);
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success(data.message || "Valor alterado e novo boleto gerado!");
+      setShowChangeValueDialog(false);
+      setChangeValue("");
+      setSelectedContribution(null);
+      loadContributions(employer.id);
+
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsChangingValue(false);
+    }
+  };
+
   const handleGenerateInvoice = async (contrib: Contribution) => {
     if (!employer) {
       toast.error("Sessão expirada. Faça login novamente.");
@@ -705,6 +760,48 @@ const [showTutorial, setShowTutorial] = useState(false);
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>Cancelar</Button>
             <Button onClick={handleSetValue} disabled={isSettingValue || !newValue} className="bg-purple-600 hover:bg-purple-700">
               {isSettingValue ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando...</> : <><FileText className="h-4 w-4 mr-2" />Gerar Boleto</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showChangeValueDialog} onOpenChange={(open) => {
+        setShowChangeValueDialog(open);
+        if (!open) { setChangeValue(""); setSelectedContribution(null); }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              Alterar Valor do Boleto
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Esta alteração só pode ser feita <strong>1 vez</strong> pelo portal e apenas para boletos <strong>a vencer</strong>. Após esta alteração, qualquer nova alteração deverá ser solicitada ao gestor do sindicato. O boleto atual será cancelado e um novo boleto será emitido com o novo valor.
+            </div>
+            <div>
+              <Label className="text-slate-700 text-sm font-medium">Novo valor (R$)</Label>
+              <Input
+                type="text"
+                placeholder="0,00"
+                value={changeValue}
+                onChange={(e) => setChangeValue(e.target.value.replace(/[^0-9,]/g, ""))}
+                className="mt-2 h-10 text-lg font-medium border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowChangeValueDialog(false)}>Cancelar</Button>
+            <Button onClick={handleChangeValue} disabled={isChangingValue || !changeValue} className="bg-blue-600 hover:bg-blue-700">
+              {isChangingValue ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Alterando...</>
+              ) : (
+                <><FileText className="h-4 w-4 mr-2" />Confirmar Alteração</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1064,6 +1161,32 @@ const [showTutorial, setShowTutorial] = useState(false);
                                           Gerar 2ª Via
                                         </DropdownMenuItem>
                                       )}
+                                      {(() => {
+                                        const todayMidnight = new Date();
+                                        todayMidnight.setHours(0, 0, 0, 0);
+                                        const dueDateOnly = new Date(contrib.due_date + "T12:00:00");
+                                        const isPendingFuture =
+                                          contrib.status === "pending" &&
+                                          dueDateOnly.getTime() >= todayMidnight.getTime();
+                                        const alreadyChanged = (contrib.portal_value_change_count || 0) >= 1;
+                                        if (!isPendingFuture || !contrib.lytex_invoice_url || (contrib.value || 0) <= 0) {
+                                          return null;
+                                        }
+                                        return (
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              if (alreadyChanged) return;
+                                              setSelectedContribution(contrib);
+                                              setChangeValue(((contrib.value || 0) / 100).toFixed(2).replace(".", ","));
+                                              setShowChangeValueDialog(true);
+                                            }}
+                                            disabled={alreadyChanged}
+                                          >
+                                            <DollarSign className="h-4 w-4 mr-2" />
+                                            {alreadyChanged ? "Valor já alterado" : "Alterar Valor"}
+                                          </DropdownMenuItem>
+                                        );
+                                      })()}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>

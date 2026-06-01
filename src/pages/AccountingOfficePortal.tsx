@@ -140,6 +140,11 @@ export default function AccountingOfficePortal() {
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
 
+  // Dialog de alterar valor (boleto ja emitido a vencer)
+  const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
+  const [changeValue, setChangeValue] = useState("");
+  const [isChangingValue, setIsChangingValue] = useState(false);
+
   // Employer selecionado para homologação
   const [selectedEmployerForHomologacao, setSelectedEmployerForHomologacao] = useState<Employer | null>(null);
 
@@ -488,6 +493,58 @@ export default function AccountingOfficePortal() {
       toast.error("Erro de conexão");
     } finally {
       setIsSettingValue(false);
+    }
+  };
+
+  const handleChangeValue = async () => {
+    if (!selectedContribution || !accountingOffice || !changeValue) {
+      toast.error("Informe o novo valor do boleto");
+      return;
+    }
+
+    setIsChangingValue(true);
+    try {
+      const valueInCents = Math.round(parseFloat(changeValue.replace(",", ".")) * 100);
+
+      if (isNaN(valueInCents) || valueInCents <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("change-contribution-value", {
+        body: {
+          contribution_id: selectedContribution.id,
+          value: valueInCents,
+          portal_type: "accounting_office",
+          portal_id: accountingOffice.id,
+        },
+      });
+
+      if (error) {
+        const errorMessage = error.message || "Erro ao alterar valor";
+        console.error("[AccountingPortal] Change value error:", error);
+        toast.error(`Erro ao alterar valor: ${errorMessage}`);
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success(data.message || "Valor alterado e novo boleto gerado!");
+      setShowChangeValueDialog(false);
+      setChangeValue("");
+      setSelectedContribution(null);
+      loadData(accountingOffice.id);
+
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsChangingValue(false);
     }
   };
 
@@ -932,6 +989,14 @@ export default function AccountingOfficePortal() {
               setSelectedContribution(contrib as any);
               setShowSetValueDialog(true);
             }}
+            onChangeValue={(contrib) => {
+              setSelectedContribution(contrib as any);
+              const initialValue = ((contrib.value || contrib.amount || 0) / 100)
+                .toFixed(2)
+                .replace(".", ",");
+              setChangeValue(initialValue);
+              setShowChangeValueDialog(true);
+            }}
           />
         </div>
 
@@ -1071,6 +1136,71 @@ export default function AccountingOfficePortal() {
                 <>
                   <FileText className="h-4 w-4 mr-2" />
                   Gerar Boleto
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Alterar Valor (boleto a vencer ja emitido) */}
+      <Dialog open={showChangeValueDialog} onOpenChange={(open) => {
+        setShowChangeValueDialog(open);
+        if (!open) {
+          setChangeValue("");
+          setSelectedContribution(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              Alterar Valor do Boleto
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && (
+                <span className="text-slate-600">
+                  {selectedContribution.employer?.name} • {MONTHS_FULL[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Esta alteração só pode ser feita <strong>1 vez</strong> pelo portal e apenas para boletos <strong>a vencer</strong>. Após esta alteração, qualquer nova alteração deverá ser solicitada ao gestor do sindicato. O boleto atual será cancelado e um novo boleto será emitido com o novo valor, mantendo a mesma data de vencimento.
+            </div>
+            <div>
+              <Label className="text-slate-700 text-sm font-medium">Novo valor (R$)</Label>
+              <Input
+                type="text"
+                placeholder="0,00"
+                value={changeValue}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9,]/g, "");
+                  setChangeValue(val);
+                }}
+                className="mt-2 h-10 text-lg font-medium border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowChangeValueDialog(false)} className="border-slate-200">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleChangeValue}
+              disabled={isChangingValue || !changeValue}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isChangingValue ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Alterando...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Confirmar Alteração
                 </>
               )}
             </Button>
