@@ -126,9 +126,11 @@ A data atual é: ${String(currentMonth).padStart(2, '0')}/${currentYear}
 ${competencePrompt}
 
 IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
-1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical", "MENSALIDADE SINDICAL")
-2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")  
-3. **Taxa Negocial** (ou "Taxa Negoc.", "Contrib. Negocial")
+1. **Mensalidade Sindical** — QUALQUER linha de desconto contendo as palavras "SINDICAL" ou "SINDICATO". Inclui variações como: "CONTRIBUIÇÃO SINDICAL", "CONTRIBUICAO SINDICAL", "CONTRIB. SINDICAL", "CONTRIB SINDICAL", "MENSALIDADE SINDICAL", "MENS. SINDICAL", "MENS SINDICAL", "DESCONTO SINDICAL", "DESC. SINDICAL", "CONTRIB SIND", "MENS SIND", abreviações com/sem acento, maiúsculas/minúsculas. Se a palavra "SINDICAL" ou "SINDICATO" aparecer em qualquer linha de desconto (coluna Descontos com valor), marque mensalidade_sindical=true.
+2. **Taxa Assistencial** — "TAXA ASSISTENCIAL", "TAXA ASSIST.", "CONTRIB. ASSISTENCIAL", "CONTRIBUIÇÃO ASSISTENCIAL", "DESC. ASSISTENCIAL", ou qualquer variação com "ASSISTENCIAL"/"ASSIST".
+3. **Taxa Negocial** — "TAXA NEGOCIAL", "TAXA NEGOC.", "CONTRIB. NEGOCIAL", "CONTRIBUIÇÃO NEGOCIAL", ou qualquer variação com "NEGOCIAL"/"NEGOC".
+
+REGRA CRÍTICA: Seja MUITO PERMISSIVO ao identificar estes itens. Procure por SUBSTRINGS (parte das palavras) em TODAS as linhas/códigos do contracheque, não apenas no rótulo de descontos. Ignore acentos, capitalização, pontuação e abreviações. Por exemplo, "994 CONTRIBUICAO SINDICAL 30,50" DEVE ser marcado como mensalidade_sindical=true. Em caso de dúvida, marque como true.
 
 ATENÇÃO: Seja FLEXÍVEL na identificação. O documento pode ter diferentes layouts, fontes, qualidade de imagem ou formatação. Se você consegue identificar os elementos principais de um contracheque, considere-o válido.
 
@@ -138,6 +140,7 @@ Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
 {"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "competence_month": número 1-12 ou null, "competence_year": número YYYY ou null, "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
+IMPORTANTE: Antes de retornar is_payslip=false por falta de item sindical, REVISE LINHA POR LINHA do documento procurando as palavras "SINDICAL", "SINDICATO", "ASSISTENCIAL", "NEGOCIAL" (com ou sem acentos, em qualquer caixa, mesmo abreviadas). Só rejeite se realmente NENHUMA dessas palavras aparecer no documento.
 Se o nome no documento não corresponde ao nome do associado, retorne is_payslip como false.
 NÃO rejeite o contracheque por causa da competência/data — o sistema validará isso automaticamente.
 Nome do arquivo: ${file_name}`;
