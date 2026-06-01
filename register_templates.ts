@@ -121,6 +121,29 @@ const templates = [
         ]
       }
     ]
+  },
+  {
+    name: "ia_prontuario_informativo",
+    language: "pt_BR",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Informação de Serviço: Olá, {{1}}. Comunicamos que uma nova funcionalidade está disponível em nosso sistema de prontuários: a transcrição de voz para texto durante o registro de atendimentos.\n\nEste recurso permite que os profissionais de saúde registrem informações de forma mais ágil, convertendo a fala em texto automaticamente.\n\nPara conhecer a funcionalidade, acesse o aplicativo oficial.",
+        example: { body_text: [["Maria Silva"]] }
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          {
+            type: "URL",
+            text: "Acessar Aplicativo",
+            url: "https://prosindweb.com.br/app"
+          }
+        ]
+      }
+    ]
   }
 ];
 
