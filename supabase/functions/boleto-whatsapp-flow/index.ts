@@ -62,7 +62,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     
      if (isNewSession || isStartAction) {
        console.log('[SESSION_INIT_OR_RESET]', session ? 'Resetting' : 'Creating');
-       const newState = 'SELECT_BOLETO_TYPE';
+        // Novo fluxo: pedimos o CNPJ primeiro (botão "Digitar CNPJ"),
+        // só depois perguntamos se o boleto é a vencer ou vencido.
+        // Se a empresa já é conhecida (reuso), pulamos direto para a escolha do tipo.
+        const newState = session?.employer_id ? 'SELECT_BOLETO_TYPE' : 'WAITING_CNPJ';
        
        const upsertData: any = {
          clinic_id,
@@ -70,9 +73,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
          state: newState,
          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
          updated_at: new Date().toISOString(),
-         employer_id: null,
-         employer_name: null,
-         employer_cnpj: null,
+          // Preserva employer no reset para suportar reuso explícito; em sessão nova fica null.
+          employer_id: session?.employer_id ?? null,
+          employer_name: session?.employer_name ?? null,
+          employer_cnpj: session?.employer_cnpj ?? null,
           contribution_id: null,
           contribution_type_id: null,
          competence_month: null,
@@ -123,14 +127,14 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
      // --- MANDATORY BOLETO STATE MACHINE ---
      const transitions: Record<string, Record<string, string>> = {
        'EMPRESA_MENU': {
-         'segunda_via_btn': 'SELECT_BOLETO_TYPE'
+          'segunda_via_btn': 'WAITING_CNPJ'
        },
        'SELECT_BOLETO_TYPE': {
-         'boleto_a_vencer': 'WAITING_CNPJ',
-         'boleto_vencido': 'WAITING_CNPJ'
+          'boleto_a_vencer': 'SELECT_CONTRIBUTION_TYPE',
+          'boleto_vencido': 'SELECT_CONTRIBUTION_TYPE'
        },
       'CONFIRM_EMPLOYER': {
-        'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
+        'boleto_sim': 'SELECT_BOLETO_TYPE',
         'boleto_nao': 'WAITING_CNPJ'
       },
       'SELECT_CONTRIBUTION_TYPE': {
@@ -146,7 +150,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       },
       'CONFIRM_REUSE_CNPJ': {
         'reuse_cnpj_sim': 'SELECT_BOLETO_TYPE',
-        'reuse_cnpj_nao': 'SELECT_BOLETO_TYPE'
+        'reuse_cnpj_nao': 'WAITING_CNPJ'
       }
      };
 
@@ -155,8 +159,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     
     let nextState = transitions[session.state]?.[text] || null;
 
-    // Start logic override
-    if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
+    // Start logic override: novo fluxo pede CNPJ antes do tipo
+    if (isStartAction) nextState = session.employer_id ? 'SELECT_BOLETO_TYPE' : 'WAITING_CNPJ';
 
     // Persist boleto_type selection ('a_vencer' = auto due date, 'vencido' = ask user)
     if (session.state === 'SELECT_BOLETO_TYPE' && (text === 'boleto_a_vencer' || text === 'boleto_vencido')) {
@@ -171,10 +175,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         new_due_date: null
       }).eq('id', session.id);
       session.boleto_type = tipo;
-      // If employer already known (reuse flow), skip CNPJ step
-      if (session.employer_id) {
-        nextState = 'SELECT_CONTRIBUTION_TYPE';
-      }
+      // CNPJ já foi coletado antes — seguimos direto para o tipo de contribuição.
     }
 
     // Handle "Emitir Outro" → ask if reuse same CNPJ
