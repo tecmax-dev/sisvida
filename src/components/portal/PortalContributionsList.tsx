@@ -19,7 +19,8 @@ import {
   XCircle,
   ChevronDown,
   Handshake,
-  Calendar
+  Calendar,
+  Pencil
 } from "lucide-react";
 
 interface Contribution {
@@ -37,6 +38,7 @@ interface Contribution {
   lytex_url?: string | null;
   lytex_invoice_id?: string | null;
   portal_reissue_count?: number;
+  portal_value_change_count?: number;
   negotiation_id?: string | null;
   negotiation?: {
     id: string;
@@ -62,6 +64,7 @@ interface PortalContributionsListProps {
   filterEmployerId?: string;
   onReissue: (contribution: Contribution) => void;
   onSetValue: (contribution: Contribution) => void;
+  onChangeValue?: (contribution: Contribution) => void;
   onGenerateInvoice?: (contribution: Contribution) => void;
   generatingInvoiceId?: string | null;
   onClearEmployerFilter?: () => void;
@@ -118,6 +121,7 @@ export function PortalContributionsList({
   filterEmployerId,
   onReissue,
   onSetValue,
+  onChangeValue,
   onGenerateInvoice,
   generatingInvoiceId,
   onClearEmployerFilter
@@ -363,6 +367,7 @@ export function PortalContributionsList({
                               showEmployerInfo={showEmployerInfo}
                               onReissue={onReissue}
                               onSetValue={onSetValue}
+                              onChangeValue={onChangeValue}
                               onGenerateInvoice={onGenerateInvoice}
                               generatingInvoiceId={generatingInvoiceId}
                               formatCurrency={formatCurrency}
@@ -390,6 +395,7 @@ interface ContributionCardProps {
   showEmployerInfo: boolean;
   onReissue: (contribution: Contribution) => void;
   onSetValue: (contribution: Contribution) => void;
+  onChangeValue?: (contribution: Contribution) => void;
   onGenerateInvoice?: (contribution: Contribution) => void;
   generatingInvoiceId?: string | null;
   formatCurrency: (value: number) => string;
@@ -402,6 +408,7 @@ function ContributionCard({
   showEmployerInfo,
   onReissue,
   onSetValue,
+  onChangeValue,
   onGenerateInvoice,
   generatingInvoiceId,
   formatCurrency,
@@ -427,6 +434,25 @@ function ContributionCard({
     contrib.status !== "cancelled" && 
     contrib.status !== "awaiting_value" &&
     value > 0;
+
+  // Alterar valor: somente para boletos pendentes (a vencer), nao em negociacao,
+  // com boleto ja emitido, e ainda nao alterado pelo portal (limite de 1).
+  const valueChangeCount = contrib.portal_value_change_count || 0;
+  const isDueInFuture = contrib.due_date
+    ? parseISODateToLocalNoon(contrib.due_date.slice(0, 10)).getTime() >= (() => {
+        const t = new Date();
+        t.setHours(0, 0, 0, 0);
+        return t.getTime();
+      })()
+    : false;
+  const canChangeValue =
+    !!onChangeValue &&
+    !isInActiveNegotiation &&
+    contrib.status === "pending" &&
+    isDueInFuture &&
+    !!invoiceUrl &&
+    value > 0 &&
+    valueChangeCount < 1;
 
   return (
     <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors gap-3">
@@ -545,6 +571,27 @@ function ContributionCard({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Gerar nova via com nova data</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {canChangeValue && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs hover:bg-blue-50 hover:text-blue-700"
+                  onClick={() => onChangeValue?.(contrib)}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1" />
+                  Alterar Valor
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Alterar valor do boleto (apenas 1 vez pelo portal)
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}
