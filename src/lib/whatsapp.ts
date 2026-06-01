@@ -17,6 +17,9 @@ interface SendWhatsAppParams {
   type?: 'reminder' | 'confirmation' | 'custom' | 'reminder_direct_reply';
   imageUrl?: string;
   appointmentId?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateComponents?: (string | number)[];
 }
 
 interface SendWhatsAppDocumentParams {
