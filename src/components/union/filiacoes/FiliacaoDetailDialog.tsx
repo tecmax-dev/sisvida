@@ -34,6 +34,7 @@ import {
 import { FiliacaoEditDialog } from "./FiliacaoEditDialog";
 import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
+import { resolveSindicalDocumentoUrl } from "@/lib/sindical-documentos-url";
 
 interface FiliacaoFull {
   id: string;
@@ -123,6 +124,12 @@ export function FiliacaoDetailDialog({
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [resolvedUrls, setResolvedUrls] = useState<{
+    foto?: string | null;
+    rg?: string | null;
+    rgVerso?: string | null;
+    comprovante?: string | null;
+  }>({});
 
   // Fetch full data when dialog opens
   useEffect(() => {
@@ -151,6 +158,16 @@ export function FiliacaoDetailDialog({
 
         if (cancelled) return;
         setDependents(depsData || []);
+
+        // Resolver signed URLs para documentos do bucket privado
+        const [foto, rg, rgVerso, comprovante] = await Promise.all([
+          resolveSindicalDocumentoUrl(filiacaoData.documento_foto_url),
+          resolveSindicalDocumentoUrl(filiacaoData.documento_rg_url),
+          resolveSindicalDocumentoUrl(filiacaoData.documento_rg_verso_url),
+          resolveSindicalDocumentoUrl(filiacaoData.documento_comprovante_url),
+        ]);
+        if (cancelled) return;
+        setResolvedUrls({ foto, rg, rgVerso, comprovante });
       } catch (error) {
         console.error("Error fetching filiacao:", error);
         toast({ title: "Erro ao carregar dados", variant: "destructive" });
@@ -171,6 +188,7 @@ export function FiliacaoDetailDialog({
     if (!newOpen) {
       setData(null);
       setDependents([]);
+      setResolvedUrls({});
     }
     onOpenChange(newOpen);
   };
@@ -319,9 +337,9 @@ export function FiliacaoDetailDialog({
             {/* Header Card */}
             <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
               <div className="flex items-start gap-4">
-                {data.documento_foto_url ? (
+                {(resolvedUrls.foto || data.documento_foto_url) ? (
                   <img 
-                    src={data.documento_foto_url} 
+                    src={resolvedUrls.foto || data.documento_foto_url!} 
                     alt={data.nome}
                     className="w-20 h-24 object-cover rounded-lg border"
                   />
@@ -521,9 +539,9 @@ export function FiliacaoDetailDialog({
                 Documentos Anexados
               </h4>
               <div className="flex flex-wrap gap-2">
-                {data.documento_rg_url && (
+                {(resolvedUrls.rg || data.documento_rg_url) && (
                   <a 
-                    href={data.documento_rg_url} 
+                    href={resolvedUrls.rg || data.documento_rg_url!} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs px-2 py-1 bg-muted rounded hover:bg-muted/80"
@@ -531,9 +549,9 @@ export function FiliacaoDetailDialog({
                     RG (Frente)
                   </a>
                 )}
-                {data.documento_rg_verso_url && (
+                {(resolvedUrls.rgVerso || data.documento_rg_verso_url) && (
                   <a 
-                    href={data.documento_rg_verso_url} 
+                    href={resolvedUrls.rgVerso || data.documento_rg_verso_url!} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs px-2 py-1 bg-muted rounded hover:bg-muted/80"
@@ -541,9 +559,9 @@ export function FiliacaoDetailDialog({
                     RG (Verso)
                   </a>
                 )}
-                {data.documento_comprovante_url && (
+                {(resolvedUrls.comprovante || data.documento_comprovante_url) && (
                   <a 
-                    href={data.documento_comprovante_url} 
+                    href={resolvedUrls.comprovante || data.documento_comprovante_url!} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs px-2 py-1 bg-muted rounded hover:bg-muted/80"
