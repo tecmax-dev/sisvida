@@ -998,20 +998,7 @@ serve(async (req) => {
       const selectedDependent = dependents[choice - 1];
 
       // Get professionals
-      const { data: pros, error } = await supabase
-        .from("professionals")
-        .select("id, name, specialty")
-        .eq("clinic_id", clinic_id)
-        .eq("is_active", true)
-        .order("name", { ascending: true });
-
-      if (error) throw error;
-
-      const professionals = (pros || []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        specialty: p.specialty || "Não informada",
-      }));
+      const professionals = await fetchProfessionalsWithSpecialties(supabase, clinic_id);
 
       if (!professionals.length) {
         return new Response(
