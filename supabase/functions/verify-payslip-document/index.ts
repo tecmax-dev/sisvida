@@ -180,6 +180,8 @@ Nome do arquivo: ${file_name}`;
     let foundItems = { mensalidade_sindical: false, taxa_assistencial: false, taxa_negocial: false };
     let nameMatch = false;
     let nameFoundInDocument: string | null = null;
+    let competenceMonth: number | null = null;
+    let competenceYear: number | null = null;
 
     try {
       const jsonMatch = content.match(/\{[\s\S]*"is_payslip"[\s\S]*\}/);
@@ -198,6 +200,9 @@ Nome do arquivo: ${file_name}`;
             taxa_negocial: !!parsed.found_items.taxa_negocial,
           };
         }
+
+        if (parsed.competence_month) competenceMonth = parseInt(parsed.competence_month) || null;
+        if (parsed.competence_year) competenceYear = parseInt(parsed.competence_year) || null;
 
         if (isPayslip && confidence < 0.4) {
           isPayslip = false;
@@ -235,7 +240,7 @@ Nome do arquivo: ${file_name}`;
       : `❌ ${reason} Por favor, envie um contracheque válido com os descontos sindicais.`;
 
     return new Response(
-      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems, name_match: nameMatch, name_found_in_document: nameFoundInDocument }),
+      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems, name_match: nameMatch, name_found_in_document: nameFoundInDocument, competence_month: competenceMonth, competence_year: competenceYear }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
