@@ -120,23 +120,22 @@ serve(async (req) => {
     // START
     // -----------------------------------------------------------------------
     if (body.action === "start") {
-      // limpa sessões anteriores e cria nova
+      // limpa QUALQUER sessão anterior desse telefone (unique key é clinic_id+phone)
       await supabase
         .from("whatsapp_booking_sessions")
         .delete()
         .eq("clinic_id", SINDICATO_CLINIC_ID)
-        .eq("phone", phone)
-        .eq("action_type", "carteirinha");
+        .eq("phone", phone);
 
       const { error: insErr } = await supabase
         .from("whatsapp_booking_sessions")
-        .insert({
+        .upsert({
           clinic_id: SINDICATO_CLINIC_ID,
           phone,
           action_type: "carteirinha",
           state: "AWAITING_CPF",
           expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        });
+        }, { onConflict: "clinic_id,phone" });
       if (insErr) {
         console.error("[carteirinha] create session error", insErr);
         return json({ success: false, response: "Erro ao iniciar fluxo. Tente novamente." });
