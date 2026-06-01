@@ -817,6 +817,10 @@ export default function UnionContributionsPageRedesign() {
                   <Users className="h-4 w-4 mr-2" />
                   {resolvingDuplicates ? "Resolvendo Duplicatas..." : "Resolver Duplicatas de Boleto"}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleAuditPaidLytex} disabled={auditingPaid} className="text-red-600">
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  {auditingPaid ? "Auditando Pagamentos..." : "Auditar Pagamentos vs Lytex"}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
                   <FileBarChart className="h-4 w-4 mr-2" />
                   Histórico de Sincronização
