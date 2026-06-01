@@ -85,3 +85,6 @@ verify_jwt = false
 
 [functions.meta-create-encerramento-inatividade-template]
 verify_jwt = false
+
+[functions.change-contribution-value]
+verify_jwt = false
