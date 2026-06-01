@@ -68,6 +68,46 @@ function timeRangesOverlap(startA: string, endA: string, startB: string, endB: s
   return timeToMinutes(startA) < timeToMinutes(endB) && timeToMinutes(startB) < timeToMinutes(endA);
 }
 
+async function fetchProfessionalsWithSpecialties(
+  supabase: SupabaseClient,
+  clinicId: string
+): Promise<Array<{ id: string; name: string; specialty: string }>> {
+  const { data: pros, error } = await supabase
+    .from("professionals")
+    .select("id, name, specialty")
+    .eq("clinic_id", clinicId)
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  if (!pros || pros.length === 0) return [];
+
+  const profIds = pros.map((p: any) => p.id);
+  const { data: profSpecs, error: specError } = await supabase
+    .from("professional_specialties")
+    .select("professional_id, specialty:specialties(name)")
+    .in("professional_id", profIds);
+
+  if (specError) {
+    console.error("[booking] Error fetching professional specialties:", specError);
+  }
+
+  const specsByProf: Record<string, string[]> = {};
+  for (const ps of profSpecs || []) {
+    const specName = (ps as any).specialty?.name;
+    if (specName) {
+      if (!specsByProf[ps.professional_id]) specsByProf[ps.professional_id] = [];
+      specsByProf[ps.professional_id].push(specName);
+    }
+  }
+
+  return pros.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    specialty: specsByProf[p.id]?.join(", ") || p.specialty || "Não informada",
+  }));
+}
+
 function validateCpf(cpf: string): boolean {
   const cleanCpf = cpf.replace(/\D/g, "");
   if (cleanCpf.length !== 11) return false;
@@ -829,20 +869,7 @@ serve(async (req) => {
         }
 
         // No dependents - go directly to professional selection
-        const { data: pros, error } = await supabase
-          .from("professionals")
-          .select("id, name, specialty")
-          .eq("clinic_id", clinic_id)
-          .eq("is_active", true)
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-
-        const professionals = (pros || []).map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          specialty: p.specialty || "Não informada",
-        }));
+        const professionals = await fetchProfessionalsWithSpecialties(supabase, clinic_id);
 
         if (!professionals.length) {
           return new Response(
@@ -886,20 +913,7 @@ serve(async (req) => {
     if (session.state === "SELECT_BOOKING_FOR") {
       if (msg === "1") {
         // Booking for titular
-        const { data: pros, error } = await supabase
-          .from("professionals")
-          .select("id, name, specialty")
-          .eq("clinic_id", clinic_id)
-          .eq("is_active", true)
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-
-        const professionals = (pros || []).map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          specialty: p.specialty || "Não informada",
-        }));
+        const professionals = await fetchProfessionalsWithSpecialties(supabase, clinic_id);
 
         if (!professionals.length) {
           return new Response(
@@ -984,20 +998,7 @@ serve(async (req) => {
       const selectedDependent = dependents[choice - 1];
 
       // Get professionals
-      const { data: pros, error } = await supabase
-        .from("professionals")
-        .select("id, name, specialty")
-        .eq("clinic_id", clinic_id)
-        .eq("is_active", true)
-        .order("name", { ascending: true });
-
-      if (error) throw error;
-
-      const professionals = (pros || []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        specialty: p.specialty || "Não informada",
-      }));
+      const professionals = await fetchProfessionalsWithSpecialties(supabase, clinic_id);
 
       if (!professionals.length) {
         return new Response(
