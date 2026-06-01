@@ -2000,13 +2000,29 @@ export default function CalendarPage() {
             cancelReason.trim() || undefined,
             (cancellingAppointment as any).dependent?.name || null
           );
-          
+
+          // Template aprovado pela Meta para o Sindicato (cancelamento_consulta_profissional)
+          // Variáveis: {{1}} nome, {{2}} profissional, {{3}} especialidade, {{4}} data, {{5}} hora, {{6}} motivo
+          const displayName = (cancellingAppointment as any).dependent?.name || patient.name;
+          const specialty = (professional as any)?.specialty || 'Consulta';
+          const motivo = cancelReason.trim() || 'Indisponibilidade do profissional';
+
           const result = await sendWhatsAppMessage({
             phone: patient.phone,
             message,
             clinicId: currentClinic.id,
             type: 'custom',
-          });
+            templateName: 'cancelamento_consulta_profissional',
+            templateLanguage: 'pt_BR',
+            templateComponents: [
+              displayName,
+              professional?.name || 'o profissional',
+              specialty,
+              formattedDate,
+              cancellingAppointment.start_time.slice(0, 5),
+              motivo,
+            ],
+          } as any);
           
           if (result.success) {
             toast({
