@@ -34,6 +34,7 @@ import {
 import { FiliacaoEditDialog } from "./FiliacaoEditDialog";
 import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
+import { resolveSindicalDocumentoUrl } from "@/lib/sindical-documentos-url";
 
 interface FiliacaoFull {
   id: string;
