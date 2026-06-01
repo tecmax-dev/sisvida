@@ -69,11 +69,16 @@ function formatBR(iso: string): string {
 
 /**
  * Calcula a nova validade seguindo a competência do contracheque:
- *  - Último dia do mês de competência + 30 dias.
+ *  - Último dia do mês de competência + 60 dias.
+ *
+ * Assim, contracheques de competências mais antigas geram validades menores
+ * (os dias já passados desde o fim da competência são naturalmente descontados),
+ * e contracheques mais recentes geram validades maiores — sem retroceder o que
+ * o associado já tem.
  */
 function calcNewExpiry(competenceMonth: number, competenceYear: number): string {
   const lastDay = new Date(Date.UTC(competenceYear, competenceMonth, 0));
-  lastDay.setUTCDate(lastDay.getUTCDate() + 30);
+  lastDay.setUTCDate(lastDay.getUTCDate() + 60);
   const y = lastDay.getUTCFullYear();
   const m = String(lastDay.getUTCMonth() + 1).padStart(2, "0");
   const d = String(lastDay.getUTCDate()).padStart(2, "0");
