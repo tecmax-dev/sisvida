@@ -337,9 +337,9 @@ export function FiliacaoDetailDialog({
             {/* Header Card */}
             <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
               <div className="flex items-start gap-4">
-                {data.documento_foto_url ? (
+                {(resolvedUrls.foto || data.documento_foto_url) ? (
                   <img 
-                    src={data.documento_foto_url} 
+                    src={resolvedUrls.foto || data.documento_foto_url!} 
                     alt={data.nome}
                     className="w-20 h-24 object-cover rounded-lg border"
                   />
@@ -539,9 +539,9 @@ export function FiliacaoDetailDialog({
                 Documentos Anexados
               </h4>
               <div className="flex flex-wrap gap-2">
-                {data.documento_rg_url && (
+                {(resolvedUrls.rg || data.documento_rg_url) && (
                   <a 
-                    href={data.documento_rg_url} 
+                    href={resolvedUrls.rg || data.documento_rg_url!} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs px-2 py-1 bg-muted rounded hover:bg-muted/80"
@@ -549,9 +549,9 @@ export function FiliacaoDetailDialog({
                     RG (Frente)
                   </a>
                 )}
-                {data.documento_rg_verso_url && (
+                {(resolvedUrls.rgVerso || data.documento_rg_verso_url) && (
                   <a 
-                    href={data.documento_rg_verso_url} 
+                    href={resolvedUrls.rgVerso || data.documento_rg_verso_url!} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs px-2 py-1 bg-muted rounded hover:bg-muted/80"
@@ -559,9 +559,9 @@ export function FiliacaoDetailDialog({
                     RG (Verso)
                   </a>
                 )}
-                {data.documento_comprovante_url && (
+                {(resolvedUrls.comprovante || data.documento_comprovante_url) && (
                   <a 
-                    href={data.documento_comprovante_url} 
+                    href={resolvedUrls.comprovante || data.documento_comprovante_url!} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs px-2 py-1 bg-muted rounded hover:bg-muted/80"
