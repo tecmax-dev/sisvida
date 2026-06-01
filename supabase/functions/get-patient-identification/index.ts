@@ -55,52 +55,12 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // If no auth header, try to use service key directly for clinic access check
-    // This handles cases where the session might have expired but we still want to serve the request
+    // Autenticação obrigatória: PII (CPF + endereço) jamais pode ser servida sem JWT válido.
     if (!authHeader) {
-      console.warn("[get-patient-identification] no auth header, using service key", { requestId });
-      
-      // Use service key to get patient data directly
-      const adminClient = createClient(supabaseUrl, serviceKey);
-      
-      const { data, error } = await adminClient
-        .from("patients")
-        .select("cpf, address, street, street_number, neighborhood, city, state")
-        .eq("clinic_id", clinicId)
-        .eq("id", patientId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[get-patient-identification] db error", { requestId, message: error.message });
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar paciente" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      if (!data) {
-        console.warn("[get-patient-identification] patient not found", { requestId, clinicId, patientId });
-        return new Response(
-          JSON.stringify({ error: "Paciente não encontrado" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const result = {
-        success: true,
-        cpf: normalizeCpf(data.cpf || ""),
-        address: buildAddress(data),
-      };
-
-      console.log("[get-patient-identification] ok (no auth)", {
-        requestId,
-        cpfLen: result.cpf.length,
-        addressLen: result.address.length,
-      });
-
+      console.warn("[get-patient-identification] missing auth header", { requestId });
       return new Response(
-        JSON.stringify(result),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Autenticação obrigatória" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -114,55 +74,16 @@ Deno.serve(async (req) => {
     });
 
     const { data: userData, error: userErr } = await userClient.auth.getUser();
-    
-    // If auth fails, try with service key as fallback
+
+    // Se a autenticação falhar, retornar 401. Nunca fazer fallback para service role.
     if (userErr || !userData?.user) {
-      console.warn("[get-patient-identification] auth failed, using service key fallback", { 
-        requestId, 
-        userErr: userErr?.message 
-      });
-      
-      // Use service key to get patient data directly
-      const adminClient = createClient(supabaseUrl, serviceKey);
-      
-      const { data, error } = await adminClient
-        .from("patients")
-        .select("cpf, address, street, street_number, neighborhood, city, state")
-        .eq("clinic_id", clinicId)
-        .eq("id", patientId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[get-patient-identification] db error", { requestId, message: error.message });
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar paciente" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      if (!data) {
-        console.warn("[get-patient-identification] patient not found", { requestId, clinicId, patientId });
-        return new Response(
-          JSON.stringify({ error: "Paciente não encontrado" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const result = {
-        success: true,
-        cpf: normalizeCpf(data.cpf || ""),
-        address: buildAddress(data),
-      };
-
-      console.log("[get-patient-identification] ok (auth fallback)", {
+      console.warn("[get-patient-identification] auth failed", {
         requestId,
-        cpfLen: result.cpf.length,
-        addressLen: result.address.length,
+        userErr: userErr?.message,
       });
-
       return new Response(
-        JSON.stringify(result),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Sessão inválida ou expirada" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 

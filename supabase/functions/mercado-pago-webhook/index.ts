@@ -16,7 +16,55 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body = await req.json();
+    const rawBody = await req.text();
+
+    // Validar assinatura HMAC do Mercado Pago quando o secret estiver configurado.
+    // Header: x-signature: ts=NNN,v1=HEX  | x-request-id: <id>
+    // Manifest: id:{data.id};request-id:{x-request-id};ts:{ts};
+    const mpSecret = Deno.env.get('MERCADO_PAGO_WEBHOOK_SECRET');
+    if (mpSecret) {
+      const sigHeader = req.headers.get('x-signature') || req.headers.get('X-Signature') || '';
+      const requestId = req.headers.get('x-request-id') || req.headers.get('X-Request-Id') || '';
+      const parts = Object.fromEntries(
+        sigHeader.split(',').map((p) => p.trim().split('=').map((s) => s.trim())).filter((kv) => kv.length === 2),
+      ) as Record<string, string>;
+      const ts = parts['ts'];
+      const v1 = parts['v1'];
+      let parsedBody: any = {};
+      try { parsedBody = JSON.parse(rawBody); } catch { /* ignore */ }
+      const dataId = parsedBody?.data?.id;
+      if (!ts || !v1 || !dataId) {
+        console.error('[mercado-pago-webhook] missing signature/ts/v1/data.id');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+      const key = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(mpSecret),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+      );
+      const macBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(manifest));
+      const expected = Array.from(new Uint8Array(macBuf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      if (expected.length !== v1.length) {
+        console.error('[mercado-pago-webhook] signature length mismatch');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      let diff = 0;
+      for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ v1.charCodeAt(i);
+      if (diff !== 0) {
+        console.error('[mercado-pago-webhook] invalid signature');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      console.warn('[mercado-pago-webhook] MERCADO_PAGO_WEBHOOK_SECRET not configured — signature verification SKIPPED');
+    }
+
+    const body = JSON.parse(rawBody);
     console.log('Webhook received:', JSON.stringify(body, null, 2));
 
     // Mercado Pago sends different notification types

@@ -443,7 +443,47 @@ serve(async (req) => {
   }
 
   try {
-    let body = await req.json();
+    // Validar assinatura HMAC da Meta antes de parsear/processar.
+    // Quando META_APP_SECRET está configurado, a assinatura é OBRIGATÓRIA.
+    const appSecret = Deno.env.get("META_APP_SECRET");
+    const rawBody = await req.text();
+    if (appSecret) {
+      const sigHeader = req.headers.get("x-hub-signature-256") || req.headers.get("X-Hub-Signature-256");
+      if (!sigHeader || !sigHeader.startsWith("sha256=")) {
+        console.error("[meta-webhook] missing x-hub-signature-256");
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+      try {
+        const key = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(appSecret),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"],
+        );
+        const macBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+        const expected = "sha256=" + Array.from(new Uint8Array(macBuf))
+          .map(b => b.toString(16).padStart(2, "0")).join("");
+        if (expected.length !== sigHeader.length) {
+          console.error("[meta-webhook] signature length mismatch");
+          return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+        }
+        let diff = 0;
+        for (let i = 0; i < expected.length; i++) {
+          diff |= expected.charCodeAt(i) ^ sigHeader.charCodeAt(i);
+        }
+        if (diff !== 0) {
+          console.error("[meta-webhook] invalid signature");
+          return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+        }
+      } catch (e) {
+        console.error("[meta-webhook] signature verification error", e);
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+    } else {
+      console.warn("[meta-webhook] META_APP_SECRET not configured — signature verification SKIPPED");
+    }
+    let body = JSON.parse(rawBody);
     console.log('[WEBHOOK_ENTRY] Meta Webhook');
     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
 

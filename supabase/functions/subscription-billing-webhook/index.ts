@@ -107,17 +107,26 @@
      const referenceId = payload.data?.referenceId;
      console.log("[Subscription Webhook] Recebido:", payload.webhookType, invoiceId, referenceId);
  
-     // Validar assinatura se secret estiver configurado
-     if (webhookSecret && payload.signature && payload.data) {
-       const isValid = await verifySignature(payload.data, payload.signature, webhookSecret);
-       if (!isValid) {
-         console.error("[Subscription Webhook] Assinatura inválida");
-         return new Response(JSON.stringify({ error: "Assinatura inválida" }), {
-           status: 401,
-           headers: { ...corsHeaders, "Content-Type": "application/json" },
-         });
-       }
-     }
+      // Validar assinatura se secret estiver configurado.
+      // IMPORTANT: quando o secret está configurado, a assinatura é OBRIGATÓRIA.
+      // Não permitir bypass por omissão do campo `signature`.
+      if (webhookSecret) {
+        if (!payload.signature || !payload.data) {
+          console.error("[Subscription Webhook] Assinatura/data ausente");
+          return new Response(JSON.stringify({ error: "Assinatura obrigatória" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const isValid = await verifySignature(payload.data, payload.signature, webhookSecret);
+        if (!isValid) {
+          console.error("[Subscription Webhook] Assinatura inválida");
+          return new Response(JSON.stringify({ error: "Assinatura inválida" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
  
      // Buscar fatura de assinatura pelo lytex_invoice_id ou referenceId
      let invoice: {
