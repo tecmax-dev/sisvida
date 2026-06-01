@@ -512,15 +512,36 @@ serve(async (req) => {
       let compMonth: number | null = null;
       let compYear: number | null = null;
       // tentativa: campos opcionais no payload
-      if (typeof (verifyData as any).competence_month === "number") {
-        compMonth = (verifyData as any).competence_month;
-        compYear = (verifyData as any).competence_year;
+      const rawCompMonth = (verifyData as any).competence_month;
+      const rawCompYear = (verifyData as any).competence_year;
+      const parsedCompMonth = Number(rawCompMonth);
+      const parsedCompYear = Number(rawCompYear);
+      if (
+        Number.isInteger(parsedCompMonth) &&
+        Number.isInteger(parsedCompYear) &&
+        parsedCompMonth >= 1 &&
+        parsedCompMonth <= 12 &&
+        parsedCompYear >= 2000
+      ) {
+        compMonth = parsedCompMonth;
+        compYear = parsedCompYear;
       }
       if (!compMonth || !compYear) {
-        // fallback: mês corrente
-        const now = new Date();
-        compMonth = now.getMonth() + 1;
-        compYear = now.getFullYear();
+        await archivePayslipToMember(supabase, {
+          clinicId: SINDICATO_CLINIC_ID,
+          patientId: session.patient_id,
+          bytes,
+          mimeType,
+          status: "rejected",
+          originalFileName: body.media_filename,
+          rejectionReason: "Competência não identificada no contracheque.",
+        });
+        return json({
+          success: true,
+          response:
+            "❌ Não consegui identificar a competência do contracheque. Envie uma foto mais nítida mostrando o mês/ano de referência.",
+          buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
+        });
       }
 
       const newExpiresAt = calcNewExpiry(compMonth, compYear);
@@ -553,9 +574,10 @@ serve(async (req) => {
       let cardId: string | null = existingCard?.id || null;
       let finalExpiresAt = newExpiresAt;
       let keptCurrent = false;
-      if (existingCard?.expires_at && existingCard.expires_at > newExpiresAt) {
+      const currentExpiresAt = toDateOnly(existingCard?.expires_at) || null;
+      if (currentExpiresAt && compareDateOnly(currentExpiresAt, newExpiresAt) >= 0) {
         // Nunca retroceder a validade: mantém a validade atual se já for maior.
-        finalExpiresAt = existingCard.expires_at;
+        finalExpiresAt = currentExpiresAt;
         keptCurrent = true;
       }
       if (cardId) {
