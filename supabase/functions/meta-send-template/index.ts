@@ -188,10 +188,33 @@ serve(async (req) => {
       tpl = data;
 
       if (!tpl) {
-        return new Response(
-          JSON.stringify({ error: `Template ${template_name} (${language}) não encontrado no cache. Sincronize antes.` }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        // Auto-heal: template pode estar aprovado na Meta mas ainda não sincronizado localmente.
+        console.log(`[meta-send-template] Template ${template_name} ausente no cache. Forçando sync com Meta...`);
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/meta-sync-templates`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SERVICE_ROLE}`,
+            },
+            body: "{}",
+          });
+          const { data: refreshed } = await supabase
+            .from("whatsapp_meta_templates")
+            .select("status, variables_count, components")
+            .eq("name", template_name)
+            .eq("language", language)
+            .maybeSingle();
+          if (refreshed) tpl = refreshed;
+        } catch (e) {
+          console.error("[meta-send-template] Falha ao sincronizar templates:", e);
+        }
+        if (!tpl) {
+          return new Response(
+            JSON.stringify({ error: `Template ${template_name} (${language}) não encontrado mesmo após sync.` }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
       }
       if (tpl.status !== "APPROVED") {
         // Auto-heal: status local pode estar desatualizado em relação à Meta.
