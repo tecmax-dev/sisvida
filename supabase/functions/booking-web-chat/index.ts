@@ -913,20 +913,7 @@ serve(async (req) => {
     if (session.state === "SELECT_BOOKING_FOR") {
       if (msg === "1") {
         // Booking for titular
-        const { data: pros, error } = await supabase
-          .from("professionals")
-          .select("id, name, specialty")
-          .eq("clinic_id", clinic_id)
-          .eq("is_active", true)
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-
-        const professionals = (pros || []).map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          specialty: p.specialty || "Não informada",
-        }));
+        const professionals = await fetchProfessionalsWithSpecialties(supabase, clinic_id);
 
         if (!professionals.length) {
           return new Response(
