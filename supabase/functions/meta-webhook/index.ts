@@ -1474,10 +1474,8 @@ serve(async (req) => {
       }
     });
 
-    if (extractedButtonId === "whazing_sub_carteirinha") {
-      await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
-      return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
-    }
+    // (Botão whazing_sub_carteirinha agora é tratado no FLUXO CARTEIRINHA acima,
+    // que oferece a escolha entre App e WhatsApp.)
 
     if (extractedButtonId === "whazing_sub_app") {
       const playUrl = "https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app";
