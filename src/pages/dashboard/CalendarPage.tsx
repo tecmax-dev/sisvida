@@ -2022,7 +2022,7 @@ export default function CalendarPage() {
               cancellingAppointment.start_time.slice(0, 5),
               motivo,
             ],
-          } as any);
+          });
           
           if (result.success) {
             toast({
@@ -2446,7 +2446,7 @@ const updateData: Record<string, any> = {
                 apt.start_time.slice(0, 5),
                 motivo,
               ],
-            } as any);
+            });
           } catch (err) {
             console.error('[BatchCancel] WhatsApp error for', apt.patient.name, err);
           }
