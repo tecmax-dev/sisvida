@@ -412,7 +412,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
           <h3 className="text-lg font-semibold">Dependentes</h3>
           <Badge variant="secondary">{dependents.length}</Badge>
         </div>
-         {!isAdding && (!hasUnionEntity || canPermanentDelete) && (
+         {!isAdding && (!hasUnionEntity || canPermanentDelete) && canManageDependents && (
           <Button onClick={() => setIsAdding(true)} size="sm">
             <Plus className="h-4 w-4 mr-1" />
             Adicionar Dependente
@@ -539,10 +539,12 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
             <p className="text-muted-foreground mb-4">
               Nenhum dependente cadastrado ainda.
             </p>
-            <Button variant="outline" onClick={() => setIsAdding(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Adicionar Primeiro Dependente
-            </Button>
+            {canManageDependents && (
+              <Button variant="outline" onClick={() => setIsAdding(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Primeiro Dependente
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
