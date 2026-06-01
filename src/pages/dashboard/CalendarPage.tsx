@@ -3721,6 +3721,23 @@ const updateData: Record<string, any> = {
           </div>
         </div>
 
+        {/* Reativar agendamento bloqueado por cancelamento profissional (somente admin) */}
+        {isBlocked && isAdmin && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReactivateBlockedAppointment(appointment);
+            }}
+            title="Reativar agendamento"
+          >
+            <UnlockIcon className="h-3 w-3 mr-1" />
+            Reativar
+          </Button>
+        )}
+
         {/* Menu de ações - três pontos sempre visível */}
         {canModify && (
           <DropdownMenu>
