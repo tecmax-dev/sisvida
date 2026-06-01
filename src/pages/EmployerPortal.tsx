@@ -1119,6 +1119,32 @@ const [showTutorial, setShowTutorial] = useState(false);
                                           Gerar 2ª Via
                                         </DropdownMenuItem>
                                       )}
+                                      {(() => {
+                                        const todayMidnight = new Date();
+                                        todayMidnight.setHours(0, 0, 0, 0);
+                                        const dueDateOnly = new Date(contrib.due_date + "T12:00:00");
+                                        const isPendingFuture =
+                                          contrib.status === "pending" &&
+                                          dueDateOnly.getTime() >= todayMidnight.getTime();
+                                        const alreadyChanged = (contrib.portal_value_change_count || 0) >= 1;
+                                        if (!isPendingFuture || !contrib.lytex_invoice_url || (contrib.value || 0) <= 0) {
+                                          return null;
+                                        }
+                                        return (
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              if (alreadyChanged) return;
+                                              setSelectedContribution(contrib);
+                                              setChangeValue(((contrib.value || 0) / 100).toFixed(2).replace(".", ","));
+                                              setShowChangeValueDialog(true);
+                                            }}
+                                            disabled={alreadyChanged}
+                                          >
+                                            <DollarSign className="h-4 w-4 mr-2" />
+                                            {alreadyChanged ? "Valor já alterado" : "Alterar Valor"}
+                                          </DropdownMenuItem>
+                                        );
+                                      })()}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
