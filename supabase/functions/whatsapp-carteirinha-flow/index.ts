@@ -11,7 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  *  2) text (CPF)    → valida CPF, localiza associado titular, state='AWAITING_PAYSLIP'
  *  3) image/doc     → baixa mídia da Meta, chama verify-payslip-document,
  *                     se válido atualiza patient_cards.expires_at = último dia da
- *                     competência + 30 dias, registra payslip_request approved,
+ *                     competência + 60 dias, registra payslip_request approved,
  *                     finaliza sessão.
  *
  * Chamadas vêm SEMPRE do meta-webhook (service role). Não exposto ao público.
@@ -63,8 +63,28 @@ function isValidCPF(cpf: string): boolean {
 }
 
 function formatBR(iso: string): string {
-  const [y, m, d] = iso.split("-");
+  const [y, m, d] = iso.slice(0, 10).split("-");
   return `${d}/${m}/${y}`;
+}
+
+function toDateOnly(value?: string | null): string | null {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const [, y, m, d] = match;
+  const month = Number(m);
+  const day = Number(d);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return `${y}-${m}-${d}`;
+}
+
+function compareDateOnly(a?: string | null, b?: string | null): number {
+  const da = toDateOnly(a);
+  const db = toDateOnly(b);
+  if (!da && !db) return 0;
+  if (!da) return -1;
+  if (!db) return 1;
+  return da.localeCompare(db);
 }
 
 /**
@@ -485,25 +505,62 @@ serve(async (req) => {
         });
       }
 
-      // 5) determina competência. Se a função não devolveu, tenta extrair do raw.
-      // Para simplificar, reaproveitamos verify e exigimos competência presente.
-      // O verify atual valida internamente; se passou is_payslip=true, é seguro.
-      // Usamos data atual como fallback (mês anterior) caso a Meta-IA não devolva.
+      // 5) determina competência. Exige mês/ano real do contracheque;
+      // nunca usa mês atual como fallback para evitar validade indevida.
       let compMonth: number | null = null;
       let compYear: number | null = null;
       // tentativa: campos opcionais no payload
-      if (typeof (verifyData as any).competence_month === "number") {
-        compMonth = (verifyData as any).competence_month;
-        compYear = (verifyData as any).competence_year;
+      const rawCompMonth = (verifyData as any).competence_month;
+      const rawCompYear = (verifyData as any).competence_year;
+      const parsedCompMonth = Number(rawCompMonth);
+      const parsedCompYear = Number(rawCompYear);
+      if (
+        Number.isInteger(parsedCompMonth) &&
+        Number.isInteger(parsedCompYear) &&
+        parsedCompMonth >= 1 &&
+        parsedCompMonth <= 12 &&
+        parsedCompYear >= 2000
+      ) {
+        compMonth = parsedCompMonth;
+        compYear = parsedCompYear;
       }
       if (!compMonth || !compYear) {
-        // fallback: mês corrente
-        const now = new Date();
-        compMonth = now.getMonth() + 1;
-        compYear = now.getFullYear();
+        await archivePayslipToMember(supabase, {
+          clinicId: SINDICATO_CLINIC_ID,
+          patientId: session.patient_id,
+          bytes,
+          mimeType,
+          status: "rejected",
+          originalFileName: body.media_filename,
+          rejectionReason: "Competência não identificada no contracheque.",
+        });
+        return json({
+          success: true,
+          response:
+            "❌ Não consegui identificar a competência do contracheque. Envie uma foto mais nítida mostrando o mês/ano de referência.",
+          buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
+        });
       }
 
       const newExpiresAt = calcNewExpiry(compMonth, compYear);
+      const todayIso = new Date().toISOString().slice(0, 10);
+      if (compareDateOnly(newExpiresAt, todayIso) < 0) {
+        await archivePayslipToMember(supabase, {
+          clinicId: SINDICATO_CLINIC_ID,
+          patientId: session.patient_id,
+          bytes,
+          mimeType,
+          status: "rejected",
+          originalFileName: body.media_filename,
+          rejectionReason: `Competência ${String(compMonth).padStart(2, "0")}/${compYear} gera validade vencida em ${formatBR(newExpiresAt)}.`,
+        });
+        return json({
+          success: true,
+          response:
+            `❌ Esse contracheque não pode renovar a carteirinha, pois a competência ${String(compMonth).padStart(2, "0")}/${compYear} gera validade somente até ${formatBR(newExpiresAt)}. Envie um contracheque mais recente.`,
+          buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
+        });
+      }
 
       // 6) arquiva o contracheque aprovado (upload + anexo na pasta Aprovados)
       const filePath = await archivePayslipToMember(supabase, {
@@ -522,20 +579,23 @@ serve(async (req) => {
         });
       }
 
-      // 7) localiza/atualiza patient_cards
-      const { data: existingCard } = await supabase
+      // 7) localiza/atualiza patient_cards. Se houver duplicidade ativa,
+      // usa sempre a maior validade para nunca escolher uma carteirinha antiga.
+      const { data: activeCards } = await supabase
         .from("patient_cards")
         .select("id, expires_at")
         .eq("patient_id", session.patient_id)
         .eq("is_active", true)
-        .maybeSingle();
+        .order("expires_at", { ascending: false });
+      const existingCard = Array.isArray(activeCards) && activeCards.length > 0 ? activeCards[0] : null;
 
       let cardId: string | null = existingCard?.id || null;
       let finalExpiresAt = newExpiresAt;
       let keptCurrent = false;
-      if (existingCard?.expires_at && existingCard.expires_at > newExpiresAt) {
+      const currentExpiresAt = toDateOnly(existingCard?.expires_at) || null;
+      if (currentExpiresAt && compareDateOnly(currentExpiresAt, newExpiresAt) >= 0) {
         // Nunca retroceder a validade: mantém a validade atual se já for maior.
-        finalExpiresAt = existingCard.expires_at;
+        finalExpiresAt = currentExpiresAt;
         keptCurrent = true;
       }
       if (cardId) {
@@ -544,6 +604,18 @@ serve(async (req) => {
             .from("patient_cards")
             .update({ expires_at: finalExpiresAt })
             .eq("id", cardId);
+        }
+        if (Array.isArray(activeCards) && activeCards.length > 1) {
+          const olderActiveIds = activeCards
+            .slice(1)
+            .map((card: any) => card.id)
+            .filter(Boolean);
+          if (olderActiveIds.length > 0) {
+            await supabase
+              .from("patient_cards")
+              .update({ expires_at: finalExpiresAt })
+              .in("id", olderActiveIds);
+          }
         }
       } else {
         const { data: newCard, error: cardErr } = await supabase
@@ -564,6 +636,12 @@ serve(async (req) => {
         }
       }
 
+      await supabase
+        .from("patient_dependents")
+        .update({ card_expires_at: finalExpiresAt })
+        .eq("patient_id", session.patient_id)
+        .eq("is_active", true);
+
       // 8) registra payslip_request como approved (auto, via whatsapp)
       await supabase.from("payslip_requests").insert({
         clinic_id: SINDICATO_CLINIC_ID,
@@ -576,7 +654,7 @@ serve(async (req) => {
         notes:
           `Aprovado automaticamente via WhatsApp. Competência: ${String(compMonth).padStart(2, "0")}/${compYear}.` +
           (keptCurrent
-            ? ` Validade atual (${existingCard?.expires_at}) é maior que a calculada (${newExpiresAt}); mantida a vigente.`
+            ? ` Validade atual (${finalExpiresAt}) é igual ou maior que a calculada (${newExpiresAt}); mantida a vigente.`
             : ""),
       });
 
@@ -593,7 +671,7 @@ serve(async (req) => {
           (keptCurrent
             ? `✅ *Contracheque validado, ${firstName}!*\n\n` +
               `📄 Competência considerada: ${String(compMonth).padStart(2, "0")}/${compYear}\n` +
-              `📅 Sua carteirinha já está válida até *${formatBR(finalExpiresAt)}*, uma data posterior à gerada por este contracheque (${formatBR(newExpiresAt)}).\n\n` +
+              `📅 Sua carteirinha já está válida até *${formatBR(finalExpiresAt)}*, uma data igual ou posterior à gerada por este contracheque (${formatBR(newExpiresAt)}).\n\n` +
               `Mantivemos sua validade atual — não houve retrocesso.\n\nObrigado!`
             : `✅ *Carteirinha renovada com sucesso, ${firstName}!*\n\n` +
               `📅 Nova validade: *${formatBR(finalExpiresAt)}*\n` +
