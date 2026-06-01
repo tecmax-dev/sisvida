@@ -765,6 +765,48 @@ const [showTutorial, setShowTutorial] = useState(false);
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showChangeValueDialog} onOpenChange={(open) => {
+        setShowChangeValueDialog(open);
+        if (!open) { setChangeValue(""); setSelectedContribution(null); }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              Alterar Valor do Boleto
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Esta alteração só pode ser feita <strong>1 vez</strong> pelo portal e apenas para boletos <strong>a vencer</strong>. Após esta alteração, qualquer nova alteração deverá ser solicitada ao gestor do sindicato. O boleto atual será cancelado e um novo boleto será emitido com o novo valor.
+            </div>
+            <div>
+              <Label className="text-slate-700 text-sm font-medium">Novo valor (R$)</Label>
+              <Input
+                type="text"
+                placeholder="0,00"
+                value={changeValue}
+                onChange={(e) => setChangeValue(e.target.value.replace(/[^0-9,]/g, ""))}
+                className="mt-2 h-10 text-lg font-medium border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowChangeValueDialog(false)}>Cancelar</Button>
+            <Button onClick={handleChangeValue} disabled={isChangingValue || !changeValue} className="bg-blue-600 hover:bg-blue-700">
+              {isChangingValue ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Alterando...</>
+              ) : (
+                <><FileText className="h-4 w-4 mr-2" />Confirmar Alteração</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header - Blue Bar */}
       <header className="bg-[#2c5282] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
