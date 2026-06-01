@@ -145,8 +145,8 @@ serve(async (req) => {
         success: true,
         response:
           "🪪 *Atualização de Carteirinha pelo WhatsApp*\n\n" +
-          "Para começar, *envie o CPF do associado titular* (somente números).\n\n" +
-          "Se preferir, você pode cancelar a qualquer momento.",
+          "Para começar, *digite o CPF do associado titular* (somente números, 11 dígitos).\n\n" +
+          "_Não envie foto/documento do CPF — basta digitar os números aqui no chat._",
         buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
       });
     }
@@ -190,7 +190,7 @@ serve(async (req) => {
         return json({
           success: true,
           response:
-            "❌ CPF inválido. Por favor envie *somente os 11 dígitos do CPF* do associado titular.",
+            "❌ CPF inválido. *Digite os 11 números do CPF* do associado titular (sem pontos, traços ou foto).",
           buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
         });
       }
