@@ -1001,11 +1001,24 @@ serve(async (req) => {
           }
           case "SELECT_PROFESSIONAL": {
             const pros = Array.isArray(sess.available_professionals) ? sess.available_professionals : [];
-            options = pros.slice(0, 10).map((p: any, i: number) => ({
-              id: `book_${i + 1}`,
-              title: truncate(p.name || `Profissional ${i + 1}`, 24),
-              description: truncate(p.specialty || "", 72),
-            }));
+            options = pros.slice(0, 10).map((p: any, i: number) => {
+              const name = p.name || `Profissional ${i + 1}`;
+              const specialty = p.specialty || "";
+              const titleWithSpecialty = (() => {
+                if (!specialty || specialty === "Não informada") return name;
+                const sep = " — ";
+                const combined = name + sep + specialty;
+                if (combined.length <= 24) return combined;
+                const avail = 24 - name.length - sep.length;
+                if (avail > 3) return name + sep + specialty.slice(0, avail - 1) + "…";
+                return name;
+              })();
+              return {
+                id: `book_${i + 1}`,
+                title: truncate(titleWithSpecialty, 24),
+                description: truncate(specialty || "", 72),
+              };
+            });
             listSectionTitle = "Profissionais";
             break;
           }
