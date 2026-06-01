@@ -219,7 +219,6 @@ serve(async (req) => {
           state: "AWAITING_PAYSLIP",
           patient_id: patient.id,
           patient_name: patient.name,
-          notes: JSON.stringify({ employer_name: patient.employer_name || null, employer_cnpj: patient.employer_cnpj || null }),
           expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
           updated_at: nowIso,
         })
