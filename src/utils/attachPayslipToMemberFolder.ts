@@ -1,25 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const CONTRA_CHEQUES_FOLDER_NAME = "Contra cheques";
+const APROVADOS_FOLDER_NAME = "Aprovados";
+const REPROVADOS_FOLDER_NAME = "Reprovados";
 
 /**
  * After a payslip is approved, copies/links the file from the contra-cheques bucket
  * into the member's "Contra cheques" attachment folder (patient_attachments table).
+ * Files are organized into "Aprovados" or "Reprovados" subfolders for audit.
  */
 export async function attachPayslipToMemberFolder({
   clinicId,
   patientId,
   attachmentPath,
   userId,
+  status = "approved",
+  rejectionReason,
 }: {
   clinicId: string;
   patientId: string;
   attachmentPath: string;
   userId: string;
+  status?: "approved" | "rejected";
+  rejectionReason?: string;
 }): Promise<void> {
   try {
-    // 1. Find or create the "Contra cheques" folder
-    let folderId: string | null = null;
+    // 1. Find or create the root "Contra cheques" folder
+    let rootFolderId: string | null = null;
 
     const { data: existingFolders } = await supabase
       .from("patient_folders")
@@ -27,10 +34,11 @@ export async function attachPayslipToMemberFolder({
       .eq("clinic_id", clinicId)
       .eq("patient_id", patientId)
       .ilike("name", "%contra%cheque%")
+      .is("parent_folder_id", null)
       .limit(1);
 
     if (existingFolders && existingFolders.length > 0) {
-      folderId = existingFolders[0].id;
+      rootFolderId = existingFolders[0].id;
     } else {
       const { data: newFolder, error: folderError } = await supabase
         .from("patient_folders")
@@ -47,7 +55,42 @@ export async function attachPayslipToMemberFolder({
         console.error("[attachPayslipToMemberFolder] Error creating folder:", folderError);
         return;
       }
-      folderId = newFolder.id;
+      rootFolderId = newFolder.id;
+    }
+
+    // 1b. Find or create the "Aprovados" / "Reprovados" subfolder
+    const subName = status === "approved" ? APROVADOS_FOLDER_NAME : REPROVADOS_FOLDER_NAME;
+    let folderId: string | null = null;
+
+    const { data: existingSub } = await supabase
+      .from("patient_folders")
+      .select("id")
+      .eq("clinic_id", clinicId)
+      .eq("patient_id", patientId)
+      .eq("parent_folder_id", rootFolderId)
+      .ilike("name", subName)
+      .limit(1);
+
+    if (existingSub && existingSub.length > 0) {
+      folderId = existingSub[0].id;
+    } else {
+      const { data: newSub, error: subErr } = await supabase
+        .from("patient_folders")
+        .insert({
+          clinic_id: clinicId,
+          patient_id: patientId,
+          name: subName,
+          parent_folder_id: rootFolderId,
+          created_by: userId,
+        })
+        .select("id")
+        .single();
+      if (subErr) {
+        console.error("[attachPayslipToMemberFolder] Error creating subfolder:", subErr);
+        folderId = rootFolderId; // fallback
+      } else {
+        folderId = newSub.id;
+      }
     }
 
     // 2. Check if this attachment_path is already linked (avoid duplicates)
@@ -89,17 +132,21 @@ export async function attachPayslipToMemberFolder({
     }
 
     // 5. Create the attachment record pointing to the contra-cheques bucket
+    const label = status === "approved" ? "Aprovado" : "Reprovado";
+    const description = status === "approved"
+      ? "Contracheque aprovado automaticamente"
+      : `Contracheque reprovado automaticamente${rejectionReason ? `: ${rejectionReason}` : ""}`;
     const { error: attachError } = await supabase
       .from("patient_attachments")
       .insert({
         clinic_id: clinicId,
         patient_id: patientId,
         folder_id: folderId,
-        file_name: `Contracheque - ${fileName}`,
+        file_name: `Contracheque (${label}) - ${fileName}`,
         file_type: fileType,
         file_size: fileSize,
         file_path: `contra-cheques:${attachmentPath}`,
-        description: "Contracheque aprovado automaticamente",
+        description,
         uploaded_by: userId,
       });
 

@@ -80,6 +80,118 @@ function calcNewExpiry(competenceMonth: number, competenceYear: number): string 
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Faz upload do contracheque ao bucket "contra-cheques" e registra a referência
+ * nos anexos do cadastro do associado (patient_attachments), organizado em
+ * pastas "Aprovados" / "Reprovados" para auditoria futura.
+ */
+async function archivePayslipToMember(
+  supabase: any,
+  opts: {
+    clinicId: string;
+    patientId: string;
+    bytes: Uint8Array;
+    mimeType: string;
+    status: "approved" | "rejected";
+    originalFileName?: string;
+    rejectionReason?: string;
+  },
+): Promise<string | null> {
+  try {
+    const ext = opts.mimeType.includes("png")
+      ? "png"
+      : opts.mimeType.includes("webp")
+      ? "webp"
+      : opts.mimeType.includes("pdf")
+      ? "pdf"
+      : "jpg";
+    const subDir = opts.status === "approved" ? "Aprovados" : "Reprovados";
+    const filePath = `${opts.clinicId}/${opts.patientId}/${subDir}/${Date.now()}.${ext}`;
+
+    const { error: upErr } = await supabase.storage
+      .from("contra-cheques")
+      .upload(filePath, opts.bytes, { contentType: opts.mimeType, upsert: true });
+    if (upErr) {
+      console.error("[carteirinha] archive upload error", upErr);
+      return null;
+    }
+
+    // Localiza/cria pasta raiz "Contra cheques"
+    let rootFolderId: string | null = null;
+    const { data: roots } = await supabase
+      .from("patient_folders")
+      .select("id")
+      .eq("clinic_id", opts.clinicId)
+      .eq("patient_id", opts.patientId)
+      .ilike("name", "%contra%cheque%")
+      .is("parent_folder_id", null)
+      .limit(1);
+    if (roots && roots.length > 0) {
+      rootFolderId = roots[0].id;
+    } else {
+      const { data: newRoot } = await supabase
+        .from("patient_folders")
+        .insert({
+          clinic_id: opts.clinicId,
+          patient_id: opts.patientId,
+          name: "Contra cheques",
+        })
+        .select("id")
+        .single();
+      rootFolderId = newRoot?.id || null;
+    }
+
+    // Subpasta Aprovados / Reprovados
+    let subFolderId: string | null = rootFolderId;
+    if (rootFolderId) {
+      const { data: subs } = await supabase
+        .from("patient_folders")
+        .select("id")
+        .eq("clinic_id", opts.clinicId)
+        .eq("patient_id", opts.patientId)
+        .eq("parent_folder_id", rootFolderId)
+        .ilike("name", subDir)
+        .limit(1);
+      if (subs && subs.length > 0) {
+        subFolderId = subs[0].id;
+      } else {
+        const { data: newSub } = await supabase
+          .from("patient_folders")
+          .insert({
+            clinic_id: opts.clinicId,
+            patient_id: opts.patientId,
+            parent_folder_id: rootFolderId,
+            name: subDir,
+          })
+          .select("id")
+          .single();
+        subFolderId = newSub?.id || rootFolderId;
+      }
+    }
+
+    const label = opts.status === "approved" ? "Aprovado" : "Reprovado";
+    const description = opts.status === "approved"
+      ? "Contracheque enviado via WhatsApp e aprovado automaticamente"
+      : `Contracheque enviado via WhatsApp e reprovado automaticamente${opts.rejectionReason ? `: ${opts.rejectionReason}` : ""}`;
+
+    await supabase.from("patient_attachments").insert({
+      clinic_id: opts.clinicId,
+      patient_id: opts.patientId,
+      folder_id: subFolderId,
+      file_name: `Contracheque WhatsApp (${label}) - ${opts.originalFileName || `${Date.now()}.${ext}`}`,
+      file_type: opts.mimeType,
+      file_size: opts.bytes.byteLength,
+      file_path: `contra-cheques:${filePath}`,
+      description,
+    });
+
+    return filePath;
+  } catch (err) {
+    console.error("[carteirinha] archivePayslipToMember failed", err);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -350,6 +462,16 @@ serve(async (req) => {
       console.log("[carteirinha] verify result", JSON.stringify(verifyData));
 
       if (!verifyData?.is_payslip) {
+        // Arquiva o contracheque reprovado nos anexos do associado para auditoria
+        await archivePayslipToMember(supabase, {
+          clinicId: SINDICATO_CLINIC_ID,
+          patientId: session.patient_id,
+          bytes,
+          mimeType,
+          status: "rejected",
+          originalFileName: body.media_filename,
+          rejectionReason: verifyData?.message,
+        });
         return json({
           success: true,
           response:
@@ -378,14 +500,16 @@ serve(async (req) => {
 
       const newExpiresAt = calcNewExpiry(compMonth, compYear);
 
-      // 6) faz upload no bucket contra-cheques
-      const ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
-      const filePath = `${SINDICATO_CLINIC_ID}/${session.patient_id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("contra-cheques")
-        .upload(filePath, bytes, { contentType: mimeType, upsert: true });
-      if (upErr) {
-        console.error("[carteirinha] storage upload error", upErr);
+      // 6) arquiva o contracheque aprovado (upload + anexo na pasta Aprovados)
+      const filePath = await archivePayslipToMember(supabase, {
+        clinicId: SINDICATO_CLINIC_ID,
+        patientId: session.patient_id,
+        bytes,
+        mimeType,
+        status: "approved",
+        originalFileName: body.media_filename,
+      });
+      if (!filePath) {
         return json({
           success: true,
           response: "❌ Erro ao salvar o contracheque. Tente novamente.",
