@@ -643,12 +643,17 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
          { id: 'menu_principal', title: 'Menu Principal' }
        ];
        nextState = 'SELECT_BOLETO_TYPE';
-     } else {
-       // SE NÃO EXISTIR TRANSIÇÃO: APENAS DEBUG
-       if (nextState === session.state && !responseText) {
-         responseText = `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`;
-       }
-     }
+      } else if (nextState === session.state && !responseText) {
+        // Fallback amigável para entradas não reconhecidas
+        responseText = "Não entendi sua resposta. 🤔\n\nVamos tentar novamente!";
+        if (session.state === 'SELECT_BOLETO_TYPE') {
+          buttons = [
+            { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+            { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+            { id: 'menu_principal', title: 'Menu Principal' }
+          ];
+        }
+      }
 
     // 3. Atualizar estado no banco
     const { error: updateError } = await supabase.from('whatsapp_boleto_sessions')
