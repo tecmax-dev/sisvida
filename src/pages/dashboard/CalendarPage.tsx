@@ -5460,7 +5460,7 @@ const updateData: Record<string, any> = {
                                       <div className="flex-1 text-sm text-muted-foreground italic">
                                         Horário disponível
                                       </div>
-                                      {profId && slotTime && hasPermission('manage_calendar_slot_blocks') && (
+                                      {profId && slotTime && (isAdmin || isProfessionalOnly) && (
                                         <Button
                                           variant="ghost"
                                           size="sm"
