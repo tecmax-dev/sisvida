@@ -1223,7 +1223,7 @@ serve(async (req) => {
               {
                 title: "Serviços Associado",
                 rows: [
-                  { id: "agendar_consulta", title: "Agendar Consulta", description: "Marcar nova consulta" },
+                  { id: "agendar_consulta", title: "Digitar CPF", description: "Agendar nova consulta" },
                   { id: "cancelar_consulta", title: "Cancelar Consulta", description: "Desmarcar consulta agendada" },
                   { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
                   { id: "whazing_sub_app", title: "Aplicativo", description: "Baixar app na Play Store" },
@@ -1257,7 +1257,7 @@ serve(async (req) => {
               {
                 title: "Serviços Empresa",
                 rows: [
-                  { id: "whazing_sub_boleto", title: "2ª Via Boleto", description: "Emissão de cobranças" },
+                  { id: "whazing_sub_boleto", title: "Digitar CNPJ", description: "2ª via de boleto" },
                   { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
                   { id: "whazing_sub_outros", title: "Outros Assuntos", description: "Suporte especializado" }
                 ]
