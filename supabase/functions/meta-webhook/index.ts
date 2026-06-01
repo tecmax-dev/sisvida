@@ -693,6 +693,153 @@ serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
+      // ============ FLUXO CARTEIRINHA (renovação via WhatsApp) ============
+      // Trata os botões novos (App / WhatsApp / Cancelar) e roteia
+      // mensagens (texto/mídia) quando há sessão action_type='carteirinha'.
+      try {
+        const isCartImage = messageObj.type === "image" && !!messageObj.image?.id;
+        const isCartDoc = messageObj.type === "document" && !!messageObj.document?.id;
+        const cartMediaId = messageObj.image?.id || messageObj.document?.id || null;
+        const cartMediaMime = messageObj.image?.mime_type || messageObj.document?.mime_type || null;
+        const cartMediaName = messageObj.document?.filename || null;
+
+        const callCarteirinha = async (payload: Record<string, unknown>) => {
+          const r = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-carteirinha-flow`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ phone: from, ...payload }),
+            },
+          );
+          return await r.json().catch(() => ({ success: false, response: "Erro." }));
+        };
+
+        const respondCart = async (d: any) => {
+          const buttons = Array.isArray(d?.buttons) ? d.buttons : [];
+          if (buttons.length > 0) {
+            await sendResponse(withMenuButtonsPayload(d.response, buttons));
+          } else {
+            await sendResponse(withMenuTextPayload(d.response));
+          }
+        };
+
+        // Botão "Atualizar Carteira" → escolha App vs WhatsApp
+        if (extractedButtonId === "whazing_sub_carteirinha") {
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: {
+                text:
+                  "🪪 *Atualizar Carteirinha*\n\n" +
+                  "Como você prefere atualizar sua carteirinha hoje?\n\n" +
+                  "• *Pelo App*: rápido, com câmera e validação na hora\n" +
+                  "• *Pelo WhatsApp*: envie o CPF e o contracheque por aqui",
+              },
+              action: {
+                buttons: [
+                  { type: "reply", reply: { id: "carteirinha_app", title: "Pelo App" } },
+                  { type: "reply", reply: { id: "carteirinha_whats", title: "Pelo WhatsApp" } },
+                  { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } },
+                ],
+              },
+            },
+          });
+          return new Response(JSON.stringify({ ok: true, action: "carteirinha_choice" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Escolheu "Pelo App"
+        if (extractedButtonId === "carteirinha_app") {
+          const playUrl = "https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app";
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "cta_url",
+              header: { type: "text", text: "Atualizar pelo App" },
+              body: {
+                text:
+                  "📱 No app você atualiza sua carteirinha em 1 minuto:\n\n" +
+                  "1. Toque em *Abrir App* abaixo\n" +
+                  "2. Faça login com seu CPF\n" +
+                  "3. Vá em *Carteirinha* → *Renovar*\n" +
+                  "4. Tire foto do contracheque\n\n" +
+                  "Pronto! Atualização automática.",
+              },
+              footer: { text: "Disponível para Android" },
+              action: {
+                name: "cta_url",
+                parameters: { display_text: "Abrir App", url: playUrl },
+              },
+            },
+          });
+          await sendResponse(withMenuTextPayload("Posso ajudar com mais alguma coisa?"));
+          return new Response(JSON.stringify({ ok: true, action: "carteirinha_app" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Escolheu "Pelo WhatsApp" → inicia fluxo
+        if (extractedButtonId === "carteirinha_whats") {
+          const d = await callCarteirinha({ action: "start" });
+          await respondCart(d);
+          return new Response(JSON.stringify({ ok: true, action: "carteirinha_start" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Cancelar fluxo carteirinha
+        if (extractedButtonId === "carteirinha_cancelar") {
+          const d = await callCarteirinha({ action: "cancel" });
+          await sendResponse(withMenuTextPayload(d.response));
+          return new Response(JSON.stringify({ ok: true, action: "carteirinha_cancel" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Sessão ativa? roteia texto/mídia
+        const { data: activeCartSession } = await supabase
+          .from("whatsapp_booking_sessions")
+          .select("id, state")
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .eq("phone", from)
+          .eq("action_type", "carteirinha")
+          .gte("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeCartSession) {
+          if (isCartImage || isCartDoc) {
+            const d = await callCarteirinha({
+              action: "media",
+              media_id: cartMediaId,
+              media_mime: cartMediaMime,
+              media_filename: cartMediaName,
+            });
+            await respondCart(d);
+            return new Response(JSON.stringify({ ok: true, action: "carteirinha_media" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (text && !extractedButtonId) {
+            const d = await callCarteirinha({ action: "text", text });
+            await respondCart(d);
+            return new Response(JSON.stringify({ ok: true, action: "carteirinha_text" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+      } catch (cartErr) {
+        console.error("[CARTEIRINHA_FLOW_ERROR]", cartErr);
+      }
+      // ============ FIM FLUXO CARTEIRINHA ============
+
       const isAgendarConsultaTrigger =
         extractedButtonId === "agendar_consulta" ||
         /\b(agendar consulta|marcar consulta|agendamento de consulta|consulta médica|consulta medica)\b/i.test(text);
