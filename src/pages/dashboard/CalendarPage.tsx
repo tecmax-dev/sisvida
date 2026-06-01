@@ -2102,7 +2102,8 @@ export default function CalendarPage() {
   };
 
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
-    // (handler abaixo)
+    // Reativar agendamento bloqueado por cancelamento profissional (somente admin)
+    void 0;
     try {
 const updateData: Record<string, any> = {
         status: newStatus as "scheduled" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show" | "in_progress" | "blocked",
