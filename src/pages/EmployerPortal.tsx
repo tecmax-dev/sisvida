@@ -70,6 +70,7 @@ interface Contribution {
   lytex_invoice_id: string | null;
   paid_at: string | null;
   portal_reissue_count: number;
+  portal_value_change_count?: number;
   contribution_type: { name: string } | null;
   negotiation_id: string | null;
   negotiation?: {
@@ -150,6 +151,9 @@ export default function EmployerPortal() {
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
+  const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
+  const [changeValue, setChangeValue] = useState("");
+  const [isChangingValue, setIsChangingValue] = useState(false);
   const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("home");
   const [activeTab, setActiveTab] = useState<ContributionTab>("pending");
