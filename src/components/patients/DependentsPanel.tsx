@@ -602,7 +602,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                     </div>
 
                     <div className="flex gap-1 ml-4">
-                      {!dependent.card_number && (
+                      {!dependent.card_number && canManageDependents && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -618,6 +618,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                           )}
                         </Button>
                       )}
+                      {canManageDependents && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -626,6 +627,8 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
+                      )}
+                      {canManageDependents && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -645,6 +648,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                           <UserX className="h-4 w-4" />
                         )}
                       </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
