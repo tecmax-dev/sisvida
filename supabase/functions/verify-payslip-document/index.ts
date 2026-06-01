@@ -233,6 +233,24 @@ Nome do arquivo: ${file_name}`;
           reason = `A empresa no contracheque (${employerFoundInDocument || "não identificada"}) não corresponde à empresa cadastrada para o associado (${employer_name}). Para sua segurança, não foi possível validar o documento.`;
         }
 
+        // Server-side CNPJ digit comparison (antifraude)
+        const onlyDigits = (s: string | null | undefined) => (s || "").replace(/\D/g, "");
+        const cadastradoDigits = onlyDigits(employer_cnpj);
+        const documentoDigits = onlyDigits(employerCnpjFoundInDocument);
+        if (isPayslip && cadastradoDigits.length === 14 && documentoDigits.length === 14) {
+          if (cadastradoDigits === documentoDigits) {
+            // CNPJ confere — força employer_match true mesmo se nome divergir por abreviação
+            employerMatch = true;
+          } else {
+            isPayslip = false;
+            employerMatch = false;
+            reason = `O CNPJ no contracheque (${documentoDigits}) não corresponde ao CNPJ da empresa cadastrada (${cadastradoDigits}). Para sua segurança, não foi possível validar o documento.`;
+          }
+        } else if (isPayslip && cadastradoDigits.length === 14 && employerCnpjFoundInDocument && documentoDigits.length !== 14) {
+          // CNPJ no documento veio em formato inválido — ignora e mantém validação por nome
+          console.warn("[verify-payslip] CNPJ no documento em formato inválido:", employerCnpjFoundInDocument);
+        }
+
         // Validate competence using configurable acceptance days
         if (isPayslip && parsed.competence_month && parsed.competence_year) {
           const result = validateCompetence(
