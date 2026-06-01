@@ -234,7 +234,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     // 4. VIEWS / RENDERERS
 
-     const forensicPrefix = `[FORENSIC_BOLETO] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
+     // (debug prefix removed — responses are clean for end users)
 
      // STATE VIEWS (LOGIC)
      if (nextState === 'SELECT_BOLETO_TYPE') {
