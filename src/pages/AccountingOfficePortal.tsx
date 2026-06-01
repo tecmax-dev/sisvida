@@ -140,6 +140,11 @@ export default function AccountingOfficePortal() {
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
 
+  // Dialog de alterar valor (boleto ja emitido a vencer)
+  const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
+  const [changeValue, setChangeValue] = useState("");
+  const [isChangingValue, setIsChangingValue] = useState(false);
+
   // Employer selecionado para homologação
   const [selectedEmployerForHomologacao, setSelectedEmployerForHomologacao] = useState<Employer | null>(null);
 
@@ -488,6 +493,58 @@ export default function AccountingOfficePortal() {
       toast.error("Erro de conexão");
     } finally {
       setIsSettingValue(false);
+    }
+  };
+
+  const handleChangeValue = async () => {
+    if (!selectedContribution || !accountingOffice || !changeValue) {
+      toast.error("Informe o novo valor do boleto");
+      return;
+    }
+
+    setIsChangingValue(true);
+    try {
+      const valueInCents = Math.round(parseFloat(changeValue.replace(",", ".")) * 100);
+
+      if (isNaN(valueInCents) || valueInCents <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("change-contribution-value", {
+        body: {
+          contribution_id: selectedContribution.id,
+          value: valueInCents,
+          portal_type: "accounting_office",
+          portal_id: accountingOffice.id,
+        },
+      });
+
+      if (error) {
+        const errorMessage = error.message || "Erro ao alterar valor";
+        console.error("[AccountingPortal] Change value error:", error);
+        toast.error(`Erro ao alterar valor: ${errorMessage}`);
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success(data.message || "Valor alterado e novo boleto gerado!");
+      setShowChangeValueDialog(false);
+      setChangeValue("");
+      setSelectedContribution(null);
+      loadData(accountingOffice.id);
+
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsChangingValue(false);
     }
   };
 
@@ -931,6 +988,14 @@ export default function AccountingOfficePortal() {
             onSetValue={(contrib) => {
               setSelectedContribution(contrib as any);
               setShowSetValueDialog(true);
+            }}
+            onChangeValue={(contrib) => {
+              setSelectedContribution(contrib as any);
+              const initialValue = ((contrib.value || contrib.amount || 0) / 100)
+                .toFixed(2)
+                .replace(".", ",");
+              setChangeValue(initialValue);
+              setShowChangeValueDialog(true);
             }}
           />
         </div>
