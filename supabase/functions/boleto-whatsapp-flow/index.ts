@@ -227,13 +227,9 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     console.log('[NEXT_STATE]', nextState);
 
-    // 3. TRANSITION ERROR (NO STATE FOUND)
+    // 3. TRANSITION ERROR (NO STATE FOUND) — fallback: re-present current state
     if (!nextState) {
-      const errorMsg = `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`;
-      return new Response(
-        JSON.stringify({ success: true, response: errorMsg, buttons: [], newState: session.state }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      nextState = session.state;
     }
 
     // 4. VIEWS / RENDERERS
