@@ -129,8 +129,8 @@ const templates = [
     components: [
       {
         type: "BODY",
-        text: "Informação de Serviço: Olá, {{1}}. Comunicamos que uma nova funcionalidade está disponível em nosso sistema de prontuários: a transcrição de voz para texto durante o registro de atendimentos.\n\nEste recurso permite que os profissionais de saúde registrem informações de forma mais ágil, convertendo a fala em texto automaticamente.\n\nPara conhecer a funcionalidade, acesse o aplicativo oficial.",
-        example: { body_text: [["Maria Silva"]] }
+        text: "Informação de Serviço: Olá, {{1}}. Comunicamos que a atualização da carteira de associado pode ser realizada diretamente pelo WhatsApp, de forma automática e com validação em tempo real.\n\nPara atualizar, envie a foto do contracheque mais recente neste canal informando seu CPF. A validade da carteira é renovada imediatamente após a verificação automática do documento.\n\nA opção pelo aplicativo oficial permanece disponível, com validação realizada pela secretaria do Sindicato.",
+        example: { body_text: [["João da Silva"]] }
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
       {
