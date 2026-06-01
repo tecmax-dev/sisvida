@@ -1215,17 +1215,34 @@ serve(async (req) => {
       await sendResponse({
         type: "interactive",
         interactive: {
+          type: "button",
+          body: { text: "Você selecionou *Sou Associado*.\n\nEscolha uma opção:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "agendar_consulta", title: "Digitar CPF" } },
+              { type: "reply", reply: { id: "whazing_sub_carteirinha", title: "Atualizar Carteira" } },
+              { type: "reply", reply: { id: "whazing_associado_mais", title: "Mais Opções" } }
+            ]
+          }
+        }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_associado" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 2b. SUBMENU ASSOCIADO — MAIS OPÇÕES (overflow das opções que não cabem em 3 botões)
+    if (extractedButtonId === "whazing_associado_mais") {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
           type: "list",
-          body: { text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:" },
+          body: { text: "Mais opções para *Associado*:" },
           action: {
             button: "Ver Opções",
             sections: [
               {
-                title: "Serviços Associado",
+                title: "Outras opções",
                 rows: [
-                  { id: "agendar_consulta", title: "Digitar CPF", description: "Agendar nova consulta" },
                   { id: "cancelar_consulta", title: "Cancelar Consulta", description: "Desmarcar consulta agendada" },
-                  { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
                   { id: "whazing_sub_app", title: "Aplicativo", description: "Baixar app na Play Store" },
                   { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
                   { id: "whazing_sub_outros", title: "Outros Assuntos", description: "Falar com atendente" }
@@ -1234,6 +1251,7 @@ serve(async (req) => {
               {
                 title: "Navegação",
                 rows: [
+                  { id: "whazing_associado", title: "Voltar", description: "Voltar ao submenu Associado" },
                   { id: "menu_principal", title: "Menu Principal", description: "Voltar ao início" }
                 ]
               }
@@ -1241,7 +1259,7 @@ serve(async (req) => {
           }
         }
       });
-      return new Response(JSON.stringify({ ok: true, action: "submenu_associado" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_associado_mais" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // 3. SUBMENU EMPRESA
@@ -1249,25 +1267,13 @@ serve(async (req) => {
       await sendResponse({
         type: "interactive",
         interactive: {
-          type: "list",
+          type: "button",
           body: { text: "Você selecionou *Sou Empresa*.\n\nComo podemos ajudar?" },
           action: {
-            button: "Ver Opções",
-            sections: [
-              {
-                title: "Serviços Empresa",
-                rows: [
-                  { id: "whazing_sub_boleto", title: "Digitar CNPJ", description: "2ª via de boleto" },
-                  { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
-                  { id: "whazing_sub_outros", title: "Outros Assuntos", description: "Suporte especializado" }
-                ]
-              },
-              {
-                title: "Navegação",
-                rows: [
-                  { id: "menu_principal", title: "Menu Principal", description: "Voltar ao início" }
-                ]
-              }
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_boleto", title: "Digitar CNPJ" } },
+              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
+              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
             ]
           }
         }
