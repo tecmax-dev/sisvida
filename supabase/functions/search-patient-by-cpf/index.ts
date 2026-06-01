@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     
     const { data, error } = await supabase
       .from('patients')
-      .select('id, name, phone, email, birth_date, gender, is_active, inactivation_reason')
+      .select('id, name, phone, email, birth_date, gender, is_active')
       .eq('clinic_id', clinicId)
       .eq('is_active', true) // Only check ACTIVE patients
       .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
