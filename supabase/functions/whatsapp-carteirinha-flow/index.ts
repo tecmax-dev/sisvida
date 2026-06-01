@@ -563,13 +563,15 @@ serve(async (req) => {
         });
       }
 
-      // 7) localiza/atualiza patient_cards
-      const { data: existingCard } = await supabase
+      // 7) localiza/atualiza patient_cards. Se houver duplicidade ativa,
+      // usa sempre a maior validade para nunca escolher uma carteirinha antiga.
+      const { data: activeCards } = await supabase
         .from("patient_cards")
         .select("id, expires_at")
         .eq("patient_id", session.patient_id)
         .eq("is_active", true)
-        .maybeSingle();
+        .order("expires_at", { ascending: false });
+      const existingCard = Array.isArray(activeCards) && activeCards.length > 0 ? activeCards[0] : null;
 
       let cardId: string | null = existingCard?.id || null;
       let finalExpiresAt = newExpiresAt;
@@ -586,6 +588,18 @@ serve(async (req) => {
             .from("patient_cards")
             .update({ expires_at: finalExpiresAt })
             .eq("id", cardId);
+        }
+        if (Array.isArray(activeCards) && activeCards.length > 1) {
+          const olderActiveIds = activeCards
+            .slice(1)
+            .map((card: any) => card.id)
+            .filter(Boolean);
+          if (olderActiveIds.length > 0) {
+            await supabase
+              .from("patient_cards")
+              .update({ expires_at: finalExpiresAt })
+              .in("id", olderActiveIds);
+          }
         }
       } else {
         const { data: newCard, error: cardErr } = await supabase
