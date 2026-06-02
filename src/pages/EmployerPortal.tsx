@@ -38,6 +38,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
@@ -150,6 +151,7 @@ export default function EmployerPortal() {
   const [isGeneratingReissue, setIsGeneratingReissue] = useState(false);
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
+  const [setValueDueDate, setSetValueDueDate] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
   const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
   const [changeValue, setChangeValue] = useState("");
