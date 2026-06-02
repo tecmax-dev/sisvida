@@ -42,66 +42,6 @@ function renderTemplateBody(components: any[], variables: string[]): string {
   return [headerText, bodyText, footerText].filter(Boolean).join("\n\n");
 }
 
-function mirrorOutgoingToChatgoo(params: {
-  to: string;
-  phoneId: string;
-  displayPhone: string;
-  templateName: string;
-  components: any[];
-  variables: string[];
-  metaResponse?: any;
-}) {
-  if (!CHATGOO_WEBHOOK_URL) return;
-  const { to, phoneId, displayPhone, templateName, components, variables, metaResponse } = params;
-  const messageId = metaResponse?.messages?.[0]?.id
-    || `synthetic.outgoing.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
-  const ts = Math.floor(Date.now() / 1000).toString();
-  const rendered = renderTemplateBody(components, variables)
-    || `[Template: ${templateName}]`;
-  const bodyWithMarker = `📤 *Enviado pelo sistema (Meta Oficial)*\n\n${rendered}`;
-  const outgoingMessage: any = {
-    from: displayPhone,
-    to,
-    id: messageId,
-    timestamp: ts,
-    _outgoing_echo: true,
-    type: "text",
-    text: { body: bodyWithMarker },
-  };
-  const synthetic = {
-    object: "whatsapp_business_account",
-    entry: [{
-      id: Deno.env.get("META_WABA_ID") || "0",
-      changes: [{
-        value: {
-          messaging_product: "whatsapp",
-          metadata: { display_phone_number: displayPhone, phone_number_id: phoneId },
-          _outgoing_echo: true,
-          messages: [outgoingMessage],
-        },
-        field: "messages",
-      }],
-    }],
-  };
-  (async () => {
-    try {
-      const res = await fetch(CHATGOO_WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${CHATGOO_WEBHOOK_TOKEN}`,
-          "X-Webhook-Token": CHATGOO_WEBHOOK_TOKEN,
-          "X-Outgoing-Echo": "true",
-        },
-        body: JSON.stringify(synthetic),
-      });
-      console.log(`[CHATGOO_MIRROR_OUT_TEMPLATE] ${res.status}`);
-    } catch (err) {
-      console.error("[CHATGOO_MIRROR_OUT_TEMPLATE_ERROR]", err);
-    }
-  })();
-}
-
 interface SendBody {
   to: string; // E.164 sem +, ex: 5573999999999
   template_name: string;
