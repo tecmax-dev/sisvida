@@ -18,6 +18,7 @@ type BookingState =
   | "SELECT_DATE"
   | "SELECT_TIME"
   | "CONFIRM_APPOINTMENT"
+  | "ASK_CONTINUE"
   | "FINISHED";
 
 interface BookingSession {
