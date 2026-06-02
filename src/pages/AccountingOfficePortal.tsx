@@ -1087,6 +1087,7 @@ export default function AccountingOfficePortal() {
         setShowSetValueDialog(open);
         if (!open) {
           setNewValue("");
+          setSetValueDueDate("");
           setSelectedContribution(null);
         }
       }}>
@@ -1121,6 +1122,21 @@ export default function AccountingOfficePortal() {
                 Após definir o valor, o boleto será gerado automaticamente.
               </p>
             </div>
+            {selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && (
+              <div>
+                <Label className="text-slate-700 text-sm font-medium">Nova Data de Vencimento</Label>
+                <Input
+                  type="date"
+                  value={setValueDueDate}
+                  onChange={(e) => setSetValueDueDate(e.target.value)}
+                  min={getMinDate()}
+                  className="mt-2 h-10 border-slate-200"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  Este boleto está vencido. Informe uma nova data para emissão.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)} className="border-slate-200">
@@ -1128,7 +1144,7 @@ export default function AccountingOfficePortal() {
             </Button>
             <Button 
               onClick={handleSetValue} 
-              disabled={isSettingValue || !newValue}
+              disabled={isSettingValue || !newValue || (!!selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && !setValueDueDate)}
               className="bg-purple-600 hover:bg-purple-700"
             >
               {isSettingValue ? (
