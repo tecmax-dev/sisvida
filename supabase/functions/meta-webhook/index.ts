@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,173 @@ const corsHeaders = {
 
 // ID da clínica do Sindicato (mesmo usado no fluxo de boleto)
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+
+// =====================================================================
+// Captura de ECOS de saída (campanhas/atendimentos disparados pelo
+// painel Chatgoo direto pela Meta). O webhook ignora esses eventos no
+// fluxo principal (para evitar loop e reprocessamento do bot), mas
+// precisamos gravá-los no histórico do ticket para que o sistema
+// reflita o que o operador enviou pelo painel. Fire-and-forget.
+// =====================================================================
+const SB_URL = Deno.env.get("SUPABASE_URL")!;
+const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+function normalizeBrPhone(raw: any): string | null {
+  if (raw === null || raw === undefined) return null;
+  const digits = String(raw).replace(/\D/g, "");
+  if (!digits) return null;
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+function captureOutgoingEcho(params: {
+  source: "chatgoo_envelope" | "meta_echo";
+  phone: string | null;
+  contactName?: string | null;
+  text?: string | null;
+  mediaUrl?: string | null;
+  mediaMime?: string | null;
+  messageType?: string;
+  messageId?: string | null;
+  timestamp?: string | null;
+  rawPayload?: any;
+}) {
+  const phone = normalizeBrPhone(params.phone);
+  if (!phone) {
+    console.log("[CAPTURE_ECHO_SKIP] missing phone");
+    return;
+  }
+  const messageType = (params.messageType || "text") as string;
+  const allowed = ["text","image","audio","video","document","location","contact","sticker"];
+  const safeType = allowed.includes(messageType) ? messageType : "text";
+  const content = params.text ?? (params.mediaUrl ? `[${safeType}]` : "");
+
+  (async () => {
+    try {
+      const sb = createClient(SB_URL, SB_SERVICE);
+
+      // 1) Find/create contact
+      let contactId: string | null = null;
+      const { data: existing } = await sb
+        .from("whatsapp_contacts")
+        .select("id, name")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (existing?.id) {
+        contactId = existing.id;
+        if (params.contactName && !existing.name) {
+          await sb.from("whatsapp_contacts")
+            .update({ name: params.contactName })
+            .eq("id", contactId);
+        }
+      } else {
+        const { data: inserted, error: insErr } = await sb
+          .from("whatsapp_contacts")
+          .insert({
+            clinic_id: SINDICATO_CLINIC_ID,
+            phone,
+            name: params.contactName || null,
+          })
+          .select("id")
+          .single();
+        if (insErr) {
+          console.error("[CAPTURE_ECHO_CONTACT_ERR]", insErr);
+          return;
+        }
+        contactId = inserted.id;
+      }
+      if (!contactId) return;
+
+      // 2) Find latest non-closed ticket; create if none
+      let ticketId: string | null = null;
+      const { data: openTicket } = await sb
+        .from("whatsapp_tickets")
+        .select("id")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .eq("contact_id", contactId)
+        .neq("status", "closed")
+        .order("last_message_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (openTicket?.id) {
+        ticketId = openTicket.id;
+      } else {
+        const { data: newTicket, error: tErr } = await sb
+          .from("whatsapp_tickets")
+          .insert({
+            clinic_id: SINDICATO_CLINIC_ID,
+            contact_id: contactId,
+            status: "open",
+            is_bot_active: false, // não acionar bot
+            subject: "Disparo via Chatgoo",
+          })
+          .select("id")
+          .single();
+        if (tErr) {
+          console.error("[CAPTURE_ECHO_TICKET_ERR]", tErr);
+          return;
+        }
+        ticketId = newTicket.id;
+      }
+      if (!ticketId) return;
+
+      // 3) Dedup by meta_message_id
+      if (params.messageId) {
+        const { data: dup } = await sb
+          .from("whatsapp_ticket_messages")
+          .select("id")
+          .eq("ticket_id", ticketId)
+          .contains("metadata", { meta_message_id: params.messageId })
+          .maybeSingle();
+        if (dup?.id) {
+          console.log("[CAPTURE_ECHO_DUP_SKIP]", params.messageId);
+          return;
+        }
+      }
+
+      // 4) Insert message as operator
+      const tsMs = params.timestamp
+        ? Number(params.timestamp) * (String(params.timestamp).length <= 10 ? 1000 : 1)
+        : Date.now();
+      const createdAt = new Date(tsMs).toISOString();
+      const { error: msgErr } = await sb
+        .from("whatsapp_ticket_messages")
+        .insert({
+          ticket_id: ticketId,
+          sender_type: "operator",
+          sender_name: "Chatgoo",
+          message_type: safeType,
+          content,
+          media_url: params.mediaUrl || null,
+          media_mime_type: params.mediaMime || null,
+          created_at: createdAt,
+          metadata: {
+            source: params.source,
+            meta_message_id: params.messageId || null,
+          },
+        });
+      if (msgErr) {
+        console.error("[CAPTURE_ECHO_MSG_ERR]", msgErr);
+        return;
+      }
+
+      // 5) Update ticket last_message
+      await sb.from("whatsapp_tickets")
+        .update({
+          last_message_at: createdAt,
+          last_message: content.slice(0, 500),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", ticketId);
+
+      console.log("[CAPTURE_ECHO_OK]", { phone, ticketId, source: params.source });
+    } catch (err) {
+      console.error("[CAPTURE_ECHO_UNHANDLED]", err);
+    }
+  })();
+}
 
 // Fluxo de agendamento liberado para todos os usuários do WhatsApp /sindicato.
 const isBookingWhitelisted = (_phone: string) => true;
@@ -507,6 +675,23 @@ serve(async (req) => {
       //    nem ser re-espelhadas (evita loop infinito de mirror).
       if (body?.fromMe === true) {
         console.log('[CHATGOO_LOOPBACK_IGNORED] fromMe=true');
+        // Captura ECO do Chatgoo (campanha/atendimento manual disparado
+        // pelo painel) para o histórico do ticket. Não reprocessa fluxo.
+        try {
+          captureOutgoingEcho({
+            source: "chatgoo_envelope",
+            phone: body?.contact?.phoneNumber || body?.contact?.number || null,
+            contactName: body?.contact?.name || body?.contact?.pushname || null,
+            text: body?.messageBody || null,
+            mediaUrl: body?.mediaUrl || null,
+            mediaMime: null,
+            messageType: (body?.mediaType === "chat" || !body?.mediaType) ? "text" : body.mediaType,
+            messageId: body?.messageId || null,
+            timestamp: body?.timestamp || null,
+          });
+        } catch (capErr) {
+          console.error("[CHATGOO_LOOPBACK_CAPTURE_ERR]", capErr);
+        }
         return new Response(JSON.stringify({ ok: true, ignored: 'chatgoo_loopback' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
@@ -552,6 +737,29 @@ serve(async (req) => {
               String(_v.metadata.display_phone_number).replace(/\D/g, ''));
         if (isOutgoingEcho) {
           console.log('[CHATGOO_OUTGOING_ECHO_IGNORED]');
+          // Captura eco no formato Meta para o histórico do ticket.
+          try {
+            const _to = _msg?.to || _v?.contacts?.[0]?.wa_id || null;
+            const _text = _msg?.text?.body
+              || (_msg?.type === "template" ? `[Template: ${_msg?.template?.name || ""}]` : null)
+              || _msg?.interactive?.body?.text
+              || null;
+            const _media = _msg?.image?.link || _msg?.document?.link
+              || _msg?.video?.link || _msg?.audio?.link || null;
+            captureOutgoingEcho({
+              source: "meta_echo",
+              phone: _to,
+              contactName: _v?.contacts?.[0]?.profile?.name || null,
+              text: _text,
+              mediaUrl: _media,
+              mediaMime: _msg?.document?.mime_type || _msg?.image?.mime_type || null,
+              messageType: _msg?.type || "text",
+              messageId: _msg?.id || null,
+              timestamp: _msg?.timestamp || null,
+            });
+          } catch (capErr) {
+            console.error("[META_ECHO_CAPTURE_ERR]", capErr);
+          }
           return new Response(JSON.stringify({ ok: true, ignored: 'outgoing_echo' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
