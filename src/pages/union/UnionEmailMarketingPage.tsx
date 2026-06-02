@@ -689,14 +689,29 @@ export default function UnionEmailMarketingPage() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button variant="outline" onClick={handlePreview}>
-              <Eye className="h-4 w-4 mr-2" /> Pré-visualizar destinatários
-            </Button>
-            <Button onClick={handleSend} disabled={sending}>
-              {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Enviar campanha
-            </Button>
+          {/* Sticky action bar */}
+          <div className="sticky bottom-0 z-10 -mx-1 px-1 pb-2">
+            <div className="flex flex-wrap items-center gap-2 justify-end rounded-xl border bg-background/90 backdrop-blur p-3 shadow-lg">
+              <Button variant="ghost" onClick={handleSaveDraft} disabled={savingDraft}>
+                {savingDraft ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar rascunho
+              </Button>
+              <Button variant="outline" onClick={handlePreview}>
+                <Eye className="h-4 w-4 mr-2" /> Pré-visualizar
+              </Button>
+              <Button variant="outline" onClick={() => {
+                const d = new Date(Date.now() + 60 * 60 * 1000);
+                setScheduleDate(d.toISOString().slice(0, 10));
+                setScheduleTime(d.toTimeString().slice(0, 5));
+                setScheduleOpen(true);
+              }}>
+                <CalendarClock className="h-4 w-4 mr-2" /> Agendar
+              </Button>
+              <Button onClick={handleSend} disabled={sending}>
+                {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                Enviar agora
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
@@ -748,6 +763,11 @@ export default function UnionEmailMarketingPage() {
                               {format(new Date(c.created_at), "dd/MM HH:mm", { locale: ptBR })}
                             </td>
                             <td className="py-2 text-right">
+                              {(c.status === "draft" || c.status === "scheduled") && (
+                                <Button variant="ghost" size="sm" onClick={() => loadDraftForEdit(c)}>
+                                  <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                                </Button>
+                              )}
                               <Button variant="ghost" size="sm" onClick={() => openCampaignDetails(c)}>Detalhes</Button>
                               {c.failed_count > 0 && c.status === "completed" && (
                                 <Button variant="ghost" size="sm" onClick={() => resendFailed(c.id)}>
