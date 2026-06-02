@@ -88,3 +88,6 @@ verify_jwt = false
 
 [functions.change-contribution-value]
 verify_jwt = false
+
+[functions.postmark-inbound]
+verify_jwt = false
