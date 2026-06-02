@@ -95,11 +95,11 @@ export default function UnionEmailMarketingPage() {
     if (!clinicId) return;
     (async () => {
       const [{ data: plansData }, { data: empData }] = await Promise.all([
-        supabase.from("plans").select("id, name").eq("clinic_id", clinicId).order("name"),
+        (supabase as any).from("insurance_plans").select("id, name").eq("clinic_id", clinicId).order("name"),
         supabase.from("employers").select("id, name").eq("clinic_id", clinicId).order("name").limit(500),
       ]);
-      setPlans(plansData || []);
-      setEmployers(empData || []);
+      setPlans((plansData as any) || []);
+      setEmployers((empData as any) || []);
     })();
     loadCampaigns();
   }, [clinicId]);
