@@ -111,9 +111,9 @@ serve(async (req) => {
     const unsubSet = new Set((unsubs || []).map((u) => (u.email || "").toLowerCase()));
 
     let totalSent = 0, totalFailed = 0, totalSkipped = 0;
-    let hasMore = true;
 
-    while (hasMore && Date.now() - startedAt < MAX_RUNTIME_MS) {
+    // Processa APENAS um pequeno lote por invocação para evitar "CPU Time exceeded".
+    {
       const { data: recipients } = await supabase
         .from("email_campaign_recipients")
         .select("*")
@@ -122,12 +122,8 @@ serve(async (req) => {
         .order("created_at", { ascending: true })
         .limit(BATCH_SIZE);
 
-      if (!recipients || recipients.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const client = new SMTPClient({
+      if (recipients && recipients.length > 0) {
+        const client = new SMTPClient({
         connection: {
           hostname: smtpHost, port: smtpPort, tls: true,
           auth: { username: smtpUser, password: smtpPassword },
@@ -180,10 +176,10 @@ serve(async (req) => {
         }
 
         if (DELAY_MS > 0) await new Promise((res) => setTimeout(res, DELAY_MS));
-        if (Date.now() - startedAt >= MAX_RUNTIME_MS) break;
       }
 
-      try { await client.close(); } catch (_) {}
+        try { await client.close(); } catch (_) {}
+      }
     }
 
     // Update counters
