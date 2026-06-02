@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ReactQuill, { Quill } from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import {
   AlignLeft, AlignCenter, AlignRight, Maximize2, Trash2,
 } from "lucide-react";
@@ -12,6 +14,8 @@ interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
   minHeight?: number;
+  /** Pasta dentro do bucket public `email-assets` (ex.: "campaigns"). */
+  uploadFolder?: string;
 }
 
 // Register extended image format preserving width/height/style/data-align
@@ -50,12 +54,60 @@ export function RichTextEditor({
   placeholder,
   className,
   minHeight = 320,
+  uploadFolder = "campaigns",
 }: RichTextEditorProps) {
   ensureImageFormat();
   const quillRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
   const [toolbarPos, setToolbarPos] = useState<{ top: number; left: number } | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadAndInsertImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Arquivo inválido", description: "Envie uma imagem.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande", description: "Máximo 8 MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${uploadFolder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("email-assets")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("email-assets").getPublicUrl(path);
+      const url = pub?.publicUrl;
+      if (!url) throw new Error("URL pública indisponível");
+      const editor = quillRef.current?.getEditor?.();
+      if (editor) {
+        const range = editor.getSelection(true) || { index: editor.getLength(), length: 0 };
+        editor.insertEmbed(range.index, "image", url, "user");
+        editor.setSelection(range.index + 1, 0);
+        onChange(editor.root.innerHTML);
+      }
+    } catch (e: any) {
+      console.error("upload image error", e);
+      toast({ title: "Falha no upload", description: e?.message || "Erro", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const openImagePicker = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) uploadAndInsertImage(file);
+    };
+    input.click();
+  };
 
   const modules = useMemo(
     () => ({
@@ -72,10 +124,50 @@ export function RichTextEditor({
         ["link", "image"],
         ["clean"],
       ],
+      // intercepta o botão de imagem nativo do Quill para subir ao storage
+      // (evita inserir como base64 dentro do HTML)
       clipboard: { matchVisual: false },
     }),
     []
   );
+
+  // Registra handlers do toolbar + colagem/arrasto de imagens após o mount
+  useEffect(() => {
+    const editor = quillRef.current?.getEditor?.();
+    if (!editor) return;
+    const toolbar = editor.getModule("toolbar");
+    toolbar?.addHandler?.("image", openImagePicker);
+
+    const root: HTMLElement = editor.root;
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const it of items) {
+        if (it.kind === "file" && it.type.startsWith("image/")) {
+          const file = it.getAsFile();
+          if (file) {
+            e.preventDefault();
+            uploadAndInsertImage(file);
+            return;
+          }
+        }
+      }
+    };
+    const onDrop = (e: DragEvent) => {
+      const files = e.dataTransfer?.files;
+      if (files && files.length && files[0].type.startsWith("image/")) {
+        e.preventDefault();
+        uploadAndInsertImage(files[0]);
+      }
+    };
+    root.addEventListener("paste", onPaste);
+    root.addEventListener("drop", onDrop);
+    return () => {
+      root.removeEventListener("paste", onPaste);
+      root.removeEventListener("drop", onDrop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const formats = [
     "header", "font", "size",
@@ -205,6 +297,11 @@ export function RichTextEditor({
           <button type="button" onClick={() => setImageAlign("right")} className="p-1 hover:bg-accent rounded" title="Alinhar à direita"><AlignRight className="h-3.5 w-3.5" /></button>
           <div className="w-px h-4 bg-border mx-0.5" />
           <button type="button" onClick={deleteImage} className="p-1 hover:bg-destructive/10 text-destructive rounded" title="Remover imagem"><Trash2 className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
+      {uploading && (
+        <div className="absolute top-2 right-2 z-50 rounded bg-popover px-2 py-1 text-[11px] shadow border">
+          Enviando imagem...
         </div>
       )}
       <style>{`
