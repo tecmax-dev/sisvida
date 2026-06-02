@@ -1405,6 +1405,95 @@ serve(async (req) => {
       );
     }
 
+    // 7) ASK_CONTINUE - após agendamento bem-sucedido, perguntar se quer agendar outra
+    if (session.state === "ASK_CONTINUE") {
+      const wantsAnother = msg === "1" || /^(sim|s|quero|outra|outro|novo|agendar)/i.test(msg);
+      const wantsToEnd = msg === "2" || /^(n[aã]o|encerrar|sair|fim|obrigad)/i.test(msg);
+
+      if (wantsAnother) {
+        // Mantém CPF/titular em memória, recarrega dependentes (podem ter mudado)
+        const { data: dependents } = await supabase
+          .from("patient_dependents")
+          .select("id, name, cpf")
+          .eq("patient_id", session.patient_id)
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+
+        const activeDependents = (dependents || []).map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          cpf: d.cpf,
+        }));
+
+        if (activeDependents.length > 0) {
+          await updateSession(supabase, session.id, {
+            state: "SELECT_BOOKING_FOR",
+            available_dependents: activeDependents,
+            booking_for: null,
+            selected_dependent_id: null,
+            selected_dependent_name: null,
+          });
+          return new Response(
+            JSON.stringify({
+              response: `Ótimo! Para quem é o novo agendamento?\n\n1 - Para mim (*${session.patient_name}*)\n2 - Para um dependente`,
+              state: "SELECT_BOOKING_FOR",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const professionals = await fetchProfessionalsWithSpecialties(supabase, clinic_id);
+        if (!professionals.length) {
+          await updateSession(supabase, session.id, { state: "FINISHED" });
+          return new Response(
+            JSON.stringify({
+              response: "No momento não há profissionais disponíveis para um novo agendamento.",
+              state: "FINISHED",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        await updateSession(supabase, session.id, {
+          state: "SELECT_PROFESSIONAL",
+          available_professionals: professionals,
+          booking_for: "titular",
+          selected_dependent_id: null,
+          selected_dependent_name: null,
+        });
+
+        return new Response(
+          JSON.stringify({
+            response: `Agendando outra consulta para *${session.patient_name}*.\n\nCom qual profissional?\n\n${numberedList(
+              professionals.map((p) => `${p.name} (${p.specialty})`)
+            )}`,
+            state: "SELECT_PROFESSIONAL",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (wantsToEnd) {
+        await updateSession(supabase, session.id, { state: "FINISHED" });
+        const firstName = (session.patient_name || "").split(" ")[0] || "";
+        return new Response(
+          JSON.stringify({
+            response: `Perfeito${firstName ? `, *${firstName}*` : ""}! 😊\n\nSeu atendimento foi encerrado. Lembre-se de comparecer com 15 minutos de antecedência à sua consulta.\n\nQualquer coisa, é só me chamar novamente. Tenha um ótimo dia! 👋`,
+            state: "FINISHED",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          response: "Não entendi. Deseja agendar outra consulta?\n\n1 - Sim, agendar outra\n2 - Não, encerrar",
+          state: "ASK_CONTINUE",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Default fallback
     await createOrResetSession(supabase, clinic_id, phone, "WAITING_CPF");
     return new Response(
