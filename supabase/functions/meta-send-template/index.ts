@@ -8,12 +8,7 @@ const corsHeaders = {
 
 const META_GRAPH_VERSION = "v21.0";
 
-// Mirror outgoing oficial Meta sends para o painel Chatgoo (não bloqueia o envio)
-const CHATGOO_WEBHOOK_URL = Deno.env.get("CHATGOO_WEBHOOK_URL")
-  || "https://apisistema.chatgoo.app/waba-webhook/2";
-const CHATGOO_WEBHOOK_TOKEN = Deno.env.get("CHATGOO_WEBHOOK_TOKEN")
-  || Deno.env.get("CHATGOO_TOKEN")
-  || "";
+// Chatgoo já recebe outgoing echoes nativamente da Meta. Mirror removido.
 
 function renderTemplateBody(components: any[], variables: string[]): string {
   if (!Array.isArray(components)) return "";
