@@ -19,7 +19,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Mail, Send, Users, Building2, Briefcase, Eye, RefreshCw,
-  CheckCircle2, AlertCircle, Clock, XCircle, Loader2,
+  CheckCircle2, AlertCircle, Clock, XCircle, Loader2, Save, CalendarClock, Pencil, Sparkles, BarChart3,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -50,6 +50,7 @@ interface Campaign {
 
 const STATUS_LABELS: Record<string, { label: string; cls: string; icon: any }> = {
   draft: { label: "Rascunho", cls: "bg-slate-100 text-slate-700", icon: Clock },
+  scheduled: { label: "Agendada", cls: "bg-violet-100 text-violet-700", icon: CalendarClock },
   queued: { label: "Na fila", cls: "bg-blue-100 text-blue-700", icon: Clock },
   sending: { label: "Enviando", cls: "bg-amber-100 text-amber-800", icon: Loader2 },
   completed: { label: "Concluída", cls: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
@@ -64,6 +65,7 @@ export default function UnionEmailMarketingPage() {
   const [tab, setTab] = useState<"compose" | "history">("compose");
 
   // Compose state
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState(DEFAULT_TEMPLATE);
@@ -81,6 +83,11 @@ export default function UnionEmailMarketingPage() {
   const [previewRecipients, setPreviewRecipients] = useState<RecipientPreview[]>([]);
 
   const [sending, setSending] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("09:00");
+  const [scheduling, setScheduling] = useState(false);
 
   // History
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -118,6 +125,37 @@ export default function UnionEmailMarketingPage() {
     setCampaignsLoading(false);
   }
 
+  function resetCompose() {
+    setEditingId(null);
+    setName(""); setSubject(""); setBodyHtml(DEFAULT_TEMPLATE);
+    setTargetType("associados");
+    setFilterPlan("all"); setFilterCity(""); setFilterActive("active");
+    setFilterEmployerId("all"); setCustomEmails("");
+    setPreviewRecipients([]); setPreviewOpen(false);
+  }
+
+  async function loadDraftForEdit(c: Campaign) {
+    const { data: full } = await supabase
+      .from("email_campaigns")
+      .select("*")
+      .eq("id", c.id)
+      .single();
+    if (!full) return;
+    setEditingId(full.id);
+    setName(full.name || "");
+    setSubject(full.subject || "");
+    setBodyHtml(full.body_html || DEFAULT_TEMPLATE);
+    setTargetType((full.target_type as TargetType) || "associados");
+    const f = (full.filters as any) || {};
+    setFilterPlan(f.plan || "all");
+    setFilterCity(f.city || "");
+    setFilterActive(f.active || "active");
+    setFilterEmployerId(f.employerId || "all");
+    setCustomEmails(f.customEmails || "");
+    setTab("compose");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function fetchAllPages<T>(
     builder: (from: number, to: number) => any
   ): Promise<T[]> {
@@ -133,6 +171,119 @@ export default function UnionEmailMarketingPage() {
       from += pageSize;
     }
     return all;
+  }
+
+  function getFilters() {
+    return {
+      plan: filterPlan, city: filterCity, active: filterActive,
+      employerId: filterEmployerId, customEmails: targetType === "custom" ? customEmails : undefined,
+    };
+  }
+
+  async function persistCampaign(status: "draft" | "scheduled" | "queued", scheduledAt?: string | null, totalRecipients?: number) {
+    if (!clinicId) throw new Error("Sem clínica");
+    const payload: any = {
+      clinic_id: clinicId,
+      name, subject, body_html: bodyHtml,
+      target_type: targetType,
+      filters: getFilters(),
+      status,
+      scheduled_at: scheduledAt ?? null,
+    };
+    if (typeof totalRecipients === "number") payload.total_recipients = totalRecipients;
+
+    if (editingId) {
+      const { data, error } = await supabase
+        .from("email_campaigns").update(payload).eq("id", editingId).select().single();
+      if (error) throw error;
+      return data;
+    } else {
+      const { data, error } = await supabase
+        .from("email_campaigns").insert(payload).select().single();
+      if (error) throw error;
+      setEditingId((data as any).id);
+      return data;
+    }
+  }
+
+  async function handleSaveDraft() {
+    if (!name.trim()) { toast({ title: "Informe um nome para a campanha", variant: "destructive" }); return; }
+    setSavingDraft(true);
+    try {
+      await persistCampaign("draft");
+      toast({ title: "Rascunho salvo", description: "Você pode continuar depois pelo histórico." });
+      loadCampaigns();
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
+  async function snapshotRecipients(campaignId: string): Promise<number> {
+    // Remove existing snapshot for this campaign (if editing)
+    await supabase.from("email_campaign_recipients").delete().eq("campaign_id", campaignId);
+    const recipients = await buildRecipients();
+    const seen = new Set<string>();
+    const rows = recipients
+      .filter((r) => r.email.includes("@"))
+      .filter((r) => {
+        const k = r.email.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+      })
+      .map((r) => ({
+        campaign_id: campaignId,
+        recipient_type: targetType,
+        recipient_id: r.id || null,
+        recipient_name: r.name,
+        recipient_email: r.email,
+        variables: { nome: r.name, ...(r.extra || {}) },
+      }));
+    const chunk = 500;
+    for (let i = 0; i < rows.length; i += chunk) {
+      const { error } = await supabase.from("email_campaign_recipients").insert(rows.slice(i, i + chunk));
+      if (error) throw error;
+    }
+    return rows.length;
+  }
+
+  async function handleSchedule() {
+    if (!name.trim() || !subject.trim() || !bodyHtml.trim()) {
+      toast({ title: "Preencha nome, assunto e conteúdo", variant: "destructive" }); return;
+    }
+    if (!scheduleDate || !scheduleTime) {
+      toast({ title: "Selecione data e horário", variant: "destructive" }); return;
+    }
+    const iso = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
+    if (new Date(iso).getTime() < Date.now() + 60_000) {
+      toast({ title: "Escolha um horário no futuro (mín. 1 minuto)", variant: "destructive" }); return;
+    }
+    setScheduling(true);
+    try {
+      const campaign = await persistCampaign("draft", iso); // create/update first
+      const total = await snapshotRecipients((campaign as any).id);
+      if (total === 0) {
+        await supabase.from("email_campaigns").update({ status: "draft", scheduled_at: null }).eq("id", (campaign as any).id);
+        toast({ title: "Nenhum destinatário válido", variant: "destructive" });
+        return;
+      }
+      await supabase.from("email_campaigns").update({
+        status: "scheduled", scheduled_at: iso, total_recipients: total,
+      }).eq("id", (campaign as any).id);
+      toast({
+        title: "Campanha agendada!",
+        description: `${total} destinatários • disparo em ${format(new Date(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}.`,
+      });
+      setScheduleOpen(false);
+      resetCompose();
+      setTab("history");
+      loadCampaigns();
+    } catch (err: any) {
+      toast({ title: "Erro ao agendar", description: err.message, variant: "destructive" });
+    } finally {
+      setScheduling(false);
+    }
   }
 
   async function buildRecipients(): Promise<RecipientPreview[]> {
@@ -258,25 +409,9 @@ export default function UnionEmailMarketingPage() {
 
     setSending(true);
     try {
-      const filters = {
-        plan: filterPlan, city: filterCity, active: filterActive,
-        employerId: filterEmployerId,
-      };
-      const { data: campaign, error: cErr } = await supabase
-        .from("email_campaigns")
-        .insert({
-          clinic_id: clinicId,
-          name,
-          subject,
-          body_html: bodyHtml,
-          target_type: targetType,
-          filters,
-          status: "queued",
-          total_recipients: recipients.length,
-        })
-        .select()
-        .single();
-      if (cErr || !campaign) throw cErr || new Error("Falha ao criar campanha");
+      const campaign: any = await persistCampaign("queued", null, recipients.length);
+      // If editing, clean existing recipients
+      await supabase.from("email_campaign_recipients").delete().eq("campaign_id", campaign.id);
 
       // Insert recipients in chunks
       const chunkSize = 500;
@@ -312,9 +447,7 @@ export default function UnionEmailMarketingPage() {
         description: `${rows.length} e-mails serão enviados em segundo plano.`,
       });
 
-      // Reset
-      setName(""); setSubject(""); setBodyHtml(DEFAULT_TEMPLATE);
-      setPreviewRecipients([]); setPreviewOpen(false);
+      resetCompose();
       setTab("history");
       loadCampaigns();
     } catch (err: any) {
@@ -352,25 +485,48 @@ export default function UnionEmailMarketingPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Mail className="h-6 w-6 text-primary" /> E-mail em Massa
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Envio via SMTP Locaweb para associados, empresas e escritórios.
-          </p>
+    <div className="space-y-6">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="inline-flex items-center gap-2 text-xs font-medium bg-background/80 backdrop-blur px-2.5 py-1 rounded-full border mb-3">
+              <Sparkles className="h-3.5 w-3.5 text-primary" /> Marketing por E-mail
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+              <Mail className="h-7 w-7 text-primary" /> Disparo de E-mail em Massa
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+              Crie campanhas profissionais, salve rascunhos, agende disparos e acompanhe o desempenho em tempo real — tudo via SMTP Locaweb.
+            </p>
+          </div>
+          {campaigns.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <StatPill label="Campanhas" value={campaigns.length} />
+              <StatPill label="Enviados" value={campaigns.reduce((a, c) => a + (c.sent_count || 0), 0)} accent="emerald" />
+              <StatPill label="Agendadas" value={campaigns.filter((c) => c.status === "scheduled").length} accent="violet" />
+            </div>
+          )}
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList>
+        <TabsList className="bg-muted/60">
           <TabsTrigger value="compose"><Send className="h-4 w-4 mr-2" />Nova Campanha</TabsTrigger>
-          <TabsTrigger value="history"><Clock className="h-4 w-4 mr-2" />Histórico</TabsTrigger>
+          <TabsTrigger value="history"><BarChart3 className="h-4 w-4 mr-2" />Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="compose" className="space-y-4">
+          {editingId && (
+            <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              <div className="flex items-center gap-2">
+                <Pencil className="h-4 w-4" />
+                Editando rascunho existente
+              </div>
+              <Button variant="ghost" size="sm" onClick={resetCompose}>Nova campanha</Button>
+            </div>
+          )}
           <Card>
             <CardHeader><CardTitle className="text-base">1. Público-alvo</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -680,6 +836,19 @@ export default function UnionEmailMarketingPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function StatPill({ label, value, accent }: { label: string; value: number; accent?: "emerald" | "violet" }) {
+  const accents: Record<string, string> = {
+    emerald: "text-emerald-700",
+    violet: "text-violet-700",
+  };
+  return (
+    <div className="bg-background/80 backdrop-blur rounded-lg border px-3 py-2 min-w-[88px]">
+      <div className={`text-lg font-bold ${accent ? accents[accent] : "text-foreground"}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
     </div>
   );
 }
