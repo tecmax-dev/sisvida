@@ -46,6 +46,7 @@ interface Campaign {
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
+  scheduled_at?: string | null;
 }
 
 const STATUS_LABELS: Record<string, { label: string; cls: string; icon: any }> = {
@@ -760,7 +761,14 @@ export default function UnionEmailMarketingPage() {
                             <td className="py-2 pr-2 text-right text-red-600">{c.failed_count}</td>
                             <td className="py-2 pr-2 text-right text-amber-600">{c.skipped_count}</td>
                             <td className="py-2 pr-2 text-xs text-muted-foreground">
-                              {format(new Date(c.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                              {c.status === "scheduled" && c.scheduled_at ? (
+                                <span className="text-violet-700 font-medium">
+                                  <CalendarClock className="h-3 w-3 inline mr-1" />
+                                  {format(new Date(c.scheduled_at), "dd/MM HH:mm", { locale: ptBR })}
+                                </span>
+                              ) : (
+                                format(new Date(c.created_at), "dd/MM HH:mm", { locale: ptBR })
+                              )}
                             </td>
                             <td className="py-2 text-right">
                               {(c.status === "draft" || c.status === "scheduled") && (
