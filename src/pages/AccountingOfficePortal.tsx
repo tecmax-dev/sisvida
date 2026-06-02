@@ -39,6 +39,7 @@ import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/po
 import { PortalContributionsList } from "@/components/portal/PortalContributionsList";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { formatCompetence } from "@/lib/competence-format";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 interface AccountingOffice {
   id: string;
@@ -138,6 +139,7 @@ export default function AccountingOfficePortal() {
   // Dialog de definir valor
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
+  const [setValueDueDate, setSetValueDueDate] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
 
   // Dialog de alterar valor (boleto ja emitido a vencer)
