@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -504,12 +505,12 @@ export default function UnionEmailMarketingPage() {
                 <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex: {{nome}}, convocação para assembleia" />
               </div>
               <div>
-                <Label>Conteúdo (HTML)</Label>
-                <Textarea
-                  rows={14}
-                  className="font-mono text-xs"
+                <Label>Conteúdo do e-mail</Label>
+                <RichTextEditor
                   value={bodyHtml}
-                  onChange={(e) => setBodyHtml(e.target.value)}
+                  onChange={setBodyHtml}
+                  minHeight={360}
+                  placeholder="Escreva sua mensagem... use a barra acima para formatar (negrito, cores, listas, links, imagens, etc.)"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Variáveis disponíveis: <code className="bg-muted px-1 rounded">{"{{nome}}"}</code>
@@ -517,6 +518,17 @@ export default function UnionEmailMarketingPage() {
                   {targetType === "empresas" && <> <code className="bg-muted px-1 rounded">{"{{empresa}}"}</code></>}
                   {targetType === "escritorios" && <> <code className="bg-muted px-1 rounded">{"{{escritorio}}"}</code></>}
                 </p>
+                <details className="mt-2">
+                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                    Ver/editar HTML bruto (avançado)
+                  </summary>
+                  <Textarea
+                    rows={8}
+                    className="font-mono text-xs mt-2"
+                    value={bodyHtml}
+                    onChange={(e) => setBodyHtml(e.target.value)}
+                  />
+                </details>
               </div>
             </CardContent>
           </Card>
