@@ -28,6 +28,12 @@ function getHeaderValue(headers: Record<string, unknown> | undefined, name: stri
   return key ? headers[key] : null;
 }
 
+function firstString(value: unknown): string {
+  if (Array.isArray(value)) return value.map((v) => String(v)).join(", ");
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
 function getProvidedTokens(req: Request, url: URL): string[] {
   const tokens = [
     url.searchParams.get("token"),
@@ -128,7 +134,7 @@ serve(async (req) => {
       for (const k of Object.keys(headers)) {
         rawHeaders[k] = Array.isArray(headers[k]) ? headers[k].join(", ") : String(headers[k]);
       }
-      const fromHeader: string = headers.from || headers.From || payload.envelope?.from || "";
+      const fromHeader = firstString(getHeaderValue(headers, "from") || payload.envelope?.from || "");
       // Extrai "Nome <email>"
       const m = fromHeader.match(/^\s*"?([^"<]*)"?\s*<([^>]+)>\s*$/);
       if (m) {
@@ -137,15 +143,15 @@ serve(async (req) => {
       } else {
         fromEmail = (payload.envelope?.from || fromHeader).trim() || "unknown@unknown";
       }
-      toEmail = headers.to || headers.To || payload.envelope?.to || null;
-      subject = headers.subject || headers.Subject || "(sem assunto)";
+      toEmail = firstString(getHeaderValue(headers, "to") || payload.envelope?.to || null) || null;
+      subject = firstString(getHeaderValue(headers, "subject") || "(sem assunto)");
       bodyText = payload.plain || payload.reply_plain || "";
       bodyHtml = payload.html || null;
-      inReplyTo = headers["in-reply-to"] || headers["In-Reply-To"] || null;
-      references = headers.references || headers.References || null;
-      rawMessageId = headers["message-id"] || headers["Message-ID"] ||
+      inReplyTo = firstString(getHeaderValue(headers, "in-reply-to")) || null;
+      references = firstString(getHeaderValue(headers, "references")) || null;
+      rawMessageId = firstString(getHeaderValue(headers, "message-id")) ||
         `<inbound-${crypto.randomUUID()}@cloudmailin.net>`;
-      dateStr = headers.date || headers.Date || null;
+      dateStr = firstString(getHeaderValue(headers, "date")) || null;
       attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
     } else {
       // Postmark Inbound JSON
