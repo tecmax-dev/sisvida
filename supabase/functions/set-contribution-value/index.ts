@@ -528,7 +528,7 @@ serve(async (req) => {
           ...logData,
           ip_address: req.headers.get("x-forwarded-for") || "unknown",
           user_agent: req.headers.get("user-agent") || "unknown",
-          details: { contribution_id, value: valueInCents },
+          details: { contribution_id, value: valueInCents, due_date: effectiveDueDate },
         });
       }
 
@@ -543,7 +543,7 @@ serve(async (req) => {
             contributionType: contribution.contribution_type?.name || "Contribuição",
             competenceMonth: contribution.competence_month,
             competenceYear: contribution.competence_year,
-            dueDate: contribution.due_date,
+            dueDate: effectiveDueDate,
             value: valueInCents,
             invoiceUrl: invoice.invoiceUrl,
           });
