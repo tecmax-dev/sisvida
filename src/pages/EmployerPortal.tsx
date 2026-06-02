@@ -414,6 +414,7 @@ const [showTutorial, setShowTutorial] = useState(false);
         body: {
           contribution_id: selectedContribution.id,
           value: valueInCents,
+          due_date: setValueDueDate || undefined,
           portal_type: "employer",
           portal_id: employer.id,
         },
@@ -435,6 +436,7 @@ const [showTutorial, setShowTutorial] = useState(false);
       toast.success(data.message || "Valor definido e boleto gerado!");
       setShowSetValueDialog(false);
       setNewValue("");
+      setSetValueDueDate("");
       setSelectedContribution(null);
       loadContributions(employer.id);
 
