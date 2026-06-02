@@ -675,6 +675,23 @@ serve(async (req) => {
       //    nem ser re-espelhadas (evita loop infinito de mirror).
       if (body?.fromMe === true) {
         console.log('[CHATGOO_LOOPBACK_IGNORED] fromMe=true');
+        // Captura ECO do Chatgoo (campanha/atendimento manual disparado
+        // pelo painel) para o histórico do ticket. Não reprocessa fluxo.
+        try {
+          captureOutgoingEcho({
+            source: "chatgoo_envelope",
+            phone: body?.contact?.phoneNumber || body?.contact?.number || null,
+            contactName: body?.contact?.name || body?.contact?.pushname || null,
+            text: body?.messageBody || null,
+            mediaUrl: body?.mediaUrl || null,
+            mediaMime: null,
+            messageType: (body?.mediaType === "chat" || !body?.mediaType) ? "text" : body.mediaType,
+            messageId: body?.messageId || null,
+            timestamp: body?.timestamp || null,
+          });
+        } catch (capErr) {
+          console.error("[CHATGOO_LOOPBACK_CAPTURE_ERR]", capErr);
+        }
         return new Response(JSON.stringify({ ok: true, ignored: 'chatgoo_loopback' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
@@ -720,6 +737,29 @@ serve(async (req) => {
               String(_v.metadata.display_phone_number).replace(/\D/g, ''));
         if (isOutgoingEcho) {
           console.log('[CHATGOO_OUTGOING_ECHO_IGNORED]');
+          // Captura eco no formato Meta para o histórico do ticket.
+          try {
+            const _to = _msg?.to || _v?.contacts?.[0]?.wa_id || null;
+            const _text = _msg?.text?.body
+              || (_msg?.type === "template" ? `[Template: ${_msg?.template?.name || ""}]` : null)
+              || _msg?.interactive?.body?.text
+              || null;
+            const _media = _msg?.image?.link || _msg?.document?.link
+              || _msg?.video?.link || _msg?.audio?.link || null;
+            captureOutgoingEcho({
+              source: "meta_echo",
+              phone: _to,
+              contactName: _v?.contacts?.[0]?.profile?.name || null,
+              text: _text,
+              mediaUrl: _media,
+              mediaMime: _msg?.document?.mime_type || _msg?.image?.mime_type || null,
+              messageType: _msg?.type || "text",
+              messageId: _msg?.id || null,
+              timestamp: _msg?.timestamp || null,
+            });
+          } catch (capErr) {
+            console.error("[META_ECHO_CAPTURE_ERR]", capErr);
+          }
           return new Response(JSON.stringify({ ok: true, ignored: 'outgoing_echo' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
