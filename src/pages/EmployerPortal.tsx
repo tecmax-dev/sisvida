@@ -38,6 +38,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
@@ -150,6 +151,7 @@ export default function EmployerPortal() {
   const [isGeneratingReissue, setIsGeneratingReissue] = useState(false);
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
+  const [setValueDueDate, setSetValueDueDate] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
   const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
   const [changeValue, setChangeValue] = useState("");
@@ -412,6 +414,7 @@ const [showTutorial, setShowTutorial] = useState(false);
         body: {
           contribution_id: selectedContribution.id,
           value: valueInCents,
+          due_date: setValueDueDate || undefined,
           portal_type: "employer",
           portal_id: employer.id,
         },
@@ -433,6 +436,7 @@ const [showTutorial, setShowTutorial] = useState(false);
       toast.success(data.message || "Valor definido e boleto gerado!");
       setShowSetValueDialog(false);
       setNewValue("");
+      setSetValueDueDate("");
       setSelectedContribution(null);
       loadContributions(employer.id);
 
@@ -737,7 +741,7 @@ const [showTutorial, setShowTutorial] = useState(false);
 
       <Dialog open={showSetValueDialog} onOpenChange={(open) => {
         setShowSetValueDialog(open);
-        if (!open) { setNewValue(""); setSelectedContribution(null); }
+        if (!open) { setNewValue(""); setSetValueDueDate(""); setSelectedContribution(null); }
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -755,10 +759,17 @@ const [showTutorial, setShowTutorial] = useState(false);
               <Input type="text" placeholder="0,00" value={newValue} onChange={(e) => setNewValue(e.target.value.replace(/[^0-9,]/g, ""))} className="mt-2 h-10 text-lg font-medium border-slate-200" />
               <p className="text-xs text-slate-500 mt-2">Após definir o valor, o boleto será gerado automaticamente.</p>
             </div>
+            {selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && (
+              <div>
+                <Label className="text-slate-700 text-sm font-medium">Nova Data de Vencimento</Label>
+                <Input type="date" value={setValueDueDate} onChange={(e) => setSetValueDueDate(e.target.value)} min={getMinDate()} className="mt-2 h-10 border-slate-200" />
+                <p className="text-xs text-slate-500 mt-2">Este boleto está vencido. Informe uma nova data para emissão.</p>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>Cancelar</Button>
-            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue || (!!selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && !setValueDueDate)} className="bg-purple-600 hover:bg-purple-700">
               {isSettingValue ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando...</> : <><FileText className="h-4 w-4 mr-2" />Gerar Boleto</>}
             </Button>
           </DialogFooter>

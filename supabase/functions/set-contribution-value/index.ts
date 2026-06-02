@@ -273,7 +273,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log("[SetValue] Request body:", JSON.stringify(body));
     
-    const { contribution_id, value, portal_type, portal_id } = body;
+    const { contribution_id, value, due_date, portal_type, portal_id } = body;
 
     if (!contribution_id || value === undefined || value === null) {
       console.error("[SetValue] Missing required fields:", { contribution_id, value });
@@ -287,6 +287,14 @@ serve(async (req) => {
     if (isNaN(valueInCents) || valueInCents <= 0) {
       return new Response(
         JSON.stringify({ error: "Valor deve ser maior que zero" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const requestedDueDate = typeof due_date === "string" ? due_date.slice(0, 10) : "";
+    if (requestedDueDate && !/^\d{4}-\d{2}-\d{2}$/.test(requestedDueDate)) {
+      return new Response(
+        JSON.stringify({ error: "Nova data de vencimento inválida" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -381,12 +389,19 @@ serve(async (req) => {
     const typeName = contribution.contribution_type?.name || "Contribuição";
     const description = `${typeName} - ${monthNames[contribution.competence_month - 1]}/${contribution.competence_year}`;
 
-    // Se a data de vencimento já passou, reagenda automaticamente para hoje
-    // (Lytex rejeita boletos com dueDate < hoje).
-    let effectiveDueDate: string = String(contribution.due_date || "").slice(0, 10);
+    // Se o portal informou uma nova data para boleto vencido, usa esta data.
+    // Caso contrário, preserva a data original quando válida e evita enviar data passada à Lytex.
+    let effectiveDueDate: string = requestedDueDate || String(contribution.due_date || "").slice(0, 10);
     try {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      if (requestedDueDate && requestedDueDate < todayStr) {
+        return new Response(
+          JSON.stringify({ error: "A nova data de vencimento deve ser futura" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (!effectiveDueDate || effectiveDueDate < todayStr) {
         console.log("[SetValue] Vencimento no passado, reagendando:", {
           original: effectiveDueDate,
@@ -513,7 +528,7 @@ serve(async (req) => {
           ...logData,
           ip_address: req.headers.get("x-forwarded-for") || "unknown",
           user_agent: req.headers.get("user-agent") || "unknown",
-          details: { contribution_id, value: valueInCents },
+          details: { contribution_id, value: valueInCents, due_date: effectiveDueDate },
         });
       }
 
@@ -528,7 +543,7 @@ serve(async (req) => {
             contributionType: contribution.contribution_type?.name || "Contribuição",
             competenceMonth: contribution.competence_month,
             competenceYear: contribution.competence_year,
-            dueDate: contribution.due_date,
+            dueDate: effectiveDueDate,
             value: valueInCents,
             invoiceUrl: invoice.invoiceUrl,
           });
