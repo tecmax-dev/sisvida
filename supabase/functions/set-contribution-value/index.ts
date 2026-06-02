@@ -389,12 +389,19 @@ serve(async (req) => {
     const typeName = contribution.contribution_type?.name || "Contribuição";
     const description = `${typeName} - ${monthNames[contribution.competence_month - 1]}/${contribution.competence_year}`;
 
-    // Se a data de vencimento já passou, reagenda automaticamente para hoje
-    // (Lytex rejeita boletos com dueDate < hoje).
-    let effectiveDueDate: string = String(contribution.due_date || "").slice(0, 10);
+    // Se o portal informou uma nova data para boleto vencido, usa esta data.
+    // Caso contrário, preserva a data original quando válida e evita enviar data passada à Lytex.
+    let effectiveDueDate: string = requestedDueDate || String(contribution.due_date || "").slice(0, 10);
     try {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      if (requestedDueDate && requestedDueDate < todayStr) {
+        return new Response(
+          JSON.stringify({ error: "A nova data de vencimento deve ser futura" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (!effectiveDueDate || effectiveDueDate < todayStr) {
         console.log("[SetValue] Vencimento no passado, reagendando:", {
           original: effectiveDueDate,
