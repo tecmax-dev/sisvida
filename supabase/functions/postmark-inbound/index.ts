@@ -12,21 +12,66 @@ function snippet(text: string | undefined | null, n = 180) {
   return String(text).replace(/\s+/g, " ").trim().slice(0, n);
 }
 
+function extractEmails(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap((item) => {
+    if (!item) return [];
+    const text = typeof item === "object" ? JSON.stringify(item) : String(item);
+    const matches = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
+    return (matches || []).map((email) => email.toLowerCase());
+  });
+}
+
+function getHeaderValue(headers: Record<string, unknown> | undefined, name: string): unknown {
+  if (!headers) return null;
+  const key = Object.keys(headers).find((k) => k.toLowerCase() === name.toLowerCase());
+  return key ? headers[key] : null;
+}
+
+function getProvidedTokens(req: Request, url: URL): string[] {
+  const tokens = [
+    url.searchParams.get("token"),
+    url.searchParams.get("secret"),
+    url.searchParams.get("key"),
+    req.headers.get("x-inbound-token"),
+    req.headers.get("x-cloudmailin-token"),
+  ];
+
+  const authorization = req.headers.get("authorization") || "";
+  if (authorization.toLowerCase().startsWith("bearer ")) {
+    tokens.push(authorization.slice(7).trim());
+  }
+
+  return tokens.filter((token): token is string => Boolean(token));
+}
+
+function isAllowedCloudMailinRecipient(payload: any): boolean {
+  const allowed = new Set(
+    [
+      "b5f86f5e593b16d67136@cloudmailin.net",
+      ...(Deno.env.get("CLOUDMAILIN_INBOUND_ADDRESSES") || "")
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    ],
+  );
+
+  const headers = payload?.headers || {};
+  const recipients = extractEmails([
+    payload?.envelope?.to,
+    payload?.to,
+    getHeaderValue(headers, "to"),
+    getHeaderValue(headers, "delivered-to"),
+    getHeaderValue(headers, "x-original-to"),
+  ]);
+
+  return recipients.some((email) => allowed.has(email));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
     return new Response("method not allowed", { status: 405, headers: corsHeaders });
-  }
-
-  // Proteção simples via token na URL: ?token=XYZ
-  const url = new URL(req.url);
-  const providedToken = url.searchParams.get("token");
-  const expectedToken = Deno.env.get("POSTMARK_INBOUND_TOKEN");
-  if (!expectedToken || providedToken !== expectedToken) {
-    console.warn("[postmark-inbound] token inválido");
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   }
 
   let payload: any;
@@ -35,6 +80,23 @@ serve(async (req) => {
   } catch {
     return new Response(JSON.stringify({ error: "invalid json" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const url = new URL(req.url);
+  const expectedToken = Deno.env.get("POSTMARK_INBOUND_TOKEN");
+  const hasValidToken = Boolean(expectedToken && getProvidedTokens(req, url).includes(expectedToken));
+  const isCloudMailin = !!payload.envelope || !!payload.plain || !!payload.html;
+  const hasAllowedCloudMailinRecipient = isCloudMailin && isAllowedCloudMailinRecipient(payload);
+
+  if (!hasValidToken && !hasAllowedCloudMailinRecipient) {
+    console.warn("[postmark-inbound] token/recipient inválido", {
+      hasToken: getProvidedTokens(req, url).length > 0,
+      isCloudMailin,
+      hasAllowedCloudMailinRecipient,
+    });
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
