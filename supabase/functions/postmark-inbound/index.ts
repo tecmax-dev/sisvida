@@ -55,6 +55,7 @@ function isAllowedCloudMailinRecipient(payload: any): boolean {
   const allowed = new Set(
     [
       "b5f86f5e593b16d67136@cloudmailin.net",
+      "respostas@prosindweb.com.br",
       ...(Deno.env.get("CLOUDMAILIN_INBOUND_ADDRESSES") || "")
         .split(",")
         .map((email) => email.trim().toLowerCase())
