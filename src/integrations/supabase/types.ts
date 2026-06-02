@@ -2850,6 +2850,111 @@ export type Database = {
         }
         Relationships: []
       }
+      email_inbox_messages: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          campaign_id: string | null
+          cc_email: string | null
+          created_at: string
+          email_references: string | null
+          folder: string
+          from_email: string
+          from_name: string | null
+          has_attachments: boolean
+          id: string
+          imap_uid: number | null
+          in_reply_to: string | null
+          is_read: boolean
+          is_starred: boolean
+          message_id: string | null
+          raw_headers: Json | null
+          received_at: string
+          size_bytes: number | null
+          snippet: string | null
+          subject: string | null
+          thread_key: string | null
+          to_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          campaign_id?: string | null
+          cc_email?: string | null
+          created_at?: string
+          email_references?: string | null
+          folder?: string
+          from_email: string
+          from_name?: string | null
+          has_attachments?: boolean
+          id?: string
+          imap_uid?: number | null
+          in_reply_to?: string | null
+          is_read?: boolean
+          is_starred?: boolean
+          message_id?: string | null
+          raw_headers?: Json | null
+          received_at: string
+          size_bytes?: number | null
+          snippet?: string | null
+          subject?: string | null
+          thread_key?: string | null
+          to_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          campaign_id?: string | null
+          cc_email?: string | null
+          created_at?: string
+          email_references?: string | null
+          folder?: string
+          from_email?: string
+          from_name?: string | null
+          has_attachments?: boolean
+          id?: string
+          imap_uid?: number | null
+          in_reply_to?: string | null
+          is_read?: boolean
+          is_starred?: boolean
+          message_id?: string | null
+          raw_headers?: Json | null
+          received_at?: string
+          size_bytes?: number | null
+          snippet?: string | null
+          subject?: string | null
+          thread_key?: string | null
+          to_email?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_inbox_state: {
+        Row: {
+          id: number
+          last_error: string | null
+          last_run_at: string | null
+          last_uid: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          last_error?: string | null
+          last_run_at?: string | null
+          last_uid?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          last_error?: string | null
+          last_run_at?: string | null
+          last_uid?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_unsubscribes: {
         Row: {
           clinic_id: string
@@ -18174,6 +18279,7 @@ export type Database = {
         Args: { check_clinic_id: string }
         Returns: boolean
       }
+      can_access_email_inbox: { Args: { _user_id: string }; Returns: boolean }
       can_mobile_cancel_homologacao: {
         Args: { p_appointment_id: string; p_employee_cpf: string }
         Returns: boolean
