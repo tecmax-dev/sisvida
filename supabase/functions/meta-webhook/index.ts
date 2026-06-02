@@ -1402,6 +1402,12 @@ serve(async (req) => {
               { id: "book_2", title: "Cancelar" },
             ];
             break;
+          case "ASK_CONTINUE":
+            options = [
+              { id: "book_1", title: "Agendar outra" },
+              { id: "book_2", title: "Encerrar" },
+            ];
+            break;
           default:
             options = [];
         }
