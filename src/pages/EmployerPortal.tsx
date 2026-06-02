@@ -741,7 +741,7 @@ const [showTutorial, setShowTutorial] = useState(false);
 
       <Dialog open={showSetValueDialog} onOpenChange={(open) => {
         setShowSetValueDialog(open);
-        if (!open) { setNewValue(""); setSelectedContribution(null); }
+        if (!open) { setNewValue(""); setSetValueDueDate(""); setSelectedContribution(null); }
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -759,6 +759,13 @@ const [showTutorial, setShowTutorial] = useState(false);
               <Input type="text" placeholder="0,00" value={newValue} onChange={(e) => setNewValue(e.target.value.replace(/[^0-9,]/g, ""))} className="mt-2 h-10 text-lg font-medium border-slate-200" />
               <p className="text-xs text-slate-500 mt-2">Após definir o valor, o boleto será gerado automaticamente.</p>
             </div>
+            {selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && (
+              <div>
+                <Label className="text-slate-700 text-sm font-medium">Nova Data de Vencimento</Label>
+                <Input type="date" value={setValueDueDate} onChange={(e) => setSetValueDueDate(e.target.value)} min={getMinDate()} className="mt-2 h-10 border-slate-200" />
+                <p className="text-xs text-slate-500 mt-2">Este boleto está vencido. Informe uma nova data para emissão.</p>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>Cancelar</Button>
