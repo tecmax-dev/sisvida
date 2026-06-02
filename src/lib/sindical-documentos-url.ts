@@ -39,10 +39,22 @@ export async function resolveSindicalDocumentoUrl(
     .from(BUCKET)
     .createSignedUrl(path, 60 * 60); // 1h
 
-  if (error || !data?.signedUrl) {
-    console.warn("[sindical-documentos] Falha ao gerar signed URL:", error);
+  if (data?.signedUrl) return data.signedUrl;
+
+  // Fallback: chamar edge function que usa service_role (após validar auth)
+  console.warn("[sindical-documentos] createSignedUrl falhou, tentando edge function:", error);
+  try {
+    const { data: fnData, error: fnError } = await supabase.functions.invoke(
+      "sign-sindical-document",
+      { body: { value, expiresIn: 60 * 60 } }
+    );
+    if (fnError || !fnData?.signedUrl) {
+      console.warn("[sindical-documentos] Edge function fallback falhou:", fnError);
+      return null;
+    }
+    return fnData.signedUrl as string;
+  } catch (e) {
+    console.warn("[sindical-documentos] Edge function exception:", e);
     return null;
   }
-
-  return data.signedUrl;
 }
