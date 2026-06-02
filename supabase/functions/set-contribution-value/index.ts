@@ -273,7 +273,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log("[SetValue] Request body:", JSON.stringify(body));
     
-    const { contribution_id, value, portal_type, portal_id } = body;
+    const { contribution_id, value, due_date, portal_type, portal_id } = body;
 
     if (!contribution_id || value === undefined || value === null) {
       console.error("[SetValue] Missing required fields:", { contribution_id, value });
@@ -287,6 +287,14 @@ serve(async (req) => {
     if (isNaN(valueInCents) || valueInCents <= 0) {
       return new Response(
         JSON.stringify({ error: "Valor deve ser maior que zero" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const requestedDueDate = typeof due_date === "string" ? due_date.slice(0, 10) : "";
+    if (requestedDueDate && !/^\d{4}-\d{2}-\d{2}$/.test(requestedDueDate)) {
+      return new Response(
+        JSON.stringify({ error: "Nova data de vencimento inválida" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
