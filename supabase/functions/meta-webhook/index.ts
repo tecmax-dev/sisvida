@@ -1626,7 +1626,7 @@ serve(async (req) => {
           body: { text: "Você selecionou *Sou Empresa*.\n\nComo podemos ajudar?" },
           action: {
             buttons: [
-              { type: "reply", reply: { id: "whazing_sub_boleto", title: "Digitar CNPJ" } },
+              { type: "reply", reply: { id: "whazing_sub_boleto", title: "2ª Via Boleto" } },
               { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
               { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
             ]
