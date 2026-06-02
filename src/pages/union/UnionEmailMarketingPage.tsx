@@ -820,6 +820,45 @@ export default function UnionEmailMarketingPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Schedule Dialog */}
+      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-primary" /> Agendar disparo
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              A campanha será disparada automaticamente na data e horário escolhidos. O sistema verifica a cada minuto.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Data</Label>
+                <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} min={new Date().toISOString().slice(0, 10)} />
+              </div>
+              <div>
+                <Label>Horário</Label>
+                <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+              </div>
+            </div>
+            {scheduleDate && scheduleTime && (
+              <div className="rounded-md bg-primary/5 border border-primary/20 p-3 text-sm">
+                <b>Disparo programado para:</b>{" "}
+                {format(new Date(`${scheduleDate}T${scheduleTime}:00`), "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSchedule} disabled={scheduling}>
+              {scheduling ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarClock className="h-4 w-4 mr-2" />}
+              Confirmar agendamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Details Dialog */}
       <Dialog open={!!selectedCampaign} onOpenChange={(o) => !o && setSelectedCampaign(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
