@@ -1574,7 +1574,7 @@ serve(async (req) => {
           body: { text: "Você selecionou *Sou Associado*.\n\nEscolha uma opção:" },
           action: {
             buttons: [
-              { type: "reply", reply: { id: "agendar_consulta", title: "Digitar CPF" } },
+              { type: "reply", reply: { id: "agendar_consulta", title: "Agendar Consulta" } },
               { type: "reply", reply: { id: "whazing_sub_carteirinha", title: "Atualizar Carteira" } },
               { type: "reply", reply: { id: "whazing_associado_mais", title: "Mais Opções" } }
             ]
