@@ -8,9 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BATCH_SIZE = 20;
-const DELAY_MS = 400; // between sends (Locaweb tolera ~3/s)
-const MAX_RUNTIME_MS = 45000; // self-recurse before timeout
+const BATCH_SIZE = 5;          // poucos envios por invocação p/ evitar CPU Time exceeded
+const DELAY_MS = 350;          // entre envios (Locaweb ~3/s)
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
