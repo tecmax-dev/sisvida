@@ -464,6 +464,7 @@ export default function AccountingOfficePortal() {
         body: {
           contribution_id: selectedContribution.id,
           value: valueInCents,
+          due_date: setValueDueDate || undefined,
           portal_type: "accounting_office",
           portal_id: accountingOffice.id,
         },
@@ -485,6 +486,7 @@ export default function AccountingOfficePortal() {
       toast.success(data.message || "Valor definido e boleto gerado!");
       setShowSetValueDialog(false);
       setNewValue("");
+      setSetValueDueDate("");
       setSelectedContribution(null);
       loadData(accountingOffice.id);
 
