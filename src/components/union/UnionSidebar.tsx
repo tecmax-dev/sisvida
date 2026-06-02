@@ -39,6 +39,7 @@ import {
   Shield,
   Bell,
   MessageSquare,
+  Mail,
 } from "lucide-react";
 import {
   Collapsible,
