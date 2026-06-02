@@ -219,6 +219,7 @@ import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
 import PayslipApprovalsPage from "./pages/dashboard/PayslipApprovalsPage";
 import UnionNotifyAppPage from "./pages/union/UnionNotifyAppPage";
+import UnionEmailMarketingPage from "./pages/union/UnionEmailMarketingPage";
 import PopupNoticesPage from "./pages/union/PopupNoticesPage";
 import UnionDependentApprovalsPage from "./pages/union/UnionDependentApprovalsPage";
 import UnionContactsPage from "./pages/union/UnionContactsPage";
@@ -656,6 +657,7 @@ function App() {
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
                   <Route path="instalacoes-app" element={<UnionPWAInstallationsPage />} />
                   <Route path="notificar-app" element={<UnionNotifyAppPage />} />
+                  <Route path="email-marketing" element={<UnionEmailMarketingPage />} />
                   <Route path="avisos-popup" element={<PopupNoticesPage />} />
                   <Route path="beneficios" element={<UnionBenefitsPage />} />
                   <Route path="autorizacoes" element={<UnionAuthorizationsPage />} />

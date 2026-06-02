@@ -2698,6 +2698,125 @@ export type Database = {
           },
         ]
       }
+      email_campaign_recipients: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_id: string | null
+          recipient_name: string | null
+          recipient_type: string
+          sent_at: string | null
+          status: string
+          variables: Json
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_id?: string | null
+          recipient_name?: string | null
+          recipient_type: string
+          sent_at?: string | null
+          status?: string
+          variables?: Json
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_id?: string | null
+          recipient_name?: string | null
+          recipient_type?: string
+          sent_at?: string | null
+          status?: string
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaigns: {
+        Row: {
+          body_html: string
+          body_text: string | null
+          clinic_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          failed_count: number
+          filters: Json
+          id: string
+          name: string
+          sent_count: number
+          skipped_count: number
+          started_at: string | null
+          status: string
+          subject: string
+          target_type: string
+          total_recipients: number
+          union_entity_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_html: string
+          body_text?: string | null
+          clinic_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          failed_count?: number
+          filters?: Json
+          id?: string
+          name: string
+          sent_count?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          subject: string
+          target_type: string
+          total_recipients?: number
+          union_entity_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          body_text?: string | null
+          clinic_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          failed_count?: number
+          filters?: Json
+          id?: string
+          name?: string
+          sent_count?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          subject?: string
+          target_type?: string
+          total_recipients?: number
+          union_entity_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_confirmations: {
         Row: {
           confirmed_at: string | null
@@ -2727,6 +2846,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      email_unsubscribes: {
+        Row: {
+          clinic_id: string
+          email: string
+          id: string
+          reason: string | null
+          source_campaign_id: string | null
+          unsubscribed_at: string
+        }
+        Insert: {
+          clinic_id: string
+          email: string
+          id?: string
+          reason?: string | null
+          source_campaign_id?: string | null
+          unsubscribed_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          email?: string
+          id?: string
+          reason?: string | null
+          source_campaign_id?: string | null
+          unsubscribed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_unsubscribes_source_campaign_id_fkey"
+            columns: ["source_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employer_categories: {
         Row: {
