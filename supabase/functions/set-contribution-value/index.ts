@@ -393,8 +393,15 @@ serve(async (req) => {
     // Caso contrário, preserva a data original quando válida e evita enviar data passada à Lytex.
     let effectiveDueDate: string = requestedDueDate || String(contribution.due_date || "").slice(0, 10);
     try {
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      // Usar fuso de São Paulo para evitar que o servidor (UTC) considere
+      // o dia seguinte como "hoje" e rejeite datas válidas escolhidas pelo usuário.
+      const fmt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Sao_Paulo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const todayStr = fmt.format(new Date()); // YYYY-MM-DD
       if (requestedDueDate && requestedDueDate < todayStr) {
         return new Response(
           JSON.stringify({ error: "A nova data de vencimento deve ser futura" }),
