@@ -139,19 +139,6 @@ serve(async (req) => {
 
     const messageId = json.messages?.[0]?.id ?? null;
 
-    // Espelhar envio para o painel Chatgoo (não-bloqueante)
-    try {
-      mirrorOutgoingToChatgoo({
-        to: phone,
-        phoneId: PHONE_ID,
-        displayPhone: Deno.env.get("META_DISPLAY_PHONE_NUMBER") || "557332311784",
-        payload,
-        metaResponse: json,
-      });
-    } catch (mirrorErr) {
-      console.error("[meta-send-text] mirror error (ignored):", mirrorErr);
-    }
-
     if (ticket_id) {
       await supabase.from("whatsapp_ticket_messages").insert({
         ticket_id,
