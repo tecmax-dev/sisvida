@@ -657,6 +657,7 @@ function App() {
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
                   <Route path="instalacoes-app" element={<UnionPWAInstallationsPage />} />
                   <Route path="notificar-app" element={<UnionNotifyAppPage />} />
+                  <Route path="email-marketing" element={<UnionEmailMarketingPage />} />
                   <Route path="avisos-popup" element={<PopupNoticesPage />} />
                   <Route path="beneficios" element={<UnionBenefitsPage />} />
                   <Route path="autorizacoes" element={<UnionAuthorizationsPage />} />
