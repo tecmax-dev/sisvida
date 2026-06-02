@@ -8,8 +8,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BATCH_SIZE = 5;          // poucos envios por invocação p/ evitar CPU Time exceeded
+const BATCH_SIZE = 20;         // lote moderado p/ concluir campanhas sem estourar o limite da função
 const DELAY_MS = 350;          // entre envios (Locaweb ~3/s)
+const DEFAULT_FROM_EMAIL = "noreply@prosindweb.com.br";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -38,6 +39,12 @@ function appendUnsubscribeFooter(html: string, unsubUrl: string): string {
     return html.replace(/<\/body>/i, `${footer}</body>`);
   }
   return `${html}${footer}`;
+}
+
+function resolveFromAddress(rawFrom: string | undefined | null): string {
+  const from = (rawFrom || "").trim();
+  if (!from || /@smtplw-\d+\.com$/i.test(from)) return DEFAULT_FROM_EMAIL;
+  return from;
 }
 
 // Extrai imagens base64 (data:image/...) do HTML, sobe para o storage
@@ -149,9 +156,9 @@ serve(async (req) => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465", 10);
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPassword = Deno.env.get("SMTP_PASSWORD");
-    const smtpFrom = Deno.env.get("SMTP_FROM");
+    const smtpFrom = resolveFromAddress(Deno.env.get("SMTP_FROM"));
 
-    if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
+    if (!smtpHost || !smtpUser || !smtpPassword) {
       await supabase.from("email_campaigns").update({
         status: "failed",
         error_message: "Configuração SMTP incompleta",
