@@ -8,9 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BATCH_SIZE = 20;
-const DELAY_MS = 400; // between sends (Locaweb tolera ~3/s)
-const MAX_RUNTIME_MS = 45000; // self-recurse before timeout
+const BATCH_SIZE = 5;          // poucos envios por invocação p/ evitar CPU Time exceeded
+const DELAY_MS = 350;          // entre envios (Locaweb ~3/s)
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -39,6 +38,48 @@ function appendUnsubscribeFooter(html: string, unsubUrl: string): string {
     return html.replace(/<\/body>/i, `${footer}</body>`);
   }
   return `${html}${footer}`;
+}
+
+// Extrai imagens base64 (data:image/...) do HTML, sobe para o storage
+// e substitui por URLs públicas. Roda uma única vez por campanha.
+async function optimizeCampaignHtml(
+  supabase: any,
+  campaignId: string,
+  html: string,
+): Promise<string> {
+  if (!html || !html.includes("data:image/")) return html;
+
+  const re = /data:image\/([a-zA-Z0-9+]+);base64,([A-Za-z0-9+/=]+)/g;
+  const matches = [...html.matchAll(re)];
+  if (matches.length === 0) return html;
+
+  let newHtml = html;
+  let idx = 0;
+  for (const m of matches) {
+    const dataUrl = m[0];
+    if (!newHtml.includes(dataUrl)) continue;
+    const ext = (m[1] || "png").toLowerCase().replace("jpeg", "jpg");
+    const b64 = m[2];
+    try {
+      const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const path = `campaigns/${campaignId}/${crypto.randomUUID()}-${idx++}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("email-assets")
+        .upload(path, bin, {
+          contentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
+          upsert: true,
+        });
+      if (upErr) { console.error("upload img err:", upErr.message); continue; }
+      const { data: pub } = supabase.storage.from("email-assets").getPublicUrl(path);
+      const publicUrl = pub?.publicUrl;
+      if (publicUrl) {
+        newHtml = newHtml.split(dataUrl).join(publicUrl);
+      }
+    } catch (e) {
+      console.error("optimize img err:", (e as any)?.message);
+    }
+  }
+  return newHtml;
 }
 
 serve(async (req) => {
@@ -87,6 +128,23 @@ serve(async (req) => {
       }).eq("id", campaignId);
     }
 
+    // Otimização: se o HTML contiver imagens base64, sobe-as para o storage e
+    // grava a versão enxuta no banco (evita estourar CPU/Memória da edge function).
+    if (campaign.body_html && campaign.body_html.includes("data:image/")) {
+      try {
+        const optimized = await optimizeCampaignHtml(supabase, campaignId, campaign.body_html);
+        if (optimized && optimized !== campaign.body_html) {
+          await supabase.from("email_campaigns")
+            .update({ body_html: optimized })
+            .eq("id", campaignId);
+          campaign.body_html = optimized;
+          console.log(`[${requestId}] HTML otimizado: ${campaign.body_html.length} bytes`);
+        }
+      } catch (e: any) {
+        console.error(`[${requestId}] falha ao otimizar HTML:`, e?.message);
+      }
+    }
+
     const smtpHost = Deno.env.get("SMTP_HOST");
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465", 10);
     const smtpUser = Deno.env.get("SMTP_USER");
@@ -112,9 +170,9 @@ serve(async (req) => {
     const unsubSet = new Set((unsubs || []).map((u) => (u.email || "").toLowerCase()));
 
     let totalSent = 0, totalFailed = 0, totalSkipped = 0;
-    let hasMore = true;
 
-    while (hasMore && Date.now() - startedAt < MAX_RUNTIME_MS) {
+    // Processa APENAS um pequeno lote por invocação para evitar "CPU Time exceeded".
+    {
       const { data: recipients } = await supabase
         .from("email_campaign_recipients")
         .select("*")
@@ -123,12 +181,8 @@ serve(async (req) => {
         .order("created_at", { ascending: true })
         .limit(BATCH_SIZE);
 
-      if (!recipients || recipients.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const client = new SMTPClient({
+      if (recipients && recipients.length > 0) {
+        const client = new SMTPClient({
         connection: {
           hostname: smtpHost, port: smtpPort, tls: true,
           auth: { username: smtpUser, password: smtpPassword },
@@ -181,10 +235,10 @@ serve(async (req) => {
         }
 
         if (DELAY_MS > 0) await new Promise((res) => setTimeout(res, DELAY_MS));
-        if (Date.now() - startedAt >= MAX_RUNTIME_MS) break;
       }
 
-      try { await client.close(); } catch (_) {}
+        try { await client.close(); } catch (_) {}
+      }
     }
 
     // Update counters
