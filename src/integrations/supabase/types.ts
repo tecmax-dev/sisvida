@@ -2761,6 +2761,7 @@ export type Database = {
           filters: Json
           id: string
           name: string
+          scheduled_at: string | null
           sent_count: number
           skipped_count: number
           started_at: string | null
@@ -2783,6 +2784,7 @@ export type Database = {
           filters?: Json
           id?: string
           name: string
+          scheduled_at?: string | null
           sent_count?: number
           skipped_count?: number
           started_at?: string | null
@@ -2805,6 +2807,7 @@ export type Database = {
           filters?: Json
           id?: string
           name?: string
+          scheduled_at?: string | null
           sent_count?: number
           skipped_count?: number
           started_at?: string | null
