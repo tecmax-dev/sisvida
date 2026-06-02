@@ -381,6 +381,23 @@ serve(async (req) => {
     const typeName = contribution.contribution_type?.name || "Contribuição";
     const description = `${typeName} - ${monthNames[contribution.competence_month - 1]}/${contribution.competence_year}`;
 
+    // Se a data de vencimento já passou, reagenda automaticamente para hoje
+    // (Lytex rejeita boletos com dueDate < hoje).
+    let effectiveDueDate: string = String(contribution.due_date || "").slice(0, 10);
+    try {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      if (!effectiveDueDate || effectiveDueDate < todayStr) {
+        console.log("[SetValue] Vencimento no passado, reagendando:", {
+          original: effectiveDueDate,
+          novo: todayStr,
+        });
+        effectiveDueDate = todayStr;
+      }
+    } catch (dateErr) {
+      console.error("[SetValue] Erro ao normalizar dueDate (nao critico):", dateErr);
+    }
+
     // Garantir que temos dados consistentes do pagador
     const employer = contribution.employer as { cnpj?: string; name?: string; email?: string; phone?: string } | null;
     if (!employer?.cnpj || !employer?.name) {
@@ -457,7 +474,7 @@ serve(async (req) => {
           phone: employer.phone,
         },
         value: valueInCents,
-        dueDate: contribution.due_date,
+        dueDate: effectiveDueDate,
         description,
         contributionId: contribution.id,
       });
@@ -468,6 +485,7 @@ serve(async (req) => {
         .update({
           value: valueInCents,
           status: "pending",
+          due_date: effectiveDueDate,
           lytex_invoice_id: invoice._id,
           lytex_invoice_url: invoice.invoiceUrl,
           lytex_boleto_barcode: invoice.boleto?.barCode || null,
