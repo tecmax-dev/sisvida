@@ -769,7 +769,7 @@ const [showTutorial, setShowTutorial] = useState(false);
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>Cancelar</Button>
-            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue || (!!selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && !setValueDueDate)} className="bg-purple-600 hover:bg-purple-700">
               {isSettingValue ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando...</> : <><FileText className="h-4 w-4 mr-2" />Gerar Boleto</>}
             </Button>
           </DialogFooter>
