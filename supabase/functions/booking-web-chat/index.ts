@@ -1356,8 +1356,23 @@ serve(async (req) => {
           );
         }
 
-        await updateSession(supabase, session.id, { state: "FINISHED" });
-        
+        await updateSession(supabase, session.id, {
+          state: "ASK_CONTINUE",
+          // Limpa seleções da consulta recém-criada, mas mantém CPF/titular/dependentes
+          // em memória para o usuário não precisar digitar tudo de novo.
+          selected_professional_id: null,
+          selected_professional_name: null,
+          selected_date: null,
+          selected_time: null,
+          selected_procedure_id: null,
+          available_professionals: null,
+          available_dates: null,
+          available_times: null,
+          booking_for: null,
+          selected_dependent_id: null,
+          selected_dependent_name: null,
+        });
+
         // Build success message with patient name
         const bookingForName = session.booking_for === "dependent" && session.selected_dependent_name
           ? session.selected_dependent_name
@@ -1372,8 +1387,8 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({
-            response: `✅ Agendamento confirmado!\n\nPaciente: *${bookingForName}*\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(appointmentDate)}*\nHorário: *${formatTime(startTime)}*${locationInfo}\n\n⏳ *Compareça com 15 minutos de antecedência.*`,
-            state: "FINISHED",
+            response: `✅ Agendamento confirmado!\n\nPaciente: *${bookingForName}*\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(appointmentDate)}*\nHorário: *${formatTime(startTime)}*${locationInfo}\n\n⏳ *Compareça com 15 minutos de antecedência.*\n\n— — —\n\nDeseja agendar *outra consulta* para você ou um dependente?\n\n1 - Sim, agendar outra\n2 - Não, encerrar`,
+            state: "ASK_CONTINUE",
             booking_complete: true,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
