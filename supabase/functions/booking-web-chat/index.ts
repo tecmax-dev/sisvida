@@ -950,6 +950,7 @@ serve(async (req) => {
         patient_id: patient.id,
         patient_name: patient.name,
       });
+      await rememberPhoneIdentity(supabase, clinic_id, phone, patient.id, "cpf");
 
       return new Response(
         JSON.stringify({
@@ -1024,6 +1025,12 @@ serve(async (req) => {
       }
 
       // Not confirmed
+      // Limpa cache de identificação por telefone para não recair no mesmo erro.
+      await supabase
+        .from("whatsapp_phone_identity")
+        .delete()
+        .eq("clinic_id", clinic_id)
+        .eq("phone", phone);
       await createOrResetSession(supabase, clinic_id, phone, "WAITING_CPF");
       return new Response(
         JSON.stringify({
