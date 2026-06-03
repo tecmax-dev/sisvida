@@ -75,10 +75,11 @@ export function EditUserRoleDialog({
 
   useEffect(() => {
     if (!open || !user) return;
+    const clinics = user.clinics ?? [];
     const initial =
-      defaultClinicId && user.clinics.find((c) => c.clinic_id === defaultClinicId)
+      defaultClinicId && clinics.find((c) => c.clinic_id === defaultClinicId)
         ? defaultClinicId
-        : user.clinics[0]?.clinic_id || "";
+        : clinics[0]?.clinic_id || "";
     setClinicId(initial);
   }, [open, user, defaultClinicId]);
 
@@ -86,7 +87,7 @@ export function EditUserRoleDialog({
   useEffect(() => {
     if (!open || !user || !clinicId) return;
 
-    const current = user.clinics.find((c) => c.clinic_id === clinicId);
+    const current = (user.clinics ?? []).find((c) => c.clinic_id === clinicId);
     setRole(current?.role || "receptionist");
 
     const loadData = async () => {
@@ -149,7 +150,8 @@ export function EditUserRoleDialog({
 
   if (!user) return null;
 
-  const selectedClinic = user.clinics.find((c) => c.clinic_id === clinicId);
+  const clinics = user.clinics ?? [];
+  const selectedClinic = clinics.find((c) => c.clinic_id === clinicId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,7 +169,7 @@ export function EditUserRoleDialog({
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>Clínica / Vínculo</Label>
-            {user.clinics.length === 0 ? (
+            {clinics.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Este usuário não possui vínculo com nenhuma clínica.
               </p>
@@ -177,7 +179,7 @@ export function EditUserRoleDialog({
                   <SelectValue placeholder="Selecione a clínica" />
                 </SelectTrigger>
                 <SelectContent>
-                  {user.clinics.map((c) => (
+                  {clinics.map((c) => (
                     <SelectItem key={c.clinic_id} value={c.clinic_id}>
                       {c.clinic_name}
                     </SelectItem>
