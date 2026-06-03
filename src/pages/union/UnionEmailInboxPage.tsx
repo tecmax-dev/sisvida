@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 import {
   Inbox, Send, Star, Trash2, RefreshCw, Reply, Search, Mail, MailOpen,
 } from "lucide-react";
@@ -115,11 +116,17 @@ export default function UnionEmailInboxPage() {
     setFetching(true);
     try {
       const { data, error } = await supabase.functions.invoke("imap-fetch-replies");
-      if (error) throw error;
+      if (error) {
+        const ex = await extractFunctionsErrorAsync(error);
+        throw new Error(ex.message);
+      }
+      if (data && data.ok === false) {
+        throw new Error(data.error || "Falha ao sincronizar");
+      }
       toast.success(`Sincronizado: ${data?.imported || 0} nova(s) mensagem(ns)`);
       load();
     } catch (e: any) {
-      toast.error(e.message || "Falha ao sincronizar");
+      toast.error(e?.message || "Falha ao sincronizar");
     } finally {
       setFetching(false);
     }

@@ -32,11 +32,19 @@ class SimpleImap {
   }
 
   private async readChunk(timeoutMs = 30000): Promise<void> {
-    const t = setTimeout(() => { try { this.conn?.close(); } catch {} }, timeoutMs);
+    if (timeoutMs <= 0) throw new Error("IMAP read timeout");
+    let timedOut = false;
+    const t = setTimeout(() => { timedOut = true; try { this.conn?.close(); } catch {} }, timeoutMs);
     try {
       const { value, done } = await this.reader!.read();
-      if (done || !value) throw new Error("connection closed");
+      if (done || !value) {
+        if (timedOut) throw new Error("IMAP read timeout");
+        throw new Error("connection closed");
+      }
       this.buffer += this.decoder.decode(value, { stream: true });
+    } catch (e) {
+      if (timedOut) throw new Error("IMAP read timeout");
+      throw e;
     } finally {
       clearTimeout(t);
     }
@@ -167,7 +175,7 @@ serve(async (req) => {
 
       const uids = await client.uidSearchSince(lastUid);
       // limitar para evitar timeout do edge
-      const MAX = 50;
+      const MAX = 20;
       const batch = uids.slice(0, MAX);
       let maxUid = lastUid;
 
