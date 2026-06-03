@@ -751,6 +751,7 @@ async function executeTool(
           horarios: filteredSlots.slice(0, 10)
         });
       }
+      
 
       case "buscar_paciente_por_cpf": {
         const cpf = args.cpf.replace(/\D/g, '');
