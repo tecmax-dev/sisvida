@@ -732,9 +732,11 @@ async function executeTool(
         // Filter past times if today
         const now = new Date();
         const today = now.toISOString().split('T')[0];
-        const filteredSlots = data === today 
+        const rawFiltered = data === today 
           ? availableSlots.filter(t => t > now.toTimeString().slice(0, 5))
           : availableSlots;
+        // Dedupe and sort (schedule may contain duplicated slot blocks)
+        const filteredSlots = Array.from(new Set(rawFiltered)).sort();
 
         if (filteredSlots.length === 0) {
           return JSON.stringify({ 
@@ -743,12 +745,15 @@ async function executeTool(
           });
         }
 
+        const slotsToShow = filteredSlots.slice(0, 10);
         return JSON.stringify({ 
           success: true,
           profissional: professional.name,
           profissional_id: professional.id,
           data: data,
-          horarios: filteredSlots.slice(0, 10)
+          horarios: slotsToShow,
+          formato_resposta: `⏰ *Horários disponíveis para ${professional.name} em ${data.split('-').reverse().join('/')}*:\n${slotsToShow.map((t, i) => `${i + 1}️⃣ ${t}`).join('\n')}\n\n*Qual horário você prefere? Digite apenas o número.*`,
+          instrucao: "Apresente EXATAMENTE o campo formato_resposta. NUNCA invente, adicione, modifique ou liste horários que não estejam no array 'horarios'."
         });
       }
       
