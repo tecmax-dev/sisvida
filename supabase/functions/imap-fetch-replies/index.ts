@@ -267,12 +267,14 @@ serve(async (req) => {
     await client.logout();
   } catch (e) {
     console.error("IMAP error:", e);
+    const diag = ` [host=${host}:${port} user=${user ? user.replace(/(.{2}).+(@.+)/, "$1***$2") : "?"}]`;
+    const msg = (e as Error).message + diag;
     await supabase
       .from("email_inbox_state")
-      .update({ last_run_at: new Date().toISOString(), last_error: (e as Error).message })
+      .update({ last_run_at: new Date().toISOString(), last_error: msg })
       .eq("id", 1);
     return new Response(
-      JSON.stringify({ ok: false, error: (e as Error).message }),
+      JSON.stringify({ ok: false, error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
