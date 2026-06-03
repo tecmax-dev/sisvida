@@ -24,11 +24,18 @@ class SimpleImap {
   private encoder = new TextEncoder();
 
   async connect(host: string, port: number) {
-    this.conn = await Deno.connectTls({ hostname: host, port });
+    // Wrap TLS connect with our own timeout — Deno.connectTls can hang silently
+    const CONNECT_TIMEOUT_MS = 20000;
+    this.conn = await Promise.race([
+      Deno.connectTls({ hostname: host, port }),
+      new Promise<Deno.TlsConn>((_, reject) =>
+        setTimeout(() => reject(new Error(`TLS connect timeout after ${CONNECT_TIMEOUT_MS}ms to ${host}:${port}`)), CONNECT_TIMEOUT_MS),
+      ),
+    ]);
     this.reader = this.conn.readable.getReader();
     this.writer = this.conn.writable.getWriter();
-    // greeting
-    await this.readUntil(/^\* OK/m, 15000);
+    // greeting — some IMAP servers (Locaweb/cPanel) demoram a enviar o banner
+    await this.readUntil(/^\* OK/m, 30000);
   }
 
   private async readChunk(timeoutMs = 30000): Promise<void> {
@@ -260,12 +267,14 @@ serve(async (req) => {
     await client.logout();
   } catch (e) {
     console.error("IMAP error:", e);
+    const diag = ` [host=${host}:${port} user=${user ? user.replace(/(.{2}).+(@.+)/, "$1***$2") : "?"}]`;
+    const msg = (e as Error).message + diag;
     await supabase
       .from("email_inbox_state")
-      .update({ last_run_at: new Date().toISOString(), last_error: (e as Error).message })
+      .update({ last_run_at: new Date().toISOString(), last_error: msg })
       .eq("id", 1);
     return new Response(
-      JSON.stringify({ ok: false, error: (e as Error).message }),
+      JSON.stringify({ ok: false, error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
