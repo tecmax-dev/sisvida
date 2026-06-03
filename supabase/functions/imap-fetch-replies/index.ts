@@ -34,8 +34,16 @@ class SimpleImap {
     ]);
     this.reader = this.conn.readable.getReader();
     this.writer = this.conn.writable.getWriter();
-    // greeting — some IMAP servers (Locaweb/cPanel) demoram a enviar o banner
-    await this.readUntil(/^\* OK/m, 30000);
+    // greeting — alguns servidores IMAP (Locaweb/cPanel) podem nunca enviar
+    // o banner para certos clients. Tentamos lê-lo em ATÉ 8s; se não vier,
+    // seguimos em frente e deixamos o LOGIN provocar a resposta do servidor.
+    try {
+      await this.readUntil(/^\* OK/m, 8000);
+    } catch (e) {
+      const msg = (e as Error).message || "";
+      if (!msg.includes("IMAP read timeout")) throw e;
+      // segue sem banner
+    }
   }
 
   private async readChunk(timeoutMs = 30000): Promise<void> {
