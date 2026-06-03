@@ -19,6 +19,7 @@ export default function MobilePasswordResetPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [smsLoading, setSmsLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -41,9 +42,7 @@ export default function MobilePasswordResetPage() {
     }
   }, [searchParams]);
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const sendResetCode = async (channel: "whatsapp" | "sms") => {
     if (!email || !email.includes("@")) {
       toast({
         title: "Email inválido",
@@ -53,7 +52,7 @@ export default function MobilePasswordResetPage() {
       return;
     }
 
-    setLoading(true);
+    if (channel === "sms") setSmsLoading(true); else setLoading(true);
 
     try {
       const supabaseUrl = (supabase as any).supabaseUrl as string;
@@ -67,7 +66,7 @@ export default function MobilePasswordResetPage() {
           Authorization: `Bearer ${anonKey}`,
           apikey: anonKey,
         },
-        body: JSON.stringify({ email, channel: "whatsapp" }),
+        body: JSON.stringify({ email, channel }),
       });
 
       const rawText = await response.text();
@@ -90,7 +89,9 @@ export default function MobilePasswordResetPage() {
         title: "Instruções enviadas",
         description:
           result.message ||
-          "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp.",
+          (channel === "sms"
+            ? "Se o email estiver cadastrado, você receberá um código por SMS."
+            : "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp."),
       });
     } catch (err: any) {
       console.error("Error sending reset link:", err);
@@ -103,9 +104,16 @@ export default function MobilePasswordResetPage() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (channel === "sms") setSmsLoading(false); else setLoading(false);
     }
   };
+
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendResetCode("whatsapp");
+  };
+
+  const handleSendSms = () => sendResetCode("sms");
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
