@@ -93,21 +93,23 @@ export function EditUserRoleDialog({
       setLoading(true);
       try {
         // Current access_group_id from DB
-        const { data: ur } = await supabase
+        const urRes = (await supabase
           .from("user_roles")
           .select("access_group_id")
           .eq("user_id", user.user_id)
           .eq("clinic_id", clinicId)
-          .maybeSingle();
+          .maybeSingle()) ?? { data: null };
+        const ur = urRes.data;
         setAccessGroupId(ur?.access_group_id || "none");
 
         // Available access groups (global system groups + this clinic's custom groups)
-        const { data: ag } = await supabase
+        const agRes = (await supabase
           .from("access_groups")
           .select("id, name, clinic_id, module_type")
           .eq("is_active", true)
           .or(`clinic_id.is.null,clinic_id.eq.${clinicId}`)
-          .order("name");
+          .order("name")) ?? { data: [] };
+        const ag = agRes.data;
         setGroups(ag || []);
       } catch (e) {
         console.error(e);
@@ -122,14 +124,15 @@ export function EditUserRoleDialog({
     if (!user || !clinicId || !role) return;
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("update-user-role", {
+      const res = (await supabase.functions.invoke("update-user-role", {
         body: {
           user_id: user.user_id,
           clinic_id: clinicId,
           role,
           access_group_id: accessGroupId === "none" ? null : accessGroupId,
         },
-      });
+      })) ?? { data: null, error: null };
+      const { data, error } = res;
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
