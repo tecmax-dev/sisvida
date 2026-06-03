@@ -453,7 +453,20 @@ async function getAvailableDates(
     if (!ex) return base;
     if (ex.is_day_off) return null;
     if (ex.start_time && ex.end_time) {
-      return { slots: [{ start: ex.start_time, end: ex.end_time }], stepMinutes: base?.stepMinutes ?? 5 };
+      const exceptionSlot = { start: String(ex.start_time).substring(0, 5), end: String(ex.end_time).substring(0, 5) };
+      if (!base?.slots?.length) {
+        return { slots: [exceptionSlot], stepMinutes: 5 };
+      }
+
+      const intersectedSlots = base.slots
+        .map((slot) => {
+          const start = timeToMinutes(slot.start) >= timeToMinutes(exceptionSlot.start) ? slot.start : exceptionSlot.start;
+          const end = timeToMinutes(slot.end) <= timeToMinutes(exceptionSlot.end) ? slot.end : exceptionSlot.end;
+          return timeToMinutes(start) < timeToMinutes(end) ? { start, end } : null;
+        })
+        .filter((slot): slot is { start: string; end: string } => Boolean(slot));
+
+      return intersectedSlots.length > 0 ? { slots: intersectedSlots, stepMinutes: base.stepMinutes } : null;
     }
     return base;
   };
@@ -610,7 +623,16 @@ async function getAvailableTimes(
   }
 
   if (ex?.start_time && ex?.end_time) {
-    slots = [{ start: ex.start_time, end: ex.end_time }];
+    const exceptionSlot = { start: String(ex.start_time).substring(0, 5), end: String(ex.end_time).substring(0, 5) };
+    slots = slots.length > 0
+      ? slots
+        .map((slot) => {
+          const start = timeToMinutes(slot.start) >= timeToMinutes(exceptionSlot.start) ? slot.start : exceptionSlot.start;
+          const end = timeToMinutes(slot.end) <= timeToMinutes(exceptionSlot.end) ? slot.end : exceptionSlot.end;
+          return timeToMinutes(start) < timeToMinutes(end) ? { start, end } : null;
+        })
+        .filter((slot): slot is { start: string; end: string } => Boolean(slot))
+      : [exceptionSlot];
   }
 
   if (!slots.length) return times;
