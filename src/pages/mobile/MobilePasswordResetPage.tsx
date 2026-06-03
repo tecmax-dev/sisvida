@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound, MessageSquare } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
 type Step = "email" | "verify_code" | "validate_birth_year" | "password" | "success";
@@ -244,7 +244,7 @@ export default function MobilePasswordResetPage() {
             <Button
               type="submit"
               className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              disabled={loading || !email}
+              disabled={loading || smsLoading || !email}
             >
               {loading ? (
                 <>
@@ -253,6 +253,35 @@ export default function MobilePasswordResetPage() {
                 </>
               ) : (
                 "Enviar código por WhatsApp"
+              )}
+            </Button>
+
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-muted" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">ou</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 font-semibold border-2"
+              disabled={loading || smsLoading || !email}
+              onClick={handleSendSms}
+            >
+              {smsLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando SMS...
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Enviar código por SMS
+                </>
               )}
             </Button>
           </form>
