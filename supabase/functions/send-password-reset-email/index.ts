@@ -413,6 +413,32 @@ serve(async (req: Request): Promise<Response> => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+    }
+
+    // ─── SEND VIA SMS (API Brasil) ───
+    if (channel === "sms") {
+      if (!patient?.phone) {
+        return new Response(
+          JSON.stringify({ error: "Associado não possui telefone cadastrado" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const smsResult = await sendResetCodeBySms({ phone: patient.phone, firstName, token });
+      if (!smsResult.success) {
+        return new Response(
+          JSON.stringify({ error: smsResult.error || "Falha ao enviar SMS" }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, channel: "sms", message: "Código enviado por SMS." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (channel === "whatsapp") {
 
       if (!patient.clinic_id) {
         return new Response(
