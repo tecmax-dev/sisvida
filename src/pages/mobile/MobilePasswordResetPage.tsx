@@ -9,11 +9,22 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound, MessageSquare } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
-type Step = "email" | "verify_code" | "validate_birth_year" | "password" | "success";
+type Step = "identify" | "verify_code" | "validate_birth_year" | "password" | "success";
+type Mode = "email" | "cpf";
+
+const formatCpf = (value: string) => {
+  const n = value.replace(/\D/g, "").slice(0, 11);
+  if (n.length <= 3) return n;
+  if (n.length <= 6) return `${n.slice(0, 3)}.${n.slice(3)}`;
+  if (n.length <= 9) return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6)}`;
+  return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9, 11)}`;
+};
 
 export default function MobilePasswordResetPage() {
-  const [step, setStep] = useState<Step>("email");
+  const [step, setStep] = useState<Step>("identify");
+  const [mode, setMode] = useState<Mode>("cpf");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [code, setCode] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -33,17 +44,30 @@ export default function MobilePasswordResetPage() {
     }
 
     setEmail((currentEmail) => currentEmail || emailFromQuery);
-    
+    setMode("email");
+
     if (codeFromQuery && codeFromQuery.length === 6) {
       setCode(codeFromQuery);
       setStep("validate_birth_year");
     } else {
-      setStep((currentStep) => currentStep === "email" ? "verify_code" : currentStep);
+      setStep((currentStep) => currentStep === "identify" ? "verify_code" : currentStep);
     }
   }, [searchParams]);
 
   const sendResetCode = async (channel: "whatsapp" | "sms") => {
-    if (!email || !email.includes("@")) {
+    const isCpfMode = mode === "cpf";
+    const cpfDigits = cpf.replace(/\D/g, "");
+
+    if (isCpfMode) {
+      if (cpfDigits.length !== 11) {
+        toast({
+          title: "CPF inválido",
+          description: "Digite os 11 dígitos do seu CPF.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (!email || !email.includes("@")) {
       toast({
         title: "Email inválido",
         description: "Por favor, insira um email válido.",
@@ -66,7 +90,9 @@ export default function MobilePasswordResetPage() {
           Authorization: `Bearer ${anonKey}`,
           apikey: anonKey,
         },
-        body: JSON.stringify({ email, channel }),
+        body: JSON.stringify(
+          isCpfMode ? { cpf: cpfDigits, channel: "sms" } : { email, channel },
+        ),
       });
 
       const rawText = await response.text();
@@ -89,7 +115,7 @@ export default function MobilePasswordResetPage() {
         title: "Instruções enviadas",
         description:
           result.message ||
-          (channel === "sms"
+          (isCpfMode || channel === "sms"
             ? "Se o email estiver cadastrado, você receberá um código por SMS."
             : "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp."),
       });
@@ -115,6 +141,11 @@ export default function MobilePasswordResetPage() {
 
   const handleSendSms = () => sendResetCode("sms");
 
+  const handleCpfSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendResetCode("sms");
+  };
+
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -127,7 +158,8 @@ export default function MobilePasswordResetPage() {
       return;
     }
 
-    setStep("validate_birth_year");
+    // CPF flow skips birth-year validation
+    setStep(mode === "cpf" ? "password" : "validate_birth_year");
   };
 
   const handleValidateBirthYear = async (e: React.FormEvent) => {
@@ -169,12 +201,19 @@ export default function MobilePasswordResetPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.rpc("reset_patient_password_by_code", {
-        p_email: email,
-        p_code: code,
-        p_birth_year: parseInt(birthYear),
-        p_new_password: newPassword,
-      } as any);
+      const { data, error } =
+        mode === "cpf"
+          ? await supabase.rpc("reset_patient_password_by_cpf_code", {
+              p_cpf: cpf.replace(/\D/g, ""),
+              p_code: code,
+              p_new_password: newPassword,
+            } as any)
+          : await supabase.rpc("reset_patient_password_by_code", {
+              p_email: email,
+              p_code: code,
+              p_birth_year: parseInt(birthYear),
+              p_new_password: newPassword,
+            } as any);
 
       if (error) {
         console.error("RPC error:", error);
@@ -212,78 +251,135 @@ export default function MobilePasswordResetPage() {
 
   const renderStepContent = () => {
     switch (step) {
-      case "email":
+      case "identify":
         return (
-          <form onSubmit={handleEmailSubmit} className="space-y-6">
+          <form onSubmit={mode === "cpf" ? handleCpfSubmit : handleEmailSubmit} className="space-y-6">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                <Mail className="h-8 w-8 text-emerald-600" />
+                {mode === "cpf" ? (
+                  <MessageSquare className="h-8 w-8 text-emerald-600" />
+                ) : (
+                  <Mail className="h-8 w-8 text-emerald-600" />
+                )}
               </div>
             </div>
 
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Recuperar Senha</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                Digite seu email cadastrado para receber um código de recuperação no WhatsApp.
+                {mode === "cpf"
+                  ? "Digite seu CPF para receber um código por SMS no telefone cadastrado."
+                  : "Digite seu email cadastrado para receber um código de recuperação no WhatsApp."}
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-12"
-                disabled={loading}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              disabled={loading || smsLoading || !email}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                "Enviar código por WhatsApp"
-              )}
-            </Button>
-
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-muted" />
+            {mode === "cpf" ? (
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000.000.000-00"
+                  value={cpf}
+                  onChange={(e) => setCpf(formatCpf(e.target.value))}
+                  className="h-12"
+                  disabled={loading || smsLoading}
+                />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground">ou</span>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12"
+                  disabled={loading}
+                />
               </div>
-            </div>
+            )}
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-12 font-semibold border-2"
-              disabled={loading || smsLoading || !email}
-              onClick={handleSendSms}
-            >
-              {smsLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando SMS...
-                </>
-              ) : (
-                <>
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Enviar código por SMS
-                </>
-              )}
-            </Button>
+            {mode === "cpf" ? (
+              <Button
+                type="submit"
+                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                disabled={smsLoading || cpf.replace(/\D/g, "").length !== 11}
+              >
+                {smsLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando SMS...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Enviar código por SMS
+                  </>
+                )}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                  disabled={loading || smsLoading || !email}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar código por WhatsApp"
+                  )}
+                </Button>
+
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-muted" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-muted-foreground">ou</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 font-semibold border-2"
+                  disabled={loading || smsLoading || !email}
+                  onClick={handleSendSms}
+                >
+                  {smsLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando SMS...
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Enviar código por SMS
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                className="text-xs text-emerald-600 hover:underline"
+                onClick={() => setMode(mode === "cpf" ? "email" : "cpf")}
+                disabled={loading || smsLoading}
+              >
+                {mode === "cpf"
+                  ? "Prefiro usar meu email"
+                  : "Não lembro o email — usar meu CPF"}
+              </button>
+            </div>
           </form>
         );
 
@@ -299,7 +395,7 @@ export default function MobilePasswordResetPage() {
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Código de Recuperação</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                Digite o <strong>código de 6 dígitos</strong> que enviamos para o seu WhatsApp.
+                Digite o <strong>código de 6 dígitos</strong> que enviamos para o seu {mode === "cpf" ? "SMS" : "WhatsApp"}.
               </p>
             </div>
 
@@ -469,10 +565,10 @@ export default function MobilePasswordResetPage() {
           {step !== "success" && (
             <button
               onClick={() => {
-                if (step === "email") navigate("/app");
-                else if (step === "verify_code") setStep("email");
+                if (step === "identify") navigate("/app");
+                else if (step === "verify_code") setStep("identify");
                 else if (step === "validate_birth_year") setStep("verify_code");
-                else if (step === "password") setStep("validate_birth_year");
+                else if (step === "password") setStep(mode === "cpf" ? "verify_code" : "validate_birth_year");
               }}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
             >

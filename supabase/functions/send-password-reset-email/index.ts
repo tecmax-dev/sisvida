@@ -315,9 +315,42 @@ serve(async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const email: string = body.email;
+    let email: string = body.email;
+    const cpfInput: string | undefined = body.cpf;
     const channel: string = body.channel || "email";
     const checkOnly: boolean = body.checkOnly === true;
+
+    // ─── CPF-only entrypoint (PWA /sindicato): resolve CPF → email and force SMS ───
+    if (cpfInput && !email) {
+      const cpfDigits = String(cpfInput).replace(/\D/g, "");
+      if (cpfDigits.length !== 11) {
+        return new Response(
+          JSON.stringify({ error: "CPF invalido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: byCpf } = await supabase
+        .from("patients")
+        .select("email, is_active")
+        .eq("cpf", cpfDigits)
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Always respond generically when CPF doesn't match an active patient
+      if (!byCpf?.email) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            channel: "sms",
+            message: "Se o CPF estiver cadastrado, voce recebera um codigo por SMS.",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      email = byCpf.email;
+    }
 
     if (!email || !email.includes("@")) {
       return new Response(
