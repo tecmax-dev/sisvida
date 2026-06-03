@@ -118,6 +118,83 @@ O código vale por 30 minutos.
 Equipe SECMI`;
 }
 
+function buildSmsResetMessage(firstName: string, code: string): string {
+  return `SECMI: Ola ${firstName}, seu codigo de recuperacao de senha e ${code}. Valido por 30 minutos. Nao compartilhe.`;
+}
+
+function buildSmsPhoneCandidates(rawPhone: string): string[] {
+  let digits = rawPhone.replace(/@s\.whatsapp\.net$/, "").replace(/\D/g, "");
+  if (digits.startsWith("55")) digits = digits.slice(2);
+
+  const candidates = new Set<string>();
+  if (digits.length === 10) {
+    candidates.add(`55${digits.slice(0, 2)}9${digits.slice(2)}`);
+    candidates.add(`55${digits}`);
+  } else if (digits.length === 11) {
+    candidates.add(`55${digits}`);
+    if (digits[2] === "9") candidates.add(`55${digits.slice(0, 2)}${digits.slice(3)}`);
+  } else {
+    candidates.add(`55${digits}`);
+  }
+  return [...candidates].filter((c) => c.length >= 12 && c.length <= 13);
+}
+
+async function sendResetCodeBySms(params: {
+  phone: string;
+  firstName: string;
+  token: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const bearer = Deno.env.get("APIBRASIL_BEARER_TOKEN");
+  const deviceToken = Deno.env.get("APIBRASIL_SMS_DEVICE_TOKEN");
+
+  if (!bearer || !deviceToken) {
+    return { success: false, error: "Servico de SMS nao configurado" };
+  }
+
+  const message = buildSmsResetMessage(params.firstName, params.token);
+  const candidates = buildSmsPhoneCandidates(params.phone);
+
+  if (candidates.length === 0) {
+    return { success: false, error: "Numero de telefone invalido para SMS" };
+  }
+
+  let lastError: string | null = null;
+
+  for (const number of candidates) {
+    try {
+      const response = await fetch("https://gateway.apibrasil.io/api/v2/sms/sendSimpleSms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${bearer}`,
+          DeviceToken: deviceToken,
+        },
+        body: JSON.stringify({ number, body: message }),
+      });
+
+      const raw = await response.text();
+      let data: any = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+
+      const errorFlag = data && typeof data === "object" && data.error === true;
+      if (!response.ok || errorFlag) {
+        lastError = (data && typeof data === "object" && (data.message || data.error_message)) || `Erro HTTP ${response.status}`;
+        console.warn("API Brasil SMS attempt failed:", { number, status: response.status, data });
+        continue;
+      }
+
+      console.log(`SMS de reset enviado via API Brasil para ${number}`);
+      return { success: true };
+    } catch (err: any) {
+      lastError = err?.message || "Falha de rede ao enviar SMS";
+      console.error("API Brasil SMS network error:", err);
+    }
+  }
+
+  return { success: false, error: lastError || "Nao foi possivel enviar SMS" };
+}
+
 async function waitForWhatsAppFinalStatus(
   adminClient: any,
   messageId: string,
@@ -471,9 +548,51 @@ serve(async (req) => {
         );
       }
 
+    } else if (channel === "sms") {
+      if (!patient.phone) {
+        return new Response(
+          JSON.stringify({ error: "Associado não possui telefone cadastrado" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`[admin-reset-patient-access${traceId ? `:${traceId}` : ""}] Sending SMS reset for patient ${patientId} to ${patient.phone}`);
+
+      await adminClient
+        .from("patient_password_resets")
+        .update({ used_at: new Date().toISOString() })
+        .eq("patient_id", patientId)
+        .is("used_at", null);
+
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+      const birthYear = patient.birth_date ? new Date(patient.birth_date).getFullYear() : null;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+      await adminClient.from("patient_password_resets").insert({
+        patient_id: patientId,
+        token: code,
+        expires_at: expiresAt,
+        birth_year: birthYear,
+      });
+
+      const smsResult = await sendResetCodeBySms({
+        phone: patient.phone,
+        firstName,
+        token: code,
+      });
+
+      if (!smsResult.success) {
+        return new Response(
+          JSON.stringify({ error: smsResult.error || "Falha ao enviar SMS" }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Patient reset code sent via SMS to ${patient.phone} by admin ${currentUser.id}`);
+
     } else {
       return new Response(
-        JSON.stringify({ error: "Canal inválido. Use 'email' ou 'whatsapp'" }),
+        JSON.stringify({ error: "Canal inválido. Use 'email', 'whatsapp' ou 'sms'" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

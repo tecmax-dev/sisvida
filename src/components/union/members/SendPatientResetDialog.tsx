@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle, Copy, Check } from "lucide-react";
+import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle, Copy, Check, Smartphone } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
@@ -33,7 +33,7 @@ export function SendPatientResetDialog({
   patient,
 }: SendPatientResetDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState<"email" | "whatsapp" | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<"email" | "whatsapp" | "sms" | null>(null);
   const [copied, setCopied] = useState(false);
 
   const resetLink = patient?.email
@@ -66,7 +66,7 @@ export function SendPatientResetDialog({
     onOpenChange(false);
   };
 
-  const handleSend = async (channel: "email" | "whatsapp") => {
+  const handleSend = async (channel: "email" | "whatsapp" | "sms") => {
     if (!patient) return;
 
     setSelectedChannel(channel);
@@ -128,16 +128,14 @@ export function SendPatientResetDialog({
           duration: 8000,
         });
       } else {
-        toast.success(
-          channel === "email"
-            ? "Código de recuperação enviado por e-mail!"
-            : "Código de recuperação enviado por WhatsApp!",
-          {
-            description: channel === "email"
+        const channelLabel =
+          channel === "email" ? "e-mail" : channel === "sms" ? "SMS" : "WhatsApp";
+        toast.success(`Código de recuperação enviado por ${channelLabel}!`, {
+          description:
+            channel === "email"
               ? `Enviado para ${patient.email}`
               : `Enviado para ${patient.phone || "telefone cadastrado"}`,
-          }
-        );
+        });
         handleClose();
       }
     } catch (err: unknown) {
@@ -230,7 +228,7 @@ export function SendPatientResetDialog({
           )}
 
           {!hasNoContact && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <Button
                 variant="outline"
                 className="h-20 flex flex-col gap-2 border-2 hover:border-primary hover:bg-primary/5"
@@ -242,7 +240,7 @@ export function SendPatientResetDialog({
                 ) : (
                   <Mail className="h-6 w-6 text-primary" />
                 )}
-                <span className="text-sm font-medium">Enviar por E-mail</span>
+                <span className="text-sm font-medium">E-mail</span>
               </Button>
 
               <Button
@@ -256,7 +254,21 @@ export function SendPatientResetDialog({
                 ) : (
                   <MessageSquare className="h-6 w-6 text-emerald-500" />
                 )}
-                <span className="text-sm font-medium">Enviar por WhatsApp</span>
+                <span className="text-sm font-medium">WhatsApp</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="h-20 flex flex-col gap-2 border-2 hover:border-blue-500 hover:bg-blue-500/5"
+                onClick={() => handleSend("sms")}
+                disabled={loading || !patient?.phone}
+              >
+                {loading && selectedChannel === "sms" ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                ) : (
+                  <Smartphone className="h-6 w-6 text-blue-500" />
+                )}
+                <span className="text-sm font-medium">SMS</span>
               </Button>
             </div>
           )}

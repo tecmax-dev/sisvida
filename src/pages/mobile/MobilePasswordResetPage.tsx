@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound, MessageSquare } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
 type Step = "email" | "verify_code" | "validate_birth_year" | "password" | "success";
@@ -19,6 +19,7 @@ export default function MobilePasswordResetPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [smsLoading, setSmsLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -41,9 +42,7 @@ export default function MobilePasswordResetPage() {
     }
   }, [searchParams]);
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const sendResetCode = async (channel: "whatsapp" | "sms") => {
     if (!email || !email.includes("@")) {
       toast({
         title: "Email inválido",
@@ -53,7 +52,7 @@ export default function MobilePasswordResetPage() {
       return;
     }
 
-    setLoading(true);
+    if (channel === "sms") setSmsLoading(true); else setLoading(true);
 
     try {
       const supabaseUrl = (supabase as any).supabaseUrl as string;
@@ -67,7 +66,7 @@ export default function MobilePasswordResetPage() {
           Authorization: `Bearer ${anonKey}`,
           apikey: anonKey,
         },
-        body: JSON.stringify({ email, channel: "whatsapp" }),
+        body: JSON.stringify({ email, channel }),
       });
 
       const rawText = await response.text();
@@ -90,7 +89,9 @@ export default function MobilePasswordResetPage() {
         title: "Instruções enviadas",
         description:
           result.message ||
-          "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp.",
+          (channel === "sms"
+            ? "Se o email estiver cadastrado, você receberá um código por SMS."
+            : "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp."),
       });
     } catch (err: any) {
       console.error("Error sending reset link:", err);
@@ -103,9 +104,16 @@ export default function MobilePasswordResetPage() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (channel === "sms") setSmsLoading(false); else setLoading(false);
     }
   };
+
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendResetCode("whatsapp");
+  };
+
+  const handleSendSms = () => sendResetCode("sms");
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,7 +244,7 @@ export default function MobilePasswordResetPage() {
             <Button
               type="submit"
               className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              disabled={loading || !email}
+              disabled={loading || smsLoading || !email}
             >
               {loading ? (
                 <>
@@ -245,6 +253,35 @@ export default function MobilePasswordResetPage() {
                 </>
               ) : (
                 "Enviar código por WhatsApp"
+              )}
+            </Button>
+
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-muted" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">ou</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 font-semibold border-2"
+              disabled={loading || smsLoading || !email}
+              onClick={handleSendSms}
+            >
+              {smsLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando SMS...
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Enviar código por SMS
+                </>
               )}
             </Button>
           </form>
