@@ -548,9 +548,51 @@ serve(async (req) => {
         );
       }
 
+    } else if (channel === "sms") {
+      if (!patient.phone) {
+        return new Response(
+          JSON.stringify({ error: "Associado não possui telefone cadastrado" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`[admin-reset-patient-access${traceId ? `:${traceId}` : ""}] Sending SMS reset for patient ${patientId} to ${patient.phone}`);
+
+      await adminClient
+        .from("patient_password_resets")
+        .update({ used_at: new Date().toISOString() })
+        .eq("patient_id", patientId)
+        .is("used_at", null);
+
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+      const birthYear = patient.birth_date ? new Date(patient.birth_date).getFullYear() : null;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+      await adminClient.from("patient_password_resets").insert({
+        patient_id: patientId,
+        token: code,
+        expires_at: expiresAt,
+        birth_year: birthYear,
+      });
+
+      const smsResult = await sendResetCodeBySms({
+        phone: patient.phone,
+        firstName,
+        token: code,
+      });
+
+      if (!smsResult.success) {
+        return new Response(
+          JSON.stringify({ error: smsResult.error || "Falha ao enviar SMS" }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Patient reset code sent via SMS to ${patient.phone} by admin ${currentUser.id}`);
+
     } else {
       return new Response(
-        JSON.stringify({ error: "Canal inválido. Use 'email' ou 'whatsapp'" }),
+        JSON.stringify({ error: "Canal inválido. Use 'email', 'whatsapp' ou 'sms'" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
