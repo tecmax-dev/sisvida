@@ -34,6 +34,7 @@ export type SendSmsResult =
 
 export interface ApiBrasilSmsConfig {
   bearerToken: string;
+  deviceToken?: string;   // Header DeviceToken — exigido pelo gateway APIBrasil
   baseUrl?: string;       // default https://gateway.apibrasil.io/api/v2
   timeoutMs?: number;     // default 20000
   fetchImpl?: typeof fetch;
@@ -41,6 +42,7 @@ export interface ApiBrasilSmsConfig {
 
 export class ApiBrasilSmsService {
   private readonly bearerToken: string;
+  private readonly deviceToken: string;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
@@ -50,6 +52,7 @@ export class ApiBrasilSmsService {
       throw new Error("APIBRASIL_BEARER_TOKEN obrigatório");
     }
     this.bearerToken = cfg.bearerToken;
+    this.deviceToken = cfg.deviceToken ?? "";
     this.baseUrl = (cfg.baseUrl ?? "https://gateway.apibrasil.io/api/v2").replace(/\/+$/, "");
     this.timeoutMs = cfg.timeoutMs ?? 20_000;
     this.fetchImpl = cfg.fetchImpl ?? fetch;
@@ -58,6 +61,7 @@ export class ApiBrasilSmsService {
   static fromEnv(overrides: Partial<ApiBrasilSmsConfig> = {}): ApiBrasilSmsService {
     return new ApiBrasilSmsService({
       bearerToken: Deno.env.get("APIBRASIL_BEARER_TOKEN") ?? "",
+      deviceToken: Deno.env.get("APIBRASIL_SMS_DEVICE_TOKEN") ?? "",
       ...overrides,
     });
   }
@@ -73,6 +77,7 @@ export class ApiBrasilSmsService {
           "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${this.bearerToken}`,
+          ...(this.deviceToken ? { DeviceToken: this.deviceToken } : {}),
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
