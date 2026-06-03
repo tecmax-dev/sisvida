@@ -695,6 +695,24 @@ serve(async (req) => {
 
     // Entry prompt (when called with empty message)
     if (!msg) {
+      // Tenta identificar o associado pelo telefone para pular a etapa de CPF.
+      if (session.state === "WAITING_CPF" && !session.patient_id) {
+        const autoPatient = await tryAutoIdentifyByPhone(supabase, clinic_id, phone);
+        if (autoPatient && autoPatient.is_active !== false) {
+          await updateSession(supabase, session.id, {
+            state: "CONFIRM_IDENTITY",
+            patient_id: autoPatient.id,
+            patient_name: autoPatient.name,
+          });
+          return new Response(
+            JSON.stringify({
+              response: `Identifiquei seu cadastro pelo número do WhatsApp: *${autoPatient.name}*\n\n1 - Confirmar\n2 - Não sou eu`,
+              state: "CONFIRM_IDENTITY",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
       return new Response(
         JSON.stringify({
           response: "Para agendar sua consulta, informe seu CPF ou número da carteirinha (apenas números):",
