@@ -406,15 +406,6 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // ─── SEND VIA WHATSAPP ───
-    if (channel === "whatsapp") {
-      if (!patient?.phone) {
-        return new Response(
-          JSON.stringify({ error: "Associado não possui telefone cadastrado" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
     // ─── SEND VIA SMS (API Brasil) ───
     if (channel === "sms") {
       if (!patient?.phone) {
@@ -439,6 +430,12 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     if (channel === "whatsapp") {
+      if (!patient?.phone) {
+        return new Response(
+          JSON.stringify({ error: "Associado não possui telefone cadastrado" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       if (!patient.clinic_id) {
         return new Response(
