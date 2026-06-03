@@ -70,9 +70,8 @@ async function sendResetCodeBySms(params: {
   token: string;
 }): Promise<{ success: boolean; error?: string; provider?: unknown }> {
   const bearer = Deno.env.get("APIBRASIL_BEARER_TOKEN");
-  const deviceToken = Deno.env.get("APIBRASIL_SMS_DEVICE_TOKEN");
 
-  if (!bearer || !deviceToken) {
+  if (!bearer) {
     return { success: false, error: "Servico de SMS nao configurado" };
   }
 
@@ -93,7 +92,6 @@ async function sendResetCodeBySms(params: {
           "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${bearer}`,
-          DeviceToken: deviceToken,
         },
         body: JSON.stringify({ number, body: message }),
       });
