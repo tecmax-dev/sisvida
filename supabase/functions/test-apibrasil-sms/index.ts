@@ -7,7 +7,7 @@ serve(async (req) => {
   const phone = body.phone || "5573999999999";
   const message = body.message || "Teste ProSindWeb";
 
-  const res = await fetch("https://gateway.apibrasil.io/api/v2/sms/sendSimpleSms", {
+  const res = await fetch("https://gateway.apibrasil.io/api/v2/sms/send", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
