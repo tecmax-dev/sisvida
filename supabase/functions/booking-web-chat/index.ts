@@ -795,6 +795,7 @@ serve(async (req) => {
             patient_id: patient.id,
             patient_name: patient.name,
           });
+          await rememberPhoneIdentity(supabase, clinic_id, phone, patient.id, "card");
           
           return new Response(
             JSON.stringify({
@@ -851,6 +852,7 @@ serve(async (req) => {
             selected_dependent_name: dependent.name,
             booking_for: "dependent",
           });
+          await rememberPhoneIdentity(supabase, clinic_id, phone, titularPatient.id, "card");
           
           return new Response(
             JSON.stringify({
