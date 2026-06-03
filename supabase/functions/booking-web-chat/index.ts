@@ -216,7 +216,7 @@ async function hasAvailableSlotsOnDate(
       .eq("clinic_id", clinicId)
       .eq("professional_id", professionalId)
       .eq("appointment_date", date)
-      .in("status", ["scheduled", "confirmed", "in_progress", "arrived"]),
+      .in("status", ["scheduled", "confirmed", "in_progress", "arrived", "blocked"]),
     supabase
       .from("appointment_slot_blocks")
       .select("start_time, end_time")
@@ -518,7 +518,7 @@ async function getAvailableTimes(
       .eq("clinic_id", clinicId)
       .eq("professional_id", professionalId)
       .eq("appointment_date", date)
-      .in("status", ["scheduled", "confirmed", "in_progress", "arrived"]),
+      .in("status", ["scheduled", "confirmed", "in_progress", "arrived", "blocked"]),
     supabase
       .from("appointment_slot_blocks")
       .select("start_time, end_time")
