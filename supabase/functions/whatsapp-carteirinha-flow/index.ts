@@ -349,33 +349,6 @@ serve(async (req) => {
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .eq("phone", phone);
 
-      // Tenta identificar o associado pelo telefone para pular a etapa de CPF.
-      const autoPatient = await tryAutoIdentifyByPhone(supabase, phone);
-      if (autoPatient) {
-        const { error: autoErr } = await supabase
-          .from("whatsapp_booking_sessions")
-          .upsert({
-            clinic_id: SINDICATO_CLINIC_ID,
-            phone,
-            action_type: "carteirinha",
-            state: "AWAITING_PAYSLIP",
-            patient_id: autoPatient.id,
-            patient_name: autoPatient.name,
-            expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-          }, { onConflict: "clinic_id,phone" });
-        if (!autoErr) {
-          const firstName = (autoPatient.name || "").split(" ")[0];
-          return json({
-            success: true,
-            response:
-              `🪪 Olá, *${firstName}*! Identifiquei seu cadastro pelo número do WhatsApp.\n\n` +
-              "📎 *Envie a imagem do seu contracheque mais recente* (foto JPG/PNG).\n\n" +
-              "O sistema vai verificar automaticamente e renovar sua carteirinha.",
-            buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
-          });
-        }
-      }
-
       const { error: insErr } = await supabase
         .from("whatsapp_booking_sessions")
         .upsert({
