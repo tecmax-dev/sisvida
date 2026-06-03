@@ -7,6 +7,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SMTPLW_API_URL = "https://api.smtplw.com.br/v1/messages";
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: number | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`timeout:${label}:${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+function isSmtplwHost(host: string): boolean {
+  return host.toLowerCase().includes("smtplw.com.br");
+}
+
+function isConnectionCanceled(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return message.includes("operation canceled") || message.includes("timeout:") || message.includes("aborted");
+}
+
 interface TestSmtpRequest {
   host: string;
   port: number;
@@ -93,22 +118,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const subject = "✅ Teste de Configuração SMTP - ProSindWeb";
+
     // Configure SMTP client
     // Port 465 uses implicit SSL/TLS, Port 587 uses STARTTLS
     const useTls = port === 465 || encryption === "ssl";
     console.log(`[test-smtp-connection] Using TLS: ${useTls} (port: ${port}, encryption: ${encryption})`);
     
-    const client = new SMTPClient({
-      connection: {
-        hostname: host,
-        port: port,
-        tls: useTls,
-        auth: {
-          username: username,
-          password: password,
-        },
-      },
-    });
+    let client: SMTPClient | null = null;
 
     // Send test email
     const testHtml = `
@@ -133,15 +150,57 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    await client.send({
-      from: `${from_name || "ProSindWeb"} <${from_email}>`,
-      to: test_email,
-      subject: "✅ Teste de Configuração SMTP - ProSindWeb",
-      content: "auto",
-      html: testHtml,
-    });
+    try {
+      client = new SMTPClient({
+        connection: {
+          hostname: host,
+          port: port,
+          tls: useTls,
+          auth: {
+            username: username,
+            password: password,
+          },
+        },
+      });
 
-    await client.close();
+      await withTimeout(client.send({
+        from: `${from_name || "ProSindWeb"} <${from_email}>`,
+        to: test_email,
+        subject,
+        content: "auto",
+        html: testHtml,
+      }), 20000, "smtp:send");
+    } catch (smtpError) {
+      const token = Deno.env.get("LOCAWEB_SMTPLW_API_TOKEN");
+      if (!isSmtplwHost(host) || !isConnectionCanceled(smtpError) || !token) throw smtpError;
+
+      console.warn("[test-smtp-connection] SMTP direto cancelado; usando fallback SMTPLW API");
+      const apiResponse = await withTimeout(fetch(SMTPLW_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-auth-token": token },
+        body: JSON.stringify({
+          subject,
+          body: testHtml,
+          from: from_email,
+          from_name: from_name || "ProSindWeb",
+          to: test_email,
+          reply_to: from_email,
+        }),
+      }), 20000, "smtplw-api:send");
+
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        throw new Error(`SMTPLW API ${apiResponse.status}: ${errorText}`);
+      }
+    } finally {
+      if (client) {
+        try {
+          await withTimeout(client.close(), 5000, "smtp:close");
+        } catch (closeError) {
+          console.warn("[test-smtp-connection] SMTP close warning:", closeError);
+        }
+      }
+    }
 
     console.log(`[test-smtp-connection] Test email sent successfully to ${test_email}`);
 
