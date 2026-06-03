@@ -1260,6 +1260,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
   *Qual data você prefere? Digite o número.*
 - NUNCA peça ao paciente para digitar uma data manualmente
 - Quando o paciente responder com um número (1, 2, 3...), use buscar_horarios_disponiveis com a data correspondente
+- Após receber os horários da função buscar_horarios_disponiveis, apresente EXATAMENTE o formato_resposta retornado. NUNCA invente, adicione ou modifique horários. Liste APENAS os valores presentes no array 'horarios' da resposta da função.
+- É PROIBIDO sugerir horários da madrugada, ou qualquer horário fora do array 'horarios' retornado pela função. Se o array vier vazio, diga que não há horários disponíveis.
 
 ## QUANDO PEDIREM AGENDAMENTO
 Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, etc.), use buscar_proximas_datas_disponiveis para mostrar as próximas datas disponíveis de forma NUMERADA.`;
