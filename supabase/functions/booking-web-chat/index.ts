@@ -45,6 +45,110 @@ interface BookingSession {
 
 const SESSION_TTL_MS = 10 * 60 * 1000;
 
+/**
+ * Gera variantes plausíveis do telefone recebido pelo WhatsApp para casar com
+ * o campo `patients.phone` (que normalmente é gravado em formato BR DDD+número,
+ * com ou sem o 9 extra do celular). O número recebido vem com prefixo 55.
+ */
+function phoneVariants(rawPhone: string): string[] {
+  const digits = (rawPhone || "").replace(/\D/g, "");
+  if (!digits) return [];
+  const variants = new Set<string>();
+  variants.add(digits);
+  // Remove DDI 55 (Brasil)
+  let local = digits.startsWith("55") ? digits.slice(2) : digits;
+  variants.add(local);
+  // Celular brasileiro: variantes com e sem o 9 adicional
+  if (local.length === 11 && local[2] === "9") {
+    variants.add(local.slice(0, 2) + local.slice(3)); // remove o 9
+  } else if (local.length === 10) {
+    variants.add(local.slice(0, 2) + "9" + local.slice(2)); // adiciona o 9
+  }
+  return Array.from(variants).filter(Boolean);
+}
+
+/**
+ * Tenta identificar o associado pelo telefone (sem pedir CPF).
+ * 1) Consulta cache persistente `whatsapp_phone_identity`.
+ * 2) Se não houver, busca em `patients.phone` por variantes do número.
+ *    Só auto-identifica quando há UM ÚNICO match — para evitar falsos positivos.
+ * Grava no cache para próximas interações.
+ */
+async function tryAutoIdentifyByPhone(
+  supabase: SupabaseClient,
+  clinicId: string,
+  phone: string
+): Promise<{ id: string; name: string; is_active: boolean | null; no_show_blocked_until: string | null; no_show_unblocked_at: string | null } | null> {
+  // 1) cache
+  const { data: cached } = await supabase
+    .from("whatsapp_phone_identity")
+    .select("patient_id")
+    .eq("clinic_id", clinicId)
+    .eq("phone", phone)
+    .maybeSingle();
+
+  if (cached?.patient_id) {
+    const { data: patient } = await supabase
+      .from("patients")
+      .select("id, name, is_active, no_show_blocked_until, no_show_unblocked_at")
+      .eq("id", cached.patient_id)
+      .maybeSingle();
+    if (patient) return patient as any;
+  }
+
+  // 2) busca por variantes do telefone
+  const variants = phoneVariants(phone);
+  if (variants.length === 0) return null;
+
+  const { data: matches } = await supabase
+    .from("patients")
+    .select("id, name, is_active, no_show_blocked_until, no_show_unblocked_at")
+    .eq("clinic_id", clinicId)
+    .in("phone", variants)
+    .limit(2);
+
+  if (!matches || matches.length !== 1) return null;
+
+  const patient = matches[0] as any;
+
+  // grava cache
+  await supabase
+    .from("whatsapp_phone_identity")
+    .upsert(
+      {
+        clinic_id: clinicId,
+        phone,
+        patient_id: patient.id,
+        identified_via: "phone",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "clinic_id,phone" }
+    );
+
+  return patient;
+}
+
+async function rememberPhoneIdentity(
+  supabase: SupabaseClient,
+  clinicId: string,
+  phone: string,
+  patientId: string,
+  via: "cpf" | "card" | "phone"
+) {
+  await supabase
+    .from("whatsapp_phone_identity")
+    .upsert(
+      {
+        clinic_id: clinicId,
+        phone,
+        patient_id: patientId,
+        identified_via: via,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "clinic_id,phone" }
+    );
+}
+
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("pt-BR");
