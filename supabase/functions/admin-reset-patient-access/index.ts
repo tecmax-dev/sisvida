@@ -139,6 +139,14 @@ function buildSmsPhoneCandidates(rawPhone: string): string[] {
   return [...candidates].filter((c) => c.length >= 12 && c.length <= 13);
 }
 
+function sanitizeSmsError(message: string | null): string {
+  if (!message) return "Nao foi possivel enviar SMS";
+  if (/device\s*token|devicetoken|dispositivo/i.test(message)) {
+    return "Nao foi possivel enviar SMS no momento. Tente outro canal.";
+  }
+  return message;
+}
+
 async function sendResetCodeBySms(params: {
   phone: string;
   firstName: string;
@@ -161,14 +169,14 @@ async function sendResetCodeBySms(params: {
 
   for (const number of candidates) {
     try {
-      const response = await fetch("https://gateway.apibrasil.io/api/v2/sms/sendSimpleSms", {
+      const response = await fetch("https://gateway.apibrasil.io/api/v2/sms/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${bearer}`,
         },
-        body: JSON.stringify({ number, body: message }),
+        body: JSON.stringify({ number, message }),
       });
 
       const raw = await response.text();
@@ -190,7 +198,7 @@ async function sendResetCodeBySms(params: {
     }
   }
 
-  return { success: false, error: lastError || "Nao foi possivel enviar SMS" };
+  return { success: false, error: sanitizeSmsError(lastError) };
 }
 
 async function waitForWhatsAppFinalStatus(
