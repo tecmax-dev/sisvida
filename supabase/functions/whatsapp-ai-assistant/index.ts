@@ -732,9 +732,11 @@ async function executeTool(
         // Filter past times if today
         const now = new Date();
         const today = now.toISOString().split('T')[0];
-        const filteredSlots = data === today 
+        const rawFiltered = data === today 
           ? availableSlots.filter(t => t > now.toTimeString().slice(0, 5))
           : availableSlots;
+        // Dedupe and sort (schedule may contain duplicated slot blocks)
+        const filteredSlots = Array.from(new Set(rawFiltered)).sort();
 
         if (filteredSlots.length === 0) {
           return JSON.stringify({ 
@@ -743,14 +745,18 @@ async function executeTool(
           });
         }
 
+        const slotsToShow = filteredSlots.slice(0, 10);
         return JSON.stringify({ 
           success: true,
           profissional: professional.name,
           profissional_id: professional.id,
           data: data,
-          horarios: filteredSlots.slice(0, 10)
+          horarios: slotsToShow,
+          formato_resposta: `⏰ *Horários disponíveis para ${professional.name} em ${data.split('-').reverse().join('/')}*:\n${slotsToShow.map((t, i) => `${i + 1}️⃣ ${t}`).join('\n')}\n\n*Qual horário você prefere? Digite apenas o número.*`,
+          instrucao: "Apresente EXATAMENTE o campo formato_resposta. NUNCA invente, adicione, modifique ou liste horários que não estejam no array 'horarios'."
         });
       }
+      
 
       case "buscar_paciente_por_cpf": {
         const cpf = args.cpf.replace(/\D/g, '');
@@ -1254,6 +1260,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
   *Qual data você prefere? Digite o número.*
 - NUNCA peça ao paciente para digitar uma data manualmente
 - Quando o paciente responder com um número (1, 2, 3...), use buscar_horarios_disponiveis com a data correspondente
+- Após receber os horários da função buscar_horarios_disponiveis, apresente EXATAMENTE o formato_resposta retornado. NUNCA invente, adicione ou modifique horários. Liste APENAS os valores presentes no array 'horarios' da resposta da função.
+- É PROIBIDO sugerir horários da madrugada, ou qualquer horário fora do array 'horarios' retornado pela função. Se o array vier vazio, diga que não há horários disponíveis.
 
 ## QUANDO PEDIREM AGENDAMENTO
 Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, etc.), use buscar_proximas_datas_disponiveis para mostrar as próximas datas disponíveis de forma NUMERADA.`;
