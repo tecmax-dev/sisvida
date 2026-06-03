@@ -1446,39 +1446,60 @@ serve(async (req) => {
     };
 
     // --- APPOINTMENT CONFIRMATION/CANCELLATION ---
-    if (extractedButtonId === "Confirmar" || extractedButtonId === "Cancelar") {
-      console.log('[APPOINTMENT_ACTION]', extractedButtonId, 'from:', from);
-      const isConfirm = extractedButtonId === "Confirmar";
+    // Reminder buttons use ids like `confirm_apt_<uuid>` / `cancel_apt_<uuid>`.
+    // Also accept the raw title ("Confirmar" / "Cancelar") as a fallback.
+    const aptIdMatch = typeof extractedButtonId === "string"
+      ? extractedButtonId.match(/^(confirm|cancel)_apt_(.+)$/i)
+      : null;
+    const isAptConfirmTitle = extractedButtonId === "Confirmar" || extractedButtonTitle === "Confirmar";
+    const isAptCancelTitle = extractedButtonId === "Cancelar" || extractedButtonTitle === "Cancelar";
+    if (aptIdMatch || isAptConfirmTitle || isAptCancelTitle) {
+      const isConfirm = aptIdMatch ? aptIdMatch[1].toLowerCase() === "confirm" : isAptConfirmTitle;
+      const explicitAptId = aptIdMatch ? aptIdMatch[2] : null;
+      console.log('[APPOINTMENT_ACTION]', { extractedButtonId, extractedButtonTitle, explicitAptId, isConfirm });
       
       try {
         const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
         const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         
-        const variants = getPhoneVariants(from);
-        console.log('[PHONE_VARIANTS]', variants);
+        let matchedApt: any = null;
 
-        // Lookup upcoming appointments
-        const today = new Date().toISOString().slice(0, 10);
-        const { data: appointments, error: aptError } = await supabase
-          .from('appointments')
-          .select(`
-            id, 
-            status, 
-            appointment_date,
-            patient:patients!inner(name, phone)
-          `)
-          .in('status', ['scheduled', 'confirmed'])
-          .gte('appointment_date', today)
-          .order('appointment_date', { ascending: true })
-          .order('start_time', { ascending: true })
-          .limit(10);
+        if (explicitAptId) {
+          // Direct lookup by appointment id from the button payload
+          const { data: apt, error: aptErr } = await supabase
+            .from('appointments')
+            .select('id, status, appointment_date, patient:patients!inner(name, phone)')
+            .eq('id', explicitAptId)
+            .in('status', ['scheduled', 'confirmed'])
+            .maybeSingle();
+          if (aptErr) console.warn('[APT_LOOKUP_BY_ID_ERROR]', aptErr);
+          matchedApt = apt || null;
+        }
 
-        if (aptError) throw aptError;
-
-        const matchedApt = appointments?.find(a => {
-          const pPhone = (a.patient as any)?.phone;
-          return pPhone && variants.includes(normalizeDigits(pPhone));
-        });
+        if (!matchedApt) {
+          // Fallback: match by phone
+          const variants = getPhoneVariants(from);
+          console.log('[PHONE_VARIANTS]', variants);
+          const today = new Date().toISOString().slice(0, 10);
+          const { data: appointments, error: aptError } = await supabase
+            .from('appointments')
+            .select(`
+              id, 
+              status, 
+              appointment_date,
+              patient:patients!inner(name, phone)
+            `)
+            .in('status', ['scheduled', 'confirmed'])
+            .gte('appointment_date', today)
+            .order('appointment_date', { ascending: true })
+            .order('start_time', { ascending: true })
+            .limit(10);
+          if (aptError) throw aptError;
+          matchedApt = appointments?.find(a => {
+            const pPhone = (a.patient as any)?.phone;
+            return pPhone && variants.includes(normalizeDigits(pPhone));
+          }) || null;
+        }
 
         if (matchedApt) {
           const newStatus = isConfirm ? 'confirmed' : 'cancelled';
