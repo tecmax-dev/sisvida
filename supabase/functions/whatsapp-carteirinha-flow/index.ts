@@ -46,6 +46,91 @@ function onlyDigits(s: string): string {
   return (s || "").replace(/\D/g, "");
 }
 
+/** Gera variantes do telefone para casar com `patients.phone` (BR DDD+número). */
+function phoneVariants(rawPhone: string): string[] {
+  const digits = (rawPhone || "").replace(/\D/g, "");
+  if (!digits) return [];
+  const variants = new Set<string>();
+  variants.add(digits);
+  let local = digits.startsWith("55") ? digits.slice(2) : digits;
+  variants.add(local);
+  if (local.length === 11 && local[2] === "9") {
+    variants.add(local.slice(0, 2) + local.slice(3));
+  } else if (local.length === 10) {
+    variants.add(local.slice(0, 2) + "9" + local.slice(2));
+  }
+  return Array.from(variants).filter(Boolean);
+}
+
+/** Identifica associado pelo telefone (cache + patients.phone). */
+async function tryAutoIdentifyByPhone(
+  supabase: any,
+  phone: string,
+): Promise<{ id: string; name: string; employer_name: string | null; employer_cnpj: string | null } | null> {
+  const { data: cached } = await supabase
+    .from("whatsapp_phone_identity")
+    .select("patient_id")
+    .eq("clinic_id", SINDICATO_CLINIC_ID)
+    .eq("phone", phone)
+    .maybeSingle();
+
+  if (cached?.patient_id) {
+    const { data: p } = await supabase
+      .from("patients")
+      .select("id, name, employer_name, employer_cnpj")
+      .eq("id", cached.patient_id)
+      .maybeSingle();
+    if (p) return p;
+  }
+
+  const variants = phoneVariants(phone);
+  if (variants.length === 0) return null;
+
+  const { data: matches } = await supabase
+    .from("patients")
+    .select("id, name, employer_name, employer_cnpj")
+    .eq("clinic_id", SINDICATO_CLINIC_ID)
+    .in("phone", variants)
+    .limit(2);
+
+  if (!matches || matches.length !== 1) return null;
+
+  await supabase
+    .from("whatsapp_phone_identity")
+    .upsert(
+      {
+        clinic_id: SINDICATO_CLINIC_ID,
+        phone,
+        patient_id: matches[0].id,
+        identified_via: "phone",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "clinic_id,phone" },
+    );
+
+  return matches[0];
+}
+
+async function rememberPhoneIdentity(
+  supabase: any,
+  phone: string,
+  patientId: string,
+  via: "cpf" | "phone",
+) {
+  await supabase
+    .from("whatsapp_phone_identity")
+    .upsert(
+      {
+        clinic_id: SINDICATO_CLINIC_ID,
+        phone,
+        patient_id: patientId,
+        identified_via: via,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "clinic_id,phone" },
+    );
+}
+
 function isValidCPF(cpf: string): boolean {
   const d = onlyDigits(cpf);
   if (d.length !== 11) return false;
@@ -264,6 +349,33 @@ serve(async (req) => {
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .eq("phone", phone);
 
+      // Tenta identificar o associado pelo telefone para pular a etapa de CPF.
+      const autoPatient = await tryAutoIdentifyByPhone(supabase, phone);
+      if (autoPatient) {
+        const { error: autoErr } = await supabase
+          .from("whatsapp_booking_sessions")
+          .upsert({
+            clinic_id: SINDICATO_CLINIC_ID,
+            phone,
+            action_type: "carteirinha",
+            state: "AWAITING_PAYSLIP",
+            patient_id: autoPatient.id,
+            patient_name: autoPatient.name,
+            expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          }, { onConflict: "clinic_id,phone" });
+        if (!autoErr) {
+          const firstName = (autoPatient.name || "").split(" ")[0];
+          return json({
+            success: true,
+            response:
+              `🪪 Olá, *${firstName}*! Identifiquei seu cadastro pelo número do WhatsApp.\n\n` +
+              "📎 *Envie a imagem do seu contracheque mais recente* (foto JPG/PNG).\n\n" +
+              "O sistema vai verificar automaticamente e renovar sua carteirinha.",
+            buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
+          });
+        }
+      }
+
       const { error: insErr } = await supabase
         .from("whatsapp_booking_sessions")
         .upsert({
@@ -349,6 +461,9 @@ serve(async (req) => {
           buttons: [{ id: "carteirinha_cancelar", title: "Cancelar" }],
         });
       }
+
+      // memoriza relação telefone↔associado para próximos atendimentos
+      await rememberPhoneIdentity(supabase, phone, patient.id, "cpf");
 
       await supabase
         .from("whatsapp_booking_sessions")

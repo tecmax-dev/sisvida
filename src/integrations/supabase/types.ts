@@ -17222,6 +17222,44 @@ export type Database = {
           },
         ]
       }
+      whatsapp_phone_identity: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          identified_via: string
+          patient_id: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          identified_via?: string
+          patient_id: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          identified_via?: string
+          patient_id?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_phone_identity_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_quick_replies: {
         Row: {
           clinic_id: string
