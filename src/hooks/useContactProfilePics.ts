@@ -14,18 +14,24 @@ export function useContactProfilePics() {
   const { data: contactMap } = useQuery({
     queryKey: ["evolution-contacts-pic-map"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("evolution-contacts");
-      if (error || !Array.isArray(data)) return {};
-      const map: Record<string, string> = {};
-      for (const c of data as EvolutionContact[]) {
+      try {
+        const res = await supabase.functions.invoke("evolution-contacts");
+        const data = res?.data;
+        if (res?.error || !Array.isArray(data)) return {};
+        const map: Record<string, string> = {};
+        for (const c of data as EvolutionContact[]) {
         if (c.remoteJid && c.profilePicUrl) {
           const phone = c.remoteJid.replace(/@.*$/, "");
           map[normalizePhone(phone)] = c.profilePicUrl;
         }
+        }
+        return map;
+      } catch {
+        return {};
       }
-      return map;
     },
     staleTime: 10 * 60 * 1000,
+    retry: false,
   });
 
   const getProfilePic = (contactNumber: string): string | null => {
