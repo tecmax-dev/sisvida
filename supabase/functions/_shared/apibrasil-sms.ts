@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Comtele SMS Service
-// Documentação: https://docs.comtele.com.br/
-//   POST https://sms.comtele.com.br/api/v2/send
-//   Headers: auth-key: <COMTELE_API_KEY>, Content-Type: application/json
-//   Body:    { "Receivers": "5511999999999", "Content": "..." , "Sender": "..." }
+// Comtele SMS Service — Gateway V4
+// Documentação: https://developers.comtele.com.br/send-sms-message-23747430e0
+//   POST https://api.comtele.com.br/messages/sms/send
+//   Headers: x-api-key: <COMTELE_API_KEY>, Content-Type: application/json
+//   Body:    { "receivers":["55..."], "contactGroups":[], "message":"...",
+//              "route":"17", "tag":"...", "custom":"...", "scheduleDate":null }
 //
 // Mantemos os MESMOS nomes/símbolos exportados (ApiBrasilSmsService, etc.)
 // para evitar churn nos chamadores. Apenas o provedor mudou.
@@ -35,10 +36,12 @@ export type SendSmsResult =
 export interface ApiBrasilSmsConfig {
   bearerToken: string;    // Comtele auth-key (mantido o nome do campo)
   deviceToken?: string;   // não usado pela Comtele; mantido por compatibilidade
-  baseUrl?: string;       // default https://sms.comtele.com.br/api/v2
+  baseUrl?: string;       // default https://api.comtele.com.br
   sender?: string;        // remetente opcional (ex.: nome curto)
   timeoutMs?: number;     // default 20000
   fetchImpl?: typeof fetch;
+  route?: string;         // Comtele route id (ex.: "17" Premium, "16" Marketing)
+  tag?: string;
 }
 
 function normalizeComteleAuthKey(rawKey: string): string {
@@ -64,16 +67,20 @@ export class ApiBrasilSmsService {
   private readonly sender: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
+  private readonly route: string;
+  private readonly tag: string;
 
   constructor(cfg: ApiBrasilSmsConfig) {
     if (!cfg.bearerToken) {
       throw new Error("COMTELE_API_KEY obrigatório");
     }
     this.authKey = normalizeComteleAuthKey(cfg.bearerToken);
-    this.baseUrl = (cfg.baseUrl ?? "https://sms.comtele.com.br/api/v2").replace(/\/+$/, "");
+    this.baseUrl = (cfg.baseUrl ?? "https://api.comtele.com.br").replace(/\/+$/, "");
     this.sender = cfg.sender ?? "";
     this.timeoutMs = cfg.timeoutMs ?? 20_000;
     this.fetchImpl = cfg.fetchImpl ?? fetch;
+    this.route = cfg.route ?? "17";
+    this.tag = cfg.tag ?? "prosindweb";
   }
 
   static fromEnv(overrides: Partial<ApiBrasilSmsConfig> = {}): ApiBrasilSmsService {
@@ -84,6 +91,8 @@ export class ApiBrasilSmsService {
         Deno.env.get("APIBRASIL_BEARER_TOKEN")?.trim() ||
         "",
       sender: Deno.env.get("COMTELE_SENDER") ?? "",
+      route: Deno.env.get("COMTELE_ROUTE") ?? "17",
+      tag: Deno.env.get("COMTELE_TAG") ?? "prosindweb",
       ...overrides,
     });
   }
@@ -94,17 +103,21 @@ export class ApiBrasilSmsService {
 
     try {
       const body: Record<string, unknown> = {
-        Receivers: payload.number,
-        Content: payload.message,
+        receivers: [payload.number],
+        contactGroups: [],
+        message: payload.message,
+        route: this.route,
+        tag: this.tag,
+        custom: this.sender || "prosindweb",
+        scheduleDate: null,
       };
-      if (this.sender) body.Sender = this.sender;
 
-      const res = await this.fetchImpl(`${this.baseUrl}/send`, {
+      const res = await this.fetchImpl(`${this.baseUrl}/messages/sms/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          "auth-key": this.authKey,
+          "x-api-key": this.authKey,
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -115,8 +128,13 @@ export class ApiBrasilSmsService {
       try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = raw; }
 
       const respBody = (parsed && typeof parsed === "object") ? parsed as Record<string, unknown> : {};
-      // Comtele retorna { Success: true/false, Message: "...", Code: number }
-      const success = respBody.Success === true || respBody.success === true;
+      // Gateway V4 retorna { hasError: false, message: null, totalRecords, errors, object }
+      const hasError =
+        respBody.hasError === true ||
+        respBody.HasError === true ||
+        respBody.Success === false ||
+        respBody.success === false;
+      const success = !hasError;
 
       if (!res.ok || !success) {
         return {
@@ -124,7 +142,9 @@ export class ApiBrasilSmsService {
           error: {
             error: true,
             status: res.status,
-            message: String(respBody.Message ?? respBody.message ?? raw ?? `HTTP ${res.status}`),
+            message: String(
+              respBody.message ?? respBody.Message ?? (Array.isArray(respBody.errors) ? (respBody.errors as unknown[]).join("; ") : "") ?? raw ?? `HTTP ${res.status}`,
+            ),
             error_code: (respBody.Code ?? respBody.code) as string | number | undefined,
           },
         };
