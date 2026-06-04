@@ -62,7 +62,7 @@ async function renderApp() {
    * e os ícones cacheados pelo Chrome WebAPK na primeira carga após a atualização.
    * Roda apenas uma vez por dispositivo (flag salva em localStorage).
    */
-  const CACHE_WIPE_VERSION = "20260528-final-filiacao-no-play-store";
+  const CACHE_WIPE_VERSION = "20260604-comtele-sms-cache-wipe";
   try {
     const last = localStorage.getItem("__pwa_cache_wipe_version");
     if (last !== CACHE_WIPE_VERSION) {
