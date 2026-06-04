@@ -60,6 +60,17 @@ export default function UnionSmsPage() {
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [showMemberPicker, setShowMemberPicker] = useState(false);
 
+  // Aba "Agendados": filtra associados que têm agendamento na clínica no intervalo
+  const today = new Date().toISOString().slice(0, 10);
+  const janFirst = `${new Date().getFullYear()}-01-01`;
+  const [agendaFrom, setAgendaFrom] = useState(janFirst);
+  const [agendaTo, setAgendaTo] = useState(today);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [agendaByProf, setAgendaByProf] = useState<
+    Record<string, { profName: string; members: MemberRow[] }>
+  >({});
+  const [agendaTotalAppointments, setAgendaTotalAppointments] = useState(0);
+
   const loadAll = async () => {
     setLoading(true);
     const [{ data: tpls }, { data: lg }] = await Promise.all([
