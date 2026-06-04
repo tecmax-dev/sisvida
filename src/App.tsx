@@ -88,6 +88,7 @@ const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const WhatsAppTemplatesPage = lazy(() => import("./pages/admin/WhatsAppTemplatesPage"));
 const WhatsAppStatusPage = lazy(() => import("./pages/admin/WhatsAppStatusPage"));
 const WhatsAppAuditPage = lazy(() => import("./pages/admin/WhatsAppAuditPage"));
+const MetaWebhookHealthPage = lazy(() => import("./pages/admin/MetaWebhookHealthPage"));
 
 
 // Mobile App Pages - lazy load
@@ -530,6 +531,7 @@ function App() {
                   <Route path="whatsapp-templates" element={<WhatsAppTemplatesPage />} />
                   <Route path="whatsapp-status" element={<WhatsAppStatusPage />} />
                   <Route path="whatsapp-audit" element={<WhatsAppAuditPage />} />
+                  <Route path="meta-webhook-health" element={<MetaWebhookHealthPage />} />
                   <Route path="hero" element={<HeroSettingsPage />} />
                   <Route path="banners" element={<CarouselBannersPage />} />
                   <Route path="config" element={<GlobalConfigPage />} />
