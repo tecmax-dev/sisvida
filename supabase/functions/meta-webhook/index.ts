@@ -1267,21 +1267,50 @@ serve(async (req) => {
       }
 
       if (shouldEnterBookingFlow) {
-        console.log("[BOOKING_FLOW] Forwarding to booking-web-chat", {
+        console.log("[BOOKING_FLOW] Redirecting to PWA (booking disabled on WhatsApp)", {
           from,
           hasSession: !!activeBookingSession,
           trigger: isAgendarConsultaTrigger,
           isBookingButton,
         });
 
-        // Se acabou de iniciar, manda mensagem vazia para o web-chat exibir o prompt de CPF.
-        // Se for clique em botão do fluxo, extrai o número (book_1 -> "1").
-        const messageToForward = isAgendarConsultaTrigger && !activeBookingSession
-          ? ""
-          : isBookingButton
-            ? extractedButtonId!.replace(/^book_/, "")
-            : (text || "");
+        // Política: agendamentos não acontecem mais via WhatsApp. Encerramos qualquer
+        // sessão pendente e redirecionamos o associado para o app oficial.
+        await supabase
+          .from("whatsapp_booking_sessions")
+          .delete()
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .eq("phone", from)
+          .is("action_type", null)
+          .neq("state", "FINISHED");
 
+        await sendResponse({
+          type: "interactive",
+          interactive: {
+            type: "button",
+            body: {
+              text:
+                "📲 Os agendamentos médicos agora são feitos exclusivamente pelo *aplicativo oficial* do Sindicato.\n\n" +
+                "Acesse: https://prosindweb.com.br/app\n\n" +
+                "Pelo app você consulta profissionais, horários e confirma a consulta na hora.",
+            },
+            action: {
+              buttons: [
+                { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } },
+              ],
+            },
+          },
+        });
+
+        return new Response(
+          JSON.stringify({ ok: true, action: "booking_redirect_to_app" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Trecho legado (desativado): forward para booking-web-chat.
+      if (false) {
+        const messageToForward = "";
         const bookingRes = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/booking-web-chat`,
           {
