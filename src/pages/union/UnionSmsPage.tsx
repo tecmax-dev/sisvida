@@ -19,7 +19,7 @@ interface SmsTemplate {
   name: string;
   meta_template_name: string | null;
   body: string;
-  variables: any;
+  variables: unknown;
   status: string;
   updated_at: string;
 }
@@ -40,6 +40,38 @@ interface MemberRow {
   cpf: string;
   is_active: boolean | null;
 }
+
+interface AppointmentPatientRow {
+  id: string;
+  cpf: string | null;
+  name: string | null;
+  phone: string | null;
+  is_active: boolean | null;
+  is_union_member: boolean | null;
+}
+
+interface AppointmentProfessionalRow {
+  name: string | null;
+}
+
+interface AppointmentWithPatientRow {
+  id: string;
+  appointment_date: string;
+  professional_id: string;
+  status: string;
+  patient_id: string;
+  patients: AppointmentPatientRow | AppointmentPatientRow[] | null;
+  professionals: AppointmentProfessionalRow | AppointmentProfessionalRow[] | null;
+}
+
+const getErrorMessage = (err: unknown) => {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) {
+    const message = (err as { message?: unknown }).message;
+    return typeof message === "string" ? message : String(message ?? err);
+  }
+  return String(err);
+};
 
 export default function UnionSmsPage() {
   const { currentClinic, userRoles } = useAuth();
@@ -114,7 +146,15 @@ export default function UnionSmsPage() {
         .range(from, from + pageSize - 1);
       if (error) throw error;
       if (!data || data.length === 0) break;
-      all.push(...((data as any[]) as MemberRow[]));
+      all.push(
+        ...data.map((row) => ({
+          id: row.id,
+          name: row.name,
+          phone: row.phone,
+          cpf: row.cpf ?? "",
+          is_active: row.is_active,
+        })),
+      );
       if (data.length < pageSize) break;
       from += pageSize;
     }
@@ -127,8 +167,8 @@ export default function UnionSmsPage() {
       const valid = await fetchSmsMembers();
       setMembers(valid);
       toast.success(`${valid.length} associados com telefone carregados`);
-    } catch (err: any) {
-      toast.error(`Erro ao carregar associados: ${err.message ?? err}`);
+    } catch (err: unknown) {
+      toast.error(`Erro ao carregar associados: ${getErrorMessage(err)}`);
     } finally {
       setMembersLoading(false);
     }
@@ -192,8 +232,8 @@ export default function UnionSmsPage() {
       if (error) throw error;
       toast.success(`Sincronização concluída: ${data?.synced ?? 0} modelos`);
       await loadAll();
-    } catch (err: any) {
-      toast.error(`Erro ao sincronizar: ${err.message ?? err}`);
+    } catch (err: unknown) {
+      toast.error(`Erro ao sincronizar: ${getErrorMessage(err)}`);
     } finally {
       setSyncing(false);
     }
