@@ -59,9 +59,23 @@ interface Props {
   onSuccess?: () => void;
 }
 
-const safeText = (value: unknown, fallback = "-") => {
+const safeText = (value: unknown, fallback = "-"): string => {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    const text = value.map((item) => safeText(item, "")).filter(Boolean).join(", ");
+    return text || fallback;
+  }
+  return fallback;
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && typeof error.message === "string") return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const candidate = (error as Record<string, unknown>).message ?? (error as Record<string, unknown>).error;
+    return safeText(candidate, fallback);
+  }
   return fallback;
 };
 
@@ -171,9 +185,9 @@ export function EditUserRoleDialog({
       toast.success("Tipo de acesso atualizado com sucesso");
       onSuccess?.();
       onOpenChange(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      toast.error(e.message || "Erro ao atualizar tipo de acesso");
+      toast.error(getErrorMessage(e, "Erro ao atualizar tipo de acesso"));
     } finally {
       setSaving(false);
     }
