@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Send, MessageSquare } from "lucide-react";
+import { Loader2, RefreshCw, Send, MessageSquare, Users, Search } from "lucide-react";
 
 interface SmsTemplate {
   id: string;
@@ -29,6 +31,14 @@ interface SmsLog {
   created_at: string;
 }
 
+interface MemberRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  cpf: string;
+  is_active: boolean | null;
+}
+
 export default function UnionSmsPage() {
   const [templates, setTemplates] = useState<SmsTemplate[]>([]);
   const [logs, setLogs] = useState<SmsLog[]>([]);
@@ -39,6 +49,12 @@ export default function UnionSmsPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [customBody, setCustomBody] = useState("");
   const [recipients, setRecipients] = useState("");
+
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
@@ -54,6 +70,87 @@ export default function UnionSmsPage() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  const loadMembers = async () => {
+    setMembersLoading(true);
+    try {
+      const all: MemberRow[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from("members")
+          .select("id, name, phone, cpf, is_active")
+          .eq("is_active", true)
+          .not("phone", "is", null)
+          .order("name", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...(data as MemberRow[]));
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      const valid = all.filter((m) => (m.phone ?? "").replace(/\D/g, "").length >= 10);
+      setMembers(valid);
+      toast.success(`${valid.length} associados com telefone carregados`);
+    } catch (err: any) {
+      toast.error(`Erro ao carregar associados: ${err.message ?? err}`);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  const openMemberPicker = async () => {
+    setShowMemberPicker(true);
+    if (members.length === 0) await loadMembers();
+  };
+
+  const filteredMembers = members.filter((m) => {
+    if (!memberSearch.trim()) return true;
+    const q = memberSearch.toLowerCase();
+    const cpfDigits = m.cpf.replace(/\D/g, "");
+    const phoneDigits = (m.phone ?? "").replace(/\D/g, "");
+    return (
+      m.name.toLowerCase().includes(q) ||
+      cpfDigits.includes(q.replace(/\D/g, "")) ||
+      phoneDigits.includes(q.replace(/\D/g, ""))
+    );
+  });
+
+  const toggleMember = (id: string) => {
+    setSelectedMemberIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = () => {
+    const allSelected = filteredMembers.every((m) => selectedMemberIds.has(m.id));
+    setSelectedMemberIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) filteredMembers.forEach((m) => next.delete(m.id));
+      else filteredMembers.forEach((m) => next.add(m.id));
+      return next;
+    });
+  };
+
+  const applyMemberSelection = () => {
+    const phones = members
+      .filter((m) => selectedMemberIds.has(m.id))
+      .map((m) => (m.phone ?? "").replace(/\D/g, ""))
+      .filter((p) => p.length >= 10);
+    const existing = recipients
+      .split(/[\n,;]+/)
+      .map((s) => s.replace(/\D/g, ""))
+      .filter((s) => s.length >= 10);
+    const merged = Array.from(new Set([...existing, ...phones]));
+    setRecipients(merged.join("\n"));
+    setShowMemberPicker(false);
+    toast.success(`${phones.length} número(s) adicionado(s)`);
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -171,6 +268,22 @@ export default function UnionSmsPage() {
 
               <div className="space-y-2">
                 <Label>Destinatários (um por linha, ou separados por vírgula)</Label>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={openMemberPicker}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Selecionar associados
+                  </Button>
+                  {selectedMemberIds.size > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedMemberIds(new Set())}
+                    >
+                      Limpar seleção ({selectedMemberIds.size})
+                    </Button>
+                  )}
+                </div>
                 <Textarea
                   rows={5}
                   value={recipients}
@@ -188,6 +301,73 @@ export default function UnionSmsPage() {
               </Button>
             </CardContent>
           </Card>
+
+          {showMemberPicker && (
+            <Card className="border-primary/30">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">
+                  Associados ({selectedMemberIds.size} selecionado{selectedMemberIds.size === 1 ? "" : "s"})
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setShowMemberPicker(false)}>Fechar</Button>
+                  <Button size="sm" onClick={applyMemberSelection} disabled={selectedMemberIds.size === 0}>
+                    Adicionar aos destinatários
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-8"
+                    placeholder="Buscar por nome, CPF ou telefone..."
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {filteredMembers.length} de {members.length} associados
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={toggleAllFiltered} disabled={filteredMembers.length === 0}>
+                    {filteredMembers.every((m) => selectedMemberIds.has(m.id)) && filteredMembers.length > 0
+                      ? "Desmarcar todos"
+                      : "Selecionar todos"}
+                  </Button>
+                </div>
+                {membersLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : (
+                  <ScrollArea className="h-[400px] border rounded-md">
+                    <div className="divide-y">
+                      {filteredMembers.map((m) => (
+                        <label
+                          key={m.id}
+                          className="flex items-center gap-3 p-2 hover:bg-muted/50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedMemberIds.has(m.id)}
+                            onCheckedChange={() => toggleMember(m.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{m.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {m.phone} · CPF {m.cpf}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                      {filteredMembers.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-8">
+                          Nenhum associado encontrado
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-2">
