@@ -257,7 +257,7 @@ interface AnamneseTemplateBuilderProps {
 }
 
 export function AnamneseTemplateBuilder({
-  questions,
+  questions = [],
   onQuestionsChange,
 }: AnamneseTemplateBuilderProps) {
   const sensors = useSensors(
