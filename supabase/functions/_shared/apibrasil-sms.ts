@@ -41,6 +41,23 @@ export interface ApiBrasilSmsConfig {
   fetchImpl?: typeof fetch;
 }
 
+function normalizeComteleAuthKey(rawKey: string): string {
+  let key = rawKey.trim().replace(/^['"]|['"]$/g, "").trim();
+
+  const authHeaderMatch = key.match(/auth-key\s*:\s*([^\s'",;]+)/i);
+  if (authHeaderMatch?.[1]) return authHeaderMatch[1].trim();
+
+  const uuidMatch = key.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  if (uuidMatch?.[0]) return uuidMatch[0].trim();
+
+  if (key.includes("=")) {
+    const [, value] = key.split(/=(.*)/s);
+    key = (value || key).trim().replace(/^['"]|['"]$/g, "").trim();
+  }
+
+  return key;
+}
+
 export class ApiBrasilSmsService {
   private readonly authKey: string;
   private readonly baseUrl: string;
@@ -52,7 +69,7 @@ export class ApiBrasilSmsService {
     if (!cfg.bearerToken) {
       throw new Error("COMTELE_API_KEY obrigatório");
     }
-    this.authKey = cfg.bearerToken.trim();
+    this.authKey = normalizeComteleAuthKey(cfg.bearerToken);
     this.baseUrl = (cfg.baseUrl ?? "https://sms.comtele.com.br/api/v2").replace(/\/+$/, "");
     this.sender = cfg.sender ?? "";
     this.timeoutMs = cfg.timeoutMs ?? 20_000;
