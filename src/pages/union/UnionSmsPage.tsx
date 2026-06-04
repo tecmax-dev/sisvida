@@ -331,6 +331,39 @@ export default function UnionSmsPage() {
                 </div>
               )}
 
+              {varIndexes.length > 0 && (
+                <div className="space-y-2 border rounded-md p-3 bg-muted/30">
+                  <Label className="text-sm">Variáveis do modelo</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Defina o valor de cada variável. Marque "Usar nome do associado" para preencher automaticamente por destinatário.
+                  </p>
+                  {varIndexes.map((idx) => (
+                    <div key={idx} className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-mono bg-background border rounded px-2 py-1">{`{${idx}}`}</span>
+                      <Input
+                        className="flex-1 min-w-[180px]"
+                        placeholder={varUseName[idx] ? "(nome do associado)" : "Valor fixo"}
+                        value={varValues[idx] ?? ""}
+                        disabled={!!varUseName[idx]}
+                        onChange={(e) => setVarValues((p) => ({ ...p, [idx]: e.target.value }))}
+                      />
+                      <label className="flex items-center gap-1 text-xs">
+                        <Checkbox
+                          checked={!!varUseName[idx]}
+                          onCheckedChange={(v) =>
+                            setVarUseName((p) => ({ ...p, [idx]: !!v }))
+                          }
+                        />
+                        Nome do associado
+                      </label>
+                    </div>
+                  ))}
+                  <div className="text-xs text-muted-foreground pt-1">
+                    <span className="font-medium">Prévia:</span> {renderPreview()}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Destinatários (um por linha, ou separados por vírgula)</Label>
                 <div className="flex gap-2">
@@ -349,6 +382,11 @@ export default function UnionSmsPage() {
                     </Button>
                   )}
                 </div>
+                {selectedMemberIds.size > 0 && (
+                  <p className="text-xs text-primary">
+                    {selectedMemberIds.size} associado(s) selecionado(s) — o nome será injetado automaticamente nas variáveis marcadas.
+                  </p>
+                )}
                 <Textarea
                   rows={5}
                   value={recipients}
@@ -356,7 +394,7 @@ export default function UnionSmsPage() {
                   placeholder="73999990000&#10;11988887777"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {parseRecipients(recipients).length} número(s) detectado(s)
+                  {parseRecipients(recipients).length} número(s) manual(is) detectado(s)
                 </p>
               </div>
 
