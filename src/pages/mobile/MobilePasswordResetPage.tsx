@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound, MessageSquare } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 type Step = "identify" | "verify_code" | "validate_birth_year" | "password" | "success";
 type Mode = "email" | "cpf";
