@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound, MessageSquare } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 type Step = "identify" | "verify_code" | "validate_birth_year" | "password" | "success";
 type Mode = "email" | "cpf";
@@ -325,6 +327,18 @@ export default function MobilePasswordResetPage() {
                   : "Digite seu email cadastrado para receber um código de recuperação no WhatsApp."}
               </p>
             </div>
+
+            {!smsAllowed && (
+              <Alert variant="destructive" className="mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Limite de SMS atingido</AlertTitle>
+                <AlertDescription>
+                  Você já recebeu 2 códigos por SMS nos últimos 15 dias. O envio por
+                  SMS foi temporariamente desativado — utilize <strong>WhatsApp</strong>
+                  {" "}ou <strong>e-mail</strong> abaixo para receber seu código.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {mode === "cpf" ? (
               <div className="space-y-2">
