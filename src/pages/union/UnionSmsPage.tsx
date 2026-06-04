@@ -252,7 +252,7 @@ export default function UnionSmsPage() {
       const currentMembers = members.length === 0 ? await fetchSmsMembers() : members;
       const cpfMap = new Map(currentMembers.map((m) => [onlyDigits(m.cpf), m]));
 
-      const all: any[] = [];
+      const all: AppointmentWithPatientRow[] = [];
       let fromIdx = 0;
       const pageSize = 1000;
       while (true) {
@@ -270,7 +270,7 @@ export default function UnionSmsPage() {
           .range(fromIdx, fromIdx + pageSize - 1);
         if (error) throw error;
         if (!data || data.length === 0) break;
-        all.push(...data);
+        all.push(...(data as unknown as AppointmentWithPatientRow[]));
         if (data.length < pageSize) break;
         fromIdx += pageSize;
       }
@@ -311,8 +311,8 @@ export default function UnionSmsPage() {
         return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
       });
       toast.success(`${all.length} agendamento(s) — ${Object.keys(result).length} profissional(is)`);
-    } catch (err: any) {
-      toast.error(`Erro ao carregar agendados: ${err.message ?? err}`);
+    } catch (err: unknown) {
+      toast.error(`Erro ao carregar agendados: ${getErrorMessage(err)}`);
     } finally {
       setAgendaLoading(false);
     }
@@ -427,8 +427,8 @@ export default function UnionSmsPage() {
       toast.success(`${data?.sent ?? 0}/${data?.total ?? 0} SMS enviados`);
       setRecipients("");
       await loadAll();
-    } catch (err: any) {
-      toast.error(`Erro: ${err.message ?? err}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${getErrorMessage(err)}`);
     } finally {
       setSending(false);
     }
