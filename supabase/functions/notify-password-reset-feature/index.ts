@@ -67,6 +67,21 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // ⛔ DESATIVADA — Esta função enviava texto livre (não-template) em massa
+  // para milhares de números, o que violou a política da Meta e contribuiu
+  // para o banimento do número oficial do sindicato.
+  // Toda comunicação transacional DEVE usar templates aprovados via
+  // meta-send-template. Não reativar sem revisão.
+  return new Response(
+    JSON.stringify({
+      disabled: true,
+      reason:
+        "Função desativada permanentemente. Envio em massa de texto livre viola política Meta e causou banimento. Use templates aprovados.",
+    }),
+    { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+
+  // eslint-disable-next-line no-unreachable
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
