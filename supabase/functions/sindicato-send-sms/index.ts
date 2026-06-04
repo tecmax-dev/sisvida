@@ -24,7 +24,10 @@ interface Payload {
 }
 
 function renderBody(body: string, vars: Record<string, string> = {}): string {
-  return body.replace(/\{(\d+)\}/g, (_m, idx) => vars[idx] ?? vars[`var${idx}`] ?? `{${idx}}`);
+  return body.replace(/\{(\d+)\}/g, (_m, idx) => {
+    const v = vars[idx] ?? vars[`var${idx}`];
+    return v != null && v !== "" ? String(v) : "";
+  });
 }
 
 Deno.serve(async (req) => {
