@@ -31,9 +31,35 @@ export default function MobilePasswordResetPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [smsLoading, setSmsLoading] = useState(false);
+  const [smsAllowed, setSmsAllowed] = useState(true);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const checkSmsAvailability = async (payload: { cpf?: string; email?: string }) => {
+    try {
+      const supabaseUrl = (supabase as any).supabaseUrl as string;
+      const anonKey = (supabase as any).supabaseKey as string;
+      const url = `${supabaseUrl}/functions/v1/send-password-reset-email`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
+        },
+        body: JSON.stringify({ ...payload, checkSmsLimit: true }),
+      });
+      const data = await response.json().catch(() => null);
+      if (typeof data?.smsAllowed === "boolean") {
+        setSmsAllowed(data.smsAllowed);
+        return data.smsAllowed as boolean;
+      }
+    } catch (err) {
+      console.warn("Failed to check SMS limit:", err);
+    }
+    return true;
+  };
 
   useEffect(() => {
     const emailFromQuery = searchParams.get("email")?.trim();
@@ -104,6 +130,17 @@ export default function MobilePasswordResetPage() {
           (data && typeof data === "object" && (data.error || data.message)) ||
           (typeof data === "string" && data) ||
           `Erro HTTP ${response.status}`;
+        if (data && typeof data === "object" && (data as any).code === "sms_limit_reached") {
+          setSmsAllowed(false);
+          if (isCpfMode) setMode("email");
+          toast({
+            title: "Limite de SMS atingido",
+            description:
+              "Você já recebeu 2 códigos por SMS nos últimos 15 dias. Use WhatsApp ou e-mail.",
+            variant: "destructive",
+          });
+          return;
+        }
         throw new Error(serverMessage);
       }
 
@@ -143,7 +180,23 @@ export default function MobilePasswordResetPage() {
 
   const handleCpfSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendResetCode("sms");
+    (async () => {
+      const cpfDigits = cpf.replace(/\D/g, "");
+      if (cpfDigits.length === 11) {
+        const allowed = await checkSmsAvailability({ cpf: cpfDigits });
+        if (!allowed) {
+          setMode("email");
+          toast({
+            title: "Limite de SMS atingido",
+            description:
+              "Você atingiu o limite de 2 envios de SMS em 15 dias. Use seu e-mail para receber o código por WhatsApp ou e-mail.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      sendResetCode("sms");
+    })();
   };
 
   const handleVerifyCode = async (e: React.FormEvent) => {
@@ -337,6 +390,7 @@ export default function MobilePasswordResetPage() {
                   )}
                 </Button>
 
+                {smsAllowed && (
                 <div className="relative my-2">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-muted" />
@@ -345,7 +399,9 @@ export default function MobilePasswordResetPage() {
                     <span className="bg-white px-2 text-muted-foreground">ou</span>
                   </div>
                 </div>
+                )}
 
+                {smsAllowed && (
                 <Button
                   type="button"
                   variant="outline"
@@ -365,6 +421,7 @@ export default function MobilePasswordResetPage() {
                     </>
                   )}
                 </Button>
+                )}
               </>
             )}
 

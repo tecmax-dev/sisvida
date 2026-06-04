@@ -8048,6 +8048,7 @@ export type Database = {
       patient_password_resets: {
         Row: {
           birth_year: number | null
+          channel: string | null
           created_at: string
           expires_at: string
           id: string
@@ -8057,6 +8058,7 @@ export type Database = {
         }
         Insert: {
           birth_year?: number | null
+          channel?: string | null
           created_at?: string
           expires_at: string
           id?: string
@@ -8066,6 +8068,7 @@ export type Database = {
         }
         Update: {
           birth_year?: number | null
+          channel?: string | null
           created_at?: string
           expires_at?: string
           id?: string
