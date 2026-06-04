@@ -390,6 +390,7 @@ export default function MobilePasswordResetPage() {
                   )}
                 </Button>
 
+                {smsAllowed && (
                 <div className="relative my-2">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-muted" />
@@ -398,7 +399,9 @@ export default function MobilePasswordResetPage() {
                     <span className="bg-white px-2 text-muted-foreground">ou</span>
                   </div>
                 </div>
+                )}
 
+                {smsAllowed && (
                 <Button
                   type="button"
                   variant="outline"
@@ -418,6 +421,7 @@ export default function MobilePasswordResetPage() {
                     </>
                   )}
                 </Button>
+                )}
               </>
             )}
 
