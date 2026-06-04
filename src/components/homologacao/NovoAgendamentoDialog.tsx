@@ -3,7 +3,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +28,6 @@ import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import {
   useHomologacaoProfessionalsWithSchedules,
   filterProfessionalsByDayOfWeek,
-  getProfessionalWorkingDays,
 } from "@/hooks/useHomologacaoProfessionalsWithSchedules";
 
 interface NovoAgendamentoDialogProps {
