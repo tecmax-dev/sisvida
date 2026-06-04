@@ -181,6 +181,77 @@ export default function UnionSmsPage() {
     }
   };
 
+  // Sincroniza/carrega associados agendados no intervalo, agrupados por profissional
+  const loadAgendados = async () => {
+    setAgendaLoading(true);
+    try {
+      if (members.length === 0) await loadMembers();
+
+      // mapa cpfDigits -> member (usa snapshot atualizado)
+      const currentMembers = members.length === 0
+        ? (await supabase.from("members").select("id, name, phone, cpf, is_active").eq("is_active", true).not("phone", "is", null)).data as MemberRow[] | null ?? []
+        : members;
+      const cpfMap = new Map(currentMembers.map((m) => [m.cpf.replace(/\D/g, ""), m]));
+
+      const all: any[] = [];
+      let fromIdx = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("id, appointment_date, professional_id, status, patients!inner(cpf,name), professionals!inner(name)")
+          .gte("appointment_date", agendaFrom)
+          .lte("appointment_date", agendaTo)
+          .neq("status", "cancelled")
+          .order("appointment_date", { ascending: true })
+          .order("id", { ascending: true })
+          .range(fromIdx, fromIdx + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        fromIdx += pageSize;
+      }
+
+      const byProf: Record<string, { profName: string; members: Map<string, MemberRow> }> = {};
+      for (const ap of all) {
+        const cpfDigits = ((ap.patients?.cpf as string) ?? "").replace(/\D/g, "");
+        const member = cpfMap.get(cpfDigits);
+        if (!member) continue;
+        const profId = ap.professional_id as string;
+        if (!byProf[profId]) {
+          byProf[profId] = { profName: (ap.professionals?.name as string) ?? "—", members: new Map() };
+        }
+        byProf[profId].members.set(member.id, member);
+      }
+
+      const result: Record<string, { profName: string; members: MemberRow[] }> = {};
+      for (const [k, v] of Object.entries(byProf)) {
+        result[k] = {
+          profName: v.profName,
+          members: Array.from(v.members.values()).sort((a, b) => a.name.localeCompare(b.name)),
+        };
+      }
+      setAgendaByProf(result);
+      setAgendaTotalAppointments(all.length);
+      toast.success(`${all.length} agendamento(s) — ${Object.keys(result).length} profissional(is)`);
+    } catch (err: any) {
+      toast.error(`Erro ao carregar agendados: ${err.message ?? err}`);
+    } finally {
+      setAgendaLoading(false);
+    }
+  };
+
+  const toggleAgendaProf = (memberIds: string[]) => {
+    const allSelected = memberIds.every((id) => selectedMemberIds.has(id));
+    setSelectedMemberIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) memberIds.forEach((id) => next.delete(id));
+      else memberIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
   const parseRecipients = (text: string) => {
     return text
       .split(/[\n,;]+/)
