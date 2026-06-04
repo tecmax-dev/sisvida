@@ -135,7 +135,7 @@ serve(async (req) => {
 
       results.push({ name: t.name, updated: true });
       // pequeno delay para evitar rate limit
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 150));
     }
 
     return new Response(
