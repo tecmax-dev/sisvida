@@ -589,6 +589,99 @@ export default function UnionSmsPage() {
             </Card>
           ))}
         </TabsContent>
+
+        <TabsContent value="agendados" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Associados agendados por profissional</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs">De</Label>
+                  <Input type="date" value={agendaFrom} onChange={(e) => setAgendaFrom(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Até</Label>
+                  <Input type="date" value={agendaTo} onChange={(e) => setAgendaTo(e.target.value)} />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={loadAgendados} disabled={agendaLoading} className="w-full">
+                    {agendaLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    Sincronizar
+                  </Button>
+                </div>
+              </div>
+
+              {agendaTotalAppointments > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {agendaTotalAppointments} agendamento(s) · {Object.keys(agendaByProf).length} profissional(is) ·{" "}
+                  {selectedMemberIds.size} associado(s) selecionado(s)
+                </p>
+              )}
+
+              {Object.keys(agendaByProf).length > 0 && (
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={applyMemberSelection} disabled={selectedMemberIds.size === 0}>
+                    Adicionar selecionados aos destinatários
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedMemberIds(new Set())} disabled={selectedMemberIds.size === 0}>
+                    Limpar seleção
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {Object.entries(agendaByProf)
+            .sort(([, a], [, b]) => a.profName.localeCompare(b.profName))
+            .map(([profId, info]) => {
+              const allSelected = info.members.length > 0 && info.members.every((m) => selectedMemberIds.has(m.id));
+              return (
+                <Card key={profId}>
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm">
+                      {info.profName}{" "}
+                      <span className="text-xs text-muted-foreground font-normal">
+                        ({info.members.length} associado{info.members.length === 1 ? "" : "s"})
+                      </span>
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleAgendaProf(info.members.map((m) => m.id))}
+                    >
+                      {allSelected ? "Desmarcar todos" : "Selecionar todos"}
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="max-h-[280px]">
+                      <div className="divide-y">
+                        {info.members.map((m) => (
+                          <label key={m.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 cursor-pointer">
+                            <Checkbox
+                              checked={selectedMemberIds.has(m.id)}
+                              onCheckedChange={() => toggleMember(m.id)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{m.name}</p>
+                              <p className="text-xs text-muted-foreground">{m.phone} · CPF {m.cpf}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+          {!agendaLoading && Object.keys(agendaByProf).length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Clique em <strong>Sincronizar</strong> para carregar os associados com agendamentos no período.
+            </p>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
