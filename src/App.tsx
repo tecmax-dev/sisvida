@@ -531,6 +531,7 @@ function App() {
                   <Route path="whatsapp-templates" element={<WhatsAppTemplatesPage />} />
                   <Route path="whatsapp-status" element={<WhatsAppStatusPage />} />
                   <Route path="whatsapp-audit" element={<WhatsAppAuditPage />} />
+                  <Route path="meta-webhook-health" element={<MetaWebhookHealthPage />} />
                   <Route path="hero" element={<HeroSettingsPage />} />
                   <Route path="banners" element={<CarouselBannersPage />} />
                   <Route path="config" element={<GlobalConfigPage />} />
