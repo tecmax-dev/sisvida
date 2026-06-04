@@ -5413,18 +5413,47 @@ const updateData: Record<string, any> = {
                                 ? calculateProfessionalSlots(fullProfessional, group.appointments, selectedDate, slotBlocks.filter(b => b.block_date === toDateKey(selectedDate)))
                                 : [];
 
+                              const cancelledAppointments = showCancelledNoShow
+                                ? group.appointments
+                                    .filter((a) => a.status === 'cancelled')
+                                    .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                                : [];
+
+                              const renderCancelledSection = () =>
+                                cancelledAppointments.length > 0 ? (
+                                  <>
+                                    <div
+                                      key="cancelled-header"
+                                      className="px-3 py-1.5 text-xs font-semibold text-destructive bg-destructive/5 border-l-2 border-destructive/40"
+                                    >
+                                      Cancelados ({cancelledAppointments.length})
+                                    </div>
+                                    {cancelledAppointments.map((apt) => (
+                                      <DraggableAppointment key={`cancelled-${apt.id}`} appointment={apt}>
+                                        <AppointmentCard appointment={apt} />
+                                      </DraggableAppointment>
+                                    ))}
+                                  </>
+                                ) : null;
+
                               if (timeline.length === 0) {
                                 // fallback: mostrar só agendamentos existentes
-                                return [...group.appointments]
-                                  .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                                  .map((apt) => (
-                                    <DraggableAppointment key={apt.id} appointment={apt}>
-                                      <AppointmentCard appointment={apt} />
-                                    </DraggableAppointment>
-                                  ));
+                                return (
+                                  <>
+                                    {[...group.appointments]
+                                      .filter((a) => a.status !== 'cancelled')
+                                      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                                      .map((apt) => (
+                                        <DraggableAppointment key={apt.id} appointment={apt}>
+                                          <AppointmentCard appointment={apt} />
+                                        </DraggableAppointment>
+                                      ))}
+                                    {renderCancelledSection()}
+                                  </>
+                                );
                               }
 
-                              return timeline.map((slot, index) => {
+                              const timelineNodes = timeline.map((slot, index) => {
                                 try {
                                   // Slot ocupado: início do agendamento
                                   if (slot.type === 'booked' && slot.appointment) {
@@ -5552,6 +5581,13 @@ const updateData: Record<string, any> = {
                                   );
                                 }
                               });
+
+                              return (
+                                <>
+                                  {timelineNodes}
+                                  {renderCancelledSection()}
+                                </>
+                              );
                             })()}
                           </div>
                         </div>
