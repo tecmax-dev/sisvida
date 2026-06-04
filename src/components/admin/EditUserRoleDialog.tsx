@@ -59,6 +59,38 @@ interface Props {
   onSuccess?: () => void;
 }
 
+const safeText = (value: unknown, fallback = "-") => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return fallback;
+};
+
+const normalizeClinics = (clinics: unknown): UserClinic[] => {
+  if (!Array.isArray(clinics)) return [];
+  return clinics
+    .filter((clinic): clinic is Record<string, unknown> => !!clinic && typeof clinic === "object")
+    .map((clinic) => ({
+      clinic_id: safeText(clinic.clinic_id, ""),
+      clinic_name: safeText(clinic.clinic_name, "Clínica"),
+      clinic_slug: safeText(clinic.clinic_slug, ""),
+      role: safeText(clinic.role, "receptionist"),
+    }))
+    .filter((clinic) => clinic.clinic_id);
+};
+
+const normalizeGroups = (groups: unknown): AccessGroup[] => {
+  if (!Array.isArray(groups)) return [];
+  return groups
+    .filter((group): group is Record<string, unknown> => !!group && typeof group === "object")
+    .map((group) => ({
+      id: safeText(group.id, ""),
+      name: safeText(group.name, "Grupo de acesso"),
+      clinic_id: group.clinic_id === null ? null : safeText(group.clinic_id, ""),
+      module_type: group.module_type === null ? null : safeText(group.module_type, ""),
+    }))
+    .filter((group) => group.id);
+};
+
 export function EditUserRoleDialog({
   open,
   onOpenChange,
@@ -75,7 +107,7 @@ export function EditUserRoleDialog({
 
   useEffect(() => {
     if (!open || !user) return;
-    const clinics = user.clinics ?? [];
+    const clinics = normalizeClinics(user.clinics);
     const initial =
       defaultClinicId && clinics.find((c) => c.clinic_id === defaultClinicId)
         ? defaultClinicId
@@ -87,7 +119,7 @@ export function EditUserRoleDialog({
   useEffect(() => {
     if (!open || !user || !clinicId) return;
 
-    const current = (user.clinics ?? []).find((c) => c.clinic_id === clinicId);
+    const current = normalizeClinics(user.clinics).find((c) => c.clinic_id === clinicId);
     setRole(current?.role || "receptionist");
 
     const loadData = async () => {
@@ -110,8 +142,7 @@ export function EditUserRoleDialog({
           .eq("is_active", true)
           .or(`clinic_id.is.null,clinic_id.eq.${clinicId}`)
           .order("name")) ?? { data: [] };
-        const ag = agRes.data;
-        setGroups(ag || []);
+        setGroups(normalizeGroups(agRes.data));
       } catch (e) {
         console.error(e);
       } finally {
@@ -150,8 +181,10 @@ export function EditUserRoleDialog({
 
   if (!user) return null;
 
-  const clinics = user.clinics ?? [];
+  const clinics = normalizeClinics(user.clinics);
   const selectedClinic = clinics.find((c) => c.clinic_id === clinicId);
+  const userName = safeText(user.name, "Usuário");
+  const userEmail = safeText(user.email, "Sem e-mail");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +195,7 @@ export function EditUserRoleDialog({
             Alterar Tipo de Acesso
           </DialogTitle>
           <DialogDescription>
-            {user.name} — {user.email}
+            {userName} — {userEmail}
           </DialogDescription>
         </DialogHeader>
 
