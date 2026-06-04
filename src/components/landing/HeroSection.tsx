@@ -39,7 +39,9 @@ const clients = [
 ];
 
 export function HeroSection() {
-  const { data: settings, isLoading } = useHeroSettings();
+  const heroSettingsQuery = useHeroSettings();
+  const settings = heroSettingsQuery?.data ?? null;
+  const isLoading = heroSettingsQuery?.isLoading ?? false;
   const typedWord = useTypewriter(typewriterWords);
 
   const title = settings?.title || "Gestão sindical";
