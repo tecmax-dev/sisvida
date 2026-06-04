@@ -717,6 +717,60 @@ serve(async (req) => {
 
     // Entry prompt (when called with empty message)
     if (!msg) {
+      const autoPatient = await tryAutoIdentifyByPhone(supabase, clinic_id, phone);
+      if (autoPatient) {
+        if (autoPatient.is_active === false) {
+          return new Response(
+            JSON.stringify({
+              response: "Seu cadastro está inativo. Por favor, procure o atendimento do sindicato para regularizar.",
+              state: session.state,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const today = new Date().toISOString().split("T")[0];
+        if (autoPatient.no_show_blocked_until && autoPatient.no_show_blocked_until >= today && !autoPatient.no_show_unblocked_at) {
+          const blockDate = new Date(autoPatient.no_show_blocked_until + "T00:00:00");
+          return new Response(
+            JSON.stringify({
+              response: `Seu cadastro está bloqueado para novos agendamentos até ${blockDate.toLocaleDateString("pt-BR")} devido a não comparecimento anterior.`,
+              state: session.state,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: cardData } = await supabase.rpc("is_patient_card_valid", {
+          p_patient_id: autoPatient.id,
+          p_clinic_id: clinic_id,
+        });
+        const cardRow = Array.isArray(cardData) ? cardData[0] : cardData;
+        if (cardRow?.card_number && cardRow.is_valid === false) {
+          return new Response(
+            JSON.stringify({
+              response: `Sua carteirinha (${cardRow.card_number}) está vencida. Por favor, renove para poder agendar.`,
+              state: session.state,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        await updateSession(supabase, session.id, {
+          state: "CONFIRM_IDENTITY",
+          patient_id: autoPatient.id,
+          patient_name: autoPatient.name,
+        });
+
+        return new Response(
+          JSON.stringify({
+            response: `Encontrei seu cadastro pelo telefone: *${autoPatient.name}*\n\n1 - Confirmar\n2 - Não sou eu`,
+            state: "CONFIRM_IDENTITY",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({
           response: "Para agendar sua consulta, informe seu CPF ou número da carteirinha (apenas números):",
