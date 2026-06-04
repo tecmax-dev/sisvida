@@ -372,6 +372,7 @@ export default function UnionSmsPage() {
       <Tabs defaultValue="send">
         <TabsList>
           <TabsTrigger value="send">Envio</TabsTrigger>
+          <TabsTrigger value="agendados">Agendados</TabsTrigger>
           <TabsTrigger value="templates">Modelos ({templates.length})</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
