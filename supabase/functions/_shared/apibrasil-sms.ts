@@ -1,12 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// APIBrasil SMS Service
-// Documentação de referência (cURL):
-//   POST https://gateway.apibrasil.io/api/v2/sms/send
-//   Headers: Authorization: Bearer <token>, Content-Type: application/json
-//   Body:    { "number": "5511999999999", "message": "..." }
+// Comtele SMS Service
+// Documentação: https://promo.comtele.com.br/api-rest
+//   POST https://sms.comtele.com.br/api/v2/send
+//   Headers: auth-key: <COMTELE_API_KEY>, Content-Type: application/json
+//   Body:    { "Receivers": "5511999999999", "Content": "..." , "Sender": "..." }
 //
-// Autenticação: APENAS Bearer token (conforme suporte APIBrasil).
-// Token via env: APIBRASIL_BEARER_TOKEN.
+// Mantemos os MESMOS nomes/símbolos exportados (ApiBrasilSmsService, etc.)
+// para evitar churn nos chamadores. Apenas o provedor mudou.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface SendSmsRequest {
@@ -33,35 +33,39 @@ export type SendSmsResult =
   | { ok: false; error: ApiBrasilError };
 
 export interface ApiBrasilSmsConfig {
-  bearerToken: string;
-  deviceToken?: string;   // Header DeviceToken — exigido pelo gateway APIBrasil
-  baseUrl?: string;       // default https://gateway.apibrasil.io/api/v2
+  bearerToken: string;    // Comtele auth-key (mantido o nome do campo)
+  deviceToken?: string;   // não usado pela Comtele; mantido por compatibilidade
+  baseUrl?: string;       // default https://sms.comtele.com.br/api/v2
+  sender?: string;        // remetente opcional (ex.: nome curto)
   timeoutMs?: number;     // default 20000
   fetchImpl?: typeof fetch;
 }
 
 export class ApiBrasilSmsService {
-  private readonly bearerToken: string;
-  private readonly deviceToken: string;
+  private readonly authKey: string;
   private readonly baseUrl: string;
+  private readonly sender: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
 
   constructor(cfg: ApiBrasilSmsConfig) {
     if (!cfg.bearerToken) {
-      throw new Error("APIBRASIL_BEARER_TOKEN obrigatório");
+      throw new Error("COMTELE_API_KEY obrigatório");
     }
-    this.bearerToken = cfg.bearerToken;
-    this.deviceToken = cfg.deviceToken ?? "";
-    this.baseUrl = (cfg.baseUrl ?? "https://gateway.apibrasil.io/api/v2").replace(/\/+$/, "");
+    this.authKey = cfg.bearerToken;
+    this.baseUrl = (cfg.baseUrl ?? "https://sms.comtele.com.br/api/v2").replace(/\/+$/, "");
+    this.sender = cfg.sender ?? "";
     this.timeoutMs = cfg.timeoutMs ?? 20_000;
     this.fetchImpl = cfg.fetchImpl ?? fetch;
   }
 
   static fromEnv(overrides: Partial<ApiBrasilSmsConfig> = {}): ApiBrasilSmsService {
     return new ApiBrasilSmsService({
-      bearerToken: Deno.env.get("APIBRASIL_BEARER_TOKEN") ?? "",
-      deviceToken: Deno.env.get("APIBRASIL_SMS_DEVICE_TOKEN") ?? "",
+      bearerToken:
+        Deno.env.get("COMTELE_API_KEY") ??
+        Deno.env.get("COMTELE_AUTH_KEY") ??
+        "",
+      sender: Deno.env.get("COMTELE_SENDER") ?? "",
       ...overrides,
     });
   }
@@ -71,15 +75,20 @@ export class ApiBrasilSmsService {
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const res = await this.fetchImpl(`${this.baseUrl}/sms/send`, {
+      const body: Record<string, unknown> = {
+        Receivers: payload.number,
+        Content: payload.message,
+      };
+      if (this.sender) body.Sender = this.sender;
+
+      const res = await this.fetchImpl(`${this.baseUrl}/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          Authorization: `Bearer ${this.bearerToken}`,
-          ...(this.deviceToken ? { DeviceToken: this.deviceToken } : {}),
+          "auth-key": this.authKey,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
 
@@ -87,22 +96,23 @@ export class ApiBrasilSmsService {
       let parsed: unknown = null;
       try { parsed = raw ? JSON.parse(raw) : null; } catch { parsed = raw; }
 
-      const body = (parsed && typeof parsed === "object") ? parsed as Record<string, unknown> : {};
-      const isErrorFlag = body.error === true;
+      const respBody = (parsed && typeof parsed === "object") ? parsed as Record<string, unknown> : {};
+      // Comtele retorna { Success: true/false, Message: "...", Code: number }
+      const success = respBody.Success === true;
 
-      if (!res.ok || isErrorFlag) {
+      if (!res.ok || !success) {
         return {
           ok: false,
           error: {
             error: true,
             status: res.status,
-            message: String(body.message ?? body.error_message ?? raw ?? `HTTP ${res.status}`),
-            error_code: body.error_code as string | number | undefined,
+            message: String(respBody.Message ?? respBody.message ?? raw ?? `HTTP ${res.status}`),
+            error_code: (respBody.Code ?? respBody.code) as string | number | undefined,
           },
         };
       }
 
-      return { ok: true, status: res.status, data: { error: false, ...body } };
+      return { ok: true, status: res.status, data: { error: false, ...respBody } };
     } catch (err) {
       const aborted = (err as Error).name === "AbortError";
       return {
@@ -140,7 +150,7 @@ export function buildBrazilianPhoneCandidates(rawPhone: string): string[] {
 
 export function sanitizeApiBrasilError(message: string | null | undefined): string {
   if (!message) return "Não foi possível enviar SMS";
-  if (/device\s*token|devicetoken|dispositivo/i.test(message)) {
+  if (/auth[-\s]?key|unauthorized|credencial/i.test(message)) {
     return "Não foi possível enviar SMS no momento. Tente pelo WhatsApp.";
   }
   return message;
