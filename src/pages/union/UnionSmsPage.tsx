@@ -50,6 +50,10 @@ export default function UnionSmsPage() {
   const [customBody, setCustomBody] = useState("");
   const [recipients, setRecipients] = useState("");
 
+  // Valores globais para variáveis {1}, {2}, ... e flag de auto-preencher com nome do associado
+  const [varValues, setVarValues] = useState<Record<string, string>>({});
+  const [varUseName, setVarUseName] = useState<Record<string, boolean>>({ "1": true });
+
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
@@ -177,8 +181,55 @@ export default function UnionSmsPage() {
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
   const previewBody = selectedTemplate?.body ?? customBody;
 
+  // Detecta índices de variáveis no texto (ex.: {1}, {2}) e ordena
+  const varIndexes = Array.from(
+    new Set((previewBody.match(/\{(\d+)\}/g) ?? []).map((m) => m.replace(/\D/g, ""))),
+  ).sort((a, b) => Number(a) - Number(b));
+
+  const renderPreview = (sampleName = "João da Silva") => {
+    return previewBody.replace(/\{(\d+)\}/g, (_m, idx) => {
+      if (varUseName[idx]) return sampleName;
+      return varValues[idx] ?? `{${idx}}`;
+    });
+  };
+
   const handleSend = async () => {
-    const list = parseRecipients(recipients);
+    // Destinatários a partir de associados selecionados (com nome para {1})
+    const selectedMembers = members.filter((m) => selectedMemberIds.has(m.id));
+    const memberPhones = new Set(
+      selectedMembers
+        .map((m) => (m.phone ?? "").replace(/\D/g, ""))
+        .filter((p) => p.length >= 10),
+    );
+
+    const memberRecipients = selectedMembers
+      .map((m) => {
+        const phone = (m.phone ?? "").replace(/\D/g, "");
+        if (phone.length < 10) return null;
+        const vars: Record<string, string> = {};
+        for (const idx of varIndexes) {
+          if (varUseName[idx]) vars[idx] = m.name;
+          else if (varValues[idx]) vars[idx] = varValues[idx];
+        }
+        return { phone, vars, name: m.name };
+      })
+      .filter(Boolean) as Array<{ phone: string; vars: Record<string, string>; name: string }>;
+
+    // Telefones manuais que NÃO estão entre os associados selecionados (evita duplicado)
+    const manualPhones = parseRecipients(recipients)
+      .map((r) => r.phone.replace(/\D/g, ""))
+      .filter((p) => p.length >= 10 && !memberPhones.has(p));
+
+    const manualRecipients = manualPhones.map((phone) => {
+      const vars: Record<string, string> = {};
+      for (const idx of varIndexes) {
+        if (!varUseName[idx] && varValues[idx]) vars[idx] = varValues[idx];
+      }
+      return { phone, vars };
+    });
+
+    const list = [...memberRecipients, ...manualRecipients];
+
     if (list.length === 0) {
       toast.error("Informe ao menos um número de telefone");
       return;
@@ -186,6 +237,20 @@ export default function UnionSmsPage() {
     if (!selectedTemplateId && !customBody.trim()) {
       toast.error("Selecione um modelo ou digite o texto do SMS");
       return;
+    }
+    // Validar variáveis sem valor (exceto as marcadas como nome do associado em envio só-manual)
+    const missingVars = varIndexes.filter((idx) => {
+      if (varUseName[idx]) {
+        // se houver destinatários manuais e não tem nome, falha
+        return manualRecipients.length > 0 && !varValues[idx];
+      }
+      return !varValues[idx];
+    });
+    if (missingVars.length > 0) {
+      const ok = confirm(
+        `As variáveis {${missingVars.join("}, {")}} ficarão sem valor para parte dos destinatários. Continuar?`,
+      );
+      if (!ok) return;
     }
     if (!confirm(`Enviar SMS para ${list.length} destinatário(s)?`)) return;
 
@@ -266,6 +331,39 @@ export default function UnionSmsPage() {
                 </div>
               )}
 
+              {varIndexes.length > 0 && (
+                <div className="space-y-2 border rounded-md p-3 bg-muted/30">
+                  <Label className="text-sm">Variáveis do modelo</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Defina o valor de cada variável. Marque "Usar nome do associado" para preencher automaticamente por destinatário.
+                  </p>
+                  {varIndexes.map((idx) => (
+                    <div key={idx} className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-mono bg-background border rounded px-2 py-1">{`{${idx}}`}</span>
+                      <Input
+                        className="flex-1 min-w-[180px]"
+                        placeholder={varUseName[idx] ? "(nome do associado)" : "Valor fixo"}
+                        value={varValues[idx] ?? ""}
+                        disabled={!!varUseName[idx]}
+                        onChange={(e) => setVarValues((p) => ({ ...p, [idx]: e.target.value }))}
+                      />
+                      <label className="flex items-center gap-1 text-xs">
+                        <Checkbox
+                          checked={!!varUseName[idx]}
+                          onCheckedChange={(v) =>
+                            setVarUseName((p) => ({ ...p, [idx]: !!v }))
+                          }
+                        />
+                        Nome do associado
+                      </label>
+                    </div>
+                  ))}
+                  <div className="text-xs text-muted-foreground pt-1">
+                    <span className="font-medium">Prévia:</span> {renderPreview()}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Destinatários (um por linha, ou separados por vírgula)</Label>
                 <div className="flex gap-2">
@@ -284,6 +382,11 @@ export default function UnionSmsPage() {
                     </Button>
                   )}
                 </div>
+                {selectedMemberIds.size > 0 && (
+                  <p className="text-xs text-primary">
+                    {selectedMemberIds.size} associado(s) selecionado(s) — o nome será injetado automaticamente nas variáveis marcadas.
+                  </p>
+                )}
                 <Textarea
                   rows={5}
                   value={recipients}
@@ -291,7 +394,7 @@ export default function UnionSmsPage() {
                   placeholder="73999990000&#10;11988887777"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {parseRecipients(recipients).length} número(s) detectado(s)
+                  {parseRecipients(recipients).length} número(s) manual(is) detectado(s)
                 </p>
               </div>
 
