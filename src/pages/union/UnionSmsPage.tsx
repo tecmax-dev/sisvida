@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,12 @@ interface MemberRow {
 }
 
 export default function UnionSmsPage() {
+  const { currentClinic, userRoles } = useAuth();
+  const resolvedClinicId = useMemo(() => {
+    const sindicatoRole = userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID);
+    return sindicatoRole?.clinic_id ?? currentClinic?.id ?? SINDICATO_CLINIC_ID;
+  }, [currentClinic?.id, userRoles]);
+
   const [templates, setTemplates] = useState<SmsTemplate[]>([]);
   const [logs, setLogs] = useState<SmsLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,27 +94,37 @@ export default function UnionSmsPage() {
     loadAll();
   }, []);
 
+  const onlyDigits = (value?: string | null) => (value ?? "").replace(/\D/g, "");
+
+  const fetchSmsMembers = async (): Promise<MemberRow[]> => {
+    const all: MemberRow[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("id, name, phone, cpf, is_active")
+        .eq("clinic_id", resolvedClinicId)
+        .eq("is_union_member", true)
+        .eq("is_active", true)
+        .not("phone", "is", null)
+        .not("cpf", "is", null)
+        .order("name", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      all.push(...((data as any[]) as MemberRow[]));
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    return all.filter((m) => onlyDigits(m.phone).length >= 10 && onlyDigits(m.cpf).length >= 11);
+  };
+
   const loadMembers = async () => {
     setMembersLoading(true);
     try {
-      const all: MemberRow[] = [];
-      let from = 0;
-      const pageSize = 1000;
-      while (true) {
-        const { data, error } = await supabase
-          .from("members")
-          .select("id, name, phone, cpf, is_active")
-          .eq("is_active", true)
-          .not("phone", "is", null)
-          .order("name", { ascending: true })
-          .range(from, from + pageSize - 1);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        all.push(...(data as MemberRow[]));
-        if (data.length < pageSize) break;
-        from += pageSize;
-      }
-      const valid = all.filter((m) => (m.phone ?? "").replace(/\D/g, "").length >= 10);
+      const valid = await fetchSmsMembers();
       setMembers(valid);
       toast.success(`${valid.length} associados com telefone carregados`);
     } catch (err: any) {
@@ -124,8 +142,8 @@ export default function UnionSmsPage() {
   const filteredMembers = members.filter((m) => {
     if (!memberSearch.trim()) return true;
     const q = memberSearch.toLowerCase();
-    const cpfDigits = m.cpf.replace(/\D/g, "");
-    const phoneDigits = (m.phone ?? "").replace(/\D/g, "");
+    const cpfDigits = onlyDigits(m.cpf);
+    const phoneDigits = onlyDigits(m.phone);
     return (
       m.name.toLowerCase().includes(q) ||
       cpfDigits.includes(q.replace(/\D/g, "")) ||
@@ -155,7 +173,7 @@ export default function UnionSmsPage() {
   const applyMemberSelection = () => {
     const phones = members
       .filter((m) => selectedMemberIds.has(m.id))
-      .map((m) => (m.phone ?? "").replace(/\D/g, ""))
+      .map((m) => onlyDigits(m.phone))
       .filter((p) => p.length >= 10);
     const existing = recipients
       .split(/[\n,;]+/)
@@ -185,13 +203,14 @@ export default function UnionSmsPage() {
   const loadAgendados = async () => {
     setAgendaLoading(true);
     try {
-      if (members.length === 0) await loadMembers();
+      if (!agendaFrom || !agendaTo) {
+        toast.error("Informe o período para sincronizar os agendados");
+        return;
+      }
 
-      // mapa cpfDigits -> member (usa snapshot atualizado)
-      const currentMembers = members.length === 0
-        ? (await supabase.from("members").select("id, name, phone, cpf, is_active").eq("is_active", true).not("phone", "is", null)).data as MemberRow[] | null ?? []
-        : members;
-      const cpfMap = new Map(currentMembers.map((m) => [m.cpf.replace(/\D/g, ""), m]));
+      // mapa cpfDigits -> associado ativo (a base oficial do sindicato é patients.is_union_member)
+      const currentMembers = members.length === 0 ? await fetchSmsMembers() : members;
+      const cpfMap = new Map(currentMembers.map((m) => [onlyDigits(m.cpf), m]));
 
       const all: any[] = [];
       let fromIdx = 0;
@@ -199,10 +218,13 @@ export default function UnionSmsPage() {
       while (true) {
         const { data, error } = await supabase
           .from("appointments")
-          .select("id, appointment_date, professional_id, status, patients!inner(cpf,name), professionals!inner(name)")
+          .select("id, appointment_date, professional_id, status, patient_id, patients!inner(id, cpf, name, phone, is_active, is_union_member), professionals!inner(name)")
+          .eq("clinic_id", resolvedClinicId)
           .gte("appointment_date", agendaFrom)
           .lte("appointment_date", agendaTo)
           .neq("status", "cancelled")
+          .eq("patients.is_union_member", true)
+          .eq("patients.is_active", true)
           .order("appointment_date", { ascending: true })
           .order("id", { ascending: true })
           .range(fromIdx, fromIdx + pageSize - 1);
@@ -215,12 +237,20 @@ export default function UnionSmsPage() {
 
       const byProf: Record<string, { profName: string; members: Map<string, MemberRow> }> = {};
       for (const ap of all) {
-        const cpfDigits = ((ap.patients?.cpf as string) ?? "").replace(/\D/g, "");
-        const member = cpfMap.get(cpfDigits);
-        if (!member) continue;
+        const patient = Array.isArray(ap.patients) ? ap.patients[0] : ap.patients;
+        const professional = Array.isArray(ap.professionals) ? ap.professionals[0] : ap.professionals;
+        const cpfDigits = onlyDigits(patient?.cpf as string | null);
+        const member = cpfMap.get(cpfDigits) ?? {
+          id: patient?.id as string,
+          name: (patient?.name as string) ?? "Associado sem nome",
+          phone: (patient?.phone as string | null) ?? null,
+          cpf: (patient?.cpf as string) ?? "",
+          is_active: Boolean(patient?.is_active),
+        };
+        if (!member.id || onlyDigits(member.phone).length < 10) continue;
         const profId = ap.professional_id as string;
         if (!byProf[profId]) {
-          byProf[profId] = { profName: (ap.professionals?.name as string) ?? "—", members: new Map() };
+          byProf[profId] = { profName: (professional?.name as string) ?? "—", members: new Map() };
         }
         byProf[profId].members.set(member.id, member);
       }
@@ -234,6 +264,12 @@ export default function UnionSmsPage() {
       }
       setAgendaByProf(result);
       setAgendaTotalAppointments(all.length);
+      setMembers((prev) => {
+        const merged = new Map(prev.map((m) => [m.id, m]));
+        currentMembers.forEach((m) => merged.set(m.id, m));
+        Object.values(result).forEach((group) => group.members.forEach((m) => merged.set(m.id, m)));
+        return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+      });
       toast.success(`${all.length} agendamento(s) — ${Object.keys(result).length} profissional(is)`);
     } catch (err: any) {
       toast.error(`Erro ao carregar agendados: ${err.message ?? err}`);
@@ -280,13 +316,13 @@ export default function UnionSmsPage() {
     const selectedMembers = members.filter((m) => selectedMemberIds.has(m.id));
     const memberPhones = new Set(
       selectedMembers
-        .map((m) => (m.phone ?? "").replace(/\D/g, ""))
+        .map((m) => onlyDigits(m.phone))
         .filter((p) => p.length >= 10),
     );
 
     const memberRecipients = selectedMembers
       .map((m) => {
-        const phone = (m.phone ?? "").replace(/\D/g, "");
+        const phone = onlyDigits(m.phone);
         if (phone.length < 10) return null;
         const vars: Record<string, string> = {};
         for (const idx of varIndexes) {
@@ -299,7 +335,7 @@ export default function UnionSmsPage() {
 
     // Telefones manuais que NÃO estão entre os associados selecionados (evita duplicado)
     const manualPhones = parseRecipients(recipients)
-      .map((r) => r.phone.replace(/\D/g, ""))
+      .map((r) => onlyDigits(r.phone))
       .filter((p) => p.length >= 10 && !memberPhones.has(p));
 
     const manualRecipients = manualPhones.map((phone) => {
