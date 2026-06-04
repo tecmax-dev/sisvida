@@ -88,6 +88,7 @@ const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const WhatsAppTemplatesPage = lazy(() => import("./pages/admin/WhatsAppTemplatesPage"));
 const WhatsAppStatusPage = lazy(() => import("./pages/admin/WhatsAppStatusPage"));
 const WhatsAppAuditPage = lazy(() => import("./pages/admin/WhatsAppAuditPage"));
+const MetaWebhookHealthPage = lazy(() => import("./pages/admin/MetaWebhookHealthPage"));
 
 
 // Mobile App Pages - lazy load
