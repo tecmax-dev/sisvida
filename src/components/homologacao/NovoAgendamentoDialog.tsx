@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,8 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -26,8 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, AlertCircle, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AlertCircle } from "lucide-react";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import {
   useHomologacaoProfessionalsWithSchedules,
   filterProfessionalsByDayOfWeek,
@@ -86,7 +84,7 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
   }, [allProfessionals, formData.appointment_date]);
 
   // Reset professional when date changes and they don't work that day
-  useMemo(() => {
+  useEffect(() => {
     if (formData.professional_id) {
       const stillAvailable = professionalsForSelectedDay.some(
         (p) => p.id === formData.professional_id
