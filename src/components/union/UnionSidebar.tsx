@@ -227,6 +227,7 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/avisos-popup", icon: Bell, label: "Avisos Pop-up", permission: "union_module_access" },
       { href: "/union/email-marketing", icon: Mail, label: "E-mail em Massa", permission: "union_module_access" },
       { href: "/union/email-inbox", icon: Inbox, label: "Caixa de Entrada", permission: "union_module_access" },
+      { href: "/union/sms", icon: MessageSquare, label: "SMS (Comtele)", permission: "union_module_access" },
     ]
   },
   {

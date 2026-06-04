@@ -10693,6 +10693,83 @@ export type Database = {
           },
         ]
       }
+      sms_send_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          provider_response: Json | null
+          recipient: string
+          rendered_body: string
+          sent_by: string | null
+          status: string
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider_response?: Json | null
+          recipient: string
+          rendered_body: string
+          sent_by?: string | null
+          status: string
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider_response?: Json | null
+          recipient?: string
+          rendered_body?: string
+          sent_by?: string | null
+          status?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_send_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "sms_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_templates: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          meta_template_name: string | null
+          name: string
+          status: string
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          meta_template_name?: string | null
+          name: string
+          status?: string
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          meta_template_name?: string | null
+          name?: string
+          status?: string
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: []
+      }
       smtp_settings: {
         Row: {
           created_at: string | null
