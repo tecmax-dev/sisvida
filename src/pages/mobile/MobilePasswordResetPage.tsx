@@ -328,6 +328,18 @@ export default function MobilePasswordResetPage() {
               </p>
             </div>
 
+            {!smsAllowed && (
+              <Alert variant="destructive" className="mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Limite de SMS atingido</AlertTitle>
+                <AlertDescription>
+                  Você já recebeu 2 códigos por SMS nos últimos 15 dias. O envio por
+                  SMS foi temporariamente desativado — utilize <strong>WhatsApp</strong>
+                  {" "}ou <strong>e-mail</strong> abaixo para receber seu código.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {mode === "cpf" ? (
               <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
