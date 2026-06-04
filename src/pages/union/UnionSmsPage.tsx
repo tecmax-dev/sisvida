@@ -305,7 +305,9 @@ export default function UnionSmsPage() {
     const manualRecipients = manualPhones.map((phone) => {
       const vars: Record<string, string> = {};
       for (const idx of varIndexes) {
-        if (!varUseName[idx] && varValues[idx]) vars[idx] = varValues[idx];
+        // Para destinatários manuais (sem associado), usa o valor digitado mesmo se
+        // a variável estiver marcada como "usar nome do associado"
+        if (varValues[idx]) vars[idx] = varValues[idx];
       }
       return { phone, vars };
     });
