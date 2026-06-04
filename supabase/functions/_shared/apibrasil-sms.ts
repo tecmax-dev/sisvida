@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Comtele SMS Service
-// Documentação: https://promo.comtele.com.br/api-rest
+// Documentação: https://docs.comtele.com.br/
 //   POST https://sms.comtele.com.br/api/v2/send
 //   Headers: auth-key: <COMTELE_API_KEY>, Content-Type: application/json
 //   Body:    { "Receivers": "5511999999999", "Content": "..." , "Sender": "..." }
@@ -52,7 +52,7 @@ export class ApiBrasilSmsService {
     if (!cfg.bearerToken) {
       throw new Error("COMTELE_API_KEY obrigatório");
     }
-    this.authKey = cfg.bearerToken;
+    this.authKey = cfg.bearerToken.trim();
     this.baseUrl = (cfg.baseUrl ?? "https://sms.comtele.com.br/api/v2").replace(/\/+$/, "");
     this.sender = cfg.sender ?? "";
     this.timeoutMs = cfg.timeoutMs ?? 20_000;
@@ -62,8 +62,9 @@ export class ApiBrasilSmsService {
   static fromEnv(overrides: Partial<ApiBrasilSmsConfig> = {}): ApiBrasilSmsService {
     return new ApiBrasilSmsService({
       bearerToken:
-        Deno.env.get("COMTELE_API_KEY") ??
-        Deno.env.get("COMTELE_AUTH_KEY") ??
+        Deno.env.get("COMTELE_API_KEY")?.trim() ||
+        Deno.env.get("COMTELE_AUTH_KEY")?.trim() ||
+        Deno.env.get("APIBRASIL_BEARER_TOKEN")?.trim() ||
         "",
       sender: Deno.env.get("COMTELE_SENDER") ?? "",
       ...overrides,
@@ -98,7 +99,7 @@ export class ApiBrasilSmsService {
 
       const respBody = (parsed && typeof parsed === "object") ? parsed as Record<string, unknown> : {};
       // Comtele retorna { Success: true/false, Message: "...", Code: number }
-      const success = respBody.Success === true;
+      const success = respBody.Success === true || respBody.success === true;
 
       if (!res.ok || !success) {
         return {
@@ -150,8 +151,8 @@ export function buildBrazilianPhoneCandidates(rawPhone: string): string[] {
 
 export function sanitizeApiBrasilError(message: string | null | undefined): string {
   if (!message) return "Não foi possível enviar SMS";
-  if (/auth[-\s]?key|unauthorized|credencial/i.test(message)) {
-    return "Não foi possível enviar SMS no momento. Tente pelo WhatsApp.";
+  if (/auth[-\s]?key|unauthorized|credencial|chave de acesso|inv[aá]lid/i.test(message)) {
+    return "Não foi possível enviar SMS: chave Comtele inválida ou sem permissão.";
   }
   return message;
 }
