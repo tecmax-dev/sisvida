@@ -1,6 +1,9 @@
 [functions.meta-templates-watch]
 verify_jwt = false
 
+[functions.meta-fix-app-urls]
+verify_jwt = false
+
 [functions.meta-register-templates]
 verify_jwt = false
 project_id = "czmnkrurkzuerrcjzbkp"
