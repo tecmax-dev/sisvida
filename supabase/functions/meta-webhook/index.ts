@@ -1274,7 +1274,7 @@ serve(async (req) => {
           isBookingButton,
         });
 
-        const messageToForward = isAgendarConsultaTrigger && !activeBookingSession
+        const messageToForward = isAgendarConsultaTrigger
           ? ""
           : isBookingButton
             ? extractedButtonId!.replace(/^book_/, "")
