@@ -76,11 +76,11 @@ async function sendResetCodeBySms(params: {
   for (const number of candidates) {
     const result = await sms.send({ number, message });
     if (result.ok) {
-      console.log(`SMS de reset enviado via API Brasil para ${number}`);
+      console.log(`SMS de reset enviado via Comtele para ${number}`);
       return { success: true, provider: result.data };
     }
     lastError = result.error.message;
-    console.warn("API Brasil SMS attempt failed:", { number, error: result.error });
+    console.warn("Comtele SMS attempt failed:", { number, error: result.error });
   }
 
   return { success: false, error: sanitizeApiBrasilError(lastError) };
