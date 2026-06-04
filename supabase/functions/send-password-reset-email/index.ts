@@ -285,6 +285,27 @@ serve(async (req: Request): Promise<Response> => {
     const cpfInput: string | undefined = body.cpf;
     const channel: string = body.channel || "email";
     const checkOnly: boolean = body.checkOnly === true;
+    const checkSmsLimit: boolean = body.checkSmsLimit === true;
+
+    const SMS_LIMIT_WINDOW_DAYS = 15;
+    const SMS_LIMIT_MAX = 2;
+    const SMS_LIMIT_ERROR =
+      `Limite de ${SMS_LIMIT_MAX} envios de SMS atingido nos últimos ${SMS_LIMIT_WINDOW_DAYS} dias. Use WhatsApp ou e-mail.`;
+
+    const countRecentSmsResets = async (patientId: string): Promise<number> => {
+      const since = new Date(Date.now() - SMS_LIMIT_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      const { count, error } = await supabase
+        .from("patient_password_resets")
+        .select("id", { count: "exact", head: true })
+        .eq("patient_id", patientId)
+        .eq("channel", "sms")
+        .gte("created_at", since);
+      if (error) {
+        console.error("Error counting recent SMS resets:", error);
+        return 0;
+      }
+      return count ?? 0;
+    };
 
     // ─── CPF-only entrypoint (PWA /sindicato): resolve CPF → email and force SMS ───
     if (cpfInput && !email) {
@@ -297,7 +318,7 @@ serve(async (req: Request): Promise<Response> => {
       }
       const { data: byCpf } = await supabase
         .from("patients")
-        .select("email, is_active")
+        .select("id, email, is_active")
         .eq("cpf", cpfDigits)
         .eq("is_active", true)
         .order("updated_at", { ascending: false })
@@ -306,6 +327,13 @@ serve(async (req: Request): Promise<Response> => {
 
       // Always respond generically when CPF doesn't match an active patient
       if (!byCpf?.email) {
+        if (checkSmsLimit) {
+          // Generic response — pretend SMS still allowed to avoid CPF enumeration
+          return new Response(
+            JSON.stringify({ smsAllowed: true, remaining: SMS_LIMIT_MAX }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         return new Response(
           JSON.stringify({
             success: true,
@@ -315,6 +343,18 @@ serve(async (req: Request): Promise<Response> => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      if (checkSmsLimit && byCpf?.id) {
+        const used = await countRecentSmsResets(byCpf.id);
+        return new Response(
+          JSON.stringify({
+            smsAllowed: used < SMS_LIMIT_MAX,
+            remaining: Math.max(0, SMS_LIMIT_MAX - used),
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       email = byCpf.email;
     }
 
@@ -353,14 +393,47 @@ serve(async (req: Request): Promise<Response> => {
         ? patient.phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, "+$1 ($2) *****-$4")
         : null;
 
+      const smsUsed = await countRecentSmsResets(patient.id);
+      const smsAllowed = smsUsed < SMS_LIMIT_MAX;
+
       return new Response(
         JSON.stringify({
           hasEmail: !!patient.email,
           hasPhone: !!patient.phone,
           maskedPhone,
+          smsAllowed,
+          smsRemaining: Math.max(0, SMS_LIMIT_MAX - smsUsed),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    if (checkSmsLimit) {
+      if (!patient) {
+        return new Response(
+          JSON.stringify({ smsAllowed: true, remaining: SMS_LIMIT_MAX }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const used = await countRecentSmsResets(patient.id);
+      return new Response(
+        JSON.stringify({
+          smsAllowed: used < SMS_LIMIT_MAX,
+          remaining: Math.max(0, SMS_LIMIT_MAX - used),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Enforce SMS rate-limit BEFORE creating a token
+    if (channel === "sms" && patient?.id) {
+      const used = await countRecentSmsResets(patient.id);
+      if (used >= SMS_LIMIT_MAX) {
+        return new Response(
+          JSON.stringify({ error: SMS_LIMIT_ERROR, code: "sms_limit_reached" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Create reset token via RPC
@@ -402,6 +475,17 @@ serve(async (req: Request): Promise<Response> => {
         .eq("patient_id", patient.id)
         .eq("token", token)
         .is("used_at", null);
+    }
+
+    // Record which channel will deliver this token (for SMS rate-limiting)
+    if (patient?.id) {
+      const recordedChannel =
+        channel === "sms" ? "sms" : channel === "whatsapp" ? "whatsapp" : "email";
+      await supabase
+        .from("patient_password_resets")
+        .update({ channel: recordedChannel })
+        .eq("patient_id", patient.id)
+        .eq("token", token);
     }
 
     // ─── SEND VIA WHATSAPP ───
