@@ -81,6 +81,7 @@ serve(async (req) => {
     const url = new URL(req.url);
     const dryRun = url.searchParams.get("dry_run") === "1";
     const onlyName = url.searchParams.get("name");
+    const limit = parseInt(url.searchParams.get("limit") ?? "10", 10);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
@@ -92,6 +93,8 @@ serve(async (req) => {
 
     const { data: templates, error: tplErr } = await query;
     if (tplErr) throw tplErr;
+
+    let processed = 0;
 
     const results: Array<Record<string, unknown>> = [];
 
@@ -105,6 +108,11 @@ serve(async (req) => {
 
       if (dryRun) {
         results.push({ name: t.name, would_update: true, new_components: fixed });
+        continue;
+      }
+
+      if (processed >= limit) {
+        results.push({ name: t.name, skipped: true, reason: "batch_limit_reached" });
         continue;
       }
 
@@ -134,6 +142,7 @@ serve(async (req) => {
         .eq("id", t.id);
 
       results.push({ name: t.name, updated: true });
+      processed++;
       // pequeno delay para evitar rate limit
       await new Promise((r) => setTimeout(r, 150));
     }
