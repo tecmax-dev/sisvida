@@ -33,6 +33,11 @@ const parseTemplate = (template: string, variables: Record<string, string>) => {
 
 export const AttendanceDeclarationPrint = forwardRef<HTMLDivElement, AttendanceDeclarationPrintProps>(
   ({ clinic, patient, professional, date, startTime, endTime, settings }, ref) => {
+    const safeClinic = clinic ?? { name: "" };
+    const safePatient = patient ?? { name: "" };
+    const safeDate = date ?? new Date().toISOString().slice(0, 10);
+    const safeStart = startTime ?? "";
+    const safeEnd = endTime ?? "";
     const showLogo = settings?.show_logo ?? true;
     const showAddress = settings?.show_address ?? true;
     const showPhone = settings?.show_phone ?? true;
@@ -47,16 +52,16 @@ export const AttendanceDeclarationPrint = forwardRef<HTMLDivElement, AttendanceD
       ? { width: '148mm', height: '210mm', padding: 'p-6', minHeight: 'min-h-[210mm]', logoHeight: 'h-12' }
       : { width: '210mm', height: '297mm', padding: 'p-8', minHeight: 'min-h-[297mm]', logoHeight: 'h-16' };
 
-    const appointmentDate = parseDateOnlyToLocalNoon(date);
+    const appointmentDate = parseDateOnlyToLocalNoon(safeDate);
     
     const defaultTemplate = 'Declaro para os devidos fins que o(a) Sr(a). {patient_name} compareceu a este estabelecimento de saúde na data de {date}, no período das {start_time} às {end_time}, para atendimento médico/consulta.';
     
     const template = settings?.attendance_template || defaultTemplate;
     const variables = {
-      patient_name: patient.name,
-      date: formatDateBR(date),
-      start_time: startTime,
-      end_time: endTime,
+      patient_name: safePatient.name,
+      date: formatDateBR(safeDate),
+      start_time: safeStart,
+      end_time: safeEnd,
     };
 
     const declarationText = parseTemplate(template, variables);
@@ -67,14 +72,14 @@ export const AttendanceDeclarationPrint = forwardRef<HTMLDivElement, AttendanceD
         <div className="border-b-2 border-gray-300 pb-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              {showLogo && clinic.logo_url && (
-                <img src={clinic.logo_url} alt={clinic.name} className={`${paperDimensions.logoHeight} mb-2 object-contain`} />
+              {showLogo && safeClinic.logo_url && (
+                <img src={safeClinic.logo_url} alt={safeClinic.name} className={`${paperDimensions.logoHeight} mb-2 object-contain`} />
               )}
-              <h1 className="text-xl font-bold">{clinic.name}</h1>
+              <h1 className="text-xl font-bold">{safeClinic.name}</h1>
               {customHeaderText && <p className="text-sm text-gray-600">{customHeaderText}</p>}
-              {showAddress && clinic.address && <p className="text-sm text-gray-600">{clinic.address}</p>}
-              {showPhone && clinic.phone && <p className="text-sm text-gray-600">Tel: {clinic.phone}</p>}
-              {showCnpj && clinic.cnpj && <p className="text-sm text-gray-600">CNPJ: {clinic.cnpj}</p>}
+              {showAddress && safeClinic.address && <p className="text-sm text-gray-600">{safeClinic.address}</p>}
+              {showPhone && safeClinic.phone && <p className="text-sm text-gray-600">Tel: {safeClinic.phone}</p>}
+              {showCnpj && safeClinic.cnpj && <p className="text-sm text-gray-600">CNPJ: {safeClinic.cnpj}</p>}
             </div>
             <div className="text-right">
               <h2 className="text-2xl font-bold text-primary">{title}</h2>
