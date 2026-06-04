@@ -302,35 +302,19 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
             <h4 className="font-medium text-sm text-muted-foreground">Dados do Agendamento</h4>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Data</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.appointment_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.appointment_date ? (
-                        format(formData.appointment_date, "dd/MM/yyyy", { locale: ptBR })
-                      ) : (
-                        <span>Selecione</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.appointment_date}
-                      onSelect={(date) => date && setFormData({ ...formData, appointment_date: date })}
-                      locale={ptBR}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="appointment_date">Data</Label>
+                <Input
+                  id="appointment_date"
+                  type="date"
+                  value={format(formData.appointment_date, "yyyy-MM-dd")}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  onChange={(event) => {
+                    const selectedDate = parseDateOnlyToLocalNoon(event.target.value);
+                    if (!Number.isNaN(selectedDate.getTime())) {
+                      setFormData({ ...formData, appointment_date: selectedDate });
+                    }
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Horário</Label>
