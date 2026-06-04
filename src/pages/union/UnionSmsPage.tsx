@@ -427,9 +427,8 @@ export default function UnionSmsPage() {
                       <span className="text-xs font-mono bg-background border rounded px-2 py-1">{`{${idx}}`}</span>
                       <Input
                         className="flex-1 min-w-[180px]"
-                        placeholder={varUseName[idx] ? "(nome do associado)" : "Valor fixo"}
+                        placeholder={varUseName[idx] ? "Fallback p/ telefones manuais (opcional)" : "Valor fixo"}
                         value={varValues[idx] ?? ""}
-                        disabled={!!varUseName[idx]}
                         onChange={(e) => setVarValues((p) => ({ ...p, [idx]: e.target.value }))}
                       />
                       <label className="flex items-center gap-1 text-xs">
