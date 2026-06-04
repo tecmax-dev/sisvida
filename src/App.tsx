@@ -209,6 +209,7 @@ import UnionChartOfAccountsPage from "./pages/union/UnionChartOfAccountsPage";
 import UnionAssociadosPage from "./pages/union/UnionAssociadosPage";
 import UnionPaymentHistoryPage from "./pages/union/UnionPaymentHistoryPage";
 import UnionAppContentPage from "./pages/union/UnionAppContentPage";
+import UnionSmsPage from "./pages/union/UnionSmsPage";
 import UnionPWAInstallationsPage from "./pages/union/UnionPWAInstallationsPage";
 import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
@@ -660,6 +661,7 @@ function App() {
                   <Route path="notificar-app" element={<UnionNotifyAppPage />} />
                   <Route path="email-marketing" element={<UnionEmailMarketingPage />} />
                   <Route path="email-inbox" element={<UnionEmailInboxPage />} />
+                  <Route path="sms" element={<UnionSmsPage />} />
                   <Route path="avisos-popup" element={<PopupNoticesPage />} />
                   <Route path="beneficios" element={<UnionBenefitsPage />} />
                   <Route path="autorizacoes" element={<UnionAuthorizationsPage />} />
