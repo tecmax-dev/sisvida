@@ -60,6 +60,17 @@ export default function UnionSmsPage() {
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [showMemberPicker, setShowMemberPicker] = useState(false);
 
+  // Aba "Agendados": filtra associados que têm agendamento na clínica no intervalo
+  const today = new Date().toISOString().slice(0, 10);
+  const janFirst = `${new Date().getFullYear()}-01-01`;
+  const [agendaFrom, setAgendaFrom] = useState(janFirst);
+  const [agendaTo, setAgendaTo] = useState(today);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [agendaByProf, setAgendaByProf] = useState<
+    Record<string, { profName: string; members: MemberRow[] }>
+  >({});
+  const [agendaTotalAppointments, setAgendaTotalAppointments] = useState(0);
+
   const loadAll = async () => {
     setLoading(true);
     const [{ data: tpls }, { data: lg }] = await Promise.all([
@@ -168,6 +179,77 @@ export default function UnionSmsPage() {
     } finally {
       setSyncing(false);
     }
+  };
+
+  // Sincroniza/carrega associados agendados no intervalo, agrupados por profissional
+  const loadAgendados = async () => {
+    setAgendaLoading(true);
+    try {
+      if (members.length === 0) await loadMembers();
+
+      // mapa cpfDigits -> member (usa snapshot atualizado)
+      const currentMembers = members.length === 0
+        ? (await supabase.from("members").select("id, name, phone, cpf, is_active").eq("is_active", true).not("phone", "is", null)).data as MemberRow[] | null ?? []
+        : members;
+      const cpfMap = new Map(currentMembers.map((m) => [m.cpf.replace(/\D/g, ""), m]));
+
+      const all: any[] = [];
+      let fromIdx = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("id, appointment_date, professional_id, status, patients!inner(cpf,name), professionals!inner(name)")
+          .gte("appointment_date", agendaFrom)
+          .lte("appointment_date", agendaTo)
+          .neq("status", "cancelled")
+          .order("appointment_date", { ascending: true })
+          .order("id", { ascending: true })
+          .range(fromIdx, fromIdx + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        fromIdx += pageSize;
+      }
+
+      const byProf: Record<string, { profName: string; members: Map<string, MemberRow> }> = {};
+      for (const ap of all) {
+        const cpfDigits = ((ap.patients?.cpf as string) ?? "").replace(/\D/g, "");
+        const member = cpfMap.get(cpfDigits);
+        if (!member) continue;
+        const profId = ap.professional_id as string;
+        if (!byProf[profId]) {
+          byProf[profId] = { profName: (ap.professionals?.name as string) ?? "—", members: new Map() };
+        }
+        byProf[profId].members.set(member.id, member);
+      }
+
+      const result: Record<string, { profName: string; members: MemberRow[] }> = {};
+      for (const [k, v] of Object.entries(byProf)) {
+        result[k] = {
+          profName: v.profName,
+          members: Array.from(v.members.values()).sort((a, b) => a.name.localeCompare(b.name)),
+        };
+      }
+      setAgendaByProf(result);
+      setAgendaTotalAppointments(all.length);
+      toast.success(`${all.length} agendamento(s) — ${Object.keys(result).length} profissional(is)`);
+    } catch (err: any) {
+      toast.error(`Erro ao carregar agendados: ${err.message ?? err}`);
+    } finally {
+      setAgendaLoading(false);
+    }
+  };
+
+  const toggleAgendaProf = (memberIds: string[]) => {
+    const allSelected = memberIds.every((id) => selectedMemberIds.has(id));
+    setSelectedMemberIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) memberIds.forEach((id) => next.delete(id));
+      else memberIds.forEach((id) => next.add(id));
+      return next;
+    });
   };
 
   const parseRecipients = (text: string) => {
@@ -290,6 +372,7 @@ export default function UnionSmsPage() {
       <Tabs defaultValue="send">
         <TabsList>
           <TabsTrigger value="send">Envio</TabsTrigger>
+          <TabsTrigger value="agendados">Agendados</TabsTrigger>
           <TabsTrigger value="templates">Modelos ({templates.length})</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
@@ -505,6 +588,99 @@ export default function UnionSmsPage() {
               </CardContent>
             </Card>
           ))}
+        </TabsContent>
+
+        <TabsContent value="agendados" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Associados agendados por profissional</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs">De</Label>
+                  <Input type="date" value={agendaFrom} onChange={(e) => setAgendaFrom(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Até</Label>
+                  <Input type="date" value={agendaTo} onChange={(e) => setAgendaTo(e.target.value)} />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={loadAgendados} disabled={agendaLoading} className="w-full">
+                    {agendaLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    Sincronizar
+                  </Button>
+                </div>
+              </div>
+
+              {agendaTotalAppointments > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {agendaTotalAppointments} agendamento(s) · {Object.keys(agendaByProf).length} profissional(is) ·{" "}
+                  {selectedMemberIds.size} associado(s) selecionado(s)
+                </p>
+              )}
+
+              {Object.keys(agendaByProf).length > 0 && (
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={applyMemberSelection} disabled={selectedMemberIds.size === 0}>
+                    Adicionar selecionados aos destinatários
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedMemberIds(new Set())} disabled={selectedMemberIds.size === 0}>
+                    Limpar seleção
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {Object.entries(agendaByProf)
+            .sort(([, a], [, b]) => a.profName.localeCompare(b.profName))
+            .map(([profId, info]) => {
+              const allSelected = info.members.length > 0 && info.members.every((m) => selectedMemberIds.has(m.id));
+              return (
+                <Card key={profId}>
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm">
+                      {info.profName}{" "}
+                      <span className="text-xs text-muted-foreground font-normal">
+                        ({info.members.length} associado{info.members.length === 1 ? "" : "s"})
+                      </span>
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleAgendaProf(info.members.map((m) => m.id))}
+                    >
+                      {allSelected ? "Desmarcar todos" : "Selecionar todos"}
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="max-h-[280px]">
+                      <div className="divide-y">
+                        {info.members.map((m) => (
+                          <label key={m.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 cursor-pointer">
+                            <Checkbox
+                              checked={selectedMemberIds.has(m.id)}
+                              onCheckedChange={() => toggleMember(m.id)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{m.name}</p>
+                              <p className="text-xs text-muted-foreground">{m.phone} · CPF {m.cpf}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+          {!agendaLoading && Object.keys(agendaByProf).length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Clique em <strong>Sincronizar</strong> para carregar os associados com agendamentos no período.
+            </p>
+          )}
         </TabsContent>
       </Tabs>
     </div>
