@@ -207,13 +207,19 @@ async function createInvoice(params: {
 
   const cleanCnpj = params.employer.cnpj.replace(/\D/g, "");
 
+  // Normaliza telefone: apenas dígitos e máximo de 11 caracteres
+  // (Lytex rejeita números maiores). Se ficar < 10, omite para evitar erro.
+  const rawPhone = (params.employer.phone || "").replace(/\D/g, "");
+  const normalizedPhone = rawPhone.length > 11 ? rawPhone.slice(-11) : rawPhone;
+  const cellphone = normalizedPhone.length >= 10 ? normalizedPhone : undefined;
+
   const invoicePayload = {
     client: {
       type: cleanCnpj.length === 14 ? "pj" : "pf",
       name: params.employer.name,
       cpfCnpj: cleanCnpj,
       email: params.employer.email || undefined,
-      cellphone: params.employer.phone?.replace(/\D/g, "") || undefined,
+      cellphone,
     },
     items: [
       {
