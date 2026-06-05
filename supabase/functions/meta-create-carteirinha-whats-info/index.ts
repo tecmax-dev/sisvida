@@ -28,34 +28,17 @@ const template = {
   ],
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
-  const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
-  if (!TOKEN) {
-    return new Response(JSON.stringify({ error: "META_WHATSAPP_TOKEN ausente" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const results: any[] = [];
-  for (const wabaId of WABA_IDS) {
-    const url = `https://graph.facebook.com/${META_GRAPH_VERSION}/${wabaId}/message_templates`;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify(template),
-      });
-      const json = await res.json();
-      results.push({ wabaId, ok: res.ok, status: res.status, response: json });
-    } catch (e) {
-      results.push({ wabaId, ok: false, error: e instanceof Error ? e.message : String(e) });
-    }
-  }
-
-  return new Response(JSON.stringify({ results }, null, 2), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-});
+// DESATIVADO: o template instruía o usuário a enviar contracheque pelo WhatsApp,
+// violando a política da Meta sobre coleta de PII/documentos sensíveis. Mantido
+// apenas como casco; criação de template bloqueada para evitar nova infração.
+serve((_req) =>
+  new Response(
+    JSON.stringify({
+      disabled: true,
+      reason:
+        "Template desativado por violação de política Meta (coleta de PII via WhatsApp).",
+      template_name: template.name,
+    }),
+    { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  )
+);
