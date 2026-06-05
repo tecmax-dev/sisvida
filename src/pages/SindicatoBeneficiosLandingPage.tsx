@@ -42,7 +42,7 @@ const OG_IMAGE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object
 const PERFIL_ELINEY_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/union-app-content/convenios/eliney-silva-v2.jpg?v=20260529-landing";
 
 const FILIACAO_URL = `/sindical/filiacao/${SINDICATO_UNION_ENTITY_ID}`;
-const WHATSAPP_URL = "https://wa.me/557332311784?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
+const WHATSAPP_URL = "https://wa.me/557331982324?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
 
 interface Benefit {
   name: string;
