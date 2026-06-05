@@ -935,31 +935,13 @@ serve(async (req) => {
           }
         };
 
-        // Botão "Atualizar Carteira" → escolha App vs WhatsApp
-        if (extractedButtonId === "whazing_sub_carteirinha") {
-          await sendResponse({
-            type: "interactive",
-            interactive: {
-              type: "button",
-              body: {
-                text:
-                  "🪪 *Atualizar Carteirinha*\n\n" +
-                  "Como você prefere atualizar sua carteirinha hoje?\n\n" +
-                  "• *Pelo WhatsApp*: o mais rápido! Digite seu CPF e envie a foto do contracheque\n" +
-                  "• *Pelo App*: envie pelo app e aguarde a validação do sindicato",
-              },
-              action: {
-                buttons: [
-                  { type: "reply", reply: { id: "carteirinha_app", title: "Pelo App" } },
-                  { type: "reply", reply: { id: "carteirinha_whats", title: "Pelo WhatsApp" } },
-                  { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } },
-                ],
-              },
-            },
-          });
-          return new Response(JSON.stringify({ ok: true, action: "carteirinha_choice" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+        // Botão "Atualizar Carteira" → APENAS pelo App (fluxo WhatsApp desativado
+        // por política da Meta: proibido coletar documentos/PII via WhatsApp).
+        if (
+          extractedButtonId === "whazing_sub_carteirinha" ||
+          extractedButtonId === "carteirinha_whats"
+        ) {
+          extractedButtonId = "carteirinha_app";
         }
 
         // Escolheu "Pelo App"
@@ -992,57 +974,18 @@ serve(async (req) => {
           });
         }
 
-        // Escolheu "Pelo WhatsApp" → inicia fluxo
-        if (extractedButtonId === "carteirinha_whats") {
-          const d = await callCarteirinha({ action: "start" });
-          await respondCart(d);
-          return new Response(JSON.stringify({ ok: true, action: "carteirinha_start" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        // Cancelar fluxo carteirinha
-        if (extractedButtonId === "carteirinha_cancelar") {
-          const d = await callCarteirinha({ action: "cancel" });
-          await sendResponse(withMenuTextPayload(d.response));
-          return new Response(JSON.stringify({ ok: true, action: "carteirinha_cancel" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        // Sessão ativa? roteia texto/mídia
-        const { data: activeCartSession } = await supabase
-          .from("whatsapp_booking_sessions")
-          .select("id, state")
-          .eq("clinic_id", SINDICATO_CLINIC_ID)
-          .eq("phone", from)
-          .eq("action_type", "carteirinha")
-          .gte("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (activeCartSession) {
-          if (isCartImage || isCartDoc) {
-            const d = await callCarteirinha({
-              action: "media",
-              media_id: cartMediaId,
-              media_mime: cartMediaMime,
-              media_filename: cartMediaName,
-            });
-            await respondCart(d);
-            return new Response(JSON.stringify({ ok: true, action: "carteirinha_media" }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          if (text && !extractedButtonId) {
-            const d = await callCarteirinha({ action: "text", text });
-            await respondCart(d);
-            return new Response(JSON.stringify({ ok: true, action: "carteirinha_text" }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-        }
+        // Fluxo "Pelo WhatsApp" DESATIVADO permanentemente.
+        // Sessões antigas (action_type='carteirinha') são encerradas silenciosamente
+        // e nenhuma mídia/texto é roteado para coleta de contracheque.
+        void callCarteirinha; // mantém referência para evitar unused warning
+        try {
+          await supabase
+            .from("whatsapp_booking_sessions")
+            .delete()
+            .eq("clinic_id", SINDICATO_CLINIC_ID)
+            .eq("phone", from)
+            .eq("action_type", "carteirinha");
+        } catch (_) { /* noop */ }
       } catch (cartErr) {
         console.error("[CARTEIRINHA_FLOW_ERROR]", cartErr);
       }

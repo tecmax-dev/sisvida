@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
  * WHATSAPP CARTEIRINHA FLOW
@@ -21,6 +20,33 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// ============================================================================
+// FUNÇÃO DESATIVADA PERMANENTEMENTE (Política Meta WhatsApp Business)
+// ----------------------------------------------------------------------------
+// Coleta de contracheque/CPF via WhatsApp violava a política da Meta sobre
+// "solicitation of sensitive personal information". Contribuiu para o
+// banimento do número oficial. A renovação de carteirinha agora é feita
+// exclusivamente pelo PWA / App (prosindweb.com.br/app).
+// ============================================================================
+serve((_req) =>
+  new Response(
+    JSON.stringify({
+      success: false,
+      disabled: true,
+      response:
+        "🪪 A renovação de carteirinha pelo WhatsApp foi desativada. " +
+        "Use o nosso aplicativo: https://prosindweb.com.br/app",
+    }),
+    {
+      status: 410,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  )
+);
+
+// --- Código legado abaixo mantido apenas para referência histórica ---
+/*
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
@@ -786,3 +812,4 @@ function json(body: FlowResponse, status = 200): Response {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+// */
