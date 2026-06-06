@@ -228,9 +228,19 @@ export default function ContributionsListTab({
     setDueDateEnd(draftDueDateEnd);
     setCurrentPage(1);
 
-    // When searching by term or using date range, fetch ALL periods from server
-    // so client-side filtering can find results across all years
-    const needsAllPeriods = !!(draftSearchTerm.trim() || draftDueDateStart || draftDueDateEnd);
+    // When searching by term, using date range, or filtering by statuses that
+    // commonly span multiple years (pendentes/vencidos/não gerados), fetch ALL
+    // periods from server so client-side filtering can find results across all years.
+    const statusNeedsAllPeriods =
+      draftStatusFilter === "pending" ||
+      draftStatusFilter === "overdue" ||
+      draftStatusFilter === "not_generated";
+    const needsAllPeriods = !!(
+      draftSearchTerm.trim() ||
+      draftDueDateStart ||
+      draftDueDateEnd ||
+      statusNeedsAllPeriods
+    );
     if (needsAllPeriods) {
       onAllPeriodsChange?.(true);
       // Also set competence to "all" so client filter doesn't restrict results
