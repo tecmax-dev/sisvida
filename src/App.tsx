@@ -433,6 +433,7 @@ function App() {
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/whatsapp-templates-guide" element={<WhatsAppTemplatesGuidePage />} />
+                <Route path="/admin/whatsapp-templates-guide" element={<Navigate to="/whatsapp-templates-guide" replace />} />
                 <Route path="/cadastro" element={<PublicSignup />} />
                 <Route path="/aguardando-confirmacao" element={<AwaitingConfirmation />} />
                 {/* Documentation / Help Center */}
