@@ -1,9 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
-  ApiBrasilSmsService,
+  createSmsService,
+  resolveSmsProvider,
   buildBrazilianPhoneCandidates,
   sanitizeApiBrasilError,
-} from "../_shared/apibrasil-sms.ts";
+} from "../_shared/sms-providers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,7 @@ interface Payload {
   template_id?: string;
   body?: string; // se template_id não informado, usa body livre
   recipients: Recipient[];
+  provider?: "comtele" | "apibrasil";
 }
 
 function renderBody(body: string, vars: Record<string, string> = {}): string {
@@ -85,7 +87,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const sms = ApiBrasilSmsService.fromEnv();
+    const provider = resolveSmsProvider(payload.provider);
+    let sms;
+    try {
+      sms = createSmsService(provider);
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ error: `Provedor ${provider} não configurado: ${(err as Error).message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const results: any[] = [];
 
     for (const rcpt of payload.recipients) {
@@ -117,7 +128,7 @@ Deno.serve(async (req) => {
     }
 
     const sent = results.filter((r) => r.status === "sent").length;
-    return new Response(JSON.stringify({ ok: true, sent, total: results.length, results }), {
+    return new Response(JSON.stringify({ ok: true, provider, sent, total: results.length, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
