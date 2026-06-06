@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { getMetaCredsByVersion, type MetaApiVersion } from "../_shared/meta-creds.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ const corsHeaders = {
 const META_GRAPH_VERSION = "v21.0";
 
 interface CopyBody {
-  source?: MetaApiVersion; // default v1
+  source?: MetaApiVersion | "local"; // default "local" (DB cache) — v1 WABA pode estar cancelada
   target?: MetaApiVersion; // default v2
   only?: string[];         // optional list of template names to copy
   skip?: string[];         // optional names to skip
@@ -45,7 +46,7 @@ serve(async (req) => {
 
   try {
     const body: CopyBody = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-    const source: MetaApiVersion = body.source ?? "v1";
+    const source = body.source ?? "local";
     const target: MetaApiVersion = body.target ?? "v2";
     const only = new Set((body.only || []).map((s) => s.toLowerCase()));
     const skip = new Set((body.skip || []).map((s) => s.toLowerCase()));
@@ -58,15 +59,7 @@ serve(async (req) => {
       );
     }
 
-    const src = getMetaCredsByVersion(source);
     const tgt = getMetaCredsByVersion(target);
-
-    if (!src.token || !src.wabaId) {
-      return new Response(
-        JSON.stringify({ error: `Credenciais Meta ${source} ausentes (token / waba_id)` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
     if (!tgt.token || !tgt.wabaId) {
       return new Response(
         JSON.stringify({ error: `Credenciais Meta ${target} ausentes (token / waba_id)` }),
@@ -74,21 +67,49 @@ serve(async (req) => {
       );
     }
 
-    // 1) Fetch all templates from source WABA
+    // 1) Fetch all templates from source (Meta API or local cache)
     const allTemplates: any[] = [];
-    let url: string | null =
-      `https://graph.facebook.com/${META_GRAPH_VERSION}/${src.wabaId}/message_templates?fields=name,language,category,status,components&limit=100`;
-    while (url) {
-      const res: Response = await fetch(url, { headers: { Authorization: `Bearer ${src.token}` } });
-      const json = await res.json();
-      if (!res.ok) {
+    let sourceWabaInfo: string;
+    if (source === "local") {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { data, error } = await sb
+        .from("whatsapp_meta_templates")
+        .select("name, language, category, status, components")
+        .eq("status", "APPROVED");
+      if (error) {
         return new Response(
-          JSON.stringify({ error: "Falha ao listar templates da origem", meta: json }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({ error: "Falha ao ler cache local", detail: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      if (Array.isArray(json.data)) allTemplates.push(...json.data);
-      url = json.paging?.next ?? null;
+      allTemplates.push(...(data || []));
+      sourceWabaInfo = "local_cache";
+    } else {
+      const src = getMetaCredsByVersion(source as MetaApiVersion);
+      if (!src.token || !src.wabaId) {
+        return new Response(
+          JSON.stringify({ error: `Credenciais Meta ${source} ausentes` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      let url: string | null =
+        `https://graph.facebook.com/${META_GRAPH_VERSION}/${src.wabaId}/message_templates?fields=name,language,category,status,components&limit=100`;
+      while (url) {
+        const res: Response = await fetch(url, { headers: { Authorization: `Bearer ${src.token}` } });
+        const json = await res.json();
+        if (!res.ok) {
+          return new Response(
+            JSON.stringify({ error: "Falha ao listar templates da origem", meta: json }),
+            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        if (Array.isArray(json.data)) allTemplates.push(...json.data);
+        url = json.paging?.next ?? null;
+      }
+      sourceWabaInfo = src.wabaId!;
     }
 
     // 2) Fetch existing templates on target WABA (avoid duplicates)
@@ -159,7 +180,7 @@ serve(async (req) => {
     const summary = {
       source,
       target,
-      source_waba: src.wabaId,
+      source_waba: sourceWabaInfo,
       target_waba: tgt.wabaId,
       total_source: allTemplates.length,
       created: results.filter((r) => r.status === "created").length,
