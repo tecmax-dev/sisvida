@@ -31,7 +31,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, segue a sua mensalidade do sindicato referente a {{2}}.\n\nValor: R$ {{3}}\nVencimento: {{4}}\n\nLink para pagamento: {{5}}\n\nQualquer dúvida, estamos à disposição.",
-    footer: "ProsindWeb · (73) 3231-1784",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "10/2026", "85,00", "15/10/2026", "https://prosindweb.com.br/p/abc123"],
     priority: 1,
   },
@@ -41,7 +41,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, identificamos que a sua mensalidade referente a {{2}} está em aberto.\n\nValor atualizado: R$ {{3}}\nVencimento original: {{4}}\n\nSegue link para regularização: {{5}}",
-    footer: "ProsindWeb · (73) 3231-1784",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "09/2026", "85,00", "15/09/2026", "https://prosindweb.com.br/p/abc123"],
     priority: 1,
   },
@@ -51,7 +51,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, este é um lembrete da sua consulta agendada.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}\n\nPedimos a gentileza de confirmar a sua presença.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "Dra. Andrea Matos", "Clínica Geral", "10/06/2026", "14:30", "Sede do Sindicato"],
     buttons: [
       { type: "QUICK_REPLY", text: "Confirmar" },
@@ -65,7 +65,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, a sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "Dra. Andrea Matos", "Clínica Geral", "10/06/2026", "14:30", "Sede do Sindicato"],
     priority: 2,
   },
@@ -75,7 +75,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, a sua carteirinha do sindicato vence em {{2}}.\n\nPara manter o acesso aos benefícios, regularize a renovação no aplicativo.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "30/06/2026"],
     priority: 2,
     notes: "Originalmente MARKETING — recriar como UTILITY (renovação é transacional).",
@@ -86,7 +86,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, a sua carteirinha do sindicato venceu em {{2}}.\n\nPara reativar o acesso aos benefícios, regularize a renovação pelo aplicativo.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "30/05/2026"],
     priority: 2,
   },
@@ -96,7 +96,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, a sua autorização ({{2}}) está disponível.\n\nProfissional: {{3}}\nValidade: {{4}}\n\nAcesse o aplicativo para visualizar e imprimir.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "Consulta médica", "Dra. Andrea Matos", "30/07/2026"],
     priority: 3,
   },
@@ -106,7 +106,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, a sua filiação ao sindicato foi aprovada.\n\nMatrícula: {{2}}\nPlano: {{3}}\n\nSeja bem-vindo(a). Acesse o aplicativo para utilizar os benefícios.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "00012345", "Padrão"],
     priority: 3,
   },
@@ -116,7 +116,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, a sua carteirinha foi renovada com sucesso.\n\nNova validade: {{2}}\n\nAcesse o aplicativo para visualizar.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "30/06/2027"],
     priority: 3,
   },
@@ -126,7 +126,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, o seu contracheque foi recebido e aprovado.\n\nObrigado por manter os seus dados atualizados.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     priority: 3,
   },
@@ -136,7 +136,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, a sua solicitação de renovação não pôde ser concluída.\n\nMotivo: {{2}}\n\nReenvie o documento atualizado pelo aplicativo.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "Contracheque ilegível"],
     priority: 3,
   },
@@ -146,7 +146,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, este é um lembrete do atendimento de homologação.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\nResponsável: {{6}}",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Setor RH", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "10:00", "Dra. Andrea Matos"],
     buttons: [
       { type: "QUICK_REPLY", text: "Confirmar" },
@@ -161,7 +161,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, lembrete de atendimento de homologação na sua agenda.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Dra. Andrea Matos", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "10:00"],
     buttons: [
       { type: "QUICK_REPLY", text: "Confirmar" },
@@ -175,7 +175,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, o atendimento de homologação foi confirmado.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\nResponsável: {{6}}",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Setor RH", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "10:00", "Dra. Andrea Matos"],
     priority: 3,
   },
@@ -185,7 +185,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, o atendimento de homologação foi concluído.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nProtocolo: {{5}}",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Setor RH", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "HOM-2026-0001"],
     priority: 3,
   },
@@ -195,7 +195,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, informamos que a sua consulta precisou ser cancelada.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nMotivo: {{6}}\n\nReagende pelo aplicativo no melhor horário para você.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "Dra. Andrea Matos", "Clínica Geral", "10/06/2026", "14:30", "Ausência do profissional"],
     priority: 3,
   },
@@ -205,7 +205,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, encerramos este atendimento por inatividade.\n\nSe ainda precisar de ajuda, envie uma nova mensagem que retornaremos o atendimento.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza"],
     priority: 3,
   },
@@ -215,7 +215,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, aqui é do Sindicato (ProsindWeb). Precisamos falar com você sobre um assunto da sua filiação.\n\nToque em \"Falar com atendente\" abaixo para iniciar a conversa.",
-    footer: "ProsindWeb · (73) 3231-1784",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     buttons: [
       { type: "QUICK_REPLY", text: "Falar com atendente" },
@@ -230,7 +230,7 @@ const TEMPLATES: Tpl[] = [
     language: "pt_BR",
     body:
       "Olá {{1}}, notamos que o seu atendimento ficou pendente. Se ainda precisar de ajuda, é só tocar no botão abaixo que retornamos.",
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza"],
     buttons: [
       { type: "QUICK_REPLY", text: "Continuar atendimento" },
@@ -258,7 +258,7 @@ for (const p of VAGA_PROFESSIONALS) {
     language: "pt_BR",
     body:
       `Olá {{1}}, abriu uma vaga de consulta com ${p.nome} no dia {{2}} às {{3}}.\n\nSe tiver interesse, acesse o aplicativo para reservar o horário.`,
-    footer: "ProsindWeb",
+    footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "12/06/2026", "14:30"],
     buttons: [
       { type: "URL", text: "Acessar Aplicativo", url: "https://prosindweb.com.br/" },
