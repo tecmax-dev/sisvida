@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { resolveMetaCreds, type MetaApiVersion } from "../_shared/meta-creds.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +20,7 @@ interface SendBody {
   ticket_id?: string;
   phone_number_id?: string;
   token?: string;
+  api_version?: MetaApiVersion;
 }
 
 function normalizePhone(raw: string): string {
@@ -36,14 +38,15 @@ serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const body: SendBody = await req.json();
-    const { to, text, ticket_id, phone_number_id, token } = body;
+    const { to, text, ticket_id, phone_number_id, token, api_version } = body;
 
-    let TOKEN = token || Deno.env.get("META_WHATSAPP_TOKEN");
+    const creds = await resolveMetaCreds(api_version);
+    let TOKEN = token || creds.token;
     if (token === "SYSTEM") {
       TOKEN = Deno.env.get("META_SYSTEM_USER_TOKEN") || TOKEN;
     }
-
-    const PHONE_ID = phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
+    const PHONE_ID = phone_number_id || creds.phoneNumberId;
+    console.log(`[meta-send-text] Using API ${creds.active} phone_id=${PHONE_ID}`);
 
     if (!PHONE_ID || !TOKEN) {
       return new Response(
