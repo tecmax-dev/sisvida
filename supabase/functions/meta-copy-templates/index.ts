@@ -44,6 +44,19 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // DESATIVADO em 2026-06-06: a criação em massa de templates via Graph API
+  // resultou em ACCOUNT_VIOLATION (SCAM) e banimento das WABAs v1 e v2 pela Meta.
+  // Criação de templates deve ser feita MANUALMENTE pelo WhatsApp Manager,
+  // poucos por dia, após apelação aprovada. Não reabilitar sem autorização.
+  return new Response(
+    JSON.stringify({
+      disabled: true,
+      reason:
+        "Endpoint desativado: criação em massa via API causou banimento da WABA (ACCOUNT_VIOLATION/SCAM). Crie templates manualmente pelo WhatsApp Manager.",
+    }),
+    { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+
   try {
     const body: CopyBody = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const source = body.source ?? "local";
