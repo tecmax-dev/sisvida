@@ -90,6 +90,18 @@ export default function UnionSmsPage() {
   const [customBody, setCustomBody] = useState("");
   const [recipients, setRecipients] = useState("");
 
+  // Provedor de SMS ativo (persistido no navegador). Default: Comtele.
+  const [provider, setProvider] = useState<"comtele" | "apibrasil">(() => {
+    if (typeof window === "undefined") return "comtele";
+    const v = window.localStorage.getItem("sindicato.sms.provider");
+    return v === "apibrasil" ? "apibrasil" : "comtele";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("sindicato.sms.provider", provider);
+    }
+  }, [provider]);
+
   // Valores globais para variáveis {1}, {2}, ... e flag de auto-preencher com nome do associado
   const [varValues, setVarValues] = useState<Record<string, string>>({});
   const [varUseName, setVarUseName] = useState<Record<string, boolean>>({ "1": true });
@@ -421,6 +433,7 @@ export default function UnionSmsPage() {
           template_id: selectedTemplateId || undefined,
           body: selectedTemplateId ? undefined : customBody,
           recipients: list,
+          provider,
         },
       });
       if (error) throw error;
@@ -439,12 +452,26 @@ export default function UnionSmsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">SMS (Comtele)</h1>
+          <h1 className="text-2xl font-bold">
+            SMS ({provider === "comtele" ? "Comtele" : "API Brasil"})
+          </h1>
         </div>
-        <Button onClick={handleSync} disabled={syncing} variant="outline" size="sm">
-          {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          Sincronizar do WhatsApp
-        </Button>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="sms-provider" className="text-xs text-muted-foreground">Provedor</Label>
+          <select
+            id="sms-provider"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value === "apibrasil" ? "apibrasil" : "comtele")}
+          >
+            <option value="comtele">Comtele</option>
+            <option value="apibrasil">API Brasil</option>
+          </select>
+          <Button onClick={handleSync} disabled={syncing} variant="outline" size="sm">
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Sincronizar do WhatsApp
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="send">
