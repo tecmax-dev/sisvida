@@ -86,6 +86,7 @@ const SindicatoExclusaoConta = lazy(() => import("./pages/SindicatoExclusaoConta
 const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const WhatsAppTemplatesPage = lazy(() => import("./pages/admin/WhatsAppTemplatesPage"));
+const WhatsAppTemplatesGuidePage = lazy(() => import("./pages/admin/WhatsAppTemplatesGuidePage"));
 const WhatsAppStatusPage = lazy(() => import("./pages/admin/WhatsAppStatusPage"));
 const WhatsAppAuditPage = lazy(() => import("./pages/admin/WhatsAppAuditPage"));
 const MetaWebhookHealthPage = lazy(() => import("./pages/admin/MetaWebhookHealthPage"));
@@ -529,6 +530,7 @@ function App() {
                   <Route path="audit" element={<AuditLogsPage />} />
                   <Route path="chat" element={<ChatSupportPage />} />
                   <Route path="whatsapp-templates" element={<WhatsAppTemplatesPage />} />
+                  <Route path="whatsapp-templates-guide" element={<WhatsAppTemplatesGuidePage />} />
                   <Route path="whatsapp-status" element={<WhatsAppStatusPage />} />
                   <Route path="whatsapp-audit" element={<WhatsAppAuditPage />} />
                   <Route path="meta-webhook-health" element={<MetaWebhookHealthPage />} />
