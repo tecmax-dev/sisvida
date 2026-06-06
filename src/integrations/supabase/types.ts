@@ -4107,6 +4107,7 @@ export type Database = {
           evolution_api_url: string | null
           evolution_instance: string | null
           id: string
+          meta_api_active: string
           updated_at: string
         }
         Insert: {
@@ -4115,6 +4116,7 @@ export type Database = {
           evolution_api_url?: string | null
           evolution_instance?: string | null
           id?: string
+          meta_api_active?: string
           updated_at?: string
         }
         Update: {
@@ -4123,6 +4125,7 @@ export type Database = {
           evolution_api_url?: string | null
           evolution_instance?: string | null
           id?: string
+          meta_api_active?: string
           updated_at?: string
         }
         Relationships: []
