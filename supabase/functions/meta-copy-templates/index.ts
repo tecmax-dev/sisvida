@@ -174,7 +174,7 @@ serve(async (req) => {
         detail: createJson,
       });
       // Throttle to avoid Meta rate limits
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 250));
     }
 
     const summary = {
