@@ -553,7 +553,7 @@ export function DependentInclusionForm({
                           size="sm"
                           variant="outline"
                           className="bg-green-600 hover:bg-green-700 text-white border-0 h-8 text-xs"
-                          onClick={() => window.open("https://wa.me/557332311784?text=Olá! Estou tentando cadastrar um dependente, mas o CPF já existe no sistema.", "_blank")}
+                          onClick={() => window.open("https://wa.me/557332239980?text=Olá! Estou tentando cadastrar um dependente, mas o CPF já existe no sistema.", "_blank")}
                         >
                           <Phone className="h-3 w-3 mr-1" />
                           Falar no WhatsApp
