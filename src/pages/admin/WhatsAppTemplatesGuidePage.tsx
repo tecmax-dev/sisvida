@@ -209,6 +209,35 @@ const TEMPLATES: Tpl[] = [
     bodyExamples: ["Maria Souza"],
     priority: 3,
   },
+  {
+    name: "iniciar_atendimento",
+    category: "UTILITY",
+    language: "pt_BR",
+    body:
+      "Olá {{1}}, aqui é do Sindicato (ProsindWeb). Precisamos falar com você sobre um assunto da sua filiação.\n\nToque em \"Falar com atendente\" abaixo para iniciar a conversa.",
+    footer: "ProsindWeb · (73) 3231-1784",
+    bodyExamples: ["João Silva"],
+    buttons: [
+      { type: "QUICK_REPLY", text: "Falar com atendente" },
+      { type: "QUICK_REPLY", text: "Agora não" },
+    ],
+    priority: 1,
+    notes: "Use quando o sindicato precisa INICIAR uma conversa (fora da janela de 24h). O toque em 'Falar com atendente' abre a janela de 24h e o operador pode mandar mensagens livres.",
+  },
+  {
+    name: "retomar_atendimento",
+    category: "UTILITY",
+    language: "pt_BR",
+    body:
+      "Olá {{1}}, notamos que o seu atendimento ficou pendente. Se ainda precisar de ajuda, é só tocar no botão abaixo que retornamos.",
+    footer: "ProsindWeb",
+    bodyExamples: ["Maria Souza"],
+    buttons: [
+      { type: "QUICK_REPLY", text: "Continuar atendimento" },
+    ],
+    priority: 2,
+    notes: "Reativa contato que parou de responder. Janela de 24h reabre quando o associado toca no botão.",
+  },
 ];
 
 const VAGA_PROFESSIONALS: { slug: string; nome: string }[] = [
