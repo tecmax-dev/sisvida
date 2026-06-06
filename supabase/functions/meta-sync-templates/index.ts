@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { resolveMetaCreds, type MetaApiVersion } from "../_shared/meta-creds.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,8 +36,11 @@ serve(async (req) => {
 
   try {
     const urlParams = new URL(req.url).searchParams;
-    const WABA_ID = urlParams.get("waba_id") || Deno.env.get("META_WABA_ID");
-    const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
+    const apiVersion = (urlParams.get("api_version") as MetaApiVersion | null) ?? undefined;
+    const creds = await resolveMetaCreds(apiVersion ?? undefined);
+    const WABA_ID = urlParams.get("waba_id") || creds.wabaId;
+    const TOKEN = creds.token;
+    console.log(`[meta-sync-templates] Using API ${creds.active} waba_id=${WABA_ID}`);
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
