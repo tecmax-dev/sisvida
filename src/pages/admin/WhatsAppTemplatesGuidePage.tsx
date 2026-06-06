@@ -211,6 +211,34 @@ const TEMPLATES: Tpl[] = [
   },
 ];
 
+const VAGA_PROFESSIONALS: { slug: string; nome: string }[] = [
+  { slug: "daniela_sales", nome: "Dra. Daniela Sales" },
+  { slug: "eliney_silva", nome: "Dr. Eliney Silva" },
+  { slug: "jorge_avelar", nome: "Dr. Jorge Avelar" },
+  { slug: "jose_alcides", nome: "Dr. José Alcides" },
+  { slug: "juliane_leite", nome: "Dra. Juliane Leite" },
+  { slug: "marcelo_aguiar", nome: "Dr. Marcelo Aguiar" },
+  { slug: "pedro_roberto", nome: "Dr. Pedro Roberto" },
+  { slug: "uiara_tiuba", nome: "Dra. Uiara Tiuba" },
+];
+
+for (const p of VAGA_PROFESSIONALS) {
+  TEMPLATES.push({
+    name: `vaga_medica_${p.slug}`,
+    category: "UTILITY",
+    language: "pt_BR",
+    body:
+      `Olá {{1}}, abriu uma vaga de consulta com ${p.nome} no dia {{2}} às {{3}}.\n\nSe tiver interesse, acesse o aplicativo para reservar o horário.`,
+    footer: "ProsindWeb",
+    bodyExamples: ["Maria Souza", "12/06/2026", "14:30"],
+    buttons: [
+      { type: "URL", text: "Acessar Aplicativo", url: "https://prosindweb.com.br/" },
+    ],
+    priority: 3,
+    notes: "Um template por profissional ativo. Originalmente jorge_avelar foi classificado como MARKETING — texto acima é utilitário (notificação de vaga reservada para associado).",
+  });
+}
+
 function CopyBtn({ value, label = "Copiar" }: { value: string; label?: string }) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
