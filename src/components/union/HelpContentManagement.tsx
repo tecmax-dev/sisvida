@@ -62,7 +62,7 @@ const defaultContent: HelpContent = {
   city_state: "São Paulo - SP",
   cep: "01310-000",
   phone: "(73) 3231-1784",
-  whatsapp: "(73) 3231-1784",
+  whatsapp: "(73) 3223-9980",
   email: "contato@sindicato.org.br",
   weekday_hours: "08:00 - 17:00",
   saturday_hours: "08:00 - 12:00",
@@ -425,7 +425,7 @@ export function HelpContentManagement() {
                 <Input
                   value={content.whatsapp}
                   onChange={(e) => setContent({ ...content, whatsapp: e.target.value })}
-                  placeholder="Ex: (73) 3231-1784"
+                  placeholder="Ex: (73) 3223-9980"
                 />
               </div>
               <div className="space-y-2">

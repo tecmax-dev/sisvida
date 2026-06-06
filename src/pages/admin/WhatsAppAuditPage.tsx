@@ -113,7 +113,7 @@ export default function WhatsAppAuditPage() {
               <Database className="h-5 w-5 text-primary" />
               Fluxo de Mensagens
             </CardTitle>
-            <CardDescription>Auditoria em tempo real (Número de Produção: 73 3231 1784)</CardDescription>
+            <CardDescription>Auditoria em tempo real (Número de Produção: 73 3223 9980)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border overflow-hidden">
