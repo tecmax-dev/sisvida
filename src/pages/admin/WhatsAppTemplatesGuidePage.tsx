@@ -214,7 +214,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, aqui é do Sindicato (ProsindWeb). Precisamos falar com você sobre um assunto da sua filiação.\n\nToque em \"Falar com atendente\" abaixo para iniciar a conversa.",
+      "Olá {{1}}, aqui é do Sindicato dos Comerciários. Precisamos falar com você sobre um assunto da sua filiação.\n\nToque em \"Falar com atendente\" abaixo para iniciar a conversa.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     buttons: [
