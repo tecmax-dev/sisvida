@@ -432,6 +432,7 @@ function App() {
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/whatsapp-templates-guide" element={<WhatsAppTemplatesGuidePage />} />
                 <Route path="/cadastro" element={<PublicSignup />} />
                 <Route path="/aguardando-confirmacao" element={<AwaitingConfirmation />} />
                 {/* Documentation / Help Center */}
