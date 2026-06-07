@@ -6,28 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
-function html(title: string, message: string, color: string) {
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${title}</title>
-<style>
-body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f7f9;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-.card{background:#fff;border-radius:16px;padding:32px 24px;max-width:380px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.08);text-align:center}
-.dot{width:64px;height:64px;border-radius:50%;background:${color};margin:0 auto 16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:bold}
-h1{font-size:20px;margin:0 0 8px;color:#111}
-p{color:#555;margin:0;font-size:15px;line-height:1.5}
-.brand{margin-top:24px;font-size:12px;color:#999}
-</style></head><body><div class="card">
-<div class="dot">${color === "#16a394" ? "✓" : color === "#dc2626" ? "✕" : "!"}</div>
-<h1>${title}</h1><p>${message}</p>
-<div class="brand">ProsindWeb</div>
-</div></body></html>`;
-}
-
-function respond(title: string, message: string, color: string, status = 200) {
-  return new Response(html(title, message, color), {
+type Kind = "confirmed" | "cancelled" | "already" | "expired" | "invalid" | "blocked";
+function respond(kind: Kind, title: string, message: string, status = 200) {
+  return new Response(JSON.stringify({ kind, title, message }), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
+    headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
   });
 }
 
@@ -40,7 +23,7 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get("x") === "1" ? "cancel" : "confirm";
 
     if (!token) {
-      return respond("Link inválido", "Token não informado.", "#dc2626", 400);
+      return respond("invalid", "Link inválido", "Token não informado.", 400);
     }
 
     const supabase = createClient(
@@ -55,19 +38,19 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (error || !row) {
-      return respond("Link inválido", "Não foi possível localizar este agendamento.", "#dc2626", 404);
+      return respond("invalid", "Link inválido", "Não foi possível localizar este agendamento.", 404);
     }
 
     if (new Date(row.expires_at).getTime() < Date.now()) {
-      return respond("Link expirado", "Entre em contato com a clínica.", "#dc2626", 410);
+      return respond("expired", "Link expirado", "Entre em contato com a clínica.", 410);
     }
 
     if (row.confirmed_at || row.cancelled_at) {
-      const already = row.cancelled_at ? "cancelado" : "confirmado";
+      const cancelled = !!row.cancelled_at;
       return respond(
-        already === "cancelado" ? "Já cancelado" : "Já confirmado",
-        `Seu agendamento já foi ${already}.`,
-        already === "cancelado" ? "#dc2626" : "#16a394",
+        cancelled ? "cancelled" : "confirmed",
+        cancelled ? "Já cancelado" : "Já confirmado",
+        `Seu agendamento já foi ${cancelled ? "cancelado" : "confirmado"}.`,
       );
     }
 
@@ -78,14 +61,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!appt) {
-      return respond("Agendamento não encontrado", "Entre em contato com a clínica.", "#dc2626", 404);
+      return respond("invalid", "Agendamento não encontrado", "Entre em contato com a clínica.", 404);
     }
 
     if (["completed", "cancelled", "no_show"].includes(appt.status)) {
       return respond(
+        "blocked",
         "Não é possível alterar",
         `Este agendamento já está ${appt.status === "cancelled" ? "cancelado" : "finalizado"}.`,
-        "#999999",
         409,
       );
     }
@@ -105,9 +88,9 @@ Deno.serve(async (req) => {
       }).eq("token", token);
 
       return respond(
+        "cancelled",
         "Agendamento cancelado",
         "Recebemos sua resposta. Para reagendar, entre em contato com a clínica.",
-        "#dc2626",
       );
     }
 
@@ -121,12 +104,12 @@ Deno.serve(async (req) => {
     }).eq("token", token);
 
     return respond(
+      "confirmed",
       "Agendamento confirmado!",
       "Obrigado por confirmar. Aguardamos você no horário marcado.",
-      "#16a394",
     );
   } catch (e) {
     console.error("[appointment-action]", e);
-    return respond("Erro", "Tente novamente em instantes.", "#dc2626", 500);
+    return respond("invalid", "Erro", "Tente novamente em instantes.", 500);
   }
 });
