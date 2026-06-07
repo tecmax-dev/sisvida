@@ -1465,14 +1465,14 @@ serve(async (req) => {
           const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString().slice(0, 10);
           const { data: homApts, error: homErr } = await supabase
             .from('homologacao_appointments')
-            .select('id, status, appointment_date, company_phone, employee_phone, professional_phone')
+            .select('id, status, appointment_date, company_phone, employee_phone')
             .in('status', ['scheduled', 'confirmed'])
             .gte('appointment_date', since)
             .order('appointment_date', { ascending: true })
             .limit(20);
           if (homErr) console.warn('[HOM_LOOKUP_ERROR]', homErr);
           const matchedHom = (homApts || []).find((h: any) => {
-            const phones = [h.company_phone, h.employee_phone, h.professional_phone]
+            const phones = [h.company_phone, h.employee_phone]
               .filter(Boolean)
               .map((p: string) => normalizeDigits(p));
             return phones.some((p) => variantsHom.includes(p));
