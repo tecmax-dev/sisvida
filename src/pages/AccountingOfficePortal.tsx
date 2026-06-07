@@ -25,6 +25,7 @@ import {
   Mail
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SindicatoWhatsappBanner } from "@/components/portals/SindicatoWhatsappBanner";
 import { 
   SindSystemHeader,
   SindSystemContainer,
@@ -679,6 +680,8 @@ export default function AccountingOfficePortal() {
             title="Olá, Bem-vindo de volta."
             subtitle="Gerenciamento e consultas."
           />
+
+          <SindicatoWhatsappBanner />
 
           {/* 4 Service Cards - SindSystem style */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
