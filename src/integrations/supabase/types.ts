@@ -851,6 +851,53 @@ export type Database = {
           },
         ]
       }
+      appointment_sms_tokens: {
+        Row: {
+          action_ip: string | null
+          appointment_id: string
+          cancelled_at: string | null
+          clinic_id: string
+          confirmed_at: string | null
+          created_at: string
+          expires_at: string
+          phone: string | null
+          sent_at: string
+          token: string
+        }
+        Insert: {
+          action_ip?: string | null
+          appointment_id: string
+          cancelled_at?: string | null
+          clinic_id: string
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          phone?: string | null
+          sent_at?: string
+          token: string
+        }
+        Update: {
+          action_ip?: string | null
+          appointment_id?: string
+          cancelled_at?: string | null
+          clinic_id?: string
+          confirmed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          phone?: string | null
+          sent_at?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_sms_tokens_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           appointment_date: string

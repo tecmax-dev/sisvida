@@ -54,6 +54,7 @@ const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const PublicAnamnesis = lazy(() => import("./pages/PublicAnamnesis"));
 const PublicNPS = lazy(() => import("./pages/PublicNPS"));
 const AppointmentConfirmation = lazy(() => import("./pages/AppointmentConfirmation"));
+const AppointmentSmsConfirm = lazy(() => import("./pages/AppointmentSmsConfirm"));
 const PublicSignup = lazy(() => import("./pages/PublicSignup"));
 const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
 const TelemedicinePatient = lazy(() => import("./pages/TelemedicinePatient"));
@@ -388,6 +389,7 @@ function App() {
                     <Routes>
                 <Route path="/" element={<HubLandingPage />} />
                 <Route path="/clinica" element={<ClinicaLandingPage />} />
+                <Route path="/c/:token" element={<AppointmentSmsConfirm />} />
                 <Route path="/sindicato-saas" element={<SindicalLandingPage />} />
                 {/* Aliases para evitar 404 por URLs antigas/alternativas */}
                 <Route path="/agendar-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />

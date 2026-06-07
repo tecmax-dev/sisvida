@@ -1,48 +1,54 @@
-# SMS Comtele em /sindicato — adição não-destrutiva
+# Lembrete de agendamento por SMS com Confirmar/Cancelar
 
-## Princípios
-- **Não tocar** em fluxos existentes (WhatsApp Meta, Evolution, e-mail, recuperação de senha SMS).
-- Comtele entra como **canal opcional adicional** apenas dentro do módulo `/sindicato`.
-- Reaproveita `ApiBrasilSmsService` (já configurado para Comtele Gateway V4 em `supabase/functions/_shared/apibrasil-sms.ts`).
+SMS não suporta botões nativos. A solução padrão (usada por clínicas no Brasil) é enviar **texto curto + 2 links** (um para confirmar, outro para cancelar). O paciente toca, abre uma página pública leve, e a ação volta para o sistema automaticamente.
 
-## Escopo
+## Custo / tamanho
+Meta: caber em **1 SMS (160 chars GSM-7)**. Exemplo (≈150 chars):
 
-### 1. Tabela nova `sms_templates` (não conflita com WhatsApp)
-Colunas: `id`, `clinic_id`, `name`, `meta_template_name` (origem opcional), `body` (texto puro, máx 160 chars com placeholders `{1}`,`{2}`...), `variables` (jsonb), `status` (`draft`|`active`), `comtele_template_id` (se cadastrado na Comtele), timestamps.
-RLS: admin/owner do sindicato.
+```
+ProSind: ola Joao, consulta 12/06 14:30 c/ Dr Ana.
+Confirmar: prosindweb.com.br/c/AbC12
+Cancelar:  prosindweb.com.br/c/AbC12?x=1
+```
 
-### 2. Edge function `sindicato-sms-templates-sync` (verify_jwt=true)
-- **Lista** templates Meta aprovados via Graph API.
-- **Converte** componente BODY removendo formatação Meta → texto SMS puro (`{{1}}` → `{1}`, remove `*bold*`, trunca 160).
-- **Cria/atualiza** registros em `sms_templates` (idempotente por `meta_template_name`).
-- **NÃO** cria templates na Comtele automaticamente (a API de templates Comtele exige aprovação manual). Apenas espelha o texto localmente.
+Usaremos token curto (5–6 chars base62) por agendamento → mesma URL serve para confirmar e cancelar via `?x=1`, economizando caracteres. Domínio próprio (já temos `prosindweb.com.br`) → link mais curto que `wa.me` / qualquer encurtador externo, sem custo extra.
 
-### 3. Edge function `sindicato-send-sms` (verify_jwt=true)
-- Input: `{ template_id, recipients: [{phone, vars}], clinic_id }`.
-- Renderiza body substituindo `{N}` por vars.
-- Envia via `ApiBrasilSmsService.fromEnv()` (Comtele já operacional).
-- Loga em tabela `sms_send_log` (success/error por destinatário).
+## Componentes
 
-### 4. UI em `/sindicato` — nova página `UnionSmsPage`
-- Rota: `/sindicato/comunicacao/sms` (nova; não substitui WhatsApp).
-- Tabs: **Templates** (lista + botão "Sincronizar do WhatsApp") | **Envio** (escolhe template, cola lista de números/CPFs, envia) | **Histórico** (logs).
-- Link no menu lateral do sindicato como item novo "SMS (Comtele)" — não remove nada.
+### 1. Tabela `appointment_sms_tokens` (migration)
+- `token` (text PK, 6 chars) · `appointment_id` (fk) · `clinic_id` · `expires_at` · `confirmed_at` · `cancelled_at` · `sent_at` · timestamps.
+- RLS: leitura/escrita só service_role; página pública usa edge function.
+- GRANT para `service_role`.
 
-### 5. Permissão
-Reusa `useUnionPermissions` — só admin/owner enxerga.
+### 2. Edge function `appointment-sms-reminder` (verify_jwt=true)
+- Input: `{ appointment_id }` ou `{ clinic_id, date }` (lote).
+- Gera token, monta texto curto (≤160 chars; trunca nome se preciso), envia via `sindicato-send-sms` reutilizando Comtele (já operacional — não toca em WhatsApp).
+- Loga em `sms_send_logs`.
+
+### 3. Edge function pública `appointment-action` (verify_jwt=false)
+- Rota: `GET /functions/v1/appointment-action?t=AbC12&x=0|1`.
+- Valida token, expira em 7 dias, idempotente.
+- `x=1` → `appointments.status = 'cancelled'` + libera waiting list (`notifyNextInWaitingList`).
+- `x=0` → `appointments.status = 'confirmed'`.
+- Retorna HTML simples com cor verde/vermelha + nome da clínica.
+
+### 4. Rota curta `/c/:token`
+- `public/_redirects` + `vercel.json`: `/c/*` → edge function `appointment-action`.
+- Mantém URL curtíssima no SMS.
+
+### 5. UI — Card de SMS no detalhe do agendamento
+- Em `AppointmentDetails` (ou menu de ações do card já existente): botão **"Enviar lembrete SMS"** chamando a edge.
+- Toggle em `clinics` (`sms_reminder_enabled`) para envio automático D-1 (cron já existente — apenas adicionar trigger opcional, não obrigatório nesta entrega).
 
 ## O que NÃO muda
-- `send-password-reset-email`, `apibrasil-sms.ts` core, recuperação de senha mobile.
-- Templates Meta WhatsApp e disparos existentes.
-- Rotas, menus e schemas atuais.
+- WhatsApp Meta / Evolution / lembretes WA existentes — intocados.
+- `appointments` schema (só leitura/update de `status`).
+- Fluxo de reset de senha SMS.
 
-## Detalhes técnicos
-- Templates Comtele só podem ser criados via painel comtele.com.br (sem endpoint público estável). Por isso espelhamos localmente e enviamos **mensagem livre** com a rota 17 (transacional). Comtele aceita texto livre na rota 17 sem pré-aprovação.
-- Truncamento: SMS = 160 chars GSM-7. Avisar usuário quando exceder.
-- Telefones via `buildBrazilianPhoneCandidates` (já existe).
+## Entregáveis nesta ordem
+1. Migration `appointment_sms_tokens` + GRANT + RLS.
+2. Edge `appointment-action` (público) + `appointment-sms-reminder` (autenticado).
+3. Redirect `/c/:token` no `public/_redirects` e `vercel.json`.
+4. Botão "Enviar lembrete SMS" no card de agendamento.
 
-## Entregáveis em ordem
-1. Migration `sms_templates` + `sms_send_log` + RLS + GRANT.
-2. Edge `sindicato-sms-templates-sync` + `sindicato-send-sms`.
-3. Hook `useSmsTemplates` + página `UnionSmsPage` + item de menu.
-4. Teste curl em uma template e um envio.
+Posso seguir?
