@@ -3122,6 +3122,60 @@ const updateData: Record<string, any> = {
     });
   };
 
+  // Envio de lembretes em massa via SMS (Confirmar/Cancelar via link curto)
+  const handleBulkSmsReminder = async (professionalId: string, appointmentsToSend: Appointment[]) => {
+    const eligibleAppointments = appointmentsToSend.filter(apt =>
+      apt.status !== 'cancelled' &&
+      apt.status !== 'completed' &&
+      apt.status !== 'no_show'
+    );
+
+    if (eligibleAppointments.length === 0) {
+      toast({
+        title: "Nenhum agendamento elegível",
+        description: "Não há agendamentos pendentes para enviar lembrete por SMS.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmMsg = `Enviar lembrete por SMS para ${eligibleAppointments.length} paciente(s)?\n\nObs.: cada SMS é tarifado pela operadora.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setSendingBulkSms(professionalId);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < eligibleAppointments.length; i++) {
+      const appointment = eligibleAppointments[i];
+      if (!appointment.patient?.phone) {
+        errorCount++;
+        continue;
+      }
+      try {
+        const { data, error } = await supabase.functions.invoke('appointment-sms-reminder', {
+          body: { appointment_id: appointment.id },
+        });
+        if (error || !data?.ok) {
+          errorCount++;
+        } else {
+          successCount++;
+        }
+        await new Promise((r) => setTimeout(r, 1200));
+      } catch (err) {
+        console.error('[BULK SMS]', err);
+        errorCount++;
+      }
+    }
+
+    setSendingBulkSms(null);
+    toast({
+      title: "SMS enviados",
+      description: `${successCount} enviado(s)${errorCount > 0 ? `, ${errorCount} falha(s)` : ''}.`,
+      variant: successCount > 0 ? "default" : "destructive",
+    });
+  };
+
   // Handler: Enviar agenda do dia para o profissional via WhatsApp
   const handleSendDailyAgenda = async (professionalId: string, appointmentsList: Appointment[]) => {
     const professional = professionals.find(p => p.id === professionalId);
