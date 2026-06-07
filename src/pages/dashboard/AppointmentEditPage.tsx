@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Calendar, Clock, User, Stethoscope, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Clock, User, Stethoscope, CheckCircle, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -675,6 +675,37 @@ export default function AppointmentEditPage() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!appointment?.id || sendingSms}
+                onClick={async () => {
+                  if (!appointment?.id) return;
+                  setSendingSms(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke('appointment-sms-reminder', {
+                      body: { appointment_id: appointment.id },
+                    });
+                    if (error) throw error;
+                    if (!(data as any)?.ok) throw new Error((data as any)?.error || 'Falha no envio');
+                    toast({
+                      title: 'SMS enviado',
+                      description: `Lembrete enviado (${(data as any).chars} chars). O paciente pode confirmar ou cancelar pelo link.`,
+                    });
+                  } catch (e: any) {
+                    toast({
+                      title: 'Erro ao enviar SMS',
+                      description: e.message || 'Tente novamente.',
+                      variant: 'destructive',
+                    });
+                  } finally {
+                    setSendingSms(false);
+                  }
+                }}
+              >
+                {sendingSms ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+                Enviar lembrete SMS
+              </Button>
               <Button
                 type="button"
                 variant="outline"
