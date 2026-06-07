@@ -388,6 +388,7 @@ function App() {
                     <Routes>
                 <Route path="/" element={<HubLandingPage />} />
                 <Route path="/clinica" element={<ClinicaLandingPage />} />
+                <Route path="/c/:token" element={<AppointmentSmsConfirm />} />
                 <Route path="/sindicato-saas" element={<SindicalLandingPage />} />
                 {/* Aliases para evitar 404 por URLs antigas/alternativas */}
                 <Route path="/agendar-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
