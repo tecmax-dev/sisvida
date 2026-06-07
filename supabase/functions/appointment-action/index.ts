@@ -45,15 +45,6 @@ Deno.serve(async (req) => {
       return respond("expired", "Link expirado", "Entre em contato com a clínica.", 410);
     }
 
-    if (row.confirmed_at || row.cancelled_at) {
-      const cancelled = !!row.cancelled_at;
-      return respond(
-        cancelled ? "cancelled" : "confirmed",
-        cancelled ? "Já cancelado" : "Já confirmado",
-        `Seu agendamento já foi ${cancelled ? "cancelado" : "confirmado"}.`,
-      );
-    }
-
     const { data: appt } = await supabase
       .from("appointments")
       .select("id, status, clinic_id, appointment_date, start_time, end_time, patient:patients(name), professional:professionals(name), clinic:clinics(name, address, phone)")
@@ -74,6 +65,17 @@ Deno.serve(async (req) => {
       clinic_address: (appt as any).clinic?.address ?? null,
       clinic_phone: (appt as any).clinic?.phone ?? null,
     };
+
+    if (row.confirmed_at || row.cancelled_at) {
+      const cancelled = !!row.cancelled_at;
+      return respond(
+        cancelled ? "cancelled" : "confirmed",
+        cancelled ? "Já cancelado" : "Já confirmado",
+        `Seu agendamento já foi ${cancelled ? "cancelado" : "confirmado"}.`,
+        200,
+        apptInfo,
+      );
+    }
 
     if (["completed", "cancelled", "no_show"].includes(appt.status)) {
       return respond(
