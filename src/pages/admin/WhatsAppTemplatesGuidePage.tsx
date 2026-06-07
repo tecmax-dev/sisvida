@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, CheckCircle2, ShieldCheck, AlertTriangle, ExternalLink } from "lucide-react";
 
 type Btn =
-  | { type: "QUICK_REPLY"; text: string }
+  | { type: "QUICK_REPLY"; text: string; payloadId?: string }
   | { type: "URL"; text: string; url: string; example?: string };
 
 interface Tpl {
@@ -218,8 +218,8 @@ const TEMPLATES: Tpl[] = [
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     buttons: [
-      { type: "QUICK_REPLY", text: "Falar com atendente" },
-      { type: "QUICK_REPLY", text: "Agora não" },
+      { type: "QUICK_REPLY", text: "Falar com atendente", payloadId: "falar_atendente" },
+      { type: "QUICK_REPLY", text: "Agora não", payloadId: "agora_nao" },
     ],
     priority: 1,
     notes: "Use quando o sindicato precisa INICIAR uma conversa (fora da janela de 24h). O toque em 'Falar com atendente' abre a janela de 24h e o operador pode mandar mensagens livres.",
@@ -233,7 +233,7 @@ const TEMPLATES: Tpl[] = [
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     buttons: [
-      { type: "QUICK_REPLY", text: "Continuar atendimento" },
+      { type: "QUICK_REPLY", text: "Continuar atendimento", payloadId: "continuar_atendimento" },
     ],
     priority: 2,
     notes: "Reativa contato que parou de responder. Janela de 24h reabre quando o associado toca no botão.",
