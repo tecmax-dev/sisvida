@@ -574,6 +574,7 @@ export default function CalendarPage() {
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
   const [directReplyEnabled, setDirectReplyEnabled] = useState(false);
   const [sendingBulkReminder, setSendingBulkReminder] = useState<string | null>(null); // professionalId or null
+  const [sendingBulkSms, setSendingBulkSms] = useState<string | null>(null); // professionalId or null
   const [sendingAgenda, setSendingAgenda] = useState<string | null>(null); // professionalId or null
   
   // Edit state
