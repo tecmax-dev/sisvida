@@ -102,6 +102,7 @@ export default function AppointmentEditPage() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingSms, setSendingSms] = useState(false);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
