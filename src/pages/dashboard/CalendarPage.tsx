@@ -3948,6 +3948,18 @@ const updateData: Record<string, any> = {
                 Enviar Lembrete WhatsApp
               </DropdownMenuItem>
 
+              {/* SMS */}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendSmsReminder(appointment);
+                }}
+                disabled={sendingSms === appointment.id || !appointment.patient?.phone}
+              >
+                <Smartphone className="h-4 w-4 mr-2 text-info" />
+                Enviar Lembrete SMS
+              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
               
               {/* Reagendar */}
