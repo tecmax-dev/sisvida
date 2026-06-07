@@ -5387,6 +5387,25 @@ const updateData: Record<string, any> = {
                                 )}
                                 <span className="min-w-0">Lembrar todos</span>
                               </Button>
+                              {/* Botão de lembrete em massa via SMS */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0 text-purple-600 hover:text-purple-700"
+                                disabled={sendingBulkSms === group.professional.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBulkSmsReminder(group.professional.id, group.appointments);
+                                }}
+                                title="Enviar lembrete via SMS para todos (com link Confirmar/Cancelar)"
+                              >
+                                {sendingBulkSms === group.professional.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Smartphone className="h-4 w-4" />
+                                )}
+                                <span className="min-w-0">Lembrar todos por SMS</span>
+                              </Button>
                               {/* Botão de cancelamento profissional em lote */}
                               <Button
                                 variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
