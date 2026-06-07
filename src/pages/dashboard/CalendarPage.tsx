@@ -571,6 +571,7 @@ export default function CalendarPage() {
   
   // WhatsApp state
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
+  const [sendingSms, setSendingSms] = useState<string | null>(null);
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
   const [directReplyEnabled, setDirectReplyEnabled] = useState(false);
   const [sendingBulkReminder, setSendingBulkReminder] = useState<string | null>(null); // professionalId or null
