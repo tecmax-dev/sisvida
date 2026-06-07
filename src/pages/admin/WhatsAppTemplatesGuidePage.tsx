@@ -30,7 +30,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Segue a sua mensalidade do Sindicato dos Comerciários.\n\nReferência: {{2}}\nValor: R$ {{3}}\nVencimento: {{4}}\nLink de pagamento: {{5}}\n\nEm caso de dúvidas, entre em contato com a secretaria.",
+      "Notificação de Mensalidade: Olá, {{1}}. Segue a mensalidade do Sindicato dos Comerciários referente ao período em curso.\n\nReferência: {{2}}\nValor: R$ {{3}}\nVencimento: {{4}}\nLink de pagamento: {{5}}\n\nEm caso de dúvidas, contate a secretaria.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "10/2026", "85,00", "15/10/2026", "https://pay.lytex.com.br/abc123"],
     priority: 1,
@@ -40,7 +40,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Identificamos uma mensalidade do Sindicato dos Comerciários em aberto.\n\nReferência: {{2}}\nValor atualizado: R$ {{3}}\nVencimento original: {{4}}\nLink de regularização: {{5}}\n\nRegularize para manter os seus benefícios ativos.",
+      "Notificação de Pendência: Olá, {{1}}. Consta uma mensalidade do Sindicato dos Comerciários em aberto.\n\nReferência: {{2}}\nValor atualizado: R$ {{3}}\nVencimento original: {{4}}\nLink de regularização: {{5}}\n\nA regularização mantém o cadastro ativo.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "09/2026", "92,30", "15/09/2026", "https://pay.lytex.com.br/abc123"],
     priority: 1,
@@ -50,7 +50,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Lembramos da sua consulta agendada no Sindicato dos Comerciários.\n\nProfissional: Dr(a). {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}\n\nConfirme a sua presença pelos botões abaixo.",
+      "Lembrete de Consulta: Olá, {{1}}. Consulta agendada no Sindicato dos Comerciários.\n\nProfissional: Dr(a). {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}\n\nUtilize os botões abaixo para confirmar ou cancelar.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "José Alcides", "Clínica Geral", "14/06/2026", "14:30", "Sede do Sindicato dos Comerciários"],
     buttons: [
@@ -64,7 +64,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Sua consulta no Sindicato dos Comerciários foi agendada com sucesso.\n\nProfissional: Dr(a). {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}\n\nPedimos a gentileza de chegar com 10 minutos de antecedência.",
+      "Confirmação de Agendamento: Olá, {{1}}. Consulta registrada no Sindicato dos Comerciários.\n\nProfissional: Dr(a). {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}\n\nRecomenda-se chegar com 10 minutos de antecedência.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "José Alcides", "Clínica Geral", "14/06/2026", "14:30", "Sede do Sindicato dos Comerciários"],
     priority: 2,
@@ -74,7 +74,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Sua carteirinha do Sindicato dos Comerciários está próxima do vencimento.\n\nData de vencimento: {{2}}\n\nRegularize a renovação no aplicativo para manter o acesso aos benefícios.",
+      "Aviso de Vencimento: Olá, {{1}}. A carteirinha do Sindicato dos Comerciários está próxima do vencimento.\n\nData de vencimento: {{2}}\n\nA renovação pode ser realizada pelo aplicativo oficial.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "30/06/2026"],
     priority: 2,
@@ -85,7 +85,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Sua carteirinha do Sindicato dos Comerciários está vencida.\n\nVencimento: {{2}}\n\nReative o acesso aos benefícios renovando pelo aplicativo.",
+      "Notificação de Cadastro: Olá, {{1}}. A carteirinha do Sindicato dos Comerciários consta vencida.\n\nVencimento: {{2}}\n\nA renovação pode ser realizada pelo aplicativo oficial.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "28/02/2026"],
     priority: 2,
@@ -95,7 +95,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Sua autorização emitida pelo Sindicato dos Comerciários está disponível.\n\nTipo: {{2}}\nProfissional: Dr(a). {{3}}\nValidade: {{4}}\n\nAcesse o aplicativo para visualizar e imprimir o documento.",
+      "Autorização Disponível: Olá, {{1}}. A autorização emitida pelo Sindicato dos Comerciários está disponível para consulta.\n\nTipo: {{2}}\nProfissional: Dr(a). {{3}}\nValidade: {{4}}\n\nO documento pode ser visualizado e impresso pelo aplicativo oficial.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "Exame Laboratorial", "José Alcides", "30/07/2026"],
     priority: 3,
@@ -105,7 +105,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Sua filiação ao Sindicato dos Comerciários foi aprovada.\n\nMatrícula: {{2}}\nPlano: {{3}}\n\nSeja bem-vindo(a). Acesse o aplicativo para utilizar todos os benefícios.",
+      "Confirmação de Filiação: Olá, {{1}}. A solicitação de filiação ao Sindicato dos Comerciários foi aprovada.\n\nMatrícula: {{2}}\nPlano: {{3}}\n\nO acesso ao aplicativo oficial está disponível para consulta de informações e serviços.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "00123456", "Plano Família"],
     priority: 3,
@@ -115,7 +115,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Sua carteirinha do Sindicato dos Comerciários foi renovada.\n\nNova validade: {{2}}\n\nAcesse o aplicativo para visualizar a carteirinha atualizada.",
+      "Atualização de Cadastro: Olá, {{1}}. A carteirinha do Sindicato dos Comerciários foi renovada.\n\nNova validade: {{2}}\n\nA versão atualizada está disponível no aplicativo oficial.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "30/06/2027"],
     priority: 3,
@@ -125,7 +125,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Seu contracheque foi recebido e aprovado pelo Sindicato dos Comerciários.\n\nObrigado por manter os seus dados atualizados.",
+      "Confirmação de Documento: Olá, {{1}}. O contracheque enviado foi recebido e aprovado pelo Sindicato dos Comerciários.\n\nO cadastro consta atualizado.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     priority: 3,
@@ -135,7 +135,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Sua solicitação de renovação da carteirinha do Sindicato dos Comerciários não pôde ser concluída.\n\nMotivo: {{2}}\n\nReenvie o documento atualizado pelo aplicativo para nova análise.",
+      "Atualização de Solicitação: Olá, {{1}}. A solicitação de renovação da carteirinha do Sindicato dos Comerciários não foi concluída.\n\nMotivo: {{2}}\n\nO documento atualizado pode ser reenviado pelo aplicativo oficial para nova análise.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva", "Contracheque ilegível — favor reenviar a foto em melhor qualidade"],
     priority: 3,
@@ -145,7 +145,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Lembramos de um atendimento de homologação agendado no Sindicato dos Comerciários.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\nResponsável: {{6}}\n\nConfirme a presença pelos botões abaixo.",
+      "Lembrete de Homologação: Olá, {{1}}. Atendimento de homologação agendado no Sindicato dos Comerciários.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\nResponsável: {{6}}\n\nUtilize os botões abaixo para confirmar ou cancelar.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["RH da Empresa", "Carlos Pereira", "Comercial ABC LTDA", "20/06/2026", "10:00", "Andrea Matos"],
     buttons: [
@@ -160,7 +160,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, Dr(a). {{1}}! Lembrete de atendimento de homologação na sua agenda.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\n\nConfirme a presença pelos botões abaixo.",
+      "Lembrete de Agenda: Olá, Dr(a). {{1}}. Atendimento de homologação registrado na agenda.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\n\nUtilize os botões abaixo para confirmar ou cancelar.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Andrea Matos", "Carlos Pereira", "Comercial ABC LTDA", "20/06/2026", "10:00"],
     buttons: [
@@ -174,7 +174,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, atendimento de homologação confirmado no Sindicato dos Comerciários.\n\nFuncionário: {{1}}\nEmpresa: {{2}}\nData: {{3}}\nHorário: {{4}}\nResponsável: {{5}}\n\nAguardamos a presença na data e horário marcados.",
+      "Confirmação de Homologação: Atendimento de homologação confirmado no Sindicato dos Comerciários.\n\nFuncionário: {{1}}\nEmpresa: {{2}}\nData: {{3}}\nHorário: {{4}}\nResponsável: {{5}}\n\nO atendimento está mantido para a data e horário informados.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Carlos Pereira", "Comercial ABC LTDA", "20/06/2026", "10:00", "Andrea Matos"],
     priority: 3,
@@ -184,7 +184,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, o atendimento de homologação foi concluído no Sindicato dos Comerciários.\n\nFuncionário: {{1}}\nEmpresa: {{2}}\nData: {{3}}\nProtocolo: {{4}}\n\nGuarde este protocolo para futuras consultas.",
+      "Protocolo de Homologação: Atendimento de homologação concluído no Sindicato dos Comerciários.\n\nFuncionário: {{1}}\nEmpresa: {{2}}\nData: {{3}}\nProtocolo: {{4}}\n\nO protocolo deve ser arquivado para futuras consultas.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Carlos Pereira", "Comercial ABC LTDA", "20/06/2026", "HOM-2026-000123"],
     priority: 3,
@@ -194,7 +194,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Informamos que uma consulta agendada no Sindicato dos Comerciários foi cancelada.\n\nProfissional: Dr(a). {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nMotivo: {{6}}\n\nReagende pelo aplicativo no melhor horário para você.",
+      "Aviso de Cancelamento: Olá, {{1}}. Uma consulta agendada no Sindicato dos Comerciários foi cancelada.\n\nProfissional: Dr(a). {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nMotivo: {{6}}\n\nO reagendamento pode ser realizado pelo aplicativo oficial.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "José Alcides", "Clínica Geral", "14/06/2026", "14:30", "Imprevisto do profissional"],
     priority: 3,
@@ -204,7 +204,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Encerramos este atendimento do Sindicato dos Comerciários por inatividade.\n\nSe ainda precisar de ajuda, envie uma nova mensagem que retornaremos o atendimento.",
+      "Encerramento por Inatividade: Olá, {{1}}. Este atendimento do Sindicato dos Comerciários foi encerrado por inatividade.\n\nUma nova mensagem nesta conversa reabre o atendimento.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     priority: 3,
@@ -214,7 +214,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Aqui é do Sindicato dos Comerciários. Precisamos falar com você sobre um assunto da sua filiação.\n\nToque em \"Falar com atendente\" abaixo para iniciar a conversa.",
+      "Notificação de Atendimento: Olá, {{1}}. O Sindicato dos Comerciários precisa tratar um assunto relativo à filiação.\n\nUtilize o botão \"Falar com atendente\" abaixo para iniciar a conversa.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     buttons: [
@@ -229,7 +229,7 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá, {{1}}! Notamos que um atendimento do Sindicato dos Comerciários ficou pendente.\n\nSe ainda precisar de ajuda, toque no botão abaixo que retornamos.",
+      "Atendimento Pendente: Olá, {{1}}. Consta um atendimento do Sindicato dos Comerciários sem retorno.\n\nUtilize o botão abaixo para retomar a conversa.",
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["João Silva"],
     buttons: [
