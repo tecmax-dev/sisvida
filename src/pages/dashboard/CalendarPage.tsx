@@ -53,6 +53,7 @@ import {
   UserX,
   CalendarCheck,
   MessageCircle,
+  Smartphone,
   Lock as LockIcon,
   LockOpen as UnlockIcon,
 } from "lucide-react";
