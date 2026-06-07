@@ -432,6 +432,7 @@ export default function WhatsAppTemplatesGuidePage() {
           <p>5. <strong>Aguarde aprovação</strong> antes de criar o próximo lote. Não crie em rajada.</p>
           <p>6. Os apelos das WABAs v1/v2 devem estar <strong>aprovados</strong> antes de qualquer cadastro.</p>
           <p>7. <strong>Variáveis sempre com rótulo</strong> (ex.: <code>Data: {`{{4}}`}</code>). Nunca comece nem termine o corpo com uma variável — sempre texto fixo no início e uma linha de fechamento no fim. Preencha todos os exemplos abaixo no campo "Adicionar amostra" da Meta.</p>
+          <p>8. <strong>Botões Quick Reply com ID/Payload obrigatório</strong>. No WhatsApp Manager, ao adicionar um botão de resposta rápida, expanda <em>Opções avançadas</em> e preencha o campo <strong>"ID do botão"</strong> (ou "Payload") com o valor mostrado em cada template. É esse ID que o webhook usa para tratar o clique — sem ele, o sistema não reconhece a ação e a Meta marca o template como baixa qualidade.</p>
           <p className="pt-2">
             <a
               href="https://business.facebook.com/wa/manage/message-templates/"
