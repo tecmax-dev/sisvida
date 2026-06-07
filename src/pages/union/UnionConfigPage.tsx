@@ -4,7 +4,7 @@ import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, CreditCard, FileText, Image, Loader2, Calendar, FileCheck } from "lucide-react";
+import { Settings, CreditCard, FileText, Image, Loader2, Calendar, FileCheck, MessageSquare } from "lucide-react";
 import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
 import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
 import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
@@ -13,6 +13,7 @@ import { DependentBookingLimitSettings } from "@/components/union/settings/Depen
 import { TitularBookingLimitSettings } from "@/components/union/settings/TitularBookingLimitSettings";
 import { PayslipAcceptanceSettings } from "@/components/union/settings/PayslipAcceptanceSettings";
 import { ReminderIntervalSettings } from "@/components/union/settings/ReminderIntervalSettings";
+import { AppointmentSmsTemplateSettings } from "@/components/union/settings/AppointmentSmsTemplateSettings";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -94,6 +95,10 @@ export default function UnionConfigPage() {
           <TabsTrigger value="payslip" className="gap-2">
             <FileCheck className="h-4 w-4" />
             Contracheque
+          </TabsTrigger>
+          <TabsTrigger value="sms-template" className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            SMS Lembrete
           </TabsTrigger>
         </TabsList>
 
@@ -210,6 +215,10 @@ export default function UnionConfigPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="sms-template">
+          <AppointmentSmsTemplateSettings />
         </TabsContent>
       </Tabs>
     </div>

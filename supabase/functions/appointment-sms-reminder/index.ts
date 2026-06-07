@@ -117,8 +117,21 @@ Deno.serve(async (req) => {
     const data = fmtDate(appt.appointment_date);
     const hora = fmtTime(appt.start_time);
     const link = `${BASE_LINK}${token}`;
-    // Texto curto: < 160 chars GSM-7
-    const msg = `ProsindWeb: ${nome}, consulta ${data} ${hora}. Confirmar ${link} | Cancelar ${link}?x=1`;
+
+    // Carrega template configurável (meta_template_name = 'appointment_reminder')
+    const { data: tpl } = await admin
+      .from("sms_templates")
+      .select("id, body")
+      .eq("meta_template_name", "appointment_reminder")
+      .maybeSingle();
+    const defaultBody = `ProsindWeb: {nome}, consulta {data} {hora}. Confirmar {link} | Cancelar {link}?x=1`;
+    const body = (tpl?.body && tpl.body.trim()) ? tpl.body : defaultBody;
+    const msg = body
+      .replace(/\{nome\}/g, nome)
+      .replace(/\{data\}/g, data)
+      .replace(/\{hora\}/g, hora)
+      .replace(/\{link\}/g, link)
+      .replace(/\{token\}/g, token);
 
     const prov = resolveSmsProvider(provider);
     const sms = createSmsService(prov);
@@ -139,7 +152,7 @@ Deno.serve(async (req) => {
     });
 
     await admin.from("sms_send_logs").insert({
-      template_id: null,
+      template_id: tpl?.id ?? null,
       recipient: phone,
       rendered_body: msg,
       status: success ? "sent" : "error",
