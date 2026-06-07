@@ -364,10 +364,15 @@ function TemplateCard({ t }: { t: Tpl }) {
                     <CopyBtn value={b.text} label="" />
                   </div>
                   {b.type === "QUICK_REPLY" && b.payloadId && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground w-20">ID / Payload:</span>
-                      <Input readOnly value={b.payloadId} className="h-8 text-sm font-mono" />
-                      <CopyBtn value={b.payloadId} label="" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-20">ID (opcional):</span>
+                        <Input readOnly value={b.payloadId} className="h-8 text-sm font-mono" />
+                        <CopyBtn value={b.payloadId} label="" />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground pl-[88px]">
+                        A Meta não mostra mais esse campo no painel. Basta cadastrar o botão com o <strong>texto exato</strong> acima — o webhook reconhece pelo texto.
+                      </p>
                     </div>
                   )}
                   {b.type === "URL" && (
