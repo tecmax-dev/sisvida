@@ -1460,7 +1460,39 @@ serve(async (req) => {
           
           return new Response(JSON.stringify({ ok: true, action: `appointment_${newStatus}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         } else {
-          console.log('[APT_NOT_FOUND] for variants:', variants);
+          // --- FALLBACK: tentar HOMOLOGAÇÃO (empresa/funcionário/profissional) ---
+          const variantsHom = getPhoneVariants(from);
+          const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const { data: homApts, error: homErr } = await supabase
+            .from('homologacao_appointments')
+            .select('id, status, appointment_date, company_phone, employee_phone, professional_phone')
+            .in('status', ['scheduled', 'confirmed'])
+            .gte('appointment_date', since)
+            .order('appointment_date', { ascending: true })
+            .limit(20);
+          if (homErr) console.warn('[HOM_LOOKUP_ERROR]', homErr);
+          const matchedHom = (homApts || []).find((h: any) => {
+            const phones = [h.company_phone, h.employee_phone, h.professional_phone]
+              .filter(Boolean)
+              .map((p: string) => normalizeDigits(p));
+            return phones.some((p) => variantsHom.includes(p));
+          });
+          if (matchedHom) {
+            const newStatus = isConfirm ? 'confirmed' : 'cancelled';
+            console.log('[MATCHED_HOM]', matchedHom.id, '->', newStatus);
+            const { error: updErr } = await supabase
+              .from('homologacao_appointments')
+              .update({ status: newStatus })
+              .eq('id', matchedHom.id);
+            if (updErr) console.error('[HOM_UPDATE_ERROR]', updErr);
+            const msg = isConfirm
+              ? "Obrigado! O atendimento de homologação foi *confirmado* com sucesso. ✅"
+              : "Entendido. O atendimento de homologação foi *cancelado*. Para reagendar, acesse o link enviado anteriormente. ❌";
+            await sendResponse(withMenuTextPayload(msg));
+            return new Response(JSON.stringify({ ok: true, action: `homologacao_${newStatus}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+
+          console.log('[APT_NOT_FOUND] for variants:', variantsHom);
           await sendResponse(
             withMenuButtonsPayload(
               "Não encontramos um agendamento pendente para este número. Se preferir, fale com um atendente.",
@@ -1471,6 +1503,36 @@ serve(async (req) => {
       } catch (err) {
         console.error('[APT_ACTION_ERROR]', err);
       }
+    }
+
+    // --- BOTÃO: "Continuar atendimento" (template retomar_atendimento) ---
+    const isContinuarAtendimento =
+      extractedButtonId === "continuar_atendimento" ||
+      extractedButtonTitle === "Continuar atendimento" ||
+      extractedButtonId === "Continuar atendimento";
+    if (isContinuarAtendimento) {
+      console.log('[CONTINUAR_ATENDIMENTO]', { from });
+      await sendResponse(
+        withMenuButtonsPayload(
+          "Ótimo! Retomamos o seu atendimento. Em instantes um atendente do Sindicato dos Comerciários continua a conversa por aqui. ✅",
+          [{ id: "falar_atendente", title: "Falar c/ Atendente" }],
+        ),
+      );
+      return new Response(JSON.stringify({ ok: true, action: "continuar_atendimento" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // --- BOTÃO: "Agora não" (template iniciar_atendimento) ---
+    const isAgoraNao =
+      extractedButtonId === "agora_nao" ||
+      extractedButtonTitle === "Agora não" ||
+      extractedButtonId === "Agora não";
+    if (isAgoraNao) {
+      console.log('[AGORA_NAO]', { from });
+      await sendResponse({
+        type: "text",
+        text: { body: "Sem problemas. Quando quiser retomar, basta enviar uma nova mensagem que continuamos por aqui. 👋\n\nSindicato dos Comerciários" },
+      });
+      return new Response(JSON.stringify({ ok: true, action: "agora_nao" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu|oi lov|ola lov|olá lov)\b/i.test(text);
