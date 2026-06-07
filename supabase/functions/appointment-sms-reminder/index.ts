@@ -124,7 +124,8 @@ Deno.serve(async (req) => {
       .select("id, body")
       .eq("meta_template_name", "appointment_reminder")
       .maybeSingle();
-    const defaultBody = `ProsindWeb: {nome}, consulta {data} {hora}. Confirmar {link} | Cancelar {link}?x=1`;
+    // SMS curto (~80 chars): cabe folgado em 1 SMS (160 GSM-7)
+    const defaultBody = `ProsindWeb {data} {hora}. SIM:{link} NAO:{link}?x=1`;
     const body = (tpl?.body && tpl.body.trim()) ? tpl.body : defaultBody;
     const msg = body
       .replace(/\{nome\}/g, nome)
