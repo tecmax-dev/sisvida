@@ -7,8 +7,8 @@ const corsHeaders = {
 };
 
 type Kind = "confirmed" | "cancelled" | "already" | "expired" | "invalid" | "blocked";
-function respond(kind: Kind, title: string, message: string, status = 200) {
-  return new Response(JSON.stringify({ kind, title, message }), {
+function respond(kind: Kind, title: string, message: string, status = 200, appointment: any = null) {
+  return new Response(JSON.stringify({ kind, title, message, appointment }), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
   });
@@ -45,23 +45,36 @@ Deno.serve(async (req) => {
       return respond("expired", "Link expirado", "Entre em contato com a clínica.", 410);
     }
 
+    const { data: appt } = await supabase
+      .from("appointments")
+      .select("id, status, clinic_id, appointment_date, start_time, end_time, patient:patients(name), professional:professionals(name), clinic:clinics(name, address, phone)")
+      .eq("id", row.appointment_id)
+      .maybeSingle();
+
+    if (!appt) {
+      return respond("invalid", "Agendamento não encontrado", "Entre em contato com a clínica.", 404);
+    }
+
+    const apptInfo = {
+      date: appt.appointment_date,
+      start_time: appt.start_time,
+      end_time: (appt as any).end_time ?? null,
+      patient_name: (appt as any).patient?.name ?? null,
+      professional_name: (appt as any).professional?.name ?? null,
+      clinic_name: (appt as any).clinic?.name ?? null,
+      clinic_address: (appt as any).clinic?.address ?? null,
+      clinic_phone: (appt as any).clinic?.phone ?? null,
+    };
+
     if (row.confirmed_at || row.cancelled_at) {
       const cancelled = !!row.cancelled_at;
       return respond(
         cancelled ? "cancelled" : "confirmed",
         cancelled ? "Já cancelado" : "Já confirmado",
         `Seu agendamento já foi ${cancelled ? "cancelado" : "confirmado"}.`,
+        200,
+        apptInfo,
       );
-    }
-
-    const { data: appt } = await supabase
-      .from("appointments")
-      .select("id, status, clinic_id, appointment_date, start_time")
-      .eq("id", row.appointment_id)
-      .maybeSingle();
-
-    if (!appt) {
-      return respond("invalid", "Agendamento não encontrado", "Entre em contato com a clínica.", 404);
     }
 
     if (["completed", "cancelled", "no_show"].includes(appt.status)) {
@@ -70,6 +83,7 @@ Deno.serve(async (req) => {
         "Não é possível alterar",
         `Este agendamento já está ${appt.status === "cancelled" ? "cancelado" : "finalizado"}.`,
         409,
+        apptInfo,
       );
     }
 
@@ -91,6 +105,8 @@ Deno.serve(async (req) => {
         "cancelled",
         "Agendamento cancelado",
         "Recebemos sua resposta. Para reagendar, entre em contato com a clínica.",
+        200,
+        apptInfo,
       );
     }
 
@@ -107,6 +123,8 @@ Deno.serve(async (req) => {
       "confirmed",
       "Agendamento confirmado!",
       "Obrigado por confirmar. Aguardamos você no horário marcado.",
+      200,
+      apptInfo,
     );
   } catch (e) {
     console.error("[appointment-action]", e);
