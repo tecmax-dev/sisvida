@@ -571,6 +571,7 @@ export default function CalendarPage() {
   
   // WhatsApp state
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
+  const [sendingSms, setSendingSms] = useState<string | null>(null);
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
   const [directReplyEnabled, setDirectReplyEnabled] = useState(false);
   const [sendingBulkReminder, setSendingBulkReminder] = useState<string | null>(null); // professionalId or null
@@ -3176,6 +3177,40 @@ const updateData: Record<string, any> = {
     });
   };
 
+  // Handler: Enviar lembrete SMS individual
+  const handleSendSmsReminder = async (appointment: Appointment) => {
+    if (!appointment.patient?.phone) {
+      toast({ title: "Sem telefone", description: "Paciente sem telefone cadastrado.", variant: "destructive" });
+      return;
+    }
+    if (["completed", "cancelled", "no_show"].includes(appointment.status)) {
+      toast({ title: "Não é possível", description: "Agendamento já finalizado/cancelado.", variant: "destructive" });
+      return;
+    }
+    const name = appointment.patient?.name || "paciente";
+    if (!window.confirm(`Enviar SMS de lembrete para ${name}?\n\nObs.: cada SMS é tarifado pela operadora.`)) return;
+
+    setSendingSms(appointment.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('appointment-sms-reminder', {
+        body: { appointment_id: appointment.id },
+      });
+      if (error || !data?.ok) {
+        toast({
+          title: "Falha no envio",
+          description: (data as any)?.error || error?.message || "Erro desconhecido.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "SMS enviado", description: `Lembrete enviado para ${name}.` });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message || "Falha ao enviar SMS.", variant: "destructive" });
+    } finally {
+      setSendingSms(null);
+    }
+  };
+
   // Handler: Enviar agenda do dia para o profissional via WhatsApp
   const handleSendDailyAgenda = async (professionalId: string, appointmentsList: Appointment[]) => {
     const professional = professionals.find(p => p.id === professionalId);
@@ -3911,6 +3946,18 @@ const updateData: Record<string, any> = {
               >
                 <Send className="h-4 w-4 mr-2 text-success" />
                 Enviar Lembrete WhatsApp
+              </DropdownMenuItem>
+
+              {/* SMS */}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendSmsReminder(appointment);
+                }}
+                disabled={sendingSms === appointment.id || !appointment.patient?.phone}
+              >
+                <Smartphone className="h-4 w-4 mr-2 text-info" />
+                Enviar Lembrete SMS
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
