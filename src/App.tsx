@@ -54,6 +54,7 @@ const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const PublicAnamnesis = lazy(() => import("./pages/PublicAnamnesis"));
 const PublicNPS = lazy(() => import("./pages/PublicNPS"));
 const AppointmentConfirmation = lazy(() => import("./pages/AppointmentConfirmation"));
+const AppointmentSmsConfirm = lazy(() => import("./pages/AppointmentSmsConfirm"));
 const PublicSignup = lazy(() => import("./pages/PublicSignup"));
 const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
 const TelemedicinePatient = lazy(() => import("./pages/TelemedicinePatient"));
