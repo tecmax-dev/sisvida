@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const TEMPLATE_KEY = "appointment_reminder";
-const DEFAULT_BODY = `ProsindWeb {data} {hora}. SIM:{link} NAO:{link}?x=1`;
+const DEFAULT_BODY = `ProsindWeb: {nome}, consulta {data} as {hora}. Confirmar SIM:{link} ou NAO:{link}?x=1`;
 const SAMPLE = { nome: "Joao", data: "12/06", hora: "14:30", link: "prosindweb.com.br/c/abc123", token: "abc123" };
 const PLACEHOLDERS = ["{nome}", "{data}", "{hora}", "{link}", "{token}"];
 const LIMIT = 160;
