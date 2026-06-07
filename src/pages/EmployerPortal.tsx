@@ -38,6 +38,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
+import { SindicatoWhatsappBanner } from "@/components/portals/SindicatoWhatsappBanner";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
@@ -870,6 +871,7 @@ const [showTutorial, setShowTutorial] = useState(false);
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {activeView === "home" && (
           <>
+            <SindicatoWhatsappBanner />
             {/* Welcome Section */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-2">
