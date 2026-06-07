@@ -363,6 +363,13 @@ function TemplateCard({ t }: { t: Tpl }) {
                     <Input readOnly value={b.text} className="h-8 text-sm" />
                     <CopyBtn value={b.text} label="" />
                   </div>
+                  {b.type === "QUICK_REPLY" && b.payloadId && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-20">ID / Payload:</span>
+                      <Input readOnly value={b.payloadId} className="h-8 text-sm font-mono" />
+                      <CopyBtn value={b.payloadId} label="" />
+                    </div>
+                  )}
                   {b.type === "URL" && (
                     <>
                       <div className="flex items-center gap-2">
