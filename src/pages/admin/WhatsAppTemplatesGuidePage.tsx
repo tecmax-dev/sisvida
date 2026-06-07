@@ -30,9 +30,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, segue a sua mensalidade do sindicato referente a {{2}}.\n\nValor: R$ {{3}}\nVencimento: {{4}}\n\nLink para pagamento: {{5}}\n\nQualquer dúvida, estamos à disposição.",
+      "Olá, segue a sua mensalidade do Sindicato dos Comerciários.\n\nOs detalhes (mês de referência, valor, vencimento e link de pagamento) serão enviados na próxima mensagem.\n\nQualquer dúvida, estamos à disposição.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva", "10/2026", "85,00", "15/10/2026", "https://prosindweb.com.br/p/abc123"],
+    bodyExamples: [],
     priority: 1,
   },
   {
@@ -40,9 +40,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, identificamos que a sua mensalidade referente a {{2}} está em aberto.\n\nValor atualizado: R$ {{3}}\nVencimento original: {{4}}\n\nSegue link para regularização: {{5}}",
+      "Olá, identificamos que existe uma mensalidade do Sindicato dos Comerciários em aberto na sua conta.\n\nOs detalhes (mês, valor atualizado, vencimento e link de regularização) serão enviados na próxima mensagem.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva", "09/2026", "85,00", "15/09/2026", "https://prosindweb.com.br/p/abc123"],
+    bodyExamples: [],
     priority: 1,
   },
   {
@@ -50,9 +50,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, este é um lembrete da sua consulta agendada.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}\n\nPedimos a gentileza de confirmar a sua presença.",
+      "Olá, este é um lembrete de uma consulta agendada no Sindicato dos Comerciários.\n\nOs dados completos (profissional, especialidade, data, horário e local) serão enviados na próxima mensagem.\n\nPedimos a gentileza de confirmar a sua presença pelos botões abaixo.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Maria Souza", "Dra. Andrea Matos", "Clínica Geral", "10/06/2026", "14:30", "Sede do Sindicato"],
+    bodyExamples: [],
     buttons: [
       { type: "QUICK_REPLY", text: "Confirmar" },
       { type: "QUICK_REPLY", text: "Cancelar" },
@@ -64,9 +64,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, a sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nLocal: {{6}}",
+      "Olá, a sua consulta no Sindicato dos Comerciários foi agendada com sucesso.\n\nOs dados completos (profissional, especialidade, data, horário e local) serão enviados na próxima mensagem.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Maria Souza", "Dra. Andrea Matos", "Clínica Geral", "10/06/2026", "14:30", "Sede do Sindicato"],
+    bodyExamples: [],
     priority: 2,
   },
   {
@@ -74,9 +74,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, a sua carteirinha do sindicato vence em {{2}}.\n\nPara manter o acesso aos benefícios, regularize a renovação no aplicativo.",
+      "Olá, a sua carteirinha do Sindicato dos Comerciários está próxima do vencimento.\n\nPara manter o acesso aos benefícios, regularize a renovação no aplicativo. A data exata será enviada na próxima mensagem.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva", "30/06/2026"],
+    bodyExamples: [],
     priority: 2,
     notes: "Originalmente MARKETING — recriar como UTILITY (renovação é transacional).",
   },
@@ -85,9 +85,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, a sua carteirinha do sindicato venceu em {{2}}.\n\nPara reativar o acesso aos benefícios, regularize a renovação pelo aplicativo.",
+      "Olá, a sua carteirinha do Sindicato dos Comerciários está vencida.\n\nPara reativar o acesso aos benefícios, regularize a renovação pelo aplicativo. A data de vencimento será enviada na próxima mensagem.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva", "30/05/2026"],
+    bodyExamples: [],
     priority: 2,
   },
   {
@@ -95,9 +95,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, a sua autorização ({{2}}) está disponível.\n\nProfissional: {{3}}\nValidade: {{4}}\n\nAcesse o aplicativo para visualizar e imprimir.",
+      "Olá, a sua autorização emitida pelo Sindicato dos Comerciários está disponível.\n\nOs dados completos (tipo, profissional e validade) serão enviados na próxima mensagem. Acesse o aplicativo para visualizar e imprimir.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Maria Souza", "Consulta médica", "Dra. Andrea Matos", "30/07/2026"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -105,9 +105,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, a sua filiação ao sindicato foi aprovada.\n\nMatrícula: {{2}}\nPlano: {{3}}\n\nSeja bem-vindo(a). Acesse o aplicativo para utilizar os benefícios.",
+      "Olá, a sua filiação ao Sindicato dos Comerciários foi aprovada.\n\nA matrícula e o plano contratado serão enviados na próxima mensagem. Seja bem-vindo(a). Acesse o aplicativo para utilizar os benefícios.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva", "00012345", "Padrão"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -115,9 +115,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, a sua carteirinha foi renovada com sucesso.\n\nNova validade: {{2}}\n\nAcesse o aplicativo para visualizar.",
+      "Olá, a sua carteirinha do Sindicato dos Comerciários foi renovada com sucesso.\n\nA nova validade será enviada na próxima mensagem. Acesse o aplicativo para visualizar.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva", "30/06/2027"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -125,9 +125,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, o seu contracheque foi recebido e aprovado.\n\nObrigado por manter os seus dados atualizados.",
+      "Olá, o seu contracheque foi recebido e aprovado pelo Sindicato dos Comerciários.\n\nObrigado por manter os seus dados atualizados.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -135,9 +135,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, a sua solicitação de renovação não pôde ser concluída.\n\nMotivo: {{2}}\n\nReenvie o documento atualizado pelo aplicativo.",
+      "Olá, a sua solicitação de renovação da carteirinha do Sindicato dos Comerciários não pôde ser concluída.\n\nO motivo será enviado na próxima mensagem. Reenvie o documento atualizado pelo aplicativo.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva", "Contracheque ilegível"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -145,9 +145,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, este é um lembrete do atendimento de homologação.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\nResponsável: {{6}}",
+      "Olá, este é um lembrete de um atendimento de homologação agendado no Sindicato dos Comerciários.\n\nOs dados completos (funcionário, empresa, data, horário e responsável) serão enviados na próxima mensagem. Confirme presença pelos botões abaixo.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Setor RH", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "10:00", "Dra. Andrea Matos"],
+    bodyExamples: [],
     buttons: [
       { type: "QUICK_REPLY", text: "Confirmar" },
       { type: "QUICK_REPLY", text: "Cancelar" },
@@ -160,9 +160,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, lembrete de atendimento de homologação na sua agenda.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}",
+      "Olá, lembrete de atendimento de homologação na sua agenda no Sindicato dos Comerciários.\n\nOs dados completos (funcionário, empresa, data e horário) serão enviados na próxima mensagem.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Dra. Andrea Matos", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "10:00"],
+    bodyExamples: [],
     buttons: [
       { type: "QUICK_REPLY", text: "Confirmar" },
       { type: "QUICK_REPLY", text: "Cancelar" },
@@ -174,9 +174,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, o atendimento de homologação foi confirmado.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nHorário: {{5}}\nResponsável: {{6}}",
+      "Olá, o atendimento de homologação foi confirmado no Sindicato dos Comerciários.\n\nOs dados completos (funcionário, empresa, data, horário e responsável) serão enviados na próxima mensagem.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Setor RH", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "10:00", "Dra. Andrea Matos"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -184,9 +184,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, o atendimento de homologação foi concluído.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nProtocolo: {{5}}",
+      "Olá, o atendimento de homologação foi concluído no Sindicato dos Comerciários.\n\nOs dados completos (funcionário, empresa, data e número de protocolo) serão enviados na próxima mensagem.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Setor RH", "Carlos Lima", "Transportes ABC LTDA", "12/06/2026", "HOM-2026-0001"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -194,9 +194,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, informamos que a sua consulta precisou ser cancelada.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}}\nHorário: {{5}}\nMotivo: {{6}}\n\nReagende pelo aplicativo no melhor horário para você.",
+      "Olá, informamos que uma consulta agendada no Sindicato dos Comerciários precisou ser cancelada.\n\nOs dados completos (profissional, especialidade, data, horário e motivo) serão enviados na próxima mensagem. Reagende pelo aplicativo no melhor horário para você.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Maria Souza", "Dra. Andrea Matos", "Clínica Geral", "10/06/2026", "14:30", "Ausência do profissional"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -204,9 +204,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, encerramos este atendimento por inatividade.\n\nSe ainda precisar de ajuda, envie uma nova mensagem que retornaremos o atendimento.",
+      "Olá, encerramos este atendimento do Sindicato dos Comerciários por inatividade.\n\nSe ainda precisar de ajuda, envie uma nova mensagem que retornaremos o atendimento.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Maria Souza"],
+    bodyExamples: [],
     priority: 3,
   },
   {
@@ -214,9 +214,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, aqui é do Sindicato dos Comerciários. Precisamos falar com você sobre um assunto da sua filiação.\n\nToque em \"Falar com atendente\" abaixo para iniciar a conversa.",
+      "Olá, aqui é do Sindicato dos Comerciários. Precisamos falar com você sobre um assunto da sua filiação.\n\nToque em \"Falar com atendente\" abaixo para iniciar a conversa.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["João Silva"],
+    bodyExamples: [],
     buttons: [
       { type: "QUICK_REPLY", text: "Falar com atendente" },
       { type: "QUICK_REPLY", text: "Agora não" },
@@ -229,9 +229,9 @@ const TEMPLATES: Tpl[] = [
     category: "UTILITY",
     language: "pt_BR",
     body:
-      "Olá {{1}}, notamos que o seu atendimento ficou pendente. Se ainda precisar de ajuda, é só tocar no botão abaixo que retornamos.",
+      "Olá, notamos que um atendimento do Sindicato dos Comerciários ficou pendente. Se ainda precisar de ajuda, é só tocar no botão abaixo que retornamos.",
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Maria Souza"],
+    bodyExamples: [],
     buttons: [
       { type: "QUICK_REPLY", text: "Continuar atendimento" },
     ],
@@ -257,9 +257,9 @@ for (const p of VAGA_PROFESSIONALS) {
     category: "UTILITY",
     language: "pt_BR",
     body:
-      `Olá {{1}}, abriu uma vaga de consulta com ${p.nome} no dia {{2}} às {{3}}.\n\nSe tiver interesse, acesse o aplicativo para reservar o horário.`,
+      `Olá, abriu uma vaga de consulta com ${p.nome} no Sindicato dos Comerciários.\n\nA data e o horário disponíveis serão enviados na próxima mensagem. Se tiver interesse, acesse o aplicativo para reservar o horário.`,
     footer: "Sindicato dos Comerciários",
-    bodyExamples: ["Maria Souza", "12/06/2026", "14:30"],
+    bodyExamples: [],
     buttons: [
       { type: "URL", text: "Acessar Aplicativo", url: "https://prosindweb.com.br/" },
     ],
@@ -336,18 +336,20 @@ function TemplateCard({ t }: { t: Tpl }) {
           </section>
         )}
 
-        <section>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">EXEMPLOS DE VARIÁVEIS (Body)</p>
-          <div className="grid gap-2">
-            {t.bodyExamples.map((ex, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="font-mono text-xs text-muted-foreground w-12">{`{{${i + 1}}}`}</span>
-                <Input readOnly value={ex} className="h-8 text-sm font-mono" />
-                <CopyBtn value={ex} label="" />
-              </div>
-            ))}
-          </div>
-        </section>
+        {t.bodyExamples.length > 0 && (
+          <section>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">EXEMPLOS DE VARIÁVEIS (Body)</p>
+            <div className="grid gap-2">
+              {t.bodyExamples.map((ex, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-muted-foreground w-12">{`{{${i + 1}}}`}</span>
+                  <Input readOnly value={ex} className="h-8 text-sm font-mono" />
+                  <CopyBtn value={ex} label="" />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {t.buttons && t.buttons.length > 0 && (
           <section>
@@ -422,6 +424,7 @@ export default function WhatsAppTemplatesGuidePage() {
           <p>4. Use sempre os <strong>exemplos reais</strong> abaixo nos campos "Adicionar exemplo" — Meta valida.</p>
           <p>5. <strong>Aguarde aprovação</strong> antes de criar o próximo lote. Não crie em rajada.</p>
           <p>6. Os apelos das WABAs v1/v2 devem estar <strong>aprovados</strong> antes de qualquer cadastro.</p>
+          <p>7. <strong>Sem variáveis no corpo.</strong> Os textos abaixo já estão 100% estáticos — os dados dinâmicos (nome, valor, data, etc.) vão numa mensagem livre logo após, dentro da janela de 24h que o template abre.</p>
           <p className="pt-2">
             <a
               href="https://business.facebook.com/wa/manage/message-templates/"
