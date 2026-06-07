@@ -424,7 +424,7 @@ export default function WhatsAppTemplatesGuidePage() {
           <p>4. Use sempre os <strong>exemplos reais</strong> abaixo nos campos "Adicionar exemplo" — Meta valida.</p>
           <p>5. <strong>Aguarde aprovação</strong> antes de criar o próximo lote. Não crie em rajada.</p>
           <p>6. Os apelos das WABAs v1/v2 devem estar <strong>aprovados</strong> antes de qualquer cadastro.</p>
-          <p>7. <strong>Sem variáveis no corpo.</strong> Os textos abaixo já estão 100% estáticos — os dados dinâmicos (nome, valor, data, etc.) vão numa mensagem livre logo após, dentro da janela de 24h que o template abre.</p>
+          <p>7. <strong>Variáveis sempre com rótulo</strong> (ex.: <code>Data: {`{{4}}`}</code>). Nunca comece nem termine o corpo com uma variável — sempre texto fixo no início e uma linha de fechamento no fim. Preencha todos os exemplos abaixo no campo "Adicionar amostra" da Meta.</p>
           <p className="pt-2">
             <a
               href="https://business.facebook.com/wa/manage/message-templates/"
