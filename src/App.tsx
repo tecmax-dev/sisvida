@@ -87,6 +87,7 @@ const SindicatoExclusaoConta = lazy(() => import("./pages/SindicatoExclusaoConta
 const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const WhatsAppTemplatesPage = lazy(() => import("./pages/admin/WhatsAppTemplatesPage"));
+const SindicatoTemplatesPage = lazy(() => import("./pages/SindicatoTemplatesPage"));
 const WhatsAppTemplatesGuidePage = lazy(() => import("./pages/admin/WhatsAppTemplatesGuidePage"));
 const WhatsAppStatusPage = lazy(() => import("./pages/admin/WhatsAppStatusPage"));
 const WhatsAppAuditPage = lazy(() => import("./pages/admin/WhatsAppAuditPage"));
