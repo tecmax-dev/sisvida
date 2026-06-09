@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { blockedByOptOut } from "../_shared/opt-out.ts";
 import { blockedByWindow } from "../_shared/session-window.ts";
+import { assertCanSend, recordSent } from "../_shared/send-gate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -457,27 +458,46 @@ serve(async (req) => {
     const isReminder = type === 'reminder' || type === 'reminder_direct_reply';
     const safeMessage = isReminder ? stripWhatsAppRiskyEmojis(message) : message;
 
-    // ===== Meta WhatsApp compliance gates =====
-    // 1) Bloqueia envio se contato tem opt-out ativo na clínica.
-    if (await blockedByOptOut({
-      clinicId,
-      phone: cleanPhone,
-      templateName,
-      sourceFunction: "send-whatsapp",
-    })) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Contato com opt-out ativo (PARAR). Envio bloqueado para preservar a reputação Meta.",
-          blocked_by: "opt_out",
-        }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // 2) Para mensagens livres (sem template), exige janela 24h aberta.
-    //    Templates aprovados não dependem da janela.
-    if (!templateName) {
+    // ===== Gate de conformidade Meta (opt-in/opt-out/score/frequência) =====
+    // Para templates, usa o gate completo (assertCanSend). Para mensagens
+    // livres (sem template), exige opt-out OK + janela 24h aberta.
+    let gateScore = 0;
+    if (templateName) {
+      const gate = await assertCanSend({
+        clinicId,
+        phone: cleanPhone,
+        templateName,
+        triggeredBy: "send-whatsapp",
+      });
+      gateScore = gate.score;
+      if (!gate.allowed) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Envio bloqueado pelo gate de conformidade Meta: ${gate.reason}`,
+            blocked_by: gate.reason,
+            score: gate.score,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      // Mensagem livre (atendimento humano): só passa se já há ticket aberto.
+      if (await blockedByOptOut({
+        clinicId,
+        phone: cleanPhone,
+        templateName,
+        sourceFunction: "send-whatsapp",
+      })) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Contato com opt-out ativo (PARAR). Envio bloqueado.",
+            blocked_by: "opt_out",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       const windowClosed = await blockedByWindow({
         clinicId,
         phone: cleanPhone,
