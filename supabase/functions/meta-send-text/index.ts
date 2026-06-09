@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { resolveMetaCreds, type MetaApiVersion } from "../_shared/meta-creds.ts";
+import { blockedByOptOut } from "../_shared/opt-out.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,6 +65,22 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const phone = normalizePhone(to);
+
+    // Hard-stop on opt-out: mensagens livres do operador também respeitam.
+    const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+    if (await blockedByOptOut({
+      clinicId: SINDICATO_CLINIC_ID,
+      phone,
+      sourceFunction: "meta-send-text",
+    })) {
+      return new Response(
+        JSON.stringify({
+          error: "OPT_OUT",
+          message: "Contato com opt-out ativo (PARAR). Envio bloqueado.",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // Verificar janela de 24h: precisa de inbound recente nesse contato
     let lastInbound: string | null = null;
