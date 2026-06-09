@@ -218,9 +218,12 @@ function mirrorToChatgoo(rawBody: any, originalHeaders: Headers) {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${CHATGOO_WEBHOOK_TOKEN}`,
-        "X-Hub-Signature-256": originalHeaders.get("x-hub-signature-256") || "",
         "X-Webhook-Token": CHATGOO_WEBHOOK_TOKEN,
       };
+      // NOTE: we intentionally do NOT forward Meta's X-Hub-Signature-256.
+      // The body is transformed (interactive -> text) so the original HMAC
+      // would not match and Chatgoo would (correctly) reject it.
+      void originalHeaders;
       const res = await fetch(CHATGOO_WEBHOOK_URL, {
         method: "POST",
         headers,
