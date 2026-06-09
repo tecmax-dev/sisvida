@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { blockedByOptOut } from "../_shared/opt-out.ts";
+import { blockedByWindow } from "../_shared/session-window.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
