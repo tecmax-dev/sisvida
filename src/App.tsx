@@ -87,6 +87,7 @@ const SindicatoExclusaoConta = lazy(() => import("./pages/SindicatoExclusaoConta
 const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const WhatsAppTemplatesPage = lazy(() => import("./pages/admin/WhatsAppTemplatesPage"));
+const SindicatoTemplatesPage = lazy(() => import("./pages/SindicatoTemplatesPage"));
 const WhatsAppTemplatesGuidePage = lazy(() => import("./pages/admin/WhatsAppTemplatesGuidePage"));
 const WhatsAppStatusPage = lazy(() => import("./pages/admin/WhatsAppStatusPage"));
 const WhatsAppAuditPage = lazy(() => import("./pages/admin/WhatsAppAuditPage"));
@@ -431,6 +432,7 @@ function App() {
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/sindicato/treinamento" element={<TrainingMaterial />} />
+                <Route path="/sindicato/templates" element={<SindicatoTemplatesPage />} />
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
