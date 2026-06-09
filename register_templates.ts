@@ -122,29 +122,10 @@ const templates = [
       }
     ]
   },
-  {
-    name: "ia_prontuario_informativo",
-    language: "pt_BR",
-    category: "UTILITY",
-    components: [
-      {
-        type: "BODY",
-        text: "Informação de Serviço: Olá, {{1}}. Comunicamos que a atualização da carteira de associado pode ser realizada diretamente pelo WhatsApp, de forma automática e com validação em tempo real.\n\nPara atualizar, envie a foto do contracheque mais recente neste canal informando seu CPF. A validade da carteira é renovada imediatamente após a verificação automática do documento.\n\nA opção pelo aplicativo oficial permanece disponível, com validação realizada pela secretaria do Sindicato.",
-        example: { body_text: [["João da Silva"]] }
-      },
-      { type: "FOOTER", text: "Sindicato dos Comerciários" },
-      {
-        type: "BUTTONS",
-        buttons: [
-          {
-            type: "URL",
-            text: "Acessar Aplicativo",
-            url: "https://prosindweb.com.br/app"
-          }
-        ]
-      }
-    ]
-  }
+  // REMOVIDO: `ia_prontuario_informativo` — solicitava envio de contracheque
+  // via WhatsApp, violando política Meta sobre coleta de PII/documentos
+  // sensíveis. A edge function correspondente está desativada (HTTP 410).
+  // Não reintroduzir.
 ];
 
 async function register() {

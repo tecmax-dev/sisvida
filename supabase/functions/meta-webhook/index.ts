@@ -1,5 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  isOptOutKeyword,
+  isOptInKeyword,
+  registerOptOut,
+  registerOptIn,
+  isOptedOut,
+  logPolicyEvent,
+} from "../_shared/opt-out.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -210,9 +218,12 @@ function mirrorToChatgoo(rawBody: any, originalHeaders: Headers) {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${CHATGOO_WEBHOOK_TOKEN}`,
-        "X-Hub-Signature-256": originalHeaders.get("x-hub-signature-256") || "",
         "X-Webhook-Token": CHATGOO_WEBHOOK_TOKEN,
       };
+      // NOTE: we intentionally do NOT forward Meta's X-Hub-Signature-256.
+      // The body is transformed (interactive -> text) so the original HMAC
+      // would not match and Chatgoo would (correctly) reject it.
+      void originalHeaders;
       const res = await fetch(CHATGOO_WEBHOOK_URL, {
         method: "POST",
         headers,
@@ -890,6 +901,90 @@ serve(async (req) => {
       });
     } catch (logErr) {
       console.error('[LOG_ERROR]', logErr);
+    }
+
+    // ============ OPT-OUT / OPT-IN (Meta policy compliance) ============
+    // Detecta palavras-chave de descadastro/recadastro. Esta verificação
+    // precisa rodar ANTES de qualquer disparo automático do bot, para que
+    // a Meta veja que o número honra "PARAR/STOP" — principal causa de
+    // banimento por "Block Rate".
+    try {
+      if (isOptOutKeyword(text)) {
+        await registerOptOut({
+          clinicId: SINDICATO_CLINIC_ID,
+          phone: to,
+          reason: `user reply: ${text}`,
+          source: "meta_webhook",
+        });
+        await sendResponse({
+          type: "text",
+          text: {
+            body:
+              "✅ Você foi removido(a) da nossa lista de envios automáticos do WhatsApp.\n\n" +
+              "Você não receberá mais lembretes, boletos ou avisos por este canal.\n\n" +
+              "Se quiser voltar a receber, basta responder *VOLTAR* aqui.",
+          },
+        });
+        // Encerra ticket aberto (se existir) para não acionar o bot novamente.
+        try {
+          const sb2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+          const { data: contact } = await sb2
+            .from("whatsapp_contacts")
+            .select("id")
+            .eq("clinic_id", SINDICATO_CLINIC_ID)
+            .eq("phone", to)
+            .maybeSingle();
+          if (contact?.id) {
+            await sb2.from("whatsapp_tickets")
+              .update({ status: "closed", is_bot_active: false, updated_at: new Date().toISOString() })
+              .eq("clinic_id", SINDICATO_CLINIC_ID)
+              .eq("contact_id", contact.id)
+              .neq("status", "closed");
+          }
+        } catch (closeErr) {
+          console.error("[OPT_OUT_TICKET_CLOSE_ERR]", closeErr);
+        }
+        return new Response(JSON.stringify({ ok: true, action: "opt_out" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (isOptInKeyword(text)) {
+        await registerOptIn({
+          clinicId: SINDICATO_CLINIC_ID,
+          phone: to,
+          source: "meta_webhook",
+        });
+        await sendResponse({
+          type: "text",
+          text: {
+            body:
+              "✅ Pronto! Você voltou a receber nossas mensagens automáticas.\n\n" +
+              "Para sair novamente, responda *PARAR* a qualquer momento.",
+          },
+        });
+        return new Response(JSON.stringify({ ok: true, action: "opt_in" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Se o contato está com opt-out ativo, NÃO acionar o bot.
+      // Permite apenas que ele responda explicitamente "VOLTAR" (tratado acima).
+      const optedOut = await isOptedOut(SINDICATO_CLINIC_ID, to);
+      if (optedOut) {
+        await logPolicyEvent({
+          clinicId: SINDICATO_CLINIC_ID,
+          phone: to,
+          event: "inbound_ignored_opt_out",
+          sourceFunction: "meta-webhook",
+          payload: { text: text?.slice(0, 200) ?? null },
+        });
+        return new Response(JSON.stringify({ ok: true, ignored: "opt_out" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch (optErr) {
+      console.error("[OPT_OUT_HANDLER_ERROR]", optErr);
     }
 
     // ============ FLUXOS DE AGENDAMENTO / CANCELAMENTO (BETA - WHITELIST) ============

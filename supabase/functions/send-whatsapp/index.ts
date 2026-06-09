@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { blockedByOptOut } from "../_shared/opt-out.ts";
+import { blockedByWindow } from "../_shared/session-window.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -454,6 +456,44 @@ serve(async (req) => {
 
     const isReminder = type === 'reminder' || type === 'reminder_direct_reply';
     const safeMessage = isReminder ? stripWhatsAppRiskyEmojis(message) : message;
+
+    // ===== Meta WhatsApp compliance gates =====
+    // 1) Bloqueia envio se contato tem opt-out ativo na clínica.
+    if (await blockedByOptOut({
+      clinicId,
+      phone: cleanPhone,
+      templateName,
+      sourceFunction: "send-whatsapp",
+    })) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Contato com opt-out ativo (PARAR). Envio bloqueado para preservar a reputação Meta.",
+          blocked_by: "opt_out",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // 2) Para mensagens livres (sem template), exige janela 24h aberta.
+    //    Templates aprovados não dependem da janela.
+    if (!templateName) {
+      const windowClosed = await blockedByWindow({
+        clinicId,
+        phone: cleanPhone,
+        sourceFunction: "send-whatsapp",
+      });
+      if (windowClosed) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Janela de 24h fechada. Para iniciar uma conversa, use um template aprovado pela Meta.",
+            blocked_by: "session_window",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
 
     // 6. Create service role client for RPC call
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

@@ -17352,6 +17352,45 @@ export type Database = {
           },
         ]
       }
+      whatsapp_opt_outs: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          opted_out_at: string
+          phone: string
+          reactivated_at: string | null
+          reactivated_by: string | null
+          reason: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          opted_out_at?: string
+          phone: string
+          reactivated_at?: string | null
+          reactivated_by?: string | null
+          reason?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          opted_out_at?: string
+          phone?: string
+          reactivated_at?: string | null
+          reactivated_by?: string | null
+          reason?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_phone_identity: {
         Row: {
           clinic_id: string
@@ -17389,6 +17428,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_policy_events: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          event: string
+          id: string
+          meta_error_code: string | null
+          payload: Json
+          phone: string | null
+          source_function: string | null
+          template_name: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          event: string
+          id?: string
+          meta_error_code?: string | null
+          payload?: Json
+          phone?: string | null
+          source_function?: string | null
+          template_name?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          event?: string
+          id?: string
+          meta_error_code?: string | null
+          payload?: Json
+          phone?: string | null
+          source_function?: string | null
+          template_name?: string | null
+        }
+        Relationships: []
       }
       whatsapp_quick_replies: {
         Row: {
