@@ -91,6 +91,33 @@ serve(async (req) => {
     
     console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
 
+    // ===== Meta WhatsApp compliance: hard-stop on opt-out =====
+    // Toda automação que dispara template aprovado passa por aqui ou pelo
+    // send-whatsapp. Bloquear envio quando há opt-out evita banimento por
+    // "Block Rate". Importamos dinamicamente para não afetar o boot quando
+    // SUPABASE_URL ainda não estiver pronto.
+    try {
+      const { blockedByOptOut } = await import("../_shared/opt-out.ts");
+      const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      if (await blockedByOptOut({
+        clinicId: SINDICATO_CLINIC_ID,
+        phone: String(to ?? ""),
+        templateName: template_name,
+        sourceFunction: "meta-send-template",
+      })) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Contato com opt-out ativo (PARAR). Template não enviado.",
+            blocked_by: "opt_out",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } catch (gateErr) {
+      console.error("[meta-send-template] opt-out gate error (continuando)", gateErr);
+    }
+
     const creds = await resolveMetaCreds(api_version);
     const PHONE_ID = phone_number_id || creds.phoneNumberId;
     const TOKEN = token || creds.token;
