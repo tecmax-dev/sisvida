@@ -114,7 +114,7 @@ function NegotiationsContent() {
               Negociações de Débitos
             </h1>
             <p className="text-sm text-muted-foreground">
-              Gerencie acordos de parcelamento de contribuições em atraso
+              Gerencie acordos de parcelamento de contribuições vencidas e a vencer
             </p>
           </div>
         </div>
