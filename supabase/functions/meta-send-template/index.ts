@@ -91,31 +91,36 @@ serve(async (req) => {
     
     console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
 
-    // ===== Meta WhatsApp compliance: hard-stop on opt-out =====
-    // Toda automação que dispara template aprovado passa por aqui ou pelo
-    // send-whatsapp. Bloquear envio quando há opt-out evita banimento por
-    // "Block Rate". Importamos dinamicamente para não afetar o boot quando
-    // SUPABASE_URL ainda não estiver pronto.
+    // ===== Gate de conformidade Meta (opt-in/opt-out/score/frequência) =====
+    const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+    let gateScore = 0;
     try {
-      const { blockedByOptOut } = await import("../_shared/opt-out.ts");
-      const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-      if (await blockedByOptOut({
+      const { assertCanSend } = await import("../_shared/send-gate.ts");
+      const gate = await assertCanSend({
         clinicId: SINDICATO_CLINIC_ID,
         phone: String(to ?? ""),
         templateName: template_name,
-        sourceFunction: "meta-send-template",
-      })) {
+        triggeredBy: "meta-send-template",
+      });
+      gateScore = gate.score;
+      if (!gate.allowed) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "Contato com opt-out ativo (PARAR). Template não enviado.",
-            blocked_by: "opt_out",
+            error: `Envio bloqueado pelo gate de conformidade Meta: ${gate.reason}`,
+            blocked_by: gate.reason,
+            score: gate.score,
           }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
     } catch (gateErr) {
-      console.error("[meta-send-template] opt-out gate error (continuando)", gateErr);
+      // fail-closed: se gate quebrar, abortar para não violar diretrizes Meta
+      console.error("[meta-send-template] gate error:", gateErr);
+      return new Response(
+        JSON.stringify({ success: false, error: "Falha no gate de conformidade", blocked_by: "gate_error" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const creds = await resolveMetaCreds(api_version);
@@ -338,6 +343,22 @@ serve(async (req) => {
     }
 
     const messageId = json.messages?.[0]?.id ?? null;
+
+    // Registrar envio bem-sucedido no log de auditoria
+    try {
+      const { recordSent } = await import("../_shared/send-gate.ts");
+      await recordSent({
+        clinicId: SINDICATO_CLINIC_ID,
+        phone: String(to ?? ""),
+        templateName: template_name,
+        metaMessageId: messageId,
+        triggeredBy: "meta-send-template",
+        score: gateScore,
+        payload: { language, variables },
+      });
+    } catch (logErr) {
+      console.error("[meta-send-template] recordSent error:", logErr);
+    }
 
     // Registrar no ticket se fornecido
     if (ticket_id) {
