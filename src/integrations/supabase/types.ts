@@ -2289,6 +2289,69 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_preferences: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          interaction_score: number
+          last_inbound_at: string | null
+          last_interaction_at: string | null
+          last_template_name: string | null
+          last_template_sent_at: string | null
+          notes: string | null
+          optout_categories: string[]
+          phone: string
+          updated_at: string
+          whatsapp_optin: boolean
+          whatsapp_optin_at: string | null
+          whatsapp_optin_source: string | null
+          whatsapp_optout: boolean
+          whatsapp_optout_at: string | null
+          whatsapp_optout_source: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          interaction_score?: number
+          last_inbound_at?: string | null
+          last_interaction_at?: string | null
+          last_template_name?: string | null
+          last_template_sent_at?: string | null
+          notes?: string | null
+          optout_categories?: string[]
+          phone: string
+          updated_at?: string
+          whatsapp_optin?: boolean
+          whatsapp_optin_at?: string | null
+          whatsapp_optin_source?: string | null
+          whatsapp_optout?: boolean
+          whatsapp_optout_at?: string | null
+          whatsapp_optout_source?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          interaction_score?: number
+          last_inbound_at?: string | null
+          last_interaction_at?: string | null
+          last_template_name?: string | null
+          last_template_sent_at?: string | null
+          notes?: string | null
+          optout_categories?: string[]
+          phone?: string
+          updated_at?: string
+          whatsapp_optin?: boolean
+          whatsapp_optin_at?: string | null
+          whatsapp_optin_source?: string | null
+          whatsapp_optout?: boolean
+          whatsapp_optout_at?: string | null
+          whatsapp_optout_source?: string | null
+        }
+        Relationships: []
+      }
       contribution_audit_logs: {
         Row: {
           action: string
@@ -8295,6 +8358,9 @@ export type Database = {
           admission_date: string | null
           birth_date: string | null
           birthplace: string | null
+          blocked_whatsapp: boolean
+          blocked_whatsapp_at: string | null
+          blocked_whatsapp_reason: string | null
           cep: string | null
           city: string | null
           clinic_id: string
@@ -8366,6 +8432,9 @@ export type Database = {
           admission_date?: string | null
           birth_date?: string | null
           birthplace?: string | null
+          blocked_whatsapp?: boolean
+          blocked_whatsapp_at?: string | null
+          blocked_whatsapp_reason?: string | null
           cep?: string | null
           city?: string | null
           clinic_id: string
@@ -8437,6 +8506,9 @@ export type Database = {
           admission_date?: string | null
           birth_date?: string | null
           birthplace?: string | null
+          blocked_whatsapp?: boolean
+          blocked_whatsapp_at?: string | null
+          blocked_whatsapp_reason?: string | null
           cep?: string | null
           city?: string | null
           clinic_id?: string
@@ -17162,6 +17234,8 @@ export type Database = {
           category: string
           components: Json
           created_at: string
+          deprecated_at: string | null
+          deprecation_reason: string | null
           id: string
           language: string
           last_synced_at: string
@@ -17177,6 +17251,8 @@ export type Database = {
           category: string
           components?: Json
           created_at?: string
+          deprecated_at?: string | null
+          deprecation_reason?: string | null
           id?: string
           language?: string
           last_synced_at?: string
@@ -17192,6 +17268,8 @@ export type Database = {
           category?: string
           components?: Json
           created_at?: string
+          deprecated_at?: string | null
+          deprecation_reason?: string | null
           id?: string
           language?: string
           last_synced_at?: string
@@ -17598,6 +17676,69 @@ export type Database = {
           phone?: string
           state?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_template_logs: {
+        Row: {
+          category: string | null
+          clinic_id: string | null
+          delivered_at: string | null
+          failed_at: string | null
+          id: string
+          interaction_score_at_send: number | null
+          meta_error_code: string | null
+          meta_message_id: string | null
+          optin_source: string | null
+          payload: Json
+          phone: string
+          purpose: string | null
+          read_at: string | null
+          reason: string | null
+          sent_at: string
+          status: string
+          template_name: string
+          triggered_by: string | null
+        }
+        Insert: {
+          category?: string | null
+          clinic_id?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          interaction_score_at_send?: number | null
+          meta_error_code?: string | null
+          meta_message_id?: string | null
+          optin_source?: string | null
+          payload?: Json
+          phone: string
+          purpose?: string | null
+          read_at?: string | null
+          reason?: string | null
+          sent_at?: string
+          status: string
+          template_name: string
+          triggered_by?: string | null
+        }
+        Update: {
+          category?: string | null
+          clinic_id?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          interaction_score_at_send?: number | null
+          meta_error_code?: string | null
+          meta_message_id?: string | null
+          optin_source?: string | null
+          payload?: Json
+          phone?: string
+          purpose?: string | null
+          read_at?: string | null
+          reason?: string | null
+          sent_at?: string
+          status?: string
+          template_name?: string
+          triggered_by?: string | null
         }
         Relationships: []
       }
@@ -18518,6 +18659,10 @@ export type Database = {
         Args: { p_cpf: string; p_password: string }
         Returns: Json
       }
+      calc_interaction_score: {
+        Args: { _clinic_id: string; _phone: string }
+        Returns: number
+      }
       can_access_chat_attachment: {
         Args: { object_name: string }
         Returns: boolean
@@ -19245,6 +19390,17 @@ export type Database = {
           patient_id: string
           patient_name: string
         }[]
+      }
+      wa_can_send: {
+        Args: {
+          _category: string
+          _clinic_id: string
+          _min_score?: number
+          _phone: string
+          _purpose: string
+          _template: string
+        }
+        Returns: Json
       }
     }
     Enums: {
