@@ -432,6 +432,7 @@ function App() {
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/sindicato/treinamento" element={<TrainingMaterial />} />
+                <Route path="/sindicato/templates" element={<SindicatoTemplatesPage />} />
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
