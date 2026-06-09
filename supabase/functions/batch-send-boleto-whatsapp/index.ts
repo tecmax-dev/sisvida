@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { blockedByOptOut } from "../_shared/opt-out.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,22 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Meta WhatsApp compliance: bloqueia disparo em massa se contato optou-out.
+    if (await blockedByOptOut({
+      clinicId,
+      phone,
+      sourceFunction: "batch-send-boleto-whatsapp",
+    })) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Contato com opt-out ativo (PARAR). Boletos não enviados via WhatsApp.",
+          blocked_by: "opt_out",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // Buscar contribuições com dados
