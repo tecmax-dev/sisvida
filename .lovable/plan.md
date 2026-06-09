@@ -1,133 +1,161 @@
 
-# Auditoria do banimento Meta e plano de conformidade
+# Conformidade WhatsApp Business API – Plano de Implementação
 
-## 1. O que encontrei na auditoria (causas prováveis do banimento)
+Objetivo: blindar o número oficial do sindicato contra novo banimento, alinhando 100% do fluxo de templates às diretrizes da Meta + LGPD. Trabalho dividido em **6 fases incrementais**, cada uma entregável de forma independente.
 
-Levantei o código que toca o número oficial do sindicato (`meta-webhook`, `whatsapp-ai-assistant`, `send-whatsapp`, `whatsapp-clean-flow`, `boleto-whatsapp-flow`, todos os `meta-*-template`) e cruzei com a memória de templates e a regra "Meta Official Only". Pontos críticos encontrados:
+> Já existe base parcial (fase 1 do plano anterior): tabelas `whatsapp_opt_outs`, `whatsapp_policy_events`, helpers `_shared/opt-out.ts`, `_shared/session-window.ts`, `_shared/meta-interactive.ts`. Este plano **estende** esse alicerce; não duplica.
 
-### 1.1. Falta de opt-out (causa nº1 de banimento por "user feedback")
-- Nenhum lugar do código (`meta-webhook`, `whatsapp-ai-assistant`) trata palavras `PARAR`, `SAIR`, `CANCELAR`, `STOP`, `UNSUBSCRIBE`.
-- Não existe tabela/coluna `whatsapp_opt_out` nem checagem antes de disparar templates MARKETING ou UTILITY recorrentes (`carteira_vencendo`, `carteira_vencida`, `vaga_medica_*`, `agenda_disponivel`, lembretes).
-- Resultado: usuário só consegue "parar" bloqueando o número → bloqueios em massa = quality rating despenca → banimento.
+---
 
-### 1.2. Templates MARKETING disparados sem consentimento explícito comprovável
-- `carteira_vencendo` e `carteira_vencida` estão classificados como **MARKETING** na memória, mas são disparados em automação para toda a base sem registro de opt-in 24h (origem do telefone vs. data/hora do consentimento).
-- A Meta exige prova de opt-in para qualquer template MARKETING; sem isso, "Block Rate" > 2% derruba o número.
+## Fase 1 — Catálogo canônico de templates (consolidação)
 
-### 1.3. Templates fora de política (já desativado, mas histórico contou)
-- `meta-create-carteirinha-whats-info` / `ia_prontuario_informativo` pedia para o associado **enviar foto de contracheque pelo WhatsApp** — violação de política de PII/documentos sensíveis. Já está bloqueado (HTTP 410), mas foi enviado por algum tempo e provavelmente gerou reportes.
-- `register_templates.ts` mantém esse mesmo template na lista — risco de re-registro acidental.
+Hoje há templates redundantes (`agenda_disponivel` + `agenda_disponivel_util` + `informativo_agenda_medica`, `carteira_vencendo` + `_util` + futuros `_v3/_v4`). Vamos congelar **um conjunto único e permanente**:
 
-### 1.4. Fluxo de botões fora do spec da Meta
-- `mainMenuPayload`, `withMenuButtonsPayload` e `withMenuListPayload` (em `meta-webhook/index.ts`) montam interactive corretamente, **mas**:
-  - `withMenuButtonsPayload` reserva 1 slot para "Menu Principal" e usa `buttons.slice(0,2)` → ok (limite 3).
-  - `withMenuListPayload` empacota 2 seções (truncado em 9 + 1 navegação) → ok no total de 10.
-  - **Não há limite enforcement para `title` (20 chars) nem `description` (72 chars) em todos os call sites** — mensagens são truncadas no momento da criação, mas dados vindos de banco (nome de profissional, serviço) podem estourar e gerar erro 131009/100 → reentregas em loop.
-  - `header.text` em `mainMenuPayload` ("Sindicato dos Comerciários") não tem limite checado (max 60).
-- `buildWhazingExternalButtonPayload` em `whatsapp-ai-assistant` envia `{ buttons: [{id,title}] }` sem `type: reply` — formato proprietário do Chatgoo/Whazing. Se em algum momento esse payload bater no endpoint Meta sem transformação, vira erro de schema.
+| Template canônico            | Categoria | Finalidade                              |
+| ---------------------------- | --------- | --------------------------------------- |
+| `consulta_confirmacao`       | UTILITY   | Confirmação de agendamento              |
+| `consulta_lembrete`          | UTILITY   | Lembrete D-1 / dia                      |
+| `consulta_cancelamento`      | UTILITY   | Cancelamento pelo profissional/clínica  |
+| `carteirinha_vencendo`       | UTILITY   | Aviso 30/15/7 dias antes do vencimento  |
+| `carteirinha_vencida`        | UTILITY   | Aviso pós-vencimento                    |
+| `boleto_disponivel`          | UTILITY   | Boleto/Lytex emitido                    |
+| `homologacao_confirmada`     | UTILITY   | Confirmação de homologação              |
+| `assembleia_aviso`           | UTILITY   | Convocação institucional                |
+| `recuperacao_senha`          | UTILITY   | Link de reset                           |
+| `agenda_medica_disponivel`   | UTILITY   | Cronograma mensal                       |
+| `comunicado_marketing`       | MARKETING | Único canal para campanhas (com opt-in) |
 
-### 1.5. Mirror Chatgoo com assinatura inválida
-- `mirrorToChatgoo` reenvia o payload **transformado** (`transformInteractiveToText`) mas mantém o `X-Hub-Signature-256` **original** da Meta. Assinatura passa a não bater com o corpo. Não derruba o número Meta diretamente, mas indica acoplamento frágil — e qualquer reentrada desse payload no `meta-webhook` cai no caminho "envelope chatgoo", podendo ecoar mensagens duplicadas (mais um vetor de spam percebido).
+Ações:
+- Marcar como **deprecated** no banco (`whatsapp_meta_templates.deprecated_at`) todos os nomes fora da lista; bloquear envio.
+- Atualizar `register_templates.ts` para refletir só o catálogo acima, sem `_v2/_v3/_vN` automáticos.
+- Reescrever textos seguindo "linguagem objetiva, neutra, institucional" — remover palavras gatilho (`última oportunidade`, `aproveite`, etc.).
+- Cada template UTILITY recorrente recebe footer fixo: *"Para parar de receber este aviso, responda PARAR."*
+- Remover de vez `ia_prontuario_informativo` da lista local.
 
-### 1.6. Janela 24h não validada antes de free-form
-- Memória diz "atendimento humano fora da janela 24h → obrigatório template", mas não há checagem em `send-whatsapp` / `whatsapp-ai-assistant` que valide `last_inbound_at` do contato antes de enviar `type: text`. Operadores do Chatgoo/Whazing podem enviar texto livre fora da janela → erro 131047 e marcação como spam.
+---
 
-### 1.7. Bot responde a `fromMe` / loops
-- Já existe proteção `fromMe=true` ignorada, mas o caminho do envelope Chatgoo confia em `body.fromMe` (cliente envia). Sem validação cruzada com `phoneNumberId`, é possível eco de mensagem do bot ser reprocessado como mensagem de entrada → resposta automática para outra automação = padrão clássico de "looping" que a Meta também pune.
+## Fase 2 — Opt-in formal + preferências de contato
 
-## 2. Correções propostas (escopo deste plano)
+Nova tabela `contact_preferences` (chave por `clinic_id` + `phone`):
 
-Trabalho **apenas** em backend (edge functions + 1 migração). Sem mexer em UI.
+- `whatsapp_optin` (bool), `whatsapp_optin_at`, `whatsapp_optin_source` (`app | site | presencial | whatsapp | portal | formulario | import`)
+- `whatsapp_optout` (bool), `whatsapp_optout_at`, `whatsapp_optout_source`, `optout_categories` (text[] — opcional, por categoria)
+- `last_interaction_at`, `last_template_sent_at`, `last_template_name`
+- `interaction_score` (int 0-100)
 
-### 2.1. Sistema de opt-out (bloqueante para banimento futuro)
-- Migração: nova tabela `whatsapp_opt_outs (clinic_id, phone, opted_out_at, reason, last_template_received)` com índice único `(clinic_id, phone)`, RLS + grants.
-- Em `meta-webhook` (entrada): detectar mensagens com texto exato `PARAR`, `SAIR`, `CANCELAR`, `STOP`, `UNSUBSCRIBE` (case-insensitive, trim) → upsert em `whatsapp_opt_outs` + responder com mensagem de confirmação (dentro da janela 24h, free-form) + encerrar ticket.
-- Em **todos** os disparos de template (`send-whatsapp`, `send-appointment-reminders`, `batch-send-boleto-whatsapp`, `send-comunicado-whatsapp-batch`, `boleto-whatsapp-flow`, `send-filiacao-notification`, `whatsapp-carteirinha-flow`, `meta-send-template`): checar opt-out antes do POST para Meta. Se opt-out existe → skip + log em `whatsapp_audit_logs`.
-- Adicionar comando `VOLTAR` / `REATIVAR` para remover opt-out (uso humano em atendimento).
+Migração de dados:
+- Opt-out atual (`whatsapp_opt_outs`) → vira view + sincroniza para `contact_preferences.whatsapp_optout=true`.
+- Opt-in inicial: todo associado ativo com `union_affiliation_date` válida + telefone confirmado no cadastro recebe `whatsapp_optin=true`, source=`presencial` (origem do contrato de filiação).
 
-### 2.2. Novos templates UTILITY com botão de opt-out
-- Recriar `carteira_vencendo_v3` e `carteira_vencida_v3` como **UTILITY** (são notificações de serviço, não marketing) com footer "Responda PARAR para não receber mais avisos."
-- Mesma adequação para `vaga_medica_*`, `agenda_disponivel`, `informativo_agenda_medica`.
-- Edge function `meta-register-templates` ganha action `register-with-optout&name=X` que adiciona o footer padronizado.
+UI:
+- Checkbox de consentimento explícito nos formulários de filiação PWA, cadastro presencial e portal do associado.
+- Aba **"Preferências WhatsApp"** no perfil do associado (mobile + admin) para opt-in/opt-out manual.
 
-### 2.3. Validação de janela 24h
-- Novo helper `assertInsideSessionWindow(phone)` em módulo compartilhado: consulta `whatsapp_tickets.last_inbound_at`; se > 24h → bloqueia envio free-form e retorna instrução para usar template.
-- `send-whatsapp` (modo `type: text`) e `whatsapp-ai-assistant` aplicam a checagem antes de chamar Graph API.
+---
 
-### 2.4. Hardening dos botões interativos
-- Centralizar builders interactive em `supabase/functions/_shared/meta-interactive.ts`:
-  - `buildButtonMessage(body, buttons[])` — força `title.slice(0,20)`, max 3 botões, body max 1024, header max 60, footer max 60.
-  - `buildListMessage(body, sections[])` — força total ≤10 rows, title 24, description 72, sectionTitle 24.
-  - Lança erro tipado se input estourar (em vez de truncar silenciosamente em alguns lugares e não em outros).
-- Substituir os builders inline de `meta-webhook` e `whatsapp-ai-assistant` por esses helpers.
+## Fase 3 — Score de reputação + gate de envio
 
-### 2.5. Remover/blindar templates fora de política
-- Remover `ia_prontuario_informativo` da lista de `register_templates.ts` (mantém edge function 410 como guarda) para impedir re-registro acidental por script local.
-- Auditar `meta-create-vaga-templates` para garantir que body **não** instrui envio de PII e classifica `UTILITY` corretamente.
+Função `public.calc_interaction_score(clinic_id, phone)` (security definer) retornando 0-100:
 
-### 2.6. Mirror Chatgoo correto
-- Em `mirrorToChatgoo`: ao transformar o body (`transformInteractiveToText`), **remover** o header `X-Hub-Signature-256` (assinatura deixa de ser válida para o corpo modificado). Manter apenas `X-Webhook-Token` autoral.
-- Adicionar dedupe por `meta_message_id` antes do mirror para impedir loop ↔ reprocessamento.
-
-### 2.7. Anti-loop reforçado no envelope Chatgoo
-- Em vez de confiar só em `body.fromMe`, comparar `body.contact.phoneNumberId` (quando disponível) com `META_PHONE_NUMBER_ID` do sindicato. Se bate → eco interno → ignorar.
-
-### 2.8. Observabilidade
-- Nova tabela `whatsapp_policy_events (clinic_id, phone, event, payload, created_at)` para registrar: opt-out, opt-in, bloqueio por janela 24h, bloqueio por opt-out, erro Meta com `code` de policy (131026, 131045, 131049, 131051).
-- Página existente `WhatsAppAuditPage` consome essa tabela (sem alteração visual estrutural; só adiciona uma aba/filtro — **a confirmar contigo se quer já incluir UI ou só backend agora**).
-
-## 3. Fora do escopo deste plano
-- Reativação do número banido (depende de processo manual com a Meta — fornecemos as evidências de "controles implementados" para o appeal).
-- Migração de provedor (continua Meta Cloud API oficial).
-- Mudança visual em telas `/sindicato`.
-
-## 4. Detalhes técnicos
-
-### 4.1. Migração `whatsapp_opt_outs`
-```sql
-CREATE TABLE public.whatsapp_opt_outs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  clinic_id uuid NOT NULL,
-  phone text NOT NULL,
-  opted_out_at timestamptz NOT NULL DEFAULT now(),
-  reason text,
-  source text NOT NULL DEFAULT 'user_reply',
-  reactivated_at timestamptz,
-  UNIQUE (clinic_id, phone)
-);
-GRANT SELECT, INSERT, UPDATE ON public.whatsapp_opt_outs TO authenticated;
-GRANT ALL ON public.whatsapp_opt_outs TO service_role;
-ALTER TABLE public.whatsapp_opt_outs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "clinic admins manage opt-outs"
-  ON public.whatsapp_opt_outs FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (true);
+```
+opt-out ativo                 → 0
+respondeu nos últimos 7 d     → 100
+respondeu nos últimos 30 d    → 80
+só recebeu nos últimos 30 d   → 60
+sem interação 30-90 d         → 40
+sem interação 90-180 d        → 20
+sem interação > 180 d         → 10
 ```
 
-### 4.2. Códigos de erro Meta a tratar
-- `131026` Message undeliverable / `131047` Re-engagement required (janela 24h) / `131049` user marked spam / `131051` unsupported message type / `131045` template paused → todos disparam `policy_events`.
+Helper `_shared/send-gate.ts` (novo) — toda edge function de envio (já listada na fase anterior + `send-appointment-reminders`, `boleto-whatsapp-flow`, `send-comunicado-whatsapp-batch`, `send-filiacao-notification`, `whatsapp-carteirinha-flow`, `meta-send-template`) chama `assertCanSend({ clinicId, phone, templateName, category, purpose })` que valida em ordem:
 
-### 4.3. Lista exata de arquivos a alterar
-- `supabase/migrations/<ts>_whatsapp_opt_outs.sql` (novo)
-- `supabase/migrations/<ts>_whatsapp_policy_events.sql` (novo)
-- `supabase/functions/_shared/meta-interactive.ts` (novo)
-- `supabase/functions/_shared/opt-out.ts` (novo)
-- `supabase/functions/_shared/session-window.ts` (novo)
-- `supabase/functions/meta-webhook/index.ts` (detecção PARAR/SAIR + mirror sem signature + anti-loop)
-- `supabase/functions/send-whatsapp/index.ts` (checagem opt-out + janela 24h)
-- `supabase/functions/send-appointment-reminders/index.ts` (opt-out)
-- `supabase/functions/batch-send-boleto-whatsapp/index.ts` (opt-out)
-- `supabase/functions/send-comunicado-whatsapp-batch/index.ts` (opt-out)
-- `supabase/functions/boleto-whatsapp-flow/index.ts` (opt-out + interactive helper)
-- `supabase/functions/send-filiacao-notification/index.ts` (opt-out)
-- `supabase/functions/whatsapp-carteirinha-flow/index.ts` (opt-out)
-- `supabase/functions/meta-send-template/index.ts` (opt-out central)
-- `supabase/functions/whatsapp-ai-assistant/index.ts` (interactive helper + janela 24h)
-- `supabase/functions/meta-register-templates/index.ts` (action `register-with-optout`)
-- `register_templates.ts` (remover template proibido)
+1. opt-out ativo → bloqueia.
+2. score < 30 → bloqueia (exceto transacional crítico: `recuperacao_senha`, `consulta_cancelamento`).
+3. Frequência: máx 1 mesma finalidade em 24h, 2 em 7 d, 5 em 30 d sem interação.
+4. Categoria correta vs. uso (não enviar MARKETING sem opt-in marketing explícito).
+5. Relacionamento ativo (associado ativo OU paciente com agendamento futuro/recente).
+6. Bloqueio interno (`patients.blocked_whatsapp`).
 
-## 5. Perguntas para você antes de implementar
+Qualquer bloqueio → grava `whatsapp_policy_events` (já existe) + retorna `409` ao chamador.
 
-1. **Comando de opt-out**: aceito que `PARAR` / `SAIR` / `CANCELAR` (qualquer um deles, sozinho na mensagem) marque opt-out? Quer adicionar outra palavra (ex.: `DESCADASTRAR`)?
-2. **Escopo de opt-out**: por número de clínica (sindicato) ou global (afeta todas as clínicas)? Recomendo por clínica.
-3. **Templates MARKETING → UTILITY**: posso recriar `carteira_vencendo` e `carteira_vencida` como `_v4` UTILITY com o footer de opt-out, ou prefere manter MARKETING e adicionar registro de opt-in formal antes?
-4. **UI**: incluo já uma aba "Opt-outs" em `WhatsAppAuditPage` para ver/reativar manualmente, ou foco só no backend nessa rodada?
+---
+
+## Fase 4 — Detecção de opt-out ampliada + categorias
+
+`_shared/opt-out.ts` (já existe) expandido:
+- Keywords aceitos (regex case-insensitive, trim, com/sem acento): `PARAR`, `SAIR`, `CANCELAR`, `CANCELAR AVISOS`, `REMOVER`, `DESCADASTRAR`, `STOP`, `UNSUBSCRIBE`.
+- Resposta automática de confirmação (dentro da janela 24h): *"Você não receberá mais avisos automáticos. Para reativar, responda VOLTAR."*
+- Suporte a opt-out por categoria (futuro): se mensagem original tinha contexto `template_category=marketing`, opt-out marca só `optout_categories=['marketing']`; caso contrário marca opt-out total.
+- `meta-webhook` intercepta antes do roteamento normal e encerra ticket.
+
+---
+
+## Fase 5 — Auditoria e painel de qualidade
+
+Nova tabela `whatsapp_template_logs`:
+- `template_name`, `category`, `clinic_id`, `phone`, `sent_at`, `status` (`sent|delivered|read|failed|blocked_optout|blocked_score|blocked_rate|blocked_consent`), `reason`, `meta_message_id`, `meta_error_code`, `optin_source`, `interaction_score_at_send`, `triggered_by` (função/usuário), `purpose`.
+- Webhook Meta de status (`messages.statuses`) atualiza `delivered`/`read`/`failed`.
+
+Página admin `WhatsAppQualityPage` (nova, sob `/sindicato/whatsapp/qualidade`):
+- KPIs: enviados, entregues, lidos, respondidos, taxa de confirmação (consulta), taxa de cancelamento, taxa de opt-out, taxa de bloqueio interno.
+- Ranking de templates mais usados + taxa de resposta por template.
+- Lista de contatos sem interação > 90 d (candidatos a limpeza).
+- Lista de contatos bloqueados/opt-out com botão **Reativar** (apenas role admin sindicato).
+- Alerta visual quando taxa de opt-out 7 d > 1% ou bloqueios Meta (131049/131045) aparecem.
+
+`WhatsAppAuditPage` existente ganha aba **"Opt-outs"** linkada à mesma fonte.
+
+---
+
+## Fase 6 — Proteção contra envio massivo + revisão de campanhas
+
+- `send-comunicado-whatsapp-batch` e `batch-send-boleto-whatsapp`: passam por `assertCanSend` por contato; lote nunca despacha sem opt-in confirmado quando categoria=MARKETING.
+- Limite global por número Meta: máx **N envios/minuto** (configurável; default 30) com fila no edge function (já temos staggering recursivo para campanhas — reutilizar).
+- Disparo "para toda a base" desabilitado na UI; substituído por seleção segmentada (`patient_segments`) + preview com contagem de bloqueados.
+- Template MARKETING (`comunicado_marketing`) só pode ser disparado para contatos com `whatsapp_optin=true` AND `optin_source IN ('app','portal','site','formulario')` (consentimento digital comprovável).
+
+---
+
+## Detalhes técnicos resumidos
+
+**Tabelas novas**
+- `contact_preferences` (RLS por clinic_id + has_role admin; grants authenticated/service_role)
+- `whatsapp_template_logs` (RLS admin; grants idem)
+- coluna `whatsapp_meta_templates.deprecated_at` (alter)
+- coluna `patients.blocked_whatsapp` (alter, default false)
+
+**Helpers compartilhados**
+- `_shared/send-gate.ts` (novo) — orquestra opt-out + score + rate + categoria + relacionamento.
+- `_shared/template-catalog.ts` (novo) — lista canônica + finalidade + categoria; usado para validar `templateName` antes do POST Meta.
+- `_shared/opt-out.ts` (expandir keywords + opt-out por categoria).
+- `_shared/session-window.ts` (já existe — manter).
+- `_shared/meta-interactive.ts` (já existe — manter, substituir últimos call sites inline).
+
+**Edge functions impactadas** (todas as 12 já listadas no plano anterior + `whatsapp-ai-assistant` para responder com opt-out confirmation).
+
+**Páginas/UI**
+- Nova: `/sindicato/whatsapp/qualidade` (KPIs + listas).
+- Atualizada: `WhatsAppAuditPage` (aba Opt-outs / Preferências).
+- Atualizada: Filiação + Portal associado + Perfil mobile (consent checkboxes + tela "Preferências WhatsApp").
+- Atualizada: tela de campanha — remover "enviar para todos", forçar seleção de segmento.
+
+**Migração de dados**
+- Backfill `contact_preferences` a partir de `patients`/`members`/`sindical_associados` (opt-in implícito de cadastro presencial).
+- Backfill `interaction_score` a partir do histórico `whatsapp_ticket_messages`.
+
+---
+
+## Fora deste plano
+
+- Reativação manual do número banido junto à Meta (processo humano — fornecemos as evidências de controles).
+- Mudanças visuais não relacionadas a WhatsApp.
+- Outros provedores (segue Meta Cloud API oficial).
+
+---
+
+## Perguntas antes de implementar
+
+1. **Backfill de opt-in**: posso marcar associados ativos com telefone como `optin_source='presencial'` (origem contrato de filiação)? Ou prefere começar zerado e exigir reconfirmação ativa via PWA antes de qualquer disparo?
+2. **Score mínimo de envio**: default 30 ok? (transacionais críticos como reset de senha sempre passam.)
+3. **Rate limit global**: 30 msgs/minuto por número Meta é confortável, ou precisa mais (ex.: 60)?
+4. **Fases**: implemento as 6 fases em sequência (1 PR cada, todas backend + UI) ou prefere priorizar 1+2+3+4 (compliance pura) agora e deixar 5+6 (painel + UI de campanhas) para uma segunda rodada?
