@@ -149,6 +149,13 @@ function preflight(tpl: any): string[] {
 }
 
 async function authorizeAdmin(req: Request) {
+  // Caminho 1: token interno via header x-rc1-token (token administrativo RC1)
+  const rc1Token = req.headers.get("x-rc1-token");
+  const expected = Deno.env.get("META_VERIFY_TOKEN");
+  if (expected && rc1Token && rc1Token === expected) {
+    return { ok: true, uid: "internal-rc1-token" };
+  }
+  // Caminho 2: JWT de admin/owner
   const url = Deno.env.get("SUPABASE_URL")!;
   const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
   const authHeader = req.headers.get("Authorization") ?? "";
