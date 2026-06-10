@@ -22,7 +22,7 @@ export const TEMPLATE_CATALOG: Record<string, CanonicalTemplate> = {
   boleto_disponivel:        { name: "boleto_disponivel",        category: "UTILITY",   purpose: "boleto",          description: "Boleto/Lytex emitido" },
   homologacao_confirmada:   { name: "homologacao_confirmada",   category: "UTILITY",   purpose: "homologacao",     description: "Confirmação de homologação" },
   assembleia_aviso:         { name: "assembleia_aviso",         category: "UTILITY",   purpose: "assembleia",      description: "Convocação institucional" },
-  recuperacao_senha:        { name: "recuperacao_senha",        category: "UTILITY",   purpose: "auth",            description: "Link de recuperação de senha", critical: true },
+  recuperacao_senha:        { name: "recuperacao_senha",        category: "AUTHENTICATION", purpose: "auth",        description: "Código OTP de recuperação de senha", critical: true },
   agenda_medica_disponivel: { name: "agenda_medica_disponivel", category: "UTILITY",   purpose: "agenda_mensal",   description: "Cronograma mensal de atendimentos" },
   comunicado_marketing:     { name: "comunicado_marketing",     category: "MARKETING", purpose: "marketing",       description: "Campanha institucional (requer opt-in digital)" },
 };
