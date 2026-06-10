@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { blockedByOptOut } from "../_shared/opt-out.ts";
 import { blockedByWindow } from "../_shared/session-window.ts";
 import { assertCanSend, recordSent } from "../_shared/send-gate.ts";
+import { TRIGGER_SOURCES } from "../_shared/trigger-sources.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
