@@ -17242,6 +17242,7 @@ export type Database = {
           meta_template_id: string | null
           name: string
           quality_score: string | null
+          raw_payload: Json | null
           rejection_reason: string | null
           status: string
           updated_at: string
@@ -17259,6 +17260,7 @@ export type Database = {
           meta_template_id?: string | null
           name: string
           quality_score?: string | null
+          raw_payload?: Json | null
           rejection_reason?: string | null
           status?: string
           updated_at?: string
@@ -17276,6 +17278,7 @@ export type Database = {
           meta_template_id?: string | null
           name?: string
           quality_score?: string | null
+          raw_payload?: Json | null
           rejection_reason?: string | null
           status?: string
           updated_at?: string

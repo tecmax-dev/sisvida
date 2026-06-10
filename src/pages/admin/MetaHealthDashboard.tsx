@@ -26,11 +26,16 @@ export default function MetaHealthDashboard() {
     EXCELLENT: 0, GOOD: 0, NORMAL: 0, LOW: 0, DO_NOT_DISTURB: 0,
   });
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [metaStatus, setMetaStatus] = useState<{
+    byStatus: Record<string, number>;
+    rejected: Array<{ name: string; language: string; rejection_reason: string | null; updated_at: string | null }>;
+    missing: string[];
+  }>({ byStatus: {}, rejected: [], missing: [] });
 
   async function loadAll() {
     setRefreshing(true);
     try {
-      const [reportRes, sentByCat, blocks, optOutsCount, consentsCount, prefs, logs] = await Promise.all([
+      const [reportRes, sentByCat, blocks, optOutsCount, consentsCount, prefs, logs, metaRows] = await Promise.all([
         supabase.functions.invoke("meta-templates-report", { body: {} }),
         supabase.from("whatsapp_template_logs")
           .select("category, status, sent_at")
@@ -51,6 +56,9 @@ export default function MetaHealthDashboard() {
           .eq("message_type", "compliance_audit")
           .order("created_at", { ascending: false })
           .limit(50),
+        supabase.from("whatsapp_meta_templates")
+          .select("name, language, status, rejection_reason, updated_at")
+          .limit(500),
       ]);
 
       if (reportRes.data) setReport(reportRes.data as any);
@@ -94,6 +102,22 @@ export default function MetaHealthDashboard() {
       }
       setReputation(repCounts);
       setAuditLogs((logs.data ?? []) as any[]);
+
+      // Status local da Meta (whatsapp_meta_templates)
+      const byStatus: Record<string, number> = {};
+      const rejected: Array<any> = [];
+      const localNames = new Set<string>();
+      for (const r of (metaRows.data ?? []) as any[]) {
+        const st = (r.status || "UNKNOWN").toUpperCase();
+        byStatus[st] = (byStatus[st] ?? 0) + 1;
+        localNames.add(r.name);
+        if (st === "REJECTED") rejected.push(r);
+      }
+      const missing: string[] = [];
+      for (const t of (reportRes.data?.templates ?? []) as any[]) {
+        if (t.in_catalog && !localNames.has(t.name)) missing.push(t.name);
+      }
+      setMetaStatus({ byStatus, rejected, missing });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -152,6 +176,7 @@ export default function MetaHealthDashboard() {
       <Tabs defaultValue="templates">
         <TabsList>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="meta-status">Status Meta</TabsTrigger>
           <TabsTrigger value="sends">Envios</TabsTrigger>
           <TabsTrigger value="reputation">Reputação</TabsTrigger>
           <TabsTrigger value="audit">Auditoria</TabsTrigger>
@@ -186,6 +211,51 @@ export default function MetaHealthDashboard() {
                         </Badge>
                       </td>
                       <td>{t.last_used_at ? new Date(t.last_used_at).toLocaleDateString("pt-BR") : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="meta-status" className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+            {["APPROVED","PENDING","REJECTED","PAUSED","DISABLED","FLAGGED"].map((st) => (
+              <SummaryCard
+                key={st}
+                label={st}
+                value={metaStatus.byStatus[st] ?? 0}
+                tone={st === "APPROVED" ? "ok" : st === "REJECTED" || st === "DISABLED" ? "danger" : st === "PENDING" || st === "PAUSED" || st === "FLAGGED" ? "warn" : undefined}
+              />
+            ))}
+          </div>
+          <Card>
+            <CardHeader><CardTitle>Templates sem status local ({metaStatus.missing.length})</CardTitle></CardHeader>
+            <CardContent className="text-sm">
+              {metaStatus.missing.length === 0 ? (
+                <span className="text-muted-foreground">Todos os templates canônicos estão sincronizados.</span>
+              ) : (
+                <ul className="list-disc pl-5">
+                  {metaStatus.missing.map((n) => <li key={n} className="font-mono">{n}</li>)}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Rejeições ({metaStatus.rejected.length})</CardTitle></CardHeader>
+            <CardContent className="overflow-auto max-h-96">
+              <table className="w-full text-sm">
+                <thead className="text-left text-muted-foreground">
+                  <tr><th>Nome</th><th>Idioma</th><th>Motivo</th><th>Atualizado</th></tr>
+                </thead>
+                <tbody>
+                  {metaStatus.rejected.map((r) => (
+                    <tr key={`${r.name}-${r.language}`} className="border-t">
+                      <td className="font-mono">{r.name}</td>
+                      <td>{r.language}</td>
+                      <td className="text-red-600">{r.rejection_reason ?? "—"}</td>
+                      <td>{r.updated_at ? new Date(r.updated_at).toLocaleString("pt-BR") : "—"}</td>
                     </tr>
                   ))}
                 </tbody>

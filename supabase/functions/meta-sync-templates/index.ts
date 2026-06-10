@@ -87,6 +87,8 @@ serve(async (req) => {
       rejection_reason: t.rejected_reason ?? null,
       quality_score: t.quality_score?.score ?? null,
       last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      raw_payload: t as any,
     }));
 
     if (rows.length > 0) {
