@@ -790,6 +790,60 @@ serve(async (req) => {
     const change = entry?.changes?.[0];
     const value = change?.value;
     
+    // ===== Template status update (Meta) =====
+    // field: "message_template_status_update" — atualização em tempo real do
+    // status do template (APPROVED, REJECTED, PAUSED, DISABLED, FLAGGED).
+    if (change?.field === "message_template_status_update" && value) {
+      console.log('[TEMPLATE_STATUS_UPDATE]', JSON.stringify(value));
+      try {
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const name = value.message_template_name || value.name;
+        const language = value.message_template_language || value.language || "pt_BR";
+        const newStatus = value.event || value.new_status || value.status;
+        const reason = value.reason || value.rejected_reason || null;
+        if (name && newStatus) {
+          await supabase.from("whatsapp_meta_templates")
+            .update({
+              status: newStatus,
+              rejection_reason: reason,
+              last_synced_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              raw_payload: value as any,
+            })
+            .eq("name", name)
+            .eq("language", language);
+        }
+      } catch (e) {
+        console.error('[TEMPLATE_STATUS_UPDATE_ERROR]', e);
+      }
+      return new Response("ok", { status: 200 });
+    }
+
+    // ===== Template quality / category update (Meta) =====
+    if ((change?.field === "template_category_update" || change?.field === "message_template_quality_update") && value) {
+      console.log(`[TEMPLATE_${change.field.toUpperCase()}]`, JSON.stringify(value));
+      try {
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const name = value.message_template_name || value.name;
+        const language = value.message_template_language || value.language || "pt_BR";
+        const patch: Record<string, unknown> = {
+          last_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          raw_payload: value as any,
+        };
+        if (value.new_category) patch.category = value.new_category;
+        if (value.new_quality_score) patch.quality_score = value.new_quality_score;
+        if (name) {
+          await supabase.from("whatsapp_meta_templates").update(patch).eq("name", name).eq("language", language);
+        }
+      } catch (e) {
+        console.error('[TEMPLATE_META_UPDATE_ERROR]', e);
+      }
+      return new Response("ok", { status: 200 });
+    }
+
     // Registrar status de entrega da Meta (sent/delivered/read/failed) para evitar falso positivo.
     if (value?.statuses) {
       console.log('[STATUS_UPDATE] Meta status update');
