@@ -467,7 +467,7 @@ serve(async (req) => {
         clinicId,
         phone: cleanPhone,
         templateName,
-        triggeredBy: "send-whatsapp",
+        triggeredBy: TRIGGER_SOURCES.SEND_WHATSAPP,
       });
       gateScore = gate.score;
       if (!gate.allowed) {
