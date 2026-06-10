@@ -31,15 +31,15 @@ serve(async (req) => {
     // Última utilização por nome
     const { data: lastUse } = await sb
       .from("whatsapp_template_logs")
-      .select("template_name, created_at")
+      .select("template_name, sent_at")
       .eq("status", "sent")
-      .order("created_at", { ascending: false })
+      .order("sent_at", { ascending: false })
       .limit(5000);
 
     const lastUseMap = new Map<string, number>();
     for (const row of (lastUse ?? []) as any[]) {
       if (!lastUseMap.has(row.template_name)) {
-        lastUseMap.set(row.template_name, new Date(row.created_at).getTime());
+        lastUseMap.set(row.template_name, new Date(row.sent_at).getTime());
       }
     }
 
