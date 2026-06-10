@@ -16,6 +16,7 @@ export interface CanonicalTemplate {
 export const TEMPLATE_CATALOG: Record<string, CanonicalTemplate> = {
   consulta_confirmacao:     { name: "consulta_confirmacao",     category: "UTILITY",   purpose: "consulta",        description: "Confirmação de agendamento" },
   consulta_lembrete:        { name: "consulta_lembrete",        category: "UTILITY",   purpose: "consulta",        description: "Lembrete D-1 / dia" },
+  lembrete_consulta_v3:     { name: "lembrete_consulta_v3",     category: "UTILITY",   purpose: "consulta",        description: "Lembrete informativo (sem CTA de resposta) — RC1 política informativa" },
   consulta_cancelamento:    { name: "consulta_cancelamento",    category: "UTILITY",   purpose: "consulta",        description: "Cancelamento pelo profissional", critical: true },
   carteirinha_vencendo:     { name: "carteirinha_vencendo",     category: "UTILITY",   purpose: "carteirinha",     description: "Aviso 30/15/7 dias antes do vencimento" },
   carteirinha_vencida:      { name: "carteirinha_vencida",      category: "UTILITY",   purpose: "carteirinha",     description: "Aviso pós-vencimento" },
