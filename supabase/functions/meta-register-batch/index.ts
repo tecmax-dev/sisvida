@@ -191,6 +191,36 @@ Deno.serve(async (req) => {
   const batch = String(body.batch ?? "");
   const confirm = body.confirm_register === true;
   const dryRun = !confirm;
+  const probe = body.probe === true;
+
+  // ---- PROBE (somente leitura): GET no endpoint message_templates de cada WABA
+  // Não registra, não envia mensagens. Diagnostica token/permissão/WABA.
+  if (probe) {
+    const token = Deno.env.get("META_WHATSAPP_TOKEN");
+    if (!token) {
+      return new Response(JSON.stringify({ error: "META_WHATSAPP_TOKEN_missing" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const probes: any[] = [];
+    for (const wabaId of WABA_IDS) {
+      const url = `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates?limit=1`;
+      try {
+        const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await r.json().catch(() => ({}));
+        probes.push({
+          waba_id: wabaId,
+          http_status: r.status,
+          ok: r.ok,
+          error: data?.error ?? null,
+          sample_count: Array.isArray(data?.data) ? data.data.length : null,
+        });
+      } catch (e) {
+        probes.push({ waba_id: wabaId, exception: String(e) });
+      }
+    }
+    return new Response(JSON.stringify({ mode: "PROBE", probes }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   if (!BATCHES[batch]) {
     return new Response(JSON.stringify({ error: "invalid_batch", allowed: ["1","2","3"] }),
@@ -246,7 +276,10 @@ Deno.serve(async (req) => {
           headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify(tpl),
         });
-        const data = await r.json();
+        const rawText = await r.text();
+        let data: any = {};
+        try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+        console.log(`[register] waba=${wabaId} tpl=${tpl.name} http=${r.status} body=${rawText.slice(0,2000)}`);
         if (r.ok) {
           status = (data.status as string) || "CREATED";
           detail = { id: data.id, status: data.status, category: data.category };
@@ -256,11 +289,18 @@ Deno.serve(async (req) => {
           if (code === 100 && /already exists/i.test(msg)) {
             status = "ALREADY_EXISTS"; detail = { message: msg };
           } else {
-            status = "ERROR"; detail = data?.error ?? data;
+            status = "ERROR";
+            detail = {
+              http_status: r.status,
+              error: data?.error ?? null,
+              raw: data?.error ? undefined : rawText.slice(0, 2000),
+              sent_payload: tpl,
+            };
           }
         }
       } catch (e) {
-        status = "ERROR"; detail = { exception: String(e) };
+        status = "ERROR"; detail = { exception: String(e), sent_payload: tpl };
+        console.error(`[register] exception waba=${wabaId} tpl=${tpl.name}`, e);
       }
       results.push({ waba_id: wabaId, name: tpl.name, status, detail });
       if (status === "ERROR") { aborted = true; break outer; }
