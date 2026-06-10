@@ -361,13 +361,6 @@ serve(async (req) => {
     let skippedCount = 0;
 
     for (const clinic of clinics || []) {
-      // Fetch Evolution config
-      const { data: evolutionConfig } = await supabase
-        .from('evolution_configs')
-        .select('api_url, api_key, instance_name, is_connected')
-        .eq('clinic_id', clinic.id)
-        .maybeSingle();
-
       const whatsappProvider = clinic.whatsapp_provider || 'evolution';
       const isMetaProvider = whatsappProvider === 'meta_official' || whatsappProvider === 'zapresponder';
 
