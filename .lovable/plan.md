@@ -1,70 +1,81 @@
-# Meta Safe Mode — Camada adicional de proteção
+# RC1 – Política Informativa de Lembretes WhatsApp
 
-Objetivo: adicionar guard-rails operacionais **acima** do Compliance Engine. Nada do fluxo atual muda; o Safe Mode apenas pode **bloquear preventivamente** envios automáticos antes de chegar em `meta-send-template` e expor health/auditoria no dashboard.
+WhatsApp = canal informativo. Gerenciamento de agendamento = somente no app oficial.
 
-## Princípios
-- Zero alteração em: `_shared/template-catalog.ts`, STRICT_MODE, `assertCanSend`, `wa_can_send`, `meta-send-template`, `meta-send-text`, `meta-webhook`.
-- Toda lógica nova fica em `_shared/safe-mode.ts` + nova tabela `meta_safe_mode_config` + tabela de auditoria.
-- Flags por env (`META_SAFE_MODE`, `META_MAINTENANCE_MODE`) **e** por linha em DB (DB tem prioridade quando existir).
-- Não cria cron novo nem altera assinaturas públicas.
+## Escopo (somente texto/fluxo, sem mudanças estruturais)
 
-## 1. Migration (única)
-Tabelas novas:
-- `meta_safe_mode_config` (singleton, id fixo): `safe_mode bool`, `maintenance_mode bool`, `dry_run bool`, `max_per_hour int`, `max_per_day int`, `max_per_contact_30d int`, `circuit_breaker_open bool`, `circuit_reason text`, `circuit_opened_at`, `go_live_stage int` (0-4), `go_live_started_at`, `manual_override bool`.
-- `meta_safe_mode_audit`: `field`, `old_value jsonb`, `new_value jsonb`, `changed_by uuid`, `reason text`, `created_at`.
-- View `meta_health_score_v` calculando 0-100 a partir de `whatsapp_template_logs` (últimas 24h), `whatsapp_meta_templates` (REJECTED/PAUSED), `whatsapp_opt_outs`, falhas Graph.
-- GRANTs + RLS (admin-only via `has_role`).
+Não tocar: Compliance Engine, Safe Mode, Strict Mode, Template Governance, Meta Health Dashboard, `assertCanSend`, `wa_can_send`, `meta-send-template`, `meta-send-text`, `meta-webhook` (núcleo), `meta-sync-templates`. Sem migrations, sem novas tabelas.
 
-## 2. `_shared/safe-mode.ts` (novo)
-Funções puras:
-- `loadSafeConfig(supabase)` → cacheável.
-- `checkSafeMode({ supabase, templateName, category, contactPhone, triggerSource })` → retorna `{ allowed: bool, reason?, dryRun?: bool }`.
-  - Sempre permite: `human-operator`, `AUTHENTICATION`, `meta-send-text` (janela 24h).
-  - Em `maintenance_mode`: bloqueia automáticos.
-  - Em `circuit_breaker_open`: bloqueia automáticos.
-  - Em `safe_mode`: aplica rate limits + go-live stage (cap de contatos únicos por janela).
-- `computeHealthScore(supabase)` → 0-100 + breakdown.
-- `tripCircuitBreakerIfNeeded(supabase)` → chamado opcionalmente após logs; abre breaker se thresholds estourados.
+## Templates a atualizar (novo body padrão, sem botões)
 
-## 3. Integração mínima (não invasiva)
-- `meta-send-template/index.ts`: **uma chamada** `checkSafeMode(...)` logo após resolver template e ANTES de `assertCanSend`. Se `dryRun`, retorna 200 com `{ simulated: true, would_send: bool, reasons: [...] }` sem tocar Graph. Se bloqueado, retorna 423 + log em `whatsapp_template_logs` com `reason='safe_mode_blocked:<...>'`. Assinatura pública preservada (mesmos campos de entrada/saída + campos extras opcionais).
-- Nada mais alterado em outras edge functions.
+Body padrão único:
 
-## 4. Edge function nova: `meta-safe-mode-admin`
-GET retorna config + health score + breakdown.
-POST atualiza campos (admin only), grava `meta_safe_mode_audit`, reseta breaker manualmente.
+```
+Olá, {{1}}.
 
-## 5. Dashboard `/admin/meta-health`
-Adicionar aba **Safe Mode**:
-- Toggles: Safe Mode, Maintenance, Dry Run, Circuit Breaker (reset).
-- Inputs: limites/hora/dia/contato.
-- Seletor Go-Live stage (Semana 1/2/3/4/Total) + override manual.
-- Card Health Score (0-100) com cor e breakdown.
-- Tabela últimos 20 eventos de auditoria.
+Lembramos que sua consulta está agendada para:
 
-## 6. Go-Live wizard
-Implementado como `go_live_stage` no config:
-- 0=desligado, 1=≤20 contatos únicos/dia, 2=≤100, 3=≤500, 4=ilimitado.
-- Verificação em `checkSafeMode` consulta `whatsapp_template_logs` (distinct phone últimas 24h).
-- Admin pode pular stages com `manual_override`.
+Data: {{2}}
+Horário: {{3}}
+Profissional: {{4}}
 
-## 7. Auditoria
-Trigger `before update` em `meta_safe_mode_config` grava diffs em `meta_safe_mode_audit` (user via `auth.uid()` quando disponível, senão NULL + reason do POST).
+Caso seja necessário alterar ou cancelar seu agendamento, utilize exclusivamente o aplicativo oficial do Sindicato.
 
-## Arquivos
-**Criar:**
-- `supabase/migrations/<ts>_meta_safe_mode.sql`
-- `supabase/functions/_shared/safe-mode.ts`
-- `supabase/functions/meta-safe-mode-admin/index.ts`
-- `src/pages/admin/MetaSafeModePage.tsx` (ou nova aba dentro de `MetaHealthDashboard.tsx`)
+Sindicato dos Comerciários
+```
 
-**Editar (mínimo):**
-- `supabase/functions/meta-send-template/index.ts` (+ ~15 linhas)
-- `src/pages/admin/MetaHealthDashboard.tsx` (+ aba Safe Mode)
+Templates impactados (criar novas versões `_v3`/`_v2` quando o nome estiver bloqueado pela Meta):
+- `lembrete_consulta_v2` → novo `lembrete_consulta_v3` (UTILITY, sem botões, 4 vars)
+- `homologacao_lembrete_v3` → novo `homologacao_lembrete_v4` (UTILITY, sem botões)
+- `homologacao_lembrete_profissional_v3` → novo `homologacao_lembrete_profissional_v4` (UTILITY, sem botões)
+- Catálogo canônico (`_shared/template-catalog.ts`): `consulta_lembrete` permanece, descrição atualizada para "informativo, sem CTA de resposta".
 
-## Não-objetivos
-- Não muda `TEMPLATE_CATALOG`, STRICT_MODE, `wa_can_send`, webhook, sync.
-- Não cria cron. Health score é calculado on-demand pela view.
-- Não muda mensagens livres <24h nem operador humano.
+Registro: via `meta-register-templates` action existente (sem alterar a função). Apenas adicionar definições novas.
 
-Confirmar para implementar?
+## Edge Functions de fluxo a ajustar
+
+1. `send-appointment-reminders/index.ts`
+   - Trocar template por `lembrete_consulta_v3`.
+   - Remover componente `BUTTONS` (quick replies Confirmar/Cancelar).
+   - Remover envio paralelo de botões Whazing.
+   - Manter um único disparo; remover qualquer lógica de "segundo lembrete" por ausência de resposta.
+
+2. `send-homologacao-reminders/index.ts` + `src/lib/homologacaoUtils.ts`
+   - Trocar para `homologacao_lembrete_v4` / `homologacao_lembrete_profissional_v4`.
+   - Remover botões e variável de URL "Reagendar".
+   - Texto institucional referenciando o app oficial.
+
+3. `send-uiara-april28-reminders/index.ts`
+   - Reescrever templates de texto removendo "Confirmar"/"Cancelar".
+   - Remover `sendConfirmationButtons` e o segundo disparo Whazing.
+
+4. `test-reminder-message/index.ts`
+   - Atualizar payload de teste para o novo body sem botões.
+
+5. `meta-webhook/index.ts`
+   - Remover handler que captura quick-reply `confirm_apt_*` / `cancel_apt_*` originados de lembretes (manter handlers de fluxos espontâneos não relacionados a lembrete, ex.: boleto/menu inicial dentro da janela 24h).
+   - Não alterar verificação de assinatura, dedupe, nem roteamento principal.
+
+## UI/KPIs
+
+- `src/pages/admin/WhatsAppStatusPage.tsx` e dashboards de lembrete: remover cartões "Taxa de confirmação", "Taxa de resposta", "Taxa de clique" relacionados a lembrete. Priorizar: Quality Rating, Health Score, Opt-out, Bloqueios, Circuit Breaker (já existentes).
+- Sem mudanças de schema; apenas esconder/retirar widgets.
+
+## IA receptiva
+
+- Confirmar que nenhum job agendado dispara mensagem "follow-up" de lembrete. Buscar e remover qualquer cron/trigger de "segundo lembrete". Edge `send-appointment-reminders` continua agendada uma vez por agendamento.
+
+## Memória do projeto
+
+- Atualizar `mem://features/whatsapp/meta-templates-sindicato.md` documentando a nova política (sem botões, sem CTA de resposta, app como canal de ação) e marcando v2/v3 com botões como deprecated.
+
+## Validação
+
+- Buscar no repo strings remanescentes: `Confirmar`, `Cancelar`, `Responda SIM`, `Confirme sua consulta`, `confirm_apt_`, `cancel_apt_` em contexto de lembrete; garantir remoção apenas onde ligadas a lembrete (não tocar em telas do app onde o usuário cancela pelo PWA).
+- Rodar `meta-register-templates` (manual pelo usuário) para os novos nomes, aguardar aprovação Meta, então fazer cut-over das edge functions para o template novo via env/flag já existente — sem deploy crítico no Compliance Engine.
+
+## Entregáveis
+
+- Arquivos alterados conforme lista acima.
+- Templates novos definidos no catálogo + governance.
+- Relatório final: arquivos, templates, fluxos, confirmações/cancelamentos removidos, lembretes mantidos, validação RC1 ("nenhuma alteração estrutural").

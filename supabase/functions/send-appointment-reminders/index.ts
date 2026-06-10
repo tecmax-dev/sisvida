@@ -403,32 +403,21 @@ function formatAppointmentReminder(
   professionalName: string,
 ): string {
   const firstName = patientName.split(' ')[0];
-  const greeting = pickRandom(GREETINGS);
-  const intro = pickRandom(REMINDER_INTROS);
-  const arrival = pickRandom(ARRIVAL_INSTRUCTIONS);
-  const noShow = pickRandom(NO_SHOW_WARNINGS);
-  const closing = pickRandom(CLOSINGS);
-  const specificLocation = getProfessionalLocation(professionalName);
-
+  // RC1 — Política informativa: WhatsApp é canal informativo.
+  // Toda ação (alterar/cancelar) ocorre exclusivamente no aplicativo oficial.
   const lines = [
-    `${greeting}, ${firstName}!`,
+    `Olá, ${firstName}.`,
     ``,
-    arrival,
+    `Lembramos que sua consulta está agendada para:`,
     ``,
-    intro,
+    `Data: ${date}`,
+    `Horário: ${time}`,
+    `Profissional: ${professionalName}`,
     ``,
-    `*Data:* ${date}`,
-    `*Horário:* ${time}`,
-    `*Profissional:* ${professionalName}`,
-    `*Clínica:* ${clinicName}`,
-    specificLocation ? `` : null,
-    specificLocation,
+    `Caso seja necessário alterar ou cancelar seu agendamento, utilize exclusivamente o aplicativo oficial do Sindicato.`,
     ``,
-    ...noShow,
-    ``,
-    closing[0],
-    closing[1].replace('{clinic}', clinicName),
-  ].filter(line => line !== null);
+    clinicName,
+  ];
   return lines.join('\n');
 }
 
@@ -656,7 +645,7 @@ serve(async (req) => {
                clinicId: clinic.id,
                type: 'reminder',
                appointmentId: appointment.id,
-               templateName: 'lembrete_consulta_v2',
+               templateName: 'lembrete_consulta_v3',
                templateComponents: templateComponents
              }),
            });
@@ -695,42 +684,9 @@ serve(async (req) => {
           console.error(`Failed to send reminder to ${displayName} via both Evolution and Whazing`);
         }
 
-        // Always try to send interactive buttons via Whazing (even if main message used fallback)
-        // Small delay before sending buttons to ensure message arrives first
-        if (success) {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          const buttonsSent = await sendConfirmationButtons(phoneToUse, appointment.id);
-          if (buttonsSent) {
-            console.log(`Confirmation buttons sent to ${displayName}`);
-          } else {
-            console.log(`Could not send buttons to ${displayName} (Whazing not configured or error)`);
-          }
-        }
-
-        // If direct reply is enabled, register pending confirmation
-        if (success && directReplyEnabled) {
-          const formattedPhone = phoneToUse.replace(/\D/g, '');
-          const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
-          
-          const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.start_time}`);
-          const expiresAt = new Date(appointmentDateTime.getTime() - 60 * 60 * 1000);
-
-          const { error: pendingError } = await supabase
-            .from('pending_confirmations')
-            .insert({
-              clinic_id: clinic.id,
-              appointment_id: appointment.id,
-              phone: phoneWithCountry,
-              expires_at: expiresAt.toISOString(),
-              status: 'pending'
-            });
-
-          if (pendingError) {
-            console.error(`Error creating pending confirmation for appointment ${appointment.id}:`, pendingError);
-          } else {
-            console.log(`Pending confirmation registered for ${displayName} (phone: ${phoneWithCountry})`);
-          }
-        }
+        // RC1 — Política informativa: NÃO enviar botões Confirmar/Cancelar e
+        // NÃO registrar pending_confirmations. Ação de alterar/cancelar é
+        // feita exclusivamente no aplicativo oficial do Sindicato.
 
         // Log the message
         if (success) {
