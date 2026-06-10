@@ -403,32 +403,21 @@ function formatAppointmentReminder(
   professionalName: string,
 ): string {
   const firstName = patientName.split(' ')[0];
-  const greeting = pickRandom(GREETINGS);
-  const intro = pickRandom(REMINDER_INTROS);
-  const arrival = pickRandom(ARRIVAL_INSTRUCTIONS);
-  const noShow = pickRandom(NO_SHOW_WARNINGS);
-  const closing = pickRandom(CLOSINGS);
-  const specificLocation = getProfessionalLocation(professionalName);
-
+  // RC1 — Política informativa: WhatsApp é canal informativo.
+  // Toda ação (alterar/cancelar) ocorre exclusivamente no aplicativo oficial.
   const lines = [
-    `${greeting}, ${firstName}!`,
+    `Olá, ${firstName}.`,
     ``,
-    arrival,
+    `Lembramos que sua consulta está agendada para:`,
     ``,
-    intro,
+    `Data: ${date}`,
+    `Horário: ${time}`,
+    `Profissional: ${professionalName}`,
     ``,
-    `*Data:* ${date}`,
-    `*Horário:* ${time}`,
-    `*Profissional:* ${professionalName}`,
-    `*Clínica:* ${clinicName}`,
-    specificLocation ? `` : null,
-    specificLocation,
+    `Caso seja necessário alterar ou cancelar seu agendamento, utilize exclusivamente o aplicativo oficial do Sindicato.`,
     ``,
-    ...noShow,
-    ``,
-    closing[0],
-    closing[1].replace('{clinic}', clinicName),
-  ].filter(line => line !== null);
+    clinicName,
+  ];
   return lines.join('\n');
 }
 
