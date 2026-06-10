@@ -13,17 +13,32 @@ serve(async (req) => {
     };
 
     if (PHONE_ID) {
-      const phoneRes = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}?fields=id,display_phone_number,whatsapp_business_account`, {
+      const phoneRes = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}`, {
         headers: { Authorization: `Bearer ${TOKEN}` }
       });
-      res.phone_details = await phoneRes.json();
+      res.phone_basic = { status: phoneRes.status, body: await phoneRes.json() };
+
+      const phoneFieldsRes = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}?fields=display_phone_number,verified_name,quality_rating`, {
+        headers: { Authorization: `Bearer ${TOKEN}` }
+      });
+      res.phone_fields = { status: phoneFieldsRes.status, body: await phoneFieldsRes.json() };
     }
 
     if (WABA_ID) {
       const wabaRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}?fields=id,name,status,message_template_namespace`, {
         headers: { Authorization: `Bearer ${TOKEN}` }
       });
-      res.waba = await wabaRes.json();
+      res.waba = { status: wabaRes.status, body: await wabaRes.json() };
+
+      const tmplRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}/message_templates?limit=1`, {
+        headers: { Authorization: `Bearer ${TOKEN}` }
+      });
+      res.message_templates_probe = { status: tmplRes.status, body: await tmplRes.json() };
+    }
+
+    if (TOKEN) {
+      const dbgRes = await fetch(`https://graph.facebook.com/v21.0/debug_token?input_token=${TOKEN}&access_token=${TOKEN}`);
+      res.debug_token = { status: dbgRes.status, body: await dbgRes.json() };
     }
 
     if (SYSTEM_TOKEN) {
