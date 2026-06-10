@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { resolveMetaCreds, type MetaApiVersion } from "../_shared/meta-creds.ts";
+import { TRIGGER_SOURCES } from "../_shared/trigger-sources.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,7 +106,7 @@ serve(async (req) => {
             template_name,
             status: "blocked_strict_mode",
             reason: strict.reason ?? "blocked_strict_mode",
-            triggered_by: "meta-send-template",
+            triggered_by: TRIGGER_SOURCES.META_SEND_TEMPLATE,
           });
         } catch (_) {}
         return new Response(
@@ -131,7 +132,7 @@ serve(async (req) => {
         clinicId: SINDICATO_CLINIC_ID,
         phone: String(to ?? ""),
         templateName: template_name,
-        triggeredBy: "meta-send-template",
+        triggeredBy: TRIGGER_SOURCES.META_SEND_TEMPLATE,
       });
       gateScore = gate.score;
       if (!gate.allowed) {
@@ -383,7 +384,7 @@ serve(async (req) => {
         phone: String(to ?? ""),
         templateName: template_name,
         metaMessageId: messageId,
-        triggeredBy: "meta-send-template",
+        triggeredBy: TRIGGER_SOURCES.META_SEND_TEMPLATE,
         score: gateScore,
         payload: { language, variables },
       });

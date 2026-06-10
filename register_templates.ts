@@ -2,6 +2,12 @@ const WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"];
 const TOKEN = process.env.META_WHATSAPP_TOKEN;
 const GRAPH_VERSION = "v21.0";
 
+// ⚠️ FONTE DA VERDADE: supabase/functions/_shared/template-catalog.ts
+// Este script roda em Node puro (CLI) e NÃO importa TS/Deno do projeto.
+// Qualquer alteração no catálogo canônico DEVE ser replicada manualmente
+// aqui (CANONICAL_NAMES) e nos templates abaixo. A auditoria
+// (meta-compliance-audit) detecta divergências após o deploy.
+
 // Governança: valida cada template contra o catálogo canônico ANTES de chamar
 // a Graph API. Reutiliza a mesma regra usada em runtime
 // (supabase/functions/_shared/template-governance.ts) — espelhada aqui para

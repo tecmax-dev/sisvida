@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { TEMPLATE_CATALOG } from "../_shared/template-catalog.ts";
+import { FREEFORM_TRIGGERS } from "../_shared/trigger-sources.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,7 +86,7 @@ serve(async (req) => {
       .eq("status", "sent")
       .is("meta_message_id", null)
       .in("template_name", canonicalNames)
-      .not("triggered_by", "in", "(send-whatsapp,meta-send-text,human-operator,session-reply)")
+      .not("triggered_by", "in", `(${FREEFORM_TRIGGERS.join(",")})`)
       .gte("sent_at", since)
       .limit(200);
     findings.suspicious_sends = (suspiciousSends ?? []).length;

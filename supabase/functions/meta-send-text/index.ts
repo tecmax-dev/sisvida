@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { resolveMetaCreds, type MetaApiVersion } from "../_shared/meta-creds.ts";
 import { blockedByOptOut } from "../_shared/opt-out.ts";
+import { TRIGGER_SOURCES } from "../_shared/trigger-sources.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,7 +72,7 @@ serve(async (req) => {
     if (await blockedByOptOut({
       clinicId: SINDICATO_CLINIC_ID,
       phone,
-      sourceFunction: "meta-send-text",
+      sourceFunction: TRIGGER_SOURCES.META_SEND_TEXT,
     })) {
       return new Response(
         JSON.stringify({
