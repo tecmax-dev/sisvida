@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, RefreshCw, ShieldCheck, AlertTriangle, Activity } from "lucide-react";
 import { computeReputation, REPUTATION_COLORS, type ContactReputation } from "@/lib/whatsapp/contactReputation";
+import { MetaSafeModePanel } from "@/components/admin/MetaSafeModePanel";
 
 interface TemplateRow {
   name: string;
@@ -180,6 +181,7 @@ export default function MetaHealthDashboard() {
           <TabsTrigger value="sends">Envios</TabsTrigger>
           <TabsTrigger value="reputation">Reputação</TabsTrigger>
           <TabsTrigger value="audit">Auditoria</TabsTrigger>
+          <TabsTrigger value="safe-mode">Safe Mode</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="space-y-3">
@@ -335,6 +337,10 @@ export default function MetaHealthDashboard() {
               </table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="safe-mode">
+          <MetaSafeModePanel />
         </TabsContent>
       </Tabs>
     </div>

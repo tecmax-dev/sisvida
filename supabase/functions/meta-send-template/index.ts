@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { resolveMetaCreds, type MetaApiVersion } from "../_shared/meta-creds.ts";
 import { TRIGGER_SOURCES } from "../_shared/trigger-sources.ts";
+import { checkSafeMode } from "../_shared/safe-mode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -178,6 +179,70 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // ===== META SAFE MODE (manutenção / circuit breaker / rate limits / dry run) =====
+    // Camada extra de proteção: roda APÓS strict + gate de conformidade,
+    // antes de qualquer chamada à Graph API. Bypass automático para AUTHENTICATION,
+    // human-operator e mensagens livres.
+    try {
+      const tplMetaCatRes = await supabase
+        .from("whatsapp_meta_templates")
+        .select("category")
+        .eq("name", template_name)
+        .eq("language", language)
+        .maybeSingle();
+      const safe = await checkSafeMode({
+        supabase,
+        templateName: template_name,
+        category: tplMetaCatRes.data?.category ?? null,
+        contactPhone: String(to ?? ""),
+        triggerSource: TRIGGER_SOURCES.META_SEND_TEMPLATE,
+      });
+
+      if (safe.dryRun) {
+        await supabase.from("whatsapp_template_logs").insert({
+          clinic_id: SINDICATO_CLINIC_ID,
+          phone: String(to ?? "").replace(/\D/g, ""),
+          template_name,
+          status: safe.allowed ? "dry_run_would_send" : "dry_run_would_block",
+          reason: safe.allowed ? "dry_run" : `dry_run:${safe.reason}`,
+          triggered_by: TRIGGER_SOURCES.META_SEND_TEMPLATE,
+        }).then(() => {}, () => {});
+        return new Response(
+          JSON.stringify({
+            success: true,
+            simulated: true,
+            would_send: safe.allowed,
+            reasons: safe.reasons,
+            message: safe.allowed ? "Mensagem seria enviada" : "Mensagem seria bloqueada",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      if (!safe.allowed) {
+        await supabase.from("whatsapp_template_logs").insert({
+          clinic_id: SINDICATO_CLINIC_ID,
+          phone: String(to ?? "").replace(/\D/g, ""),
+          template_name,
+          status: "blocked_safe_mode",
+          reason: `safe_mode_blocked:${safe.reason}`,
+          triggered_by: TRIGGER_SOURCES.META_SEND_TEMPLATE,
+        }).then(() => {}, () => {});
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Envio bloqueado pelo Meta Safe Mode: ${safe.reason}`,
+            blocked_by: safe.reason,
+            safe_mode_reasons: safe.reasons,
+          }),
+          { status: 423, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } catch (safeErr) {
+      console.error("[meta-send-template] safe-mode error:", safeErr);
+      // fail-open: safe mode é proteção extra, não pode quebrar o fluxo principal.
+    }
 
     // Buscar template (necessário fora do if para usar components depois)
     let tpl: any = null;

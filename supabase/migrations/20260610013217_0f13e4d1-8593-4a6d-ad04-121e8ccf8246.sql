@@ -1,0 +1,1 @@
+ALTER VIEW public.meta_health_score_v SET (security_invoker = true);
