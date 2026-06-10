@@ -803,6 +803,25 @@ export default function AccountingOfficesPage({ clinicOverride }: AccountingOffi
                                 <TooltipContent>Enviar código por e-mail</TooltipContent>
                               </Tooltip>
                             )}
+                            {office.access_code && activeClinic?.slug && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => {
+                                      const directLink = `${window.location.origin}/portal-contador/${activeClinic.slug}?email=${encodeURIComponent(office.email)}&code=${office.access_code}`;
+                                      navigator.clipboard.writeText(directLink);
+                                      toast.success("Link de acesso direto copiado!");
+                                    }}
+                                  >
+                                    <Link2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Copiar link de acesso direto</TooltipContent>
+                              </Tooltip>
+                            )}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
