@@ -12,15 +12,8 @@ const PROF_NAME_FILTER = "uiara";
 const INTERVAL_MS = 3 * 60 * 1000; // 3 minutes
 
 const templates = [
-  (n: string, h: string) => `Olá, ${n}!\n\nLembramos que você tem consulta marcada com a *Dra. Uiara Tiuba* no dia *28/04/2026 às ${h}* no Sindicato dos Comerciários.\n\nPor favor, *confirme* sua presença ou *cancele* caso não possa comparecer usando os botões abaixo.`,
-
-  (n: string, h: string) => `Oi ${n}, tudo bem?\n\nEste é um lembrete da sua consulta com a *Dra. Uiara Tiuba* marcada para *28/04/2026 às ${h}*.\n\nPedimos a gentileza de *confirmar* ou *cancelar* seu horário pelos botões abaixo, para que possamos liberar a vaga caso necessário.`,
-
-  (n: string, h: string) => `${n}, bom dia!\n\nPassando para lembrar da sua consulta com a *Dra. Uiara Tiuba*:\n*Data:* 28/04/2026\n*Horário:* ${h}\n*Local:* Sindicato dos Comerciários de Ilhéus\n\nPor favor, *confirme* ou *cancele* sua presença usando os botões abaixo.`,
-
-  (n: string, h: string) => `Prezado(a) ${n},\n\nLembrete: você possui consulta agendada com a *Dra. Uiara Tiuba* em *28/04/2026 às ${h}*.\n\nSolicitamos que *confirme* sua presença ou *cancele* caso não possa comparecer, para evitar faltas e permitir o atendimento de outro associado.`,
-
-  (n: string, h: string) => `Oi ${n}!\n\nSua consulta com a *Dra. Uiara Tiuba* está chegando!\n*Data:* 28/04/2026 - *Horário:* ${h}\n\nPor favor, *confirme* ou *cancele* pelos botões abaixo. Isso ajuda a organizar a agenda e libera horários para outros associados.`,
+  // RC1 — Política informativa. Sem CTA de resposta. Ação só no app oficial.
+  (n: string, h: string) => `Olá, ${n}.\n\nLembramos que sua consulta está agendada para:\n\nData: 28/04/2026\nHorário: ${h}\nProfissional: Dra. Uiara Tiuba\n\nCaso seja necessário alterar ou cancelar seu agendamento, utilize exclusivamente o aplicativo oficial do Sindicato.\n\nSindicato dos Comerciários`,
 ];
 
 function sleep(ms: number) {
@@ -181,10 +174,7 @@ serve(async (req) => {
         });
         console.log(`[uiara-28] text ${sent}/${recipients.length} -> ${r.phone} (${r.name})`);
 
-        // 2) wait 4s for the text to land, then send Whazing buttons
-        await sleep(4000);
-        const ok = await sendConfirmationButtons(r.phone, r.appointmentId);
-        if (ok) buttons++;
+        // RC1 — Política informativa: não enviar botões Confirmar/Cancelar.
       } catch (err) {
         failed++;
         console.error(`[uiara-28] FAIL ${r.phone}:`, err);
