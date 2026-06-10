@@ -1,0 +1,2 @@
+ALTER TABLE public.whatsapp_meta_templates
+  ADD COLUMN IF NOT EXISTS raw_payload jsonb;
