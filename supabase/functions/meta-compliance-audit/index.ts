@@ -65,9 +65,9 @@ serve(async (req) => {
     const cutoff = Date.now() - DEPRECATED_DAYS * 86400 * 1000;
     const { data: lastUse } = await sb
       .from("whatsapp_template_logs")
-      .select("template_name, created_at")
+      .select("template_name, sent_at")
       .eq("status", "sent")
-      .gte("created_at", new Date(cutoff).toISOString())
+      .gte("sent_at", new Date(cutoff).toISOString())
       .limit(5000);
     const usedRecently = new Set((lastUse ?? []).map((r: any) => r.template_name));
     findings.deprecated = (tpls ?? [])
@@ -78,10 +78,10 @@ serve(async (req) => {
     const since = new Date(Date.now() - 86400 * 1000).toISOString();
     const { data: suspiciousSends } = await sb
       .from("whatsapp_template_logs")
-      .select("template_name, triggered_by, created_at")
+      .select("template_name, triggered_by, sent_at")
       .eq("status", "sent")
       .is("meta_message_id", null)
-      .gte("created_at", since)
+      .gte("sent_at", since)
       .limit(200);
     findings.suspicious_sends = (suspiciousSends ?? []).length;
     if (findings.suspicious_sends > 0) {

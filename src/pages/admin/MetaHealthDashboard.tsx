@@ -33,13 +33,13 @@ export default function MetaHealthDashboard() {
       const [reportRes, sentByCat, blocks, optOutsCount, consentsCount, prefs, logs] = await Promise.all([
         supabase.functions.invoke("meta-templates-report", { body: {} }),
         supabase.from("whatsapp_template_logs")
-          .select("category, status, created_at")
-          .gte("created_at", new Date(Date.now() - 30 * 86400 * 1000).toISOString())
+          .select("category, status, sent_at")
+          .gte("sent_at", new Date(Date.now() - 30 * 86400 * 1000).toISOString())
           .limit(5000),
         supabase.from("whatsapp_template_logs")
           .select("reason")
           .like("status", "blocked_%")
-          .gte("created_at", new Date(Date.now() - 30 * 86400 * 1000).toISOString())
+          .gte("sent_at", new Date(Date.now() - 30 * 86400 * 1000).toISOString())
           .limit(2000),
         supabase.from("whatsapp_opt_outs").select("id", { count: "exact", head: true }),
         supabase.from("marketing_consents").select("id", { count: "exact", head: true }),
@@ -62,7 +62,7 @@ export default function MetaHealthDashboard() {
         if (r.status === "sent") {
           const cat = r.category ?? "UNKNOWN";
           byCat[cat] = (byCat[cat] ?? 0) + 1;
-          const day = (r.created_at ?? "").slice(0, 10);
+          const day = (r.sent_at ?? "").slice(0, 10);
           if (day) sentByDay[day] = (sentByDay[day] ?? 0) + 1;
         }
       }
