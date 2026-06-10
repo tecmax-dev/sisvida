@@ -75,17 +75,26 @@ serve(async (req) => {
       .map((t: any) => t.name);
 
     // 5. Envios sem meta_message_id (proxy de chamadas fora do engine nas últimas 24h)
+    // Filtra apenas TEMPLATES canônicos — mensagens livres de sessão, respostas
+    // humanas e envios não-template não contam como bypass.
     const since = new Date(Date.now() - 86400 * 1000).toISOString();
+    const canonicalNames = Object.keys(TEMPLATE_CATALOG);
     const { data: suspiciousSends } = await sb
       .from("whatsapp_template_logs")
       .select("template_name, triggered_by, sent_at")
       .eq("status", "sent")
       .is("meta_message_id", null)
+      .in("template_name", canonicalNames)
+      .not("triggered_by", "in", "(send-whatsapp,meta-send-text,human-operator,session-reply)")
       .gte("sent_at", since)
       .limit(200);
     findings.suspicious_sends = (suspiciousSends ?? []).length;
     if (findings.suspicious_sends > 0) {
-      await log(sb, "possible_direct_graph_call", "high", { count: findings.suspicious_sends, samples: suspiciousSends?.slice(0, 5) });
+      await log(sb, "possible_direct_graph_call", "high", {
+        count: findings.suspicious_sends,
+        note: "Apenas templates canônicos sem meta_message_id; mensagens livres/sessão excluídas.",
+        samples: suspiciousSends?.slice(0, 5),
+      });
     }
 
     await log(sb, "completed", "low", { summary: {
