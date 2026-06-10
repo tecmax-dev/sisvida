@@ -302,7 +302,7 @@ export default function AccountingOfficesPage({ clinicOverride }: AccountingOffi
         const { error } = await supabase
           .from("accounting_offices")
           .insert({
-            clinic_id: currentClinic!.id,
+            clinic_id: activeClinic!.id,
             name: formData.name,
             email: formData.email.toLowerCase().trim(),
             phone: formData.phone || null,
@@ -591,8 +591,8 @@ export default function AccountingOfficesPage({ clinicOverride }: AccountingOffi
     );
   });
 
-  const portalUrl = currentClinic?.slug 
-    ? `${window.location.origin}/portal-contador/${currentClinic.slug}`
+  const portalUrl = activeClinic?.slug 
+    ? `${window.location.origin}/portal-contador/${activeClinic.slug}`
     : null;
 
   return (
@@ -1206,7 +1206,7 @@ export default function AccountingOfficesPage({ clinicOverride }: AccountingOffi
 
       {/* Painel de Importação */}
       <AccountingOfficeImportPanel
-        clinicId={currentClinic?.id || ""}
+        clinicId={activeClinic?.id || ""}
         employers={employers}
         existingOffices={offices.map(o => ({ id: o.id, email: o.email, name: o.name }))}
         onImportComplete={loadData}
