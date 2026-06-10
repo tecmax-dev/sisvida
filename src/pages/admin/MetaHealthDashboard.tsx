@@ -44,10 +44,11 @@ export default function MetaHealthDashboard() {
         supabase.from("whatsapp_opt_outs").select("id", { count: "exact", head: true }),
         supabase.from("marketing_consents").select("id", { count: "exact", head: true }),
         supabase.from("contact_preferences")
-          .select("interaction_score, last_inbound_at, last_outbound_reply_at, last_template_sent_at, opted_out_at")
+          .select("interaction_score, last_inbound_at, last_interaction_at, last_template_sent_at, whatsapp_optout, whatsapp_optout_at")
           .limit(5000),
         supabase.from("whatsapp_audit_logs")
-          .select("id, action, severity, details, created_at")
+          .select("id, content, session_state, message_type, metadata, created_at")
+          .eq("message_type", "compliance_audit")
           .order("created_at", { ascending: false })
           .limit(50),
       ]);
@@ -86,8 +87,8 @@ export default function MetaHealthDashboard() {
         const r = computeReputation({
           score: p.interaction_score,
           lastInteractionAt: p.last_inbound_at,
-          lastReplyAt: p.last_outbound_reply_at,
-          optOutAt: p.opted_out_at,
+          lastReplyAt: p.last_interaction_at,
+          optOutAt: p.whatsapp_optout ? p.whatsapp_optout_at : null,
         });
         repCounts[r]++;
       }
@@ -252,10 +253,10 @@ export default function MetaHealthDashboard() {
                   {auditLogs.map((l) => (
                     <tr key={l.id} className="border-t">
                       <td>{new Date(l.created_at).toLocaleString("pt-BR")}</td>
-                      <td className="font-mono text-xs">{l.action}</td>
+                      <td className="font-mono text-xs">{l.content}</td>
                       <td>
-                        <Badge variant={l.severity === "high" ? "destructive" : l.severity === "medium" ? "secondary" : "outline"}>
-                          {l.severity}
+                        <Badge variant={l.session_state === "high" ? "destructive" : l.session_state === "medium" ? "secondary" : "outline"}>
+                          {l.session_state}
                         </Badge>
                       </td>
                     </tr>

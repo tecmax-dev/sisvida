@@ -10,16 +10,17 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 };
 
-const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 const DEPRECATED_DAYS = 30;
 
 async function log(sb: any, action: string, severity: "low" | "medium" | "high", details: any) {
   try {
     await sb.from("whatsapp_audit_logs").insert({
-      clinic_id: SINDICATO_CLINIC_ID,
-      action: `compliance_audit_${action}`,
-      severity,
-      details,
+      phone: "system",
+      direction: "status",
+      message_type: "compliance_audit",
+      session_state: severity,
+      content: `compliance_audit_${action}`,
+      metadata: { action, severity, details },
     });
   } catch (e) {
     console.error("[audit] log failed:", e);
