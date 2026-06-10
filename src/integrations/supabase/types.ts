@@ -6500,6 +6500,93 @@ export type Database = {
           },
         ]
       }
+      meta_safe_mode_audit: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          field: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          reason: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      meta_safe_mode_config: {
+        Row: {
+          circuit_breaker_open: boolean
+          circuit_opened_at: string | null
+          circuit_reason: string | null
+          dry_run: boolean
+          go_live_stage: number
+          go_live_started_at: string | null
+          id: string
+          maintenance_mode: boolean
+          manual_override: boolean
+          max_per_contact_30d: number
+          max_per_day: number
+          max_per_hour: number
+          safe_mode: boolean
+          singleton: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          circuit_breaker_open?: boolean
+          circuit_opened_at?: string | null
+          circuit_reason?: string | null
+          dry_run?: boolean
+          go_live_stage?: number
+          go_live_started_at?: string | null
+          id?: string
+          maintenance_mode?: boolean
+          manual_override?: boolean
+          max_per_contact_30d?: number
+          max_per_day?: number
+          max_per_hour?: number
+          safe_mode?: boolean
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          circuit_breaker_open?: boolean
+          circuit_opened_at?: string | null
+          circuit_reason?: string | null
+          dry_run?: boolean
+          go_live_stage?: number
+          go_live_started_at?: string | null
+          id?: string
+          maintenance_mode?: boolean
+          manual_override?: boolean
+          max_per_contact_30d?: number
+          max_per_day?: number
+          max_per_hour?: number
+          safe_mode?: boolean
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       mobile_app_settings: {
         Row: {
           clinic_id: string | null
@@ -18514,6 +18601,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      meta_health_score_v: {
+        Row: {
+          bad_templates: number | null
+          blocked_24h: number | null
+          failed_24h: number | null
+          health_label: string | null
+          health_score: number | null
+          optouts_24h: number | null
+          sent_24h: number | null
+        }
+        Relationships: []
       }
       public_clinic_info: {
         Row: {
