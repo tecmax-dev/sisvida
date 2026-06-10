@@ -560,7 +560,7 @@ export default function AccountingOfficesPage({ clinicOverride }: AccountingOffi
       doc.setFontSize(8);
       doc.setTextColor(150);
       doc.text(
-        `Página ${i} de ${pageCount} • ${currentClinic?.name || "ProSindWeb"}`,
+        `Página ${i} de ${pageCount} • ${activeClinic?.name || "ProSindWeb"}`,
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 10,
         { align: "center" }
