@@ -20,7 +20,23 @@ const corsHeaders = {
 };
 
 const GRAPH_VERSION = "v21.0";
-const WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"];
+const HARDCODED_WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"];
+
+function readSecretId(name: string): string | null {
+  const value = Deno.env.get(name)?.trim();
+  return value || null;
+}
+
+function resolveRuntimeWabaIds() {
+  const secretWabaId = readSecretId("META_WABA_ID");
+  return {
+    secret_waba_id: secretWabaId,
+    legacy_hardcoded_waba_ids: HARDCODED_WABA_IDS,
+    ignored_hardcoded_waba_ids: HARDCODED_WABA_IDS.filter(id => id !== secretWabaId),
+    target_waba_ids: secretWabaId ? [secretWabaId] : [],
+    uses_secret_only: Boolean(secretWabaId),
+  };
+}
 
 const CANONICAL_NAMES = new Set([
   "consulta_confirmacao","consulta_lembrete","consulta_cancelamento",
@@ -148,6 +164,40 @@ function preflight(tpl: any): string[] {
   return errors;
 }
 
+function probableObjectType(label: string, data: any, error: any): string {
+  if (error?.code === 190) return "TOKEN_INVALID_OR_EXPIRED";
+  if (error?.code === 100 && error?.error_subcode === 33) return "INACCESSIBLE_OR_WRONG_OBJECT_FOR_TOKEN";
+  if (!data) return "UNKNOWN";
+  if (label === "waba" && data?.id) return "WHATSAPP_BUSINESS_ACCOUNT";
+  if (label === "message_templates" && Array.isArray(data?.data)) return "WABA_MESSAGE_TEMPLATES_EDGE";
+  if (label.startsWith("phone") && (data?.display_phone_number || data?.verified_name || data?.quality_rating)) return "WHATSAPP_PHONE_NUMBER";
+  if (data?.id) return "META_OBJECT";
+  return "UNKNOWN";
+}
+
+async function graphGet(token: string, path: string, label: string) {
+  const r = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await r.json().catch(() => ({}));
+  const error = data?.error ?? null;
+  return {
+    ok: r.ok,
+    http_status: r.status,
+    error_code: error?.code ?? null,
+    error_type: error?.type ?? null,
+    error_subcode: error?.error_subcode ?? null,
+    message: error?.message ?? null,
+    probable_object_type: probableObjectType(label, data, error),
+    object_id: data?.id ?? null,
+    name: data?.name ?? data?.verified_name ?? null,
+    display_phone_number: data?.display_phone_number ?? null,
+    quality_rating: data?.quality_rating ?? null,
+    sample_count: Array.isArray(data?.data) ? data.data.length : null,
+    scopes: label === "debug_token" && Array.isArray(data?.data?.scopes) ? data.data.scopes : undefined,
+  };
+}
+
 async function authorizeAdmin(req: Request) {
   // Caminho 1: token interno via header x-rc1-token (token administrativo RC1)
   const rc1Token = req.headers.get("x-rc1-token");
@@ -193,32 +243,51 @@ Deno.serve(async (req) => {
   const dryRun = !confirm;
   const probe = body.probe === true;
 
-  // ---- PROBE (somente leitura): GET no endpoint message_templates de cada WABA
-  // Não registra, não envia mensagens. Diagnostica token/permissão/WABA.
+  // ---- PROBE (somente leitura): GETs de validação. Não registra nem envia mensagens.
   if (probe) {
     const token = Deno.env.get("META_WHATSAPP_TOKEN");
+    const secretWabaId = readSecretId("META_WABA_ID");
+    const phoneNumberId = readSecretId("META_PHONE_NUMBER_ID");
+    const wabaResolution = resolveRuntimeWabaIds();
     if (!token) {
       return new Response(JSON.stringify({ error: "META_WHATSAPP_TOKEN_missing" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const probes: any[] = [];
-    for (const wabaId of WABA_IDS) {
-      const url = `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates?limit=1`;
-      try {
-        const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await r.json().catch(() => ({}));
-        probes.push({
-          waba_id: wabaId,
-          http_status: r.status,
-          ok: r.ok,
-          error: data?.error ?? null,
-          sample_count: Array.isArray(data?.data) ? data.data.length : null,
-        });
-      } catch (e) {
-        probes.push({ waba_id: wabaId, exception: String(e) });
-      }
+    if (!secretWabaId || !phoneNumberId) {
+      return new Response(JSON.stringify({
+        mode: "PROBE",
+        error: "missing_meta_ids",
+        secret_waba_id_present: Boolean(secretWabaId),
+        phone_number_id_present: Boolean(phoneNumberId),
+        waba_resolution: wabaResolution,
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ mode: "PROBE", probes }),
+
+    const [tokenDebug, waba, templatesEdge, phone, phoneFields] = await Promise.all([
+      graphGet(token, "debug_token?input_token=" + encodeURIComponent(token), "debug_token"),
+      graphGet(token, secretWabaId, "waba"),
+      graphGet(token, `${secretWabaId}/message_templates?limit=1`, "message_templates"),
+      graphGet(token, phoneNumberId, "phone"),
+      graphGet(token, `${phoneNumberId}?fields=display_phone_number,verified_name,quality_rating`, "phone_fields"),
+    ]);
+    const grantedScopes = Array.isArray((tokenDebug as any)?.data?.scopes) ? (tokenDebug as any).data.scopes : [];
+    const permissions = {
+      whatsapp_business_management: grantedScopes.includes("whatsapp_business_management") || templatesEdge.ok,
+      whatsapp_business_messaging: grantedScopes.includes("whatsapp_business_messaging") || phone.ok || phoneFields.ok,
+      source: grantedScopes.length ? "debug_token.scopes" : "endpoint_access_inference",
+    };
+    const canRegisterSafely = Boolean(waba.ok && templatesEdge.ok && permissions.whatsapp_business_management);
+
+    return new Response(JSON.stringify({
+      mode: "PROBE",
+      waba_resolution: wabaResolution,
+      detected: { waba_id: secretWabaId, phone_number_id: phoneNumberId },
+      checks: { waba, message_templates: templatesEdge, phone, phone_fields: phoneFields },
+      permissions,
+      token_valid: waba.ok || templatesEdge.ok || phone.ok || phoneFields.ok,
+      permissions_sufficient: canRegisterSafely,
+      can_register_templates_safely: canRegisterSafely,
+    }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
@@ -250,8 +319,9 @@ Deno.serve(async (req) => {
   }));
 
   if (dryRun) {
+    const wabaResolution = resolveRuntimeWabaIds();
     return new Response(JSON.stringify({
-      mode: "DRY_RUN", batch, waba_ids: WABA_IDS, preflight: "OK",
+      mode: "DRY_RUN", batch, waba_ids: wabaResolution.target_waba_ids, waba_resolution: wabaResolution, preflight: "OK",
       lot: summary, note: "Nenhum POST enviado à Graph API.",
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
@@ -262,10 +332,16 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  // REGISTRO REAL — para no primeiro erro crítico
+  const wabaResolution = resolveRuntimeWabaIds();
+  if (!wabaResolution.secret_waba_id) {
+    return new Response(JSON.stringify({ error: "META_WABA_ID_missing", note: "Registro real bloqueado sem WABA ID real da Secret." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  // REGISTRO REAL — usa somente META_WABA_ID e para no primeiro erro crítico
   const results: any[] = [];
   let aborted = false;
-  outer: for (const wabaId of WABA_IDS) {
+  outer: for (const wabaId of wabaResolution.target_waba_ids) {
     for (const tpl of lot) {
       const url = `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates`;
       let status: string = "ERROR";
@@ -309,6 +385,6 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    mode: "REGISTER", batch, waba_ids: WABA_IDS, aborted, results,
+    mode: "REGISTER", batch, waba_ids: wabaResolution.target_waba_ids, waba_resolution: wabaResolution, aborted, results,
   }), { status: aborted ? 207 : 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
