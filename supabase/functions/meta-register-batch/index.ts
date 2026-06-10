@@ -194,6 +194,7 @@ async function graphGet(token: string, path: string, label: string) {
     display_phone_number: data?.display_phone_number ?? null,
     quality_rating: data?.quality_rating ?? null,
     sample_count: Array.isArray(data?.data) ? data.data.length : null,
+    scopes: label === "debug_token" && Array.isArray(data?.data?.scopes) ? data.data.scopes : undefined,
   };
 }
 
