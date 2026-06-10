@@ -213,6 +213,14 @@ serve(async (req) => {
           console.error("[meta-send-template] Falha ao sincronizar templates:", e);
         }
         if (!tpl) {
+          await supabase.from("whatsapp_template_logs").insert({
+            clinic_id: SINDICATO_CLINIC_ID,
+            phone: String(to ?? "").replace(/\D/g, ""),
+            template_name,
+            status: "blocked_no_local_status",
+            reason: "template_not_in_local_cache_after_sync",
+            triggered_by: TRIGGER_SOURCES.META_SEND_TEMPLATE,
+          }).then(() => {}, () => {});
           return new Response(
             JSON.stringify({ error: `Template ${template_name} (${language}) não encontrado mesmo após sync.` }),
             { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -243,6 +251,15 @@ serve(async (req) => {
           console.error("[meta-send-template] Falha ao re-sincronizar templates:", e);
         }
         if (tpl.status !== "APPROVED") {
+          const blockedStatus = `blocked_status_${String(tpl.status || "unknown").toLowerCase()}`;
+          await supabase.from("whatsapp_template_logs").insert({
+            clinic_id: SINDICATO_CLINIC_ID,
+            phone: String(to ?? "").replace(/\D/g, ""),
+            template_name,
+            status: blockedStatus,
+            reason: `template_status_${tpl.status}_not_approved`,
+            triggered_by: TRIGGER_SOURCES.META_SEND_TEMPLATE,
+          }).then(() => {}, () => {});
           return new Response(
             JSON.stringify({ error: `Template não aprovado (status atual: ${tpl.status})` }),
             { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
