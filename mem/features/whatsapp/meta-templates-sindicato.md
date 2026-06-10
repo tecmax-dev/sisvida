@@ -7,6 +7,16 @@ type: feature
 
 Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META_GRAPH_VERSION.
 
+## RC1 — Política informativa (congelada em 2026-06-10)
+
+- WhatsApp é canal **exclusivamente informativo**. Aplicativo oficial é o único canal de gerenciamento (confirmar/cancelar/reagendar).
+- Apenas **um** lembrete por agendamento, sem botões e sem CTA de resposta. Template oficial: `lembrete_consulta_v3`.
+- Templates com Quick Reply de Confirmar/Cancelar em lembretes ficam **deprecated** (não disparar novos envios): `lembrete_consulta_v2`, `homologacao_lembrete_v2/v3`, `homologacao_lembrete_profissional_v2/v3`.
+- IA só responde quando o associado escreve primeiro (janela 24h). Nunca inicia, nunca insiste, nunca reenvia.
+- Métricas descontinuadas: Taxa de confirmação/clique/resposta. Métricas priorizadas: Comparecimento, Opt-out, Blocked, Reported, Health Score, Quality Rating, Circuit Breaker, Delivery/Read Rate.
+- Componentes congelados em RC1: Compliance Engine, Safe Mode, Strict Mode, Template Governance, Meta Health Dashboard, Circuit Breaker, `meta-send-template`, `meta-send-text`, `meta-webhook`, `meta-sync-templates`.
+- Detalhes completos: `docs/RC1_META_COMPLIANCE_BASELINE.md`.
+
 ## Templates ativos (PENDING/aprovados)
 
 | Nome | Categoria | Botões | Variáveis | Uso |
