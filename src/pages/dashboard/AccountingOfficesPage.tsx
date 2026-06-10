@@ -106,8 +106,17 @@ interface OfficeEmployerLink {
   employer_id: string;
 }
 
-export default function AccountingOfficesPage() {
+interface AccountingOfficesPageProps {
+  clinicOverride?: {
+    id: string;
+    name?: string | null;
+    slug?: string | null;
+  } | null;
+}
+
+export default function AccountingOfficesPage({ clinicOverride }: AccountingOfficesPageProps = {}) {
   const { currentClinic } = useAuth();
+  const activeClinic = clinicOverride || currentClinic;
   const { lookupCnpj, cnpjLoading } = useCnpjLookup();
   const [offices, setOffices] = useState<AccountingOffice[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
@@ -142,10 +151,10 @@ export default function AccountingOfficesPage() {
   const [linkSearchTerm, setLinkSearchTerm] = useState("");
 
   useEffect(() => {
-    if (currentClinic?.id) {
+    if (activeClinic?.id) {
       loadData();
     }
-  }, [currentClinic?.id]);
+  }, [activeClinic?.id]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -154,14 +163,14 @@ export default function AccountingOfficesPage() {
       const { data: officesData, error: officesError } = await supabase
         .from("accounting_offices")
         .select("*")
-        .eq("clinic_id", currentClinic!.id)
+        .eq("clinic_id", activeClinic!.id)
         .order("name");
 
       if (officesError) throw officesError;
       setOffices(officesData || []);
 
       // Carregar empresas - using pagination to avoid 1000 limit
-      const employersResult = await fetchAllEmployers<Employer>(currentClinic!.id, {
+      const employersResult = await fetchAllEmployers<Employer>(activeClinic!.id, {
         select: "id, name, cnpj, registration_number",
         activeOnly: false
       });
@@ -293,7 +302,7 @@ export default function AccountingOfficesPage() {
         const { error } = await supabase
           .from("accounting_offices")
           .insert({
-            clinic_id: currentClinic!.id,
+            clinic_id: activeClinic!.id,
             name: formData.name,
             email: formData.email.toLowerCase().trim(),
             phone: formData.phone || null,
@@ -551,7 +560,7 @@ export default function AccountingOfficesPage() {
       doc.setFontSize(8);
       doc.setTextColor(150);
       doc.text(
-        `Página ${i} de ${pageCount} • ${currentClinic?.name || "ProSindWeb"}`,
+        `Página ${i} de ${pageCount} • ${activeClinic?.name || "ProSindWeb"}`,
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 10,
         { align: "center" }
@@ -582,8 +591,8 @@ export default function AccountingOfficesPage() {
     );
   });
 
-  const portalUrl = currentClinic?.slug 
-    ? `${window.location.origin}/portal-contador/${currentClinic.slug}`
+  const portalUrl = activeClinic?.slug 
+    ? `${window.location.origin}/portal-contador/${activeClinic.slug}`
     : null;
 
   return (
@@ -1197,7 +1206,7 @@ export default function AccountingOfficesPage() {
 
       {/* Painel de Importação */}
       <AccountingOfficeImportPanel
-        clinicId={currentClinic?.id || ""}
+        clinicId={activeClinic?.id || ""}
         employers={employers}
         existingOffices={offices.map(o => ({ id: o.id, email: o.email, name: o.name }))}
         onImportComplete={loadData}

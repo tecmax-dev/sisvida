@@ -43,5 +43,5 @@ export default function UnionAccountingOfficesPage() {
     );
   }
 
-  return <AccountingOfficesPage />;
+  return <AccountingOfficesPage clinicOverride={resolvedClinic} />;
 }
