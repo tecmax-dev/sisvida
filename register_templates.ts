@@ -2,6 +2,31 @@ const WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"];
 const TOKEN = process.env.META_WHATSAPP_TOKEN;
 const GRAPH_VERSION = "v21.0";
 
+// Governança: valida cada template contra o catálogo canônico ANTES de chamar
+// a Graph API. Reutiliza a mesma regra usada em runtime
+// (supabase/functions/_shared/template-governance.ts) — espelhada aqui para
+// permitir execução como script Node puro, sem alterar a assinatura.
+const CANONICAL_NAMES = new Set([
+  "consulta_confirmacao","consulta_lembrete","consulta_cancelamento",
+  "carteirinha_vencendo","carteirinha_vencida","boleto_disponivel",
+  "homologacao_confirmada","assembleia_aviso","recuperacao_senha",
+  "agenda_medica_disponivel","comunicado_marketing",
+]);
+const PROMOTIONAL_REGEX = /\b(promo(ç|c)?ão|desconto|oferta|aproveite|imperd(í|i)vel|gr(á|a)tis|cupom|black friday|liquida(ç|c)ão)\b/i;
+const AUTH_ALLOWED_WORDS = /(c(ó|o)digo|verifica(ç|c)(ã|a)o|login|autentica(ç|c)(ã|a)o|senha|otp|2fa|acesso)/i;
+
+function validateTemplate(tpl) {
+  const errors = [];
+  if (!CANONICAL_NAMES.has(tpl.name)) errors.push(`Template '${tpl.name}' fora do catálogo canônico.`);
+  const body = (tpl.components || []).find((c) => c.type === "BODY")?.text ?? "";
+  if (tpl.category === "UTILITY" && PROMOTIONAL_REGEX.test(body)) errors.push("UTILITY com vocabulário promocional.");
+  if (tpl.category === "AUTHENTICATION") {
+    if (!AUTH_ALLOWED_WORDS.test(body)) errors.push("AUTHENTICATION fora de OTP/senha/login.");
+    if (PROMOTIONAL_REGEX.test(body)) errors.push("AUTHENTICATION com texto promocional.");
+  }
+  return errors;
+}
+
 // CATÁLOGO CANÔNICO — conjunto permanente e único de templates.
 // NÃO criar versões _v2/_v3/_vN automáticas. Reaproveitar SEMPRE o mesmo nome.
 // Textos: linguagem institucional, neutra, objetiva. Sem palavras-gatilho.
@@ -189,6 +214,11 @@ async function register() {
 
     for (const tpl of templates) {
       console.log(`Creating template: ${tpl.name}...`);
+      const govErrors = validateTemplate(tpl);
+      if (govErrors.length > 0) {
+        console.log(`⛔ Governance rejeitou ${tpl.name}: ${govErrors.join(" | ")}`);
+        continue;
+      }
       try {
         const response = await fetch(url, {
           method: "POST",
