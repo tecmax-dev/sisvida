@@ -91,6 +91,37 @@ serve(async (req) => {
     
     console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
 
+    // ===== STRICT MODE (templates only) =====
+    try {
+      const { assertStrictAllowed, STRICT_MODE } = await import("../_shared/template-catalog.ts");
+      const strict = assertStrictAllowed(template_name);
+      if (!strict.allowed) {
+        console.warn(`[meta-send-template] STRICT_MODE rejected: ${template_name}`);
+        try {
+          const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+          await supa.from("whatsapp_template_logs").insert({
+            clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
+            phone: String(to ?? "").replace(/\D/g, ""),
+            template_name,
+            status: "blocked_strict_mode",
+            reason: strict.reason ?? "blocked_strict_mode",
+            triggered_by: "meta-send-template",
+          });
+        } catch (_) {}
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Template '${template_name}' rejeitado pelo STRICT MODE (fora do catálogo canônico).`,
+            blocked_by: strict.reason,
+            strict_mode: STRICT_MODE,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } catch (e) {
+      console.error("[meta-send-template] strict check error:", e);
+    }
+
     // ===== Gate de conformidade Meta (opt-in/opt-out/score/frequência) =====
     const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     let gateScore = 0;
