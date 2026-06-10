@@ -20,7 +20,23 @@ const corsHeaders = {
 };
 
 const GRAPH_VERSION = "v21.0";
-const WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"];
+const HARDCODED_WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"];
+
+function readSecretId(name: string): string | null {
+  const value = Deno.env.get(name)?.trim();
+  return value || null;
+}
+
+function resolveRuntimeWabaIds() {
+  const secretWabaId = readSecretId("META_WABA_ID");
+  return {
+    secret_waba_id: secretWabaId,
+    legacy_hardcoded_waba_ids: HARDCODED_WABA_IDS,
+    ignored_hardcoded_waba_ids: HARDCODED_WABA_IDS.filter(id => id !== secretWabaId),
+    target_waba_ids: secretWabaId ? [secretWabaId] : [],
+    uses_secret_only: Boolean(secretWabaId),
+  };
+}
 
 const CANONICAL_NAMES = new Set([
   "consulta_confirmacao","consulta_lembrete","consulta_cancelamento",
@@ -146,6 +162,39 @@ function preflight(tpl: any): string[] {
     if (vars[i] !== i + 1) { errors.push("variáveis fora de sequência"); break; }
   }
   return errors;
+}
+
+function probableObjectType(label: string, data: any, error: any): string {
+  if (error?.code === 190) return "TOKEN_INVALID_OR_EXPIRED";
+  if (error?.code === 100 && error?.error_subcode === 33) return "INACCESSIBLE_OR_WRONG_OBJECT_FOR_TOKEN";
+  if (!data) return "UNKNOWN";
+  if (label === "waba" && data?.id) return "WHATSAPP_BUSINESS_ACCOUNT";
+  if (label === "message_templates" && Array.isArray(data?.data)) return "WABA_MESSAGE_TEMPLATES_EDGE";
+  if (label.startsWith("phone") && (data?.display_phone_number || data?.verified_name || data?.quality_rating)) return "WHATSAPP_PHONE_NUMBER";
+  if (data?.id) return "META_OBJECT";
+  return "UNKNOWN";
+}
+
+async function graphGet(token: string, path: string, label: string) {
+  const r = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await r.json().catch(() => ({}));
+  const error = data?.error ?? null;
+  return {
+    ok: r.ok,
+    http_status: r.status,
+    error_code: error?.code ?? null,
+    error_type: error?.type ?? null,
+    error_subcode: error?.error_subcode ?? null,
+    message: error?.message ?? null,
+    probable_object_type: probableObjectType(label, data, error),
+    object_id: data?.id ?? null,
+    name: data?.name ?? data?.verified_name ?? null,
+    display_phone_number: data?.display_phone_number ?? null,
+    quality_rating: data?.quality_rating ?? null,
+    sample_count: Array.isArray(data?.data) ? data.data.length : null,
+  };
 }
 
 async function authorizeAdmin(req: Request) {
