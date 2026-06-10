@@ -494,39 +494,73 @@ serve(async (req) => {
     }
 
     try {
-      const invoice = await createInvoice({
-        employer: {
-          cnpj: employer.cnpj,
-          name: employer.name,
-          email: employer.email,
-          phone: employer.phone,
-        },
-        value: valueInCents,
-        dueDate: effectiveDueDate,
-        description,
-        contributionId: contribution.id,
-      });
-
-      // Atualizar contribuição com valor e dados do boleto
-      const { error: updateError } = await supabase
+      // Atualizar valor e vencimento antes de invocar a Lytex (a função lytex-api
+      // gravará os campos lytex_* e o status=pending após criar a cobrança).
+      const { error: preUpdateError } = await supabase
         .from("employer_contributions")
-        .update({
-          value: valueInCents,
-          status: "pending",
-          due_date: effectiveDueDate,
-          lytex_invoice_id: invoice._id,
-          lytex_invoice_url: invoice.invoiceUrl,
-          lytex_boleto_barcode: invoice.boleto?.barCode || null,
-          lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
-          lytex_pix_code: invoice.pix?.code || null,
-          lytex_pix_qrcode: invoice.pix?.qrCode || null,
-        })
+        .update({ value: valueInCents, due_date: effectiveDueDate })
         .eq("id", contribution_id);
-
-      if (updateError) {
-        console.error("[SetValue] Erro ao atualizar contribuição:", updateError);
+      if (preUpdateError) {
+        console.error("[SetValue] Erro ao salvar valor/vencimento:", preUpdateError);
         throw new Error("Erro ao salvar dados");
       }
+
+      // Delegar a criação da cobrança ao lytex-api (caminho oficial e validado).
+      // Inclui matrícula, endereço (quando disponível) e tratamento de erros da Lytex.
+      const employerAddressStr = (employer as any)?.address as string | undefined;
+      const employerCity = (employer as any)?.city as string | undefined;
+      const employerState = (employer as any)?.state as string | undefined;
+      const employerCep = (employer as any)?.cep as string | undefined;
+      const employerNeighborhood = (employer as any)?.neighborhood as string | undefined;
+
+      const employerPayload: any = {
+        cnpj: employer.cnpj,
+        name: employer.name,
+        email: employer.email,
+        phone: employer.phone,
+      };
+      if (employerAddressStr && employerCity && employerState && employerCep && employerNeighborhood) {
+        employerPayload.address = {
+          street: employerAddressStr,
+          number: "S/N",
+          zone: employerNeighborhood,
+          city: employerCity,
+          state: employerState,
+          zip: String(employerCep).replace(/\D/g, ""),
+        };
+      }
+
+      const { data: lytexResp, error: invokeErr } = await supabase.functions.invoke(
+        "lytex-api",
+        {
+          body: {
+            action: "create_invoice",
+            contributionId: contribution.id,
+            clinicId: clinicId || "",
+            value: valueInCents,
+            valueIsInCents: true,
+            dueDate: effectiveDueDate,
+            description,
+            enableBoleto: true,
+            enablePix: true,
+            employer: employerPayload,
+          },
+        },
+      );
+
+      if (invokeErr) {
+        throw new Error(invokeErr.message || "Falha ao invocar lytex-api");
+      }
+      if (lytexResp?.error) {
+        throw new Error(lytexResp.error);
+      }
+
+      const invoice = {
+        _id: lytexResp?.invoice?._id || lytexResp?.invoice?.id || null,
+        invoiceUrl: lytexResp?.invoiceUrl || lytexResp?.invoice?.invoiceUrl || null,
+        boleto: lytexResp?.invoice?.boleto || null,
+        pix: lytexResp?.invoice?.pix || null,
+      };
 
       // Registrar log se for portal
       if (portal_type && portal_id) {
