@@ -34,3 +34,25 @@ export function getCanonicalTemplate(name: string): CanonicalTemplate | null {
 export function isCanonical(name: string): boolean {
   return name in TEMPLATE_CATALOG;
 }
+
+// ============================================================
+// STRICT MODE — aplica-se EXCLUSIVAMENTE a templates Meta.
+// NÃO bloqueia mensagens livres, janela 24h, respostas humanas
+// ou conversas iniciadas pelo usuário.
+// Quando ativo, rejeita qualquer template fora do catálogo
+// canônico no momento de registro/envio via Meta Template API.
+// ============================================================
+export const STRICT_MODE: boolean =
+  (((globalThis as any)?.Deno?.env?.get?.("META_TEMPLATE_STRICT_MODE")) ?? "true") === "true";
+
+export interface StrictCheckResult {
+  allowed: boolean;
+  reason?: string;
+}
+
+/** Retorna allowed=false se STRICT_MODE estiver ativo e o template não pertencer ao catálogo. */
+export function assertStrictAllowed(name: string): StrictCheckResult {
+  if (!STRICT_MODE) return { allowed: true };
+  if (isCanonical(name)) return { allowed: true };
+  return { allowed: false, reason: "blocked_strict_mode_not_in_catalog" };
+}
