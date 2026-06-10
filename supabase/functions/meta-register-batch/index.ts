@@ -242,32 +242,51 @@ Deno.serve(async (req) => {
   const dryRun = !confirm;
   const probe = body.probe === true;
 
-  // ---- PROBE (somente leitura): GET no endpoint message_templates de cada WABA
-  // Não registra, não envia mensagens. Diagnostica token/permissão/WABA.
+  // ---- PROBE (somente leitura): GETs de validação. Não registra nem envia mensagens.
   if (probe) {
     const token = Deno.env.get("META_WHATSAPP_TOKEN");
+    const secretWabaId = readSecretId("META_WABA_ID");
+    const phoneNumberId = readSecretId("META_PHONE_NUMBER_ID");
+    const wabaResolution = resolveRuntimeWabaIds();
     if (!token) {
       return new Response(JSON.stringify({ error: "META_WHATSAPP_TOKEN_missing" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const probes: any[] = [];
-    for (const wabaId of WABA_IDS) {
-      const url = `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates?limit=1`;
-      try {
-        const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await r.json().catch(() => ({}));
-        probes.push({
-          waba_id: wabaId,
-          http_status: r.status,
-          ok: r.ok,
-          error: data?.error ?? null,
-          sample_count: Array.isArray(data?.data) ? data.data.length : null,
-        });
-      } catch (e) {
-        probes.push({ waba_id: wabaId, exception: String(e) });
-      }
+    if (!secretWabaId || !phoneNumberId) {
+      return new Response(JSON.stringify({
+        mode: "PROBE",
+        error: "missing_meta_ids",
+        secret_waba_id_present: Boolean(secretWabaId),
+        phone_number_id_present: Boolean(phoneNumberId),
+        waba_resolution: wabaResolution,
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ mode: "PROBE", probes }),
+
+    const [tokenDebug, waba, templatesEdge, phone, phoneFields] = await Promise.all([
+      graphGet(token, "debug_token?input_token=" + encodeURIComponent(token), "debug_token"),
+      graphGet(token, secretWabaId, "waba"),
+      graphGet(token, `${secretWabaId}/message_templates?limit=1`, "message_templates"),
+      graphGet(token, phoneNumberId, "phone"),
+      graphGet(token, `${phoneNumberId}?fields=display_phone_number,verified_name,quality_rating`, "phone_fields"),
+    ]);
+    const grantedScopes = Array.isArray((tokenDebug as any)?.data?.scopes) ? (tokenDebug as any).data.scopes : [];
+    const permissions = {
+      whatsapp_business_management: grantedScopes.includes("whatsapp_business_management") || templatesEdge.ok,
+      whatsapp_business_messaging: grantedScopes.includes("whatsapp_business_messaging") || phone.ok || phoneFields.ok,
+      source: grantedScopes.length ? "debug_token.scopes" : "endpoint_access_inference",
+    };
+    const canRegisterSafely = Boolean(waba.ok && templatesEdge.ok && permissions.whatsapp_business_management);
+
+    return new Response(JSON.stringify({
+      mode: "PROBE",
+      waba_resolution: wabaResolution,
+      detected: { waba_id: secretWabaId, phone_number_id: phoneNumberId },
+      checks: { waba, message_templates: templatesEdge, phone, phone_fields: phoneFields },
+      permissions,
+      token_valid: waba.ok || templatesEdge.ok || phone.ok || phoneFields.ok,
+      permissions_sufficient: canRegisterSafely,
+      can_register_templates_safely: canRegisterSafely,
+    }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
@@ -299,8 +318,9 @@ Deno.serve(async (req) => {
   }));
 
   if (dryRun) {
+    const wabaResolution = resolveRuntimeWabaIds();
     return new Response(JSON.stringify({
-      mode: "DRY_RUN", batch, waba_ids: WABA_IDS, preflight: "OK",
+      mode: "DRY_RUN", batch, waba_ids: wabaResolution.target_waba_ids, waba_resolution: wabaResolution, preflight: "OK",
       lot: summary, note: "Nenhum POST enviado à Graph API.",
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
@@ -311,10 +331,16 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  // REGISTRO REAL — para no primeiro erro crítico
+  const wabaResolution = resolveRuntimeWabaIds();
+  if (!wabaResolution.secret_waba_id) {
+    return new Response(JSON.stringify({ error: "META_WABA_ID_missing", note: "Registro real bloqueado sem WABA ID real da Secret." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  // REGISTRO REAL — usa somente META_WABA_ID e para no primeiro erro crítico
   const results: any[] = [];
   let aborted = false;
-  outer: for (const wabaId of WABA_IDS) {
+  outer: for (const wabaId of wabaResolution.target_waba_ids) {
     for (const tpl of lot) {
       const url = `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates`;
       let status: string = "ERROR";
@@ -358,6 +384,6 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    mode: "REGISTER", batch, waba_ids: WABA_IDS, aborted, results,
+    mode: "REGISTER", batch, waba_ids: wabaResolution.target_waba_ids, waba_resolution: wabaResolution, aborted, results,
   }), { status: aborted ? 207 : 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
