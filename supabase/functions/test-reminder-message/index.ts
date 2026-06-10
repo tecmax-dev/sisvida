@@ -36,36 +36,21 @@ function formatAppointmentReminder(
   time: string,
   professionalName: string,
 ): string {
-  const noShowWarning = [
-    `*Atenção, Associado(a):*`,
-    `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
+  // RC1 — Política informativa (WhatsApp = canal informativo).
+  const firstName = patientName.split(' ')[0];
+  return [
+    `Olá, ${firstName}.`,
     ``,
-    `Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
-  ];
-
-  const arrivalInstruction = `*Compareça com 15 minutos de antecedência.*`;
-  const specificLocation = getProfessionalLocation(professionalName);
-
-  const lines = [
-    `Olá ${patientName}!`,
+    `Lembramos que sua consulta está agendada para:`,
     ``,
-    arrivalInstruction,
+    `Data: ${date}`,
+    `Horário: ${time}`,
+    `Profissional: ${professionalName}`,
     ``,
-    `Lembramos que você tem uma consulta agendada:`,
+    `Caso seja necessário alterar ou cancelar seu agendamento, utilize exclusivamente o aplicativo oficial do Sindicato.`,
     ``,
-    `*Data:* ${date}`,
-    `*Horário:* ${time}`,
-    `*Profissional:* ${professionalName}`,
-    `*Clínica:* ${clinicName}`,
-    specificLocation ? `` : null,
-    specificLocation,
-    ``,
-    ...noShowWarning,
-    ``,
-    `Atenciosamente,`,
-    `Equipe ${clinicName}`,
-  ].filter(Boolean);
-  return lines.join('\n');
+    clinicName,
+  ].join('\n');
 }
 
 function getWhazingSendUrl(baseUrl: string): string {
@@ -324,13 +309,9 @@ serve(async (req) => {
       messageSent = whazingTextResult.success;
     }
 
-    // STEP 3: Send buttons via Whazing
-    let buttonsResult = null;
-    if (messageSent) {
-      console.log('[test] === STEP 3: Waiting 1.5s then sending buttons ===');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      buttonsResult = await sendConfirmationButtons(phone, testAppointmentId);
-    }
+    // RC1 — Política informativa: não enviar botões Confirmar/Cancelar.
+    const buttonsResult = null;
+    void testAppointmentId;
 
     return new Response(
       JSON.stringify({
