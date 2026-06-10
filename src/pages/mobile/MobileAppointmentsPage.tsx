@@ -232,7 +232,7 @@ function MobileAppointmentsPageContent() {
     const date = parseDateOnlyToLocalNoon(apt.appointment_date);
     return (isFuture(date) || isToday(date)) && 
            !['cancelled', 'no_show', 'attended', 'completed'].includes(apt.status);
-  }).sort((a, b) => parseISO(a.appointment_date).getTime() - parseISO(b.appointment_date).getTime());
+  }).sort((a, b) => parseDateOnlyToLocalNoon(a.appointment_date).getTime() - parseDateOnlyToLocalNoon(b.appointment_date).getTime());
 
   const historyAppointments = allAppointments.filter(apt => {
     const date = parseDateOnlyToLocalNoon(apt.appointment_date);
