@@ -228,7 +228,7 @@ async function createInvoice(params: {
         value: params.value,
       },
     ],
-    dueDate: params.dueDate,
+    dueDate: params.dueDate.includes("T") ? params.dueDate : `${params.dueDate}T12:00:00`,
     paymentMethods: {
       pix: { enable: true },
       boleto: { enable: true },
