@@ -338,6 +338,10 @@ export default function MetaHealthDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="safe-mode">
+          <MetaSafeModePanel />
+        </TabsContent>
       </Tabs>
     </div>
   );
