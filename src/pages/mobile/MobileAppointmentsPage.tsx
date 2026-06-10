@@ -229,13 +229,13 @@ function MobileAppointmentsPageContent() {
   const allAppointments = [...appointments, ...dependentAppointments];
   
   const upcomingAppointments = allAppointments.filter(apt => {
-    const date = parseISO(apt.appointment_date);
+    const date = parseDateOnlyToLocalNoon(apt.appointment_date);
     return (isFuture(date) || isToday(date)) && 
            !['cancelled', 'no_show', 'attended', 'completed'].includes(apt.status);
   }).sort((a, b) => parseISO(a.appointment_date).getTime() - parseISO(b.appointment_date).getTime());
 
   const historyAppointments = allAppointments.filter(apt => {
-    const date = parseISO(apt.appointment_date);
+    const date = parseDateOnlyToLocalNoon(apt.appointment_date);
     return isPast(date) || ['cancelled', 'no_show', 'attended', 'completed'].includes(apt.status);
   });
 
@@ -262,17 +262,17 @@ function MobileAppointmentsPageContent() {
   };
 
   const canConfirm = (appointment: Appointment) => {
-    const date = parseISO(appointment.appointment_date);
+    const date = parseDateOnlyToLocalNoon(appointment.appointment_date);
     return (isFuture(date) || isToday(date)) && appointment.status === 'scheduled';
   };
 
   const canCancel = (appointment: Appointment) => {
-    const date = parseISO(appointment.appointment_date);
+    const date = parseDateOnlyToLocalNoon(appointment.appointment_date);
     return (isFuture(date) || isToday(date)) && ['scheduled', 'confirmed', 'arrived'].includes(appointment.status);
   };
 
   const canReschedule = (appointment: Appointment) => {
-    const date = parseISO(appointment.appointment_date);
+    const date = parseDateOnlyToLocalNoon(appointment.appointment_date);
     return (isFuture(date) || isToday(date)) && ['scheduled', 'confirmed', 'arrived'].includes(appointment.status);
   };
 
@@ -454,7 +454,7 @@ function MobileAppointmentsPageContent() {
   };
 
   const renderAppointmentCard = (appointment: Appointment, showActions = true) => {
-    const appointmentDate = parseISO(appointment.appointment_date);
+    const appointmentDate = parseDateOnlyToLocalNoon(appointment.appointment_date);
     const isUpcoming = isFuture(appointmentDate) || isToday(appointmentDate);
     const isPastAppointment = isPast(appointmentDate);
     
@@ -739,7 +739,7 @@ function MobileAppointmentsPageContent() {
               <div>
                 <span className="text-sm text-muted-foreground">Data e Horário</span>
                 <p className="font-medium">
-                  {format(parseISO(selectedAppointment.appointment_date), "dd/MM/yyyy", { locale: ptBR })} às {selectedAppointment.start_time.slice(0, 5)}
+                  {format(parseDateOnlyToLocalNoon(selectedAppointment.appointment_date), "dd/MM/yyyy", { locale: ptBR })} às {selectedAppointment.start_time.slice(0, 5)}
                 </p>
               </div>
 
@@ -801,7 +801,7 @@ function MobileAppointmentsPageContent() {
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                   <p className="font-medium">{selectedAppointment.procedure?.name || selectedAppointment.type}</p>
                   <p className="text-sm">
-                    {format(parseISO(selectedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedAppointment.start_time.slice(0, 5)}
+                    {format(parseDateOnlyToLocalNoon(selectedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedAppointment.start_time.slice(0, 5)}
                   </p>
                 </div>
               )}
