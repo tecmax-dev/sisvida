@@ -51,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format, parseISO, isPast, isToday, isFuture, addDays } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { ptBR } from "date-fns/locale";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
