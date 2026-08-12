@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
-import prosingeLogo from "@/assets/prosindweb-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
 import sindicalContribuicoes from "@/assets/sindical-contribuicoes.jpg";
 import sindicalRelatorios from "@/assets/sindical-relatorios.jpg";
@@ -127,7 +127,7 @@ function SindicalHeader() {
       <div className="container">
         <div className="flex items-center justify-between h-16">
           <Link to="/sindical" className="flex items-center">
-            <img src={prosingeLogo} alt="Prosinge" className="h-9 w-auto" />
+            <img src={prosindwebLogo} alt="Prosinge" className="h-9 w-auto" />
           </Link>
 
           <nav className="hidden lg:flex items-center gap-7">
@@ -950,7 +950,7 @@ function SindicalFooter() {
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
-            <img src={prosingeLogo} alt="Prosinge" className="h-10 w-auto mb-4 brightness-0 invert" />
+            <img src={prosindwebLogo} alt="Prosinge" className="h-10 w-auto mb-4 brightness-0 invert" />
             <p className="text-white/40 mb-6 max-w-sm text-sm leading-relaxed">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>

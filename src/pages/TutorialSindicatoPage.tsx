@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import prosingeLogo from "@/assets/prosindweb-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 // Import illustrations
 import ilustracaoEmpresas from "@/assets/illustrations/tutorial-empresas.png";
@@ -57,7 +57,7 @@ const TutorialSindicatoPage = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch(prosingeLogo);
+        const response = await fetch(prosindwebLogo);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {

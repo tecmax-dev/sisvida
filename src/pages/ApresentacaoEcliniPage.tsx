@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText, Loader2, Building2, Users, Briefcase, Calculator, Zap, Shield, Globe, Smartphone, BarChart3, MessageSquare, Clock, CheckCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import prosingeLogo from "@/assets/prosindweb-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 const ApresentacaoEcliniPage = () => {
   const [generating, setGenerating] = useState(false);
@@ -14,7 +14,7 @@ const ApresentacaoEcliniPage = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch(prosingeLogo);
+        const response = await fetch(prosindwebLogo);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {

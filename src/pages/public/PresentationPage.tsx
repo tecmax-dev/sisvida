@@ -9,7 +9,7 @@ import clinicModule from "@/assets/presentation/clinic-module.jpg";
 import unionModule from "@/assets/presentation/union-module.jpg";
 import technologyStack from "@/assets/presentation/technology-stack.jpg";
 import portalsAccess from "@/assets/presentation/portals-access.jpg";
-import prosingeLogo from "@/assets/prosindweb-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 
 export default function PresentationPage() {
@@ -77,7 +77,7 @@ export default function PresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
             <div className="w-28 h-28 print:w-24 print:h-24 bg-white rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-2xl p-3">
-              <img src={prosingeLogo} alt="Prosinge" className="w-full h-full object-contain" />
+              <img src={prosindwebLogo} alt="Prosinge" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">Prosinge</h1>
             <p className="text-xl print:text-lg text-blue-100">Sistema Integrado de Gestão Clínica e Sindical</p>
