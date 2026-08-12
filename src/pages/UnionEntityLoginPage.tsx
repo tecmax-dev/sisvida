@@ -12,6 +12,7 @@ import { Loader2, LogIn, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
+
 export default function UnionEntityLoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");

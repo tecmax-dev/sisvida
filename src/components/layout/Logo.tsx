@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
+
 interface LogoProps {
   variant?: "light" | "dark";
   size?: "sm" | "md" | "lg";

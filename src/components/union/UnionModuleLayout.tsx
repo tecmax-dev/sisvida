@@ -11,6 +11,7 @@ import { UserAvatar } from "@/components/users/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import prosindwebLogo from "@/assets/prosindweb-logo.png";
+
 import {
   Menu,
   X,

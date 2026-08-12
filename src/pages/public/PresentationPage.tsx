@@ -11,6 +11,7 @@ import technologyStack from "@/assets/presentation/technology-stack.jpg";
 import portalsAccess from "@/assets/presentation/portals-access.jpg";
 import ecliniLogo from "@/assets/prosindweb-logo.png";
 
+
 export default function PresentationPage() {
   const handlePrint = () => {
     window.print();
