@@ -12,7 +12,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ProsindWeb Design System - Azul Royal + Vermelho + Homologação Audit */
+/* Prosinge Design System - Azul Royal + Vermelho + Homologação Audit */
 
 @layer base {
   :root {
@@ -216,23 +216,23 @@
   }
   
   /* ProsindWeb-style solid button - Azul Royal */
-  .btn-prosindweb {
+  .btn-prosinge {
     @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
     background: hsl(var(--primary));
     @apply hover:shadow-lg hover:-translate-y-0.5;
   }
   
-  .btn-prosindweb:hover {
+  .btn-prosinge:hover {
     background: hsl(var(--primary-dark));
   }
   
-  .btn-prosindweb-outline {
+  .btn-prosinge-outline {
     @apply border-2 font-semibold px-6 py-3 rounded-full transition-all duration-300;
     border-color: hsl(var(--primary));
     color: hsl(var(--primary));
   }
   
-  .btn-prosindweb-outline:hover {
+  .btn-prosinge-outline:hover {
     background: hsl(var(--primary));
     @apply text-white border-transparent;
   }
@@ -259,10 +259,10 @@
   }
   
   /* Legacy compatibility */
-  .btn-eclini { @apply btn-prosindweb; }
-  .btn-eclini:hover { @apply btn-prosindweb; }
-  .btn-eclini-outline { @apply btn-prosindweb-outline; }
-  .btn-eclini-outline:hover { @apply btn-prosindweb-outline; }
+  .btn-eclini { @apply btn-prosinge; }
+  .btn-eclini:hover { @apply btn-prosinge; }
+  .btn-eclini-outline { @apply btn-prosinge-outline; }
+  .btn-eclini-outline:hover { @apply btn-prosinge-outline; }
   
   .animate-float {
     animation: float 6s ease-in-out infinite;

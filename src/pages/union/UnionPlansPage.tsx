@@ -264,7 +264,7 @@ export default function UnionPlansPage() {
                 </Button>
                 <Button variant="ghost" size="sm" className="w-full" asChild>
                   <a 
-                    href="mailto:contato@prosindweb.com.br?subject=Dúvidas sobre planos sindicais"
+                    href="mailto:contato@prosinge.com.br?subject=Dúvidas sobre planos sindicais"
                   >
                     Falar com comercial
                   </a>

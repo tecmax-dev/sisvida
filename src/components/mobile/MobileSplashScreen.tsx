@@ -275,7 +275,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
             className="absolute bottom-8 text-center"
           >
             <p className="text-white/50 text-xs font-medium tracking-wider">
-              PROSINDWEB
+              PROSINGE
             </p>
           </motion.div>
         </motion.div>
