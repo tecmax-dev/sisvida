@@ -21,10 +21,10 @@ const sindicatoFeatures = [
 
 export default function HubLandingPage() {
   useEffect(() => {
-    document.title = "ProsindWeb — Sistema completo para Clínicas e Sindicatos";
+    document.title = "Prosinge — Sistema completo para Clínicas e Sindicatos";
     const meta = document.querySelector('meta[name="description"]');
     const content =
-      "Escolha o módulo ideal: ProsindWeb Clínica para gestão de clínicas e consultórios, ou ProsindWeb Sindicato para sindicatos, associações e federações.";
+      "Escolha o módulo ideal: Prosinge Clínica para gestão de clínicas e consultórios, ou Prosinge Sindicato para sindicatos, associações e federações.";
     if (meta) meta.setAttribute("content", content);
     else {
       const m = document.createElement("meta");
@@ -49,10 +49,10 @@ export default function HubLandingPage() {
             <div className="max-w-3xl mx-auto text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/8 border border-primary/15 text-primary text-xs font-semibold px-4 py-2 rounded-full mb-8 backdrop-blur-sm">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                +200 entidades confiam no ProsindWeb
+                +200 entidades confiam no Prosinge
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] tracking-tight text-foreground mb-6">
-                Qual módulo do <span className="text-primary">ProsindWeb</span> é para você?
+                Qual módulo do <span className="text-primary">Prosinge</span> é para você?
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
                 Uma plataforma, dois módulos especializados. Escolha a solução ideal para o seu negócio e comece agora mesmo.
@@ -73,7 +73,7 @@ export default function HubLandingPage() {
                   Módulo Clínica
                 </div>
                 <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-3">
-                  ProsindWeb Clínica
+                  Prosinge Clínica
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-6">
                   Sistema completo para clínicas, consultórios e centros médicos. Agenda, prontuário, financeiro e muito mais.
@@ -104,7 +104,7 @@ export default function HubLandingPage() {
                   Módulo Sindicato
                 </div>
                 <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-3">
-                  ProsindWeb Sindicato
+                  Prosinge Sindicato
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-6">
                   Plataforma completa para sindicatos, associações e federações. Gestão sindical + app do associado.

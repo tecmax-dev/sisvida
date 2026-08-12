@@ -1496,7 +1496,7 @@ export default function UnionMembersListPage() {
         member={selectedMemberForWelcome}
         clinicId={resolvedClinic?.id || ""}
         entityName={resolvedClinic?.name || "Sindicato"}
-        appUrl="https://prosindweb.com.br/app/baixar-app"
+        appUrl="https://prosinge.com.br/app/baixar-app"
         headerImageUrl="https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-headers/header_bem_vindo_socio_secmi.png"
       />
 

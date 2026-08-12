@@ -24,7 +24,7 @@ export default function InstallPage() {
      setIsAndroid(isAndroidUA);
 
      // /app/instalar deve sempre direcionar para a página de filiação do SECMI.
-     window.location.replace("https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28");
+     window.location.replace("https://prosinge.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28");
      return;
 
      setIsDesktop(window.innerWidth >= 1024);
@@ -109,7 +109,7 @@ export default function InstallPage() {
             <Smartphone className="h-10 w-10 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Instale o ProsindWeb
+            Instale o Prosinge
           </h1>
           <p className="text-muted-foreground">
             Tenha acesso rápido ao sistema diretamente da sua tela inicial
@@ -130,7 +130,7 @@ export default function InstallPage() {
               <CardContent className="py-6">
                 <div className="text-center space-y-4">
                   <p className="text-foreground font-medium">
-                    Instale o ProsindWeb diretamente no seu dispositivo
+                    Instale o Prosinge diretamente no seu dispositivo
                   </p>
                   <Button onClick={handleInstall} size="lg" className="gap-2">
                     <Download className="h-5 w-5" />
@@ -194,7 +194,7 @@ export default function InstallPage() {
                 <div>
                   <p className="font-medium text-foreground">Confirme a instalação</p>
                   <p className="text-sm text-muted-foreground">
-                    O ícone do ProsindWeb aparecerá na sua tela inicial
+                    O ícone do Prosinge aparecerá na sua tela inicial
                   </p>
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default function InstallPage() {
                 <div>
                   <p className="font-medium text-foreground">Se não aparecer, use o menu</p>
                   <p className="text-sm text-muted-foreground">
-                    Clique nos três pontos <MoreVertical className="inline h-4 w-4" /> → "Instalar ProsindWeb" ou "Mais ferramentas" → "Criar atalho"
+                    Clique nos três pontos <MoreVertical className="inline h-4 w-4" /> → "Instalar Prosinge" ou "Mais ferramentas" → "Criar atalho"
                   </p>
                 </div>
               </div>
@@ -305,7 +305,7 @@ export default function InstallPage() {
                 <div>
                   <p className="font-medium text-foreground">Confirme tocando em "Adicionar"</p>
                   <p className="text-sm text-muted-foreground">
-                    O ícone do ProsindWeb aparecerá na sua tela inicial
+                    O ícone do Prosinge aparecerá na sua tela inicial
                   </p>
                 </div>
               </div>

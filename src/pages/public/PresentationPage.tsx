@@ -106,9 +106,9 @@ export default function PresentationPage() {
 
         <div className="grid grid-cols-1 gap-4">
           <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
-            <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a ProsindWeb</h3>
+            <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a Prosinge</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
-              A <strong>ProsindWeb</strong> é especializada no desenvolvimento de soluções 
+              A <strong>Prosinge</strong> é especializada no desenvolvimento de soluções 
               digitais personalizadas, com foco em sistemas de gestão para organizações que buscam 
               modernização, eficiência e segurança em seus processos administrativos.
             </p>
@@ -657,7 +657,7 @@ export default function PresentationPage() {
                 </div>
                 <div>
                   <p className="text-blue-300 text-[10px]">E-mail</p>
-                  <p className="text-base font-semibold">contato@prosindweb.com.br</p>
+                  <p className="text-base font-semibold">contato@prosinge.com.br</p>
                 </div>
               </div>
 
@@ -677,7 +677,7 @@ export default function PresentationPage() {
                 </div>
                 <div>
                   <p className="text-blue-300 text-[10px]">Sistema</p>
-                  <p className="text-base font-semibold">prosindweb.com.br</p>
+                  <p className="text-base font-semibold">prosinge.com.br</p>
                 </div>
               </div>
             </div>
@@ -685,7 +685,7 @@ export default function PresentationPage() {
 
           <div className="mt-6 text-blue-300">
             <p className="text-base italic mb-1">"Tecnologia a serviço da gestão eficiente"</p>
-            <p className="text-[10px]">© 2026 ProsindWeb - Todos os direitos reservados</p>
+            <p className="text-[10px]">© 2026 Prosinge - Todos os direitos reservados</p>
           </div>
         </div>
       </div>
