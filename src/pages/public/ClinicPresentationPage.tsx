@@ -88,7 +88,7 @@ export default function ClinicPresentationPage() {
             
             <div className="border-t border-white/30 pt-6 mt-6">
               <p className="text-base print:text-sm text-cyan-200 mb-2">Desenvolvido por:</p>
-              <p className="text-2xl print:text-xl font-bold">PROSINDWEB</p>
+              <p className="text-2xl print:text-xl font-bold">PROSINGE</p>
               <p className="text-cyan-200 mt-3 print:text-sm">Brasil • 2026</p>
             </div>
           </div>
@@ -570,7 +570,7 @@ export default function ClinicPresentationPage() {
             <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center mb-4 mx-auto shadow-2xl">
               <span className="text-3xl font-bold text-cyan-600">PW</span>
             </div>
-            <h2 className="text-3xl print:text-2xl font-bold mb-2">PROSINDWEB</h2>
+            <h2 className="text-3xl print:text-2xl font-bold mb-2">PROSINGE</h2>
             <p className="text-lg print:text-base text-cyan-200">Gestão Sindical e Clínica</p>
           </div>
 
