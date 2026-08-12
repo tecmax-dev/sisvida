@@ -59,38 +59,47 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative min-h-screen flex items-center pt-20 pb-20 overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-background to-primary/[0.06]" />
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/[0.04] rounded-full blur-[120px] -translate-y-1/4 translate-x-1/4" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-primary/[0.03] rounded-full blur-[100px] translate-y-1/4 -translate-x-1/4" />
+    <section className="relative min-h-screen flex items-center pt-32 pb-20 overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(16,185,129,0.08),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(59,130,246,0.05),transparent_50%)]" />
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+      
+      <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[140px] -translate-y-1/2 translate-x-1/2 animate-pulse" style={{ animationDuration: '8s' }} />
+      <div className="absolute bottom-0 left-0 w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2 animate-pulse" style={{ animationDuration: '12s' }} />
 
       <div className="container relative z-10">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-20 items-center">
           {/* Left Column */}
-          <div className="max-w-xl">
+          <div className="max-w-2xl">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-primary/8 border border-primary/15 text-primary text-xs font-semibold px-4 py-2 rounded-full mb-8 backdrop-blur-sm">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              +200 entidades confiam no ProsindWeb
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-primary text-xs font-bold px-5 py-2.5 rounded-full mb-10 backdrop-blur-md shadow-xl transition-all hover:border-primary/30">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              +200 entidades confiam no Prosinge
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] tracking-tight text-foreground mb-6">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight text-foreground mb-8">
               {title}{" "}
-              <span className="text-primary">
-                {typedWord}
-                <span className="animate-pulse font-light">|</span>
+              <span className="relative inline-block">
+                <span className="relative z-10 text-primary">
+                  {typedWord}
+                  <span className="animate-pulse font-light">|</span>
+                </span>
+                <span className="absolute -bottom-2 left-0 w-full h-3 bg-primary/10 -rotate-1 rounded-full" />
               </span>
             </h1>
 
-            <p className="text-lg text-muted-foreground leading-relaxed mb-10 max-w-lg">
+            <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-xl font-medium">
               {description}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-12">
+            <div className="flex flex-col sm:flex-row gap-5 mb-16">
               <Button
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-14 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:-translate-y-0.5"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-10 h-16 text-lg font-bold shadow-[0_20px_40px_-12px_rgba(var(--primary-rgb),0.35)] hover:shadow-[0_25px_50px_-12px_rgba(var(--primary-rgb),0.45)] transition-all duration-300 hover:-translate-y-1 active:scale-95"
                 asChild
               >
                 <Link to={primaryButtonLink} className="flex items-center gap-2">
@@ -101,7 +110,7 @@ export function HeroSection() {
               <Button
                 size="lg"
                 variant="outline"
-                className="rounded-full px-8 h-14 text-base border-border/60 hover:border-primary/30 hover:bg-primary/5"
+                className="rounded-full px-10 h-16 text-lg font-bold border-border/60 hover:border-primary/30 hover:bg-primary/5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 active:scale-95"
                 asChild
               >
                 <Link to="/cadastro" className="flex items-center gap-2">
@@ -132,14 +141,43 @@ export function HeroSection() {
           </div>
 
           {/* Right Column - Hero Image */}
-          <div className="relative flex justify-center lg:justify-end">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 rounded-3xl blur-3xl scale-110" />
-            <div className="relative bg-card/50 backdrop-blur-sm border border-border/40 rounded-2xl p-3 shadow-2xl shadow-primary/10">
-              <img
-                src={heroImage}
-                alt="ProsindWeb - Sistema de Gestão Sindical"
-                className="w-full max-w-lg h-auto object-contain rounded-xl"
-              />
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 to-emerald-500/20 rounded-[2rem] blur-[80px] scale-110 group-hover:scale-125 transition-transform duration-700 opacity-60" />
+            
+            <div className="relative rounded-[2.5rem] p-4 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-md border border-white/20 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] transition-all duration-700 hover:-rotate-2 hover:scale-[1.02]">
+              <div className="relative rounded-[1.8rem] overflow-hidden">
+                <img
+                  src={heroImage}
+                  alt="Prosinge - Sistema de Gestão Sindical"
+                  className="w-full max-w-2xl h-auto object-cover transform transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/20 rounded-[1.8rem]" />
+              </div>
+              
+              {/* Floating element 1 */}
+              <div className="absolute -top-10 -right-10 bg-card/80 backdrop-blur-xl border border-border/50 p-6 rounded-3xl shadow-2xl animate-bounce" style={{ animationDuration: '4s' }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                    <ArrowRight className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">+R$ 2.4M</div>
+                    <div className="text-xs text-muted-foreground font-medium">Recuperados este mês</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating element 2 */}
+              <div className="absolute -bottom-8 -left-12 bg-card/80 backdrop-blur-xl border border-border/50 p-5 rounded-2xl shadow-2xl animate-float" style={{ animationDuration: '6s' }}>
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="w-8 h-8 rounded-full border-2 border-card bg-primary/10 flex items-center justify-center text-[10px] font-bold">U{i}</div>
+                    ))}
+                  </div>
+                  <div className="text-sm font-bold">+120 Novos Sócios</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
