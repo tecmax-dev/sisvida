@@ -425,7 +425,7 @@ export default function PresentationPage() {
           />
           <div className="flex flex-col justify-center">
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
-              O eCLINI foi desenvolvido utilizando as mais modernas tecnologias do mercado,
+              O Prosinge foi desenvolvido utilizando as mais modernas tecnologias do mercado,
               garantindo performance, segurança e escalabilidade.
             </p>
           </div>
