@@ -12,23 +12,25 @@ export function CTASection() {
   return (
     <section id="contact" className="relative py-24 lg:py-32 overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary-foreground/10" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(220, 80%, 35%))' }} />
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-white/5 rounded-full blur-[120px]" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-white/5 rounded-full blur-[100px]" />
+      <div className="absolute inset-0 bg-slate-950" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(16,185,129,0.3),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_120%,rgba(59,130,246,0.2),transparent_50%)]" />
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-emerald-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
 
       <div className="container relative z-10">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 tracking-tight">
-            Transforme a gestão do seu sindicato
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl lg:text-7xl font-extrabold text-white mb-8 tracking-tighter leading-tight">
+            Pronto para transformar a <span className="text-primary italic">sua gestão?</span>
           </h2>
-          <p className="text-lg text-white/80 mb-10 max-w-lg mx-auto leading-relaxed">
-            Junte-se a mais de 200 entidades que já confiam no ProsindWeb
+          <p className="text-xl text-white/70 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
+            Junte-se a centenas de entidades que elevaram sua administração para o próximo nível com o Prosinge.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button
               size="lg"
-              className="bg-white text-primary hover:bg-white/90 rounded-full px-8 h-14 text-base font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-12 h-16 text-lg font-bold shadow-2xl shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:-translate-y-1"
               asChild
             >
               <Link to="/cadastro" className="flex items-center gap-2">
