@@ -80,7 +80,7 @@ export function exportFinancialToPDF({ title, clinicName, period, columns, data,
     doc.setFontSize(9);
     doc.setTextColor(150);
     doc.text(
-      `Página ${i} de ${pageCount} • ProsindWeb`,
+      `Página ${i} de ${pageCount} • Prosinge`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }

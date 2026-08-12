@@ -136,7 +136,7 @@ export function exportToPDF({ clinicName, period, data }: ExportOptions) {
     doc.setFontSize(10);
     doc.setTextColor(150);
     doc.text(
-      `Página ${i} de ${pageCount} • ProsindWeb`,
+      `Página ${i} de ${pageCount} • Prosinge`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }

@@ -177,7 +177,7 @@ export default function UnionEmailInboxPage() {
             <Inbox className="h-6 w-6" /> Caixa de Entrada
           </h1>
           <p className="text-sm text-muted-foreground">
-            Respostas recebidas em <strong>respostas@prosindweb.com.br</strong>
+            Respostas recebidas em <strong>respostas@prosinge.com.br</strong>
           </p>
         </div>
         <Button onClick={fetchNow} disabled={fetching} variant="outline">

@@ -20,7 +20,7 @@ const reasons = [
   {
     icon: MapPin,
     title: "Presença Nacional",
-    description: "Sindicatos de todas as regiões do Brasil confiam no ProsindWeb.",
+    description: "Sindicatos de todas as regiões do Brasil confiam no Prosinge.",
   },
 ];
 
@@ -35,7 +35,7 @@ export function ProblemsSection() {
             </span>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
               Por que escolher o{" "}
-              <span className="text-primary">ProsindWeb</span>?
+              <span className="text-primary">Prosinge</span>?
             </h2>
           </div>
 
@@ -62,7 +62,7 @@ export function ProblemsSection() {
               asChild
             >
               <a
-                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o ProsindWeb."
+                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o Prosinge."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"

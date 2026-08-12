@@ -19,7 +19,7 @@ export function Logo({ variant = "dark", size = "md", showText = true, customSrc
     <Link to="/" className="flex items-center gap-2 group">
       <img 
         src={customSrc || prosindwebLogo} 
-        alt="ProsindWeb - Sistema para Clínicas" 
+        alt="Prosinge - Gestão Sindical" 
         className={`${sizes[size]} w-auto object-contain`}
       />
     </Link>

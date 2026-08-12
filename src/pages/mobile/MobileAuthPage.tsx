@@ -269,7 +269,7 @@ export default function MobileAuthPage() {
         </Card>
 
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>© 2026 ProsindWeb</p>
+          <p>© 2026 Prosinge</p>
           <p className="mt-1">Todos os Direitos Reservados</p>
         </div>
       </div>
