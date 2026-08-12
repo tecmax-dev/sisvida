@@ -82,11 +82,11 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:contato@prosindweb.com.br"
+                  href="mailto:contato@prosinge.com.br"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <Mail className="h-4 w-4" />
-                  contato@prosindweb.com.br
+                  contato@prosinge.com.br
                 </a>
               </li>
             </ul>
@@ -96,7 +96,7 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-border/50">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground">
-               © 2025 ProsindWeb — Todos os direitos reservados
+               © 2025 Prosinge — Todos os direitos reservados
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Shield className="h-3.5 w-3.5" />
