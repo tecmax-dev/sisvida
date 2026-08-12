@@ -77,9 +77,9 @@ export default function PresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
             <div className="w-28 h-28 print:w-24 print:h-24 bg-white rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-2xl p-3">
-              <img src={ecliniLogo} alt="eCLINI" className="w-full h-full object-contain" />
+              <img src={ecliniLogo} alt="Prosinge" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">eCLINI</h1>
+            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">Prosinge</h1>
             <p className="text-xl print:text-lg text-blue-100">Sistema Integrado de Gestão Clínica e Sindical</p>
           </div>
 
@@ -118,7 +118,7 @@ export default function PresentationPage() {
           <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-emerald-800 mb-2">Visão Geral do Projeto</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed mb-3">
-              O <strong>eCLINI</strong> é uma plataforma completa e integrada que unifica a gestão clínica 
+              O <strong>Prosinge</strong> é uma plataforma completa e integrada que unifica a gestão clínica 
               e sindical em um único ecossistema digital, proporcionando:
             </p>
             <div className="grid grid-cols-3 gap-2">

@@ -188,7 +188,7 @@ export default function UnionEntityLoginPage() {
           <CardHeader className="space-y-4 text-center pb-2">
             <img 
               src={prosindwebLogo} 
-              alt="ProsindWeb - Sistema de Gestão Sindical" 
+              alt="Prosinge - Sistema de Gestão Sindical" 
               className="h-16 mx-auto object-contain"
             />
             <div>
