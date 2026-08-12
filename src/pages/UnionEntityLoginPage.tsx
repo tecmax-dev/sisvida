@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Loader2, LogIn, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import prosindwebLogo from "@/assets/prosindweb-logo.png";
+import prosingeLogo from "@/assets/prosindweb-logo.png";
 
 
 export default function UnionEntityLoginPage() {
@@ -187,7 +187,7 @@ export default function UnionEntityLoginPage() {
         <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur">
           <CardHeader className="space-y-4 text-center pb-2">
             <img 
-              src={prosindwebLogo} 
+              src={prosingeLogo} 
               alt="Prosinge - Sistema de Gestão Sindical" 
               className="h-16 mx-auto object-contain"
             />

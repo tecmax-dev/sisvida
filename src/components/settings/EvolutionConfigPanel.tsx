@@ -774,7 +774,7 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
                         <span className="text-sm font-medium">Proxy ativo</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        As mensagens serão encaminhadas para o ProsindWeb e para o sistema externo simultaneamente.
+                        As mensagens serão encaminhadas para o Prosinge e para o sistema externo simultaneamente.
                       </p>
                     </div>
                   )}

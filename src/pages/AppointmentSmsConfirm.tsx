@@ -89,7 +89,7 @@ export default function AppointmentSmsConfirm() {
                 )}
               </div>
             )}
-            <p className="mt-6 text-xs text-muted-foreground">ProsindWeb</p>
+            <p className="mt-6 text-xs text-muted-foreground">Prosinge</p>
           </>
         ) : null}
       </div>

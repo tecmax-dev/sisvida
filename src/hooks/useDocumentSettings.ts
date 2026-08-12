@@ -28,7 +28,7 @@ const defaultSettings: Omit<DocumentSettings, 'clinic_id'> = {
   show_cnpj: true,
   show_footer: true,
   custom_header_text: null,
-  footer_text: 'Este documento foi gerado eletronicamente pelo sistema ProsindWeb',
+  footer_text: 'Este documento foi gerado eletronicamente pelo sistema Prosinge',
   prescription_title: 'RECEITUÁRIO',
   prescription_template: null,
   certificate_title: 'ATESTADO MÉDICO',

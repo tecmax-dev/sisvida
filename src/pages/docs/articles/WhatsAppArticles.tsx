@@ -22,7 +22,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Provedores Disponíveis</h2>
           <p className="text-muted-foreground mb-4">
-            O ProsindWeb oferece duas opções de integração com WhatsApp:
+            O Prosinge oferece duas opções de integração com WhatsApp:
           </p>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
@@ -53,7 +53,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={whatsappIntegracao} 
-              alt="Configuração WhatsApp ProsindWeb" 
+              alt="Configuração WhatsApp Prosinge" 
               className="rounded-lg w-full"
             />
           </div>
@@ -93,7 +93,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={agendaCalendar} 
-              alt="Dashboard ProsindWeb com lembretes" 
+              alt="Dashboard Prosinge com lembretes" 
               className="rounded-lg w-full"
             />
           </div>
@@ -191,7 +191,7 @@ const articles: Record<string, {
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
             src={agendaCalendar} 
-            alt="Tela de agenda ProsindWeb com status" 
+            alt="Tela de agenda Prosinge com status" 
             className="rounded-lg w-full"
           />
         </div>
@@ -216,7 +216,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Ativando o Recurso</h2>
           <p className="text-muted-foreground mb-4">
-            O ProsindWeb pode enviar automaticamente mensagens de aniversário para seus pacientes:
+            O Prosinge pode enviar automaticamente mensagens de aniversário para seus pacientes:
           </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-4">
             <li>Acesse <strong>Configurações → Geral</strong></li>
@@ -229,7 +229,7 @@ const articles: Record<string, {
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
             src="/birthday-header.webp" 
-            alt="Imagem de aniversário ProsindWeb" 
+            alt="Imagem de aniversário Prosinge" 
             className="rounded-lg w-full"
           />
         </div>

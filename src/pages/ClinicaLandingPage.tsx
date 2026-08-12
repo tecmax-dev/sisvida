@@ -12,7 +12,7 @@ import { ClinicaCTASection } from "@/components/landing/clinica/ClinicaCTASectio
 
 export default function ClinicaLandingPage() {
   useEffect(() => {
-    document.title = "ProsindWeb Clínica — Sistema de gestão para clínicas e consultórios";
+    document.title = "Prosinge Clínica — Sistema de gestão para clínicas e consultórios";
     const desc = "Sistema completo para clínicas, consultórios e centros médicos: agenda, prontuário eletrônico, prescrição digital, financeiro, TISS e WhatsApp.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {

@@ -151,7 +151,7 @@ const TEMPLATES: Tpl[] = [
     buttons: [
       { type: "QUICK_REPLY", text: "Confirmar" },
       { type: "QUICK_REPLY", text: "Cancelar" },
-      { type: "URL", text: "Reagendar", url: "https://prosindweb.com.br/agendamento/profissional/{{1}}", example: "andrea-matos" },
+      { type: "URL", text: "Reagendar", url: "https://prosinge.com.br/agendamento/profissional/{{1}}", example: "andrea-matos" },
     ],
     priority: 3,
   },
@@ -261,7 +261,7 @@ for (const p of VAGA_PROFESSIONALS) {
     footer: "Sindicato dos Comerciários",
     bodyExamples: ["Maria Souza", "20/06/2026", "14:30"],
     buttons: [
-      { type: "URL", text: "Acessar Aplicativo", url: "https://prosindweb.com.br/" },
+      { type: "URL", text: "Acessar Aplicativo", url: "https://prosinge.com.br/" },
     ],
     priority: 3,
     notes: "Um template por profissional ativo. Originalmente jorge_avelar foi classificado como MARKETING — texto acima é utilitário (notificação de vaga reservada para associado).",

@@ -19,22 +19,22 @@ const articles: Record<string, {
 }> = {
   "visao-geral-agenda": {
     title: "Visão Geral da Agenda",
-    description: "Conheça todas as funcionalidades da agenda do ProsindWeb e como ela pode otimizar sua clínica",
+    description: "Conheça todas as funcionalidades da agenda do Prosinge e como ela pode otimizar sua clínica",
     readTime: "4 min",
     prevArticle: undefined,
     nextArticle: { slug: "criando-agendamentos", title: "Criando Agendamentos" },
     content: (
       <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-4">A Agenda do ProsindWeb</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">A Agenda do Prosinge</h2>
           <p className="text-muted-foreground">
-            A agenda é o coração do ProsindWeb. Aqui você gerencia todos os agendamentos da sua clínica de forma visual e intuitiva.
+            A agenda é o coração do Prosinge. Aqui você gerencia todos os agendamentos da sua clínica de forma visual e intuitiva.
           </p>
         </section>
 
         <TutorialImage 
           src={tutorialAgenda} 
-          alt="Visão geral da agenda do ProsindWeb" 
+          alt="Visão geral da agenda do Prosinge" 
           caption="Agenda com visualização de agendamentos coloridos por status"
         />
 
@@ -126,7 +126,7 @@ const articles: Record<string, {
   },
   "criando-agendamentos": {
     title: "Criando Agendamentos",
-    description: "Aprenda todas as formas de criar e gerenciar agendamentos no ProsindWeb",
+    description: "Aprenda todas as formas de criar e gerenciar agendamentos no Prosinge",
     readTime: "5 min",
     prevArticle: { slug: "visao-geral-agenda", title: "Visão Geral da Agenda" },
     nextArticle: { slug: "confirmacao-whatsapp", title: "Confirmação via WhatsApp" },
@@ -135,7 +135,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-4">Criando um Novo Agendamento</h2>
           <p className="text-muted-foreground">
-            Existem várias formas de criar um agendamento no ProsindWeb. Veja as opções disponíveis e escolha a mais prática para você.
+            Existem várias formas de criar um agendamento no Prosinge. Veja as opções disponíveis e escolha a mais prática para você.
           </p>
         </section>
 
@@ -218,7 +218,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-4">Confirmação Automática</h2>
           <p className="text-muted-foreground">
-            O ProsindWeb pode enviar automaticamente mensagens de confirmação para os pacientes via WhatsApp, 
+            O Prosinge pode enviar automaticamente mensagens de confirmação para os pacientes via WhatsApp, 
             reduzindo faltas e melhorando a organização da sua agenda.
           </p>
         </section>

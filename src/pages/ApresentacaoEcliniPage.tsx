@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText, Loader2, Building2, Users, Briefcase, Calculator, Zap, Shield, Globe, Smartphone, BarChart3, MessageSquare, Clock, CheckCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import ecliniLogo from "@/assets/prosindweb-logo.png";
+import prosingeLogo from "@/assets/prosindweb-logo.png";
 
 const ApresentacaoEcliniPage = () => {
   const [generating, setGenerating] = useState(false);
@@ -14,7 +14,7 @@ const ApresentacaoEcliniPage = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch(ecliniLogo);
+        const response = await fetch(prosingeLogo);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -78,7 +78,7 @@ const ApresentacaoEcliniPage = () => {
         
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(8);
-        doc.text('www.prosindweb.com.br | contato@prosindweb.com.br | (73) 3198-2161', pageWidth / 2, pageHeight - 5, { align: 'center' });
+        doc.text('www.prosinge.com.br | contato@prosinge.com.br | (73) 3198-2161', pageWidth / 2, pageHeight - 5, { align: 'center' });
       };
 
       const drawCard = (x: number, y: number, w: number, h: number, title: string, items: string[], iconColor: [number, number, number]) => {
@@ -453,7 +453,7 @@ const ApresentacaoEcliniPage = () => {
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('PROSINDWEB | (73) 3198-2161 | contato@prosindweb.com.br', pageWidth/2, 172, { align: 'center' });
+      doc.text('PROSINDWEB | (73) 3198-2161 | contato@prosinge.com.br', pageWidth/2, 172, { align: 'center' });
       
       drawFooter();
 
@@ -481,7 +481,7 @@ const ApresentacaoEcliniPage = () => {
             Proposta para o Sindicato dos Comerciários
           </p>
           <p className="text-muted-foreground">
-            ProsindWeb | (73) 3198-2161
+            Prosinge | (73) 3198-2161
           </p>
         </div>
 
@@ -518,7 +518,7 @@ const ApresentacaoEcliniPage = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Capa institucional com apresentação do Sistema ProsindWeb e destaques principais.
+                Capa institucional com apresentação do Sistema Prosinge e destaques principais.
               </p>
             </CardContent>
           </Card>

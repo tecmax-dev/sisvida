@@ -33,7 +33,7 @@ export function HowItWorksSection() {
             Como funciona
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            Comece a usar o ProsindWeb em apenas 3 passos simples
+            Comece a usar o Prosinge em apenas 3 passos simples
           </p>
         </div>
 

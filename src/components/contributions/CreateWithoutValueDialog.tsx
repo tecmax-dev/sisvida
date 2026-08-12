@@ -78,7 +78,7 @@ const MONTHS = [
 ];
 
 // Custom domain for portal
-const PORTAL_DOMAIN = "https://prosindweb.com.br";
+const PORTAL_DOMAIN = "https://prosinge.com.br";
 
 export default function CreateWithoutValueDialog({
   open,

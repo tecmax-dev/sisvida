@@ -16,7 +16,7 @@ const EXCLUDED_ROUTES = [
   "/portais",
   "/apresentacao",
   "/apresentacao-clinica",
-  "/apresentacao-eclini",
+  "/apresentacao-prosinge",
   "/tutorial-sindicato",
   "/lgpd",
 ];

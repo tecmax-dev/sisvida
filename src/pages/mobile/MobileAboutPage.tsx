@@ -181,7 +181,7 @@ export default function MobileAboutPage() {
           
           <div>
             <p className="text-xs text-muted-foreground">Desenvolvido por</p>
-            <p className="text-sm font-medium text-foreground">ProsindWeb</p>
+            <p className="text-sm font-medium text-foreground">Prosinge</p>
             <p className="text-xs text-muted-foreground mt-1">
               © 2026 Todos os direitos reservados
             </p>

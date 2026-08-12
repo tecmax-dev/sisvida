@@ -10,8 +10,8 @@ interface SessionTimeoutOptions {
   enabled?: boolean;           // Se o timeout está ativo
 }
 
-const SESSION_LOGIN_TIME_KEY = 'prosindweb_session_login_time';
-const LAST_ACTIVITY_KEY = 'prosindweb_last_activity';
+const SESSION_LOGIN_TIME_KEY = 'prosinge_session_login_time';
+const LAST_ACTIVITY_KEY = 'prosinge_last_activity';
 
 export function useSessionTimeout(options: SessionTimeoutOptions) {
   const {

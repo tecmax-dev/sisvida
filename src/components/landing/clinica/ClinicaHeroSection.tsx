@@ -69,7 +69,7 @@ export function ClinicaHeroSection() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="rounded-full px-8 h-14 text-base border-border/60 hover:border-primary/30 hover:bg-primary/5" asChild>
-                <a href="https://wa.me/551151943839?text=Olá! Quero ver uma demonstração do ProsindWeb Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href="https://wa.me/551151943839?text=Olá! Quero ver uma demonstração do Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <Play className="h-4 w-4 fill-current" />
                   Ver demonstração
                 </a>
@@ -97,7 +97,7 @@ export function ClinicaHeroSection() {
             <div className="relative bg-card/50 backdrop-blur-sm border border-border/40 rounded-2xl p-3 shadow-2xl shadow-primary/10">
               <img
                 src={heroMockup}
-                alt="ProsindWeb Clínica - Sistema de gestão para clínicas"
+                alt="Prosinge Clínica - Sistema de gestão para clínicas"
                 className="w-full max-w-lg h-auto object-contain rounded-xl"
               />
             </div>

@@ -17,7 +17,7 @@ const CUSTOM_DOMAIN_ROUTES: Record<string, {
     clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
   },
   // Eclini - App Sindicato Redirect
-  "app.eclini.com.br": {
+  "app.prosinge.com.br": {
     basePath: "/sindicato",
     defaultRoute: "/instalar",
     clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
@@ -43,19 +43,19 @@ export function DomainRedirect() {
   const location = useLocation();
   const customDomain = useCustomDomain();
 
-  // Link de filiação ao qual o QR Code impresso (app.eclini.com.br/app/instalar)
+  // Link de filiação ao qual o QR Code impresso (app.prosinge.com.br/app/instalar)
   // deve redirecionar. Solicitação do sindicato: SECMI.
   const FILIACAO_REDIRECT_URL =
-    "https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
+    "https://prosinge.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
 
   useEffect(() => {
     if (!customDomain) return;
 
     const currentPath = location.pathname;
     const hostname = window.location.hostname;
-    const isEcliniDomain = hostname === "app.eclini.com.br";
+    const isEcliniDomain = hostname === "app.prosinge.com.br";
 
-    // QR Code impresso aponta para app.eclini.com.br (/, /instalar ou /app/instalar)
+    // QR Code impresso aponta para app.prosinge.com.br (/, /instalar ou /app/instalar)
     // → redirecionar diretamente para a página de filiação do SECMI.
     const normalizedPath = currentPath.replace(/\/+$/, "").replace(/\/+/g, "/");
     if (
@@ -66,7 +66,7 @@ export function DomainRedirect() {
         normalizedPath === "/app/instalar")
     ) {
       console.info(
-        `[DomainRedirect] QR app.eclini.com.br → redirecionando para ${FILIACAO_REDIRECT_URL}`
+        `[DomainRedirect] QR app.prosinge.com.br → redirecionando para ${FILIACAO_REDIRECT_URL}`
       );
       window.location.replace(FILIACAO_REDIRECT_URL);
       return;

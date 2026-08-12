@@ -45,7 +45,7 @@ Digite o número da opção desejada:`;
 6️⃣ 2ª via Boleto Empresa
 
 📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://prosindweb.com.br/sindicato/baixar-app
+👉 https://prosinge.com.br/sindicato/baixar-app
 
 Digite o número da opção desejada:`;
 };

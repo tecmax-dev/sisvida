@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
-import prosindwebLogo from "@/assets/prosindweb-logo.png";
+import prosingeLogo from "@/assets/prosindweb-logo.png";
 import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
 import sindicalContribuicoes from "@/assets/sindical-contribuicoes.jpg";
 import sindicalRelatorios from "@/assets/sindical-relatorios.jpg";
@@ -127,7 +127,7 @@ function SindicalHeader() {
       <div className="container">
         <div className="flex items-center justify-between h-16">
           <Link to="/sindical" className="flex items-center">
-            <img src={prosindwebLogo} alt="ProsindWeb" className="h-9 w-auto" />
+            <img src={prosingeLogo} alt="Prosinge" className="h-9 w-auto" />
           </Link>
 
           <nav className="hidden lg:flex items-center gap-7">
@@ -331,7 +331,7 @@ function HeroSection() {
 // ─── Testimonials Section ───────────────────────────────────────
 const testimonials = [
   {
-    quote: "O ProsindWeb revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças da entidade.",
+    quote: "O Prosinge revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças da entidade.",
     name: "Maria Santos",
     role: "Diretora Administrativa",
     org: "SINDICOMÉRCIO",
@@ -464,10 +464,10 @@ function MigrationSection() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
-              Migrar para o ProsindWeb é fácil e seguro!
+              Migrar para o Prosinge é fácil e seguro!
             </h2>
             <p className="text-gray-500 leading-relaxed mb-8">
-              Muitas entidades já trouxeram seus dados para o ProsindWeb. O processo de{" "}
+              Muitas entidades já trouxeram seus dados para o Prosinge. O processo de{" "}
               <strong className="text-gray-800">migração de sistema</strong> é feito com total segurança,
               agilidade e sem interferir na rotina da equipe!
             </p>
@@ -855,11 +855,11 @@ function PricingSection() {
 function FAQSection() {
   const faqs = [
     { q: "Como funciona o período de teste gratuito?", a: "Oferecemos um período de teste gratuito para que você conheça todas as funcionalidades do sistema. Durante esse período, você tem acesso completo a todas as ferramentas sem compromisso." },
-    { q: "Preciso instalar algum software?", a: "Não! O ProsindWeb é 100% na nuvem. Basta acessar pelo navegador de qualquer dispositivo — computador, tablet ou celular." },
+    { q: "Preciso instalar algum software?", a: "Não! O Prosinge é 100% na nuvem. Basta acessar pelo navegador de qualquer dispositivo — computador, tablet ou celular." },
     { q: "Meus dados estão seguros?", a: "Sim. Utilizamos criptografia de ponta e seguimos todas as normas da LGPD para garantir a segurança e privacidade dos seus dados." },
     { q: "Posso cancelar a qualquer momento?", a: "Sim, não há fidelidade. Você pode cancelar seu plano a qualquer momento sem multas ou taxas adicionais." },
     { q: "Como funciona o suporte técnico?", a: "Oferecemos suporte técnico por WhatsApp, e-mail e telefone em horário comercial. Nosso time é especializado em gestão sindical." },
-    { q: "O sistema funciona no celular?", a: "Sim! O ProsindWeb é totalmente responsivo e funciona em qualquer dispositivo. Além disso, oferecemos um aplicativo PWA para acesso rápido." },
+    { q: "O sistema funciona no celular?", a: "Sim! O Prosinge é totalmente responsivo e funciona em qualquer dispositivo. Além disso, oferecemos um aplicativo PWA para acesso rápido." },
   ];
 
   return (
@@ -870,7 +870,7 @@ function FAQSection() {
           <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
             Perguntas Frequentes
           </h2>
-          <p className="text-gray-500">Encontre respostas para as dúvidas mais comuns sobre o ProsindWeb</p>
+          <p className="text-gray-500">Encontre respostas para as dúvidas mais comuns sobre o Prosinge</p>
         </div>
 
         <div className="max-w-3xl mx-auto space-y-3">
@@ -886,7 +886,7 @@ function FAQSection() {
             className="font-bold border-[hsl(215,85%,35%)] text-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,97%)]"
             asChild
           >
-            <a href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o ProsindWeb" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+            <a href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o Prosinge" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
               <MessageCircle className="h-4 w-4" />
               Falar no WhatsApp
             </a>
@@ -907,7 +907,7 @@ function CTASection() {
             Pronto para transformar sua entidade?
           </h2>
           <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Junte-se a centenas de entidades sindicais que já simplificaram sua gestão com o ProsindWeb.
+            Junte-se a centenas de entidades sindicais que já simplificaram sua gestão com o Prosinge.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -916,7 +916,7 @@ function CTASection() {
               className="h-14 px-10 text-base font-bold shadow-lg bg-[hsl(0,85%,50%)] hover:bg-[hsl(0,85%,42%)] text-white"
               asChild
             >
-              <a href="mailto:contato@prosindweb.com.br?subject=Demonstração ProsindWeb" className="flex items-center gap-2">
+              <a href="mailto:contato@prosinge.com.br?subject=Demonstração Prosinge" className="flex items-center gap-2">
                 Começar grátis agora
                 <ArrowRight className="h-5 w-5" />
               </a>
@@ -927,7 +927,7 @@ function CTASection() {
               asChild
             >
               <a
-                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o ProsindWeb."
+                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o Prosinge."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -950,7 +950,7 @@ function SindicalFooter() {
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
-            <img src={prosindwebLogo} alt="ProsindWeb" className="h-10 w-auto mb-4 brightness-0 invert" />
+            <img src={prosingeLogo} alt="Prosinge" className="h-10 w-auto mb-4 brightness-0 invert" />
             <p className="text-white/40 mb-6 max-w-sm text-sm leading-relaxed">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>
@@ -958,7 +958,7 @@ function SindicalFooter() {
               <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <MessageCircle className="h-5 w-5" />
               </a>
-              <a href="mailto:contato@prosindweb.com.br" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+              <a href="mailto:contato@prosinge.com.br" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <Mail className="h-5 w-5" />
               </a>
             </div>
@@ -968,7 +968,7 @@ function SindicalFooter() {
             <h4 className="font-bold text-white mb-4 text-sm">Contato</h4>
             <ul className="space-y-3 text-white/40 text-sm">
               <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(11) 5194-3839</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
+              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosinge.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />São Paulo, SP - Brasil</li>
             </ul>
           </div>
@@ -986,7 +986,7 @@ function SindicalFooter() {
         </div>
 
         <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
-          <p>© {new Date().getFullYear()} ProsindWeb - Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} Prosinge - Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
@@ -998,8 +998,8 @@ export default function SindicalLandingPage() {
   useEffect(() => {
     const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     const originalHref = favicon?.href || "/favicon.ico";
-    if (favicon) favicon.href = "/favicon.png?v=prosindweb-final-20260517c";
-    document.title = "ProsindWeb - Sistema de Gestão Sindical";
+    if (favicon) favicon.href = "/favicon.png?v=prosinge-final-20260517c";
+    document.title = "Prosinge - Sistema de Gestão Sindical";
     return () => {
       if (favicon) favicon.href = originalHref;
       document.title = "ProSindWeb - Sistema de Gestão Sindical";

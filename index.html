@@ -4,10 +4,10 @@
       <script>
         // Redirecionamento crítico do QR/links antigos antes do React e antes do Service Worker.
         (function() {
-          var FILIACAO_REDIRECT_URL = "https://prosindweb.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
+          var FILIACAO_REDIRECT_URL = "https://prosinge.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
           var path = window.location.pathname.replace(/\/+$/, "").replace(/\/+/g, "/");
           var host = window.location.hostname;
-          var domains = ["app.eclini.com.br", "www.app.eclini.com.br", "prosindweb.com.br", "www.prosindweb.com.br"];
+          var domains = ["app.eclini.com.br", "www.app.eclini.com.br", "prosinge.com.br", "www.prosinge.com.br"];
           var mustRedirect =
             domains.indexOf(host) > -1 &&
             (path === "/instalar" || path === "/app/instalar" || path === "/sindicato/instalar");
@@ -28,16 +28,16 @@
     <meta name="author" content="Prosinge" />
     <meta name="robots" content="index, follow" />
     <meta name="facebook-domain-verification" content="qxb68t51a2ph1tz70ajt1jj6lr9gq4" />
-    <link rel="canonical" href="https://prosindweb.com.br" />
+    <link rel="canonical" href="https://prosinge.com.br" />
     
     <!-- PWA iOS meta tags base -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png?v=prosindweb-final-20260517c" />
-    <link rel="shortcut icon" href="/favicon.ico?v=prosindweb-final-20260517c" />
-    <link rel="apple-touch-icon" href="/prosindweb-apple-touch-icon.png?v=prosindweb-final-20260517c" />
-    <link rel="manifest" href="/manifest-prosindweb.webmanifest?v=prosindweb-final-20260517c" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png?v=prosinge-final-20260517c" />
+    <link rel="shortcut icon" href="/favicon.ico?v=prosinge-final-20260517c" />
+    <link rel="apple-touch-icon" href="/prosinge-apple-touch-icon.png?v=prosinge-final-20260517c" />
+    <link rel="manifest" href="/manifest-prosinge.webmanifest?v=prosinge-final-20260517c" />
     
     <!--
       Critérios para o Chrome Android mostrar o prompt de instalação (qualquer versão):
@@ -88,22 +88,22 @@
         } else {
           // --- ProSindWeb branding (padrão) ---
           var manifest = document.querySelector('link[rel="manifest"]');
-          if (manifest) manifest.href = '/manifest-prosindweb.webmanifest?v=prosindweb-final-20260517c';
+          if (manifest) manifest.href = '/manifest-prosinge.webmanifest?v=prosinge-final-20260517c';
 
           var favicon = document.createElement('link');
           favicon.rel = 'icon';
           favicon.type = 'image/png';
-          favicon.href = '/favicon.png?v=prosindweb-final-20260517c';
+          favicon.href = '/favicon.png?v=prosinge-final-20260517c';
           document.head.appendChild(favicon);
 
           var shortcutIcon = document.createElement('link');
           shortcutIcon.rel = 'shortcut icon';
-          shortcutIcon.href = '/favicon.ico?v=prosindweb-final-20260517c';
+          shortcutIcon.href = '/favicon.ico?v=prosinge-final-20260517c';
           document.head.appendChild(shortcutIcon);
           
           var appleIcon = document.createElement('link');
           appleIcon.rel = 'apple-touch-icon';
-          appleIcon.href = '/prosindweb-apple-touch-icon.png?v=prosindweb-final-20260517c';
+          appleIcon.href = '/prosinge-apple-touch-icon.png?v=prosinge-final-20260517c';
           document.head.appendChild(appleIcon);
           
           var appTitleMeta = document.createElement('meta');
@@ -192,14 +192,14 @@
     
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <!-- Cache cleanup: força limpeza única no domínio ProsindWeb -->
+    <!-- Cache cleanup: força limpeza única no domínio Prosinge -->
     <script>
       (function() {
         try {
           var host = window.location.hostname;
-          var isProsindWeb = host === 'prosindweb.com.br' || host === 'www.prosindweb.com.br';
-          var FLAG = 'prosindweb-cache-cleared-20260520a';
-          if (isProsindWeb && !localStorage.getItem(FLAG)) {
+          var isProsinge = host === 'prosinge.com.br' || host === 'www.prosinge.com.br';
+          var FLAG = 'prosinge-cache-cleared-20260520a';
+          if (isProsinge && !localStorage.getItem(FLAG)) {
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.getRegistrations().then(function(regs) {
                 regs.forEach(function(r) { r.unregister(); });

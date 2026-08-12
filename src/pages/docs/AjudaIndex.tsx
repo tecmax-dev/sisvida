@@ -49,7 +49,7 @@ const categories: TutorialCategory[] = [
   {
     id: "primeiros-passos",
     title: "Primeiros Passos",
-    description: "Configure sua clínica do zero e comece a usar o ProsindWeb em minutos",
+    description: "Configure sua clínica do zero e comece a usar o Prosinge em minutos",
     icon: Play,
     color: "text-emerald-600",
     bgColor: "bg-emerald-500/10 border-emerald-500/20",
@@ -111,7 +111,7 @@ const categories: TutorialCategory[] = [
   {
     id: "configuracoes",
     title: "Configurações do Sistema",
-    description: "Personalize o ProsindWeb de acordo com as necessidades da sua clínica",
+    description: "Personalize o Prosinge de acordo com as necessidades da sua clínica",
     icon: Settings,
     color: "text-slate-600",
     bgColor: "bg-slate-500/10 border-slate-500/20",
@@ -184,11 +184,11 @@ export default function AjudaIndex() {
             Central de Tutoriais
           </Badge>
           <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Aprenda a usar o ProsindWeb
+            Aprenda a usar o Prosinge
           </h1>
           <p className="text-lg text-muted-foreground mb-6">
             Tutoriais passo a passo para você aproveitar todas as funcionalidades do sistema. 
-            Encontre respostas rápidas e torne-se um expert no ProsindWeb.
+            Encontre respostas rápidas e torne-se um expert no Prosinge.
           </p>
           
           {/* Search Bar */}

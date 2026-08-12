@@ -7,7 +7,7 @@ const DEFAULT_BRANDING = {
   name: "ProSindWeb - Sistema de Gestão Sindical",
   shortName: "ProSindWeb",
   description: "Sistema de gestão para sindicatos e clínicas.",
-  logo: "/favicon-prosindweb.png",
+  logo: "/favicon-prosinge.png",
 };
 
 const SINDICATO_MANIFEST_URL = "/manifest-sindicato.webmanifest";
@@ -24,7 +24,7 @@ describe("useDynamicPWA - Branding Isolation", () => {
     it("should have correct default branding values", () => {
       expect(DEFAULT_BRANDING.name).toBe("ProSindWeb - Sistema de Gestão Sindical");
       expect(DEFAULT_BRANDING.shortName).toBe("ProSindWeb");
-      expect(DEFAULT_BRANDING.logo).toBe("/favicon-prosindweb.png");
+      expect(DEFAULT_BRANDING.logo).toBe("/favicon-prosinge.png");
     });
 
     it("should have correct target clinic ID for Sindicato", () => {

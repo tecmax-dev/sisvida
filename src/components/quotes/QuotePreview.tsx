@@ -141,7 +141,7 @@ export function QuotePreview({ data }: QuotePreviewProps) {
       {/* Footer */}
       <div className="pt-4 border-t text-center">
         <p className="text-xs text-muted-foreground italic">
-          Este documento foi gerado eletronicamente pelo sistema ProsindWeb
+          Este documento foi gerado eletronicamente pelo sistema Prosinge
         </p>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { MessageCircle } from "lucide-react";
 
 const faqs = [
   {
-    question: "O ProsindWeb Clínica atende qual tipo de clínica?",
+    question: "O Prosinge Clínica atende qual tipo de clínica?",
     answer: "Atendemos clínicas médicas (todas as especialidades), odontológicas, fisioterapia, psicologia, nutrição, estética e centros multidisciplinares — de consultórios individuais a clínicas com dezenas de profissionais.",
   },
   {
@@ -40,7 +40,7 @@ export function ClinicaFAQSection() {
         <div className="text-center mb-16">
           <span className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 block">FAQ</span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4 tracking-tight">Perguntas Frequentes</h2>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">Tire suas dúvidas sobre o ProsindWeb Clínica</p>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">Tire suas dúvidas sobre o Prosinge Clínica</p>
         </div>
 
         <div className="max-w-2xl mx-auto">
@@ -56,7 +56,7 @@ export function ClinicaFAQSection() {
           <div className="mt-12 text-center">
             <p className="text-muted-foreground text-sm mb-4">Ainda tem dúvidas?</p>
             <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 font-semibold shadow-md">
-              <a href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o ProsindWeb Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Falar no WhatsApp
               </a>

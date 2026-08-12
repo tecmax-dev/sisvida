@@ -16,7 +16,7 @@ export function ClinicaProblemsSection() {
           <div className="text-center mb-16">
             <span className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 block">Diferenciais</span>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
-              Por que clínicas escolhem o <span className="text-primary">ProsindWeb</span>?
+              Por que clínicas escolhem o <span className="text-primary">Prosinge</span>?
             </h2>
           </div>
 
@@ -36,7 +36,7 @@ export function ClinicaProblemsSection() {
 
           <div className="text-center">
             <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-14 text-base font-semibold shadow-lg shadow-primary/20" asChild>
-              <a href="https://wa.me/551151943839?text=Olá! Quero saber mais sobre o ProsindWeb Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a href="https://wa.me/551151943839?text=Olá! Quero saber mais sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 Falar com um especialista
                 <ArrowRight className="h-5 w-5" />
               </a>

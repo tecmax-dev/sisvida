@@ -47,11 +47,11 @@ export function MaintenanceClinicOverlay({ reason }: MaintenanceClinicOverlayPro
               (73) 3198-2161
             </a>
             <a 
-              href="mailto:suporte@prosindweb.com.br" 
+              href="mailto:suporte@prosinge.com.br" 
               className="flex items-center justify-center gap-2 text-primary hover:underline"
             >
               <Mail className="h-4 w-4" />
-              suporte@prosindweb.com.br
+              suporte@prosinge.com.br
             </a>
           </div>
         </div>
