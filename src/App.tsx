@@ -376,7 +376,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="system" storageKey="prosindweb-theme">
+      <ThemeProvider defaultTheme="system" storageKey="prosinge-theme">
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <ModalProvider>
