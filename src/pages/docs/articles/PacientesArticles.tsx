@@ -34,7 +34,7 @@ const articles: Record<string, {
         <TutorialImage 
           src={tutorialPacientes} 
           alt="Tela de cadastro de pacientes" 
-          caption="Interface de cadastro de pacientes do ProsindWeb"
+          caption="Interface de cadastro de pacientes do Prosinge"
         />
 
         <section>

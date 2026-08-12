@@ -217,7 +217,7 @@ export function PortalTutorialVideo({ open, onOpenChange }: { open: boolean, onO
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
               </div>
               <div className="flex-1 max-w-md bg-white h-5 rounded border text-[10px] flex items-center px-2 text-slate-400">
-                https://prosindweb.com.br/portal/empresa
+                https://prosinge.com.br/portal/empresa
               </div>
             </div>
 

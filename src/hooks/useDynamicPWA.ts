@@ -8,11 +8,11 @@ const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 // Default system branding (ProSindWeb)
 const DEFAULT_BRANDING = {
   name: "Prosinge - Gestão Sindical e Clínica",
-  shortName: "ProsindWeb",
+  shortName: "Prosinge",
   description: "Sistema completo de gestão para sindicatos e clínicas.",
-  logo: "/favicon.png?v=prosindweb-final-20260517c",
-  appleIcon: "/prosindweb-apple-touch-icon.png?v=prosindweb-final-20260517c",
-  manifest: "/manifest-prosindweb.webmanifest?v=prosindweb-final-20260517c",
+  logo: "/favicon.png?v=prosinge-final-20260517c",
+  appleIcon: "/prosinge-apple-touch-icon.png?v=prosinge-final-20260517c",
+  manifest: "/manifest-prosinge.webmanifest?v=prosinge-final-20260517c",
 };
 
 interface ClinicBranding {
@@ -26,7 +26,7 @@ interface ClinicBranding {
  * based on the clinic's data for the mobile app.
  * 
  * IMPORTANT: This hook applies custom branding on /app/*, /m/*, and /sindicato/* routes.
- * On all other routes, it restores the default ProsindWeb branding.
+ * On all other routes, it restores the default Prosinge branding.
  */
 export function useDynamicPWA() {
   const [clinic, setClinic] = useState<ClinicBranding | null>(null);
@@ -83,7 +83,7 @@ export function useDynamicPWA() {
 
     // Restore favicon
     updateLinkElement("icon", DEFAULT_BRANDING.logo);
-    updateLinkElement("shortcut icon", "/favicon.ico?v=prosindweb-final-20260517c");
+    updateLinkElement("shortcut icon", "/favicon.ico?v=prosinge-final-20260517c");
     updateLinkElement("apple-touch-icon", DEFAULT_BRANDING.appleIcon);
 
     // Restore meta tags
@@ -100,7 +100,7 @@ export function useDynamicPWA() {
     updateMetaProperty("twitter:title", DEFAULT_BRANDING.name);
     updateMetaProperty("twitter:description", DEFAULT_BRANDING.description);
 
-    // Restore default manifest (ProsindWeb)
+    // Restore default manifest (Prosinge)
     restoreDefaultManifest();
 
     setClinic(null);

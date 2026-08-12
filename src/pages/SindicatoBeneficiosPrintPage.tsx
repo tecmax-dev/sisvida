@@ -308,7 +308,7 @@ export default function SindicatoBeneficiosPrintPage() {
             </div>
             <div className="text-white/40">•</div>
             <div className="text-sm">
-              <span className="font-semibold">prosindweb.com.br/sindicato</span>
+              <span className="font-semibold">prosinge.com.br/sindicato</span>
             </div>
           </div>
         </div>

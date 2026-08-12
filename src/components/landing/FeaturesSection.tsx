@@ -74,7 +74,7 @@ export function FeaturesSection() {
           <div className="mt-8">
             <Button 
               size="lg"
-              className="btn-eclini px-8 h-14 text-base shadow-lg"
+              className="btn-prosinge px-8 h-14 text-base shadow-lg"
               asChild
             >
               <Link to="/cadastro">

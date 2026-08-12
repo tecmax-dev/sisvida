@@ -16,12 +16,12 @@ export function MigrationSection() {
           {/* Left - Content */}
           <div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
-              Migrar para o ProsindWeb é{" "}
+              Migrar para o Prosinge é{" "}
               <span className="gradient-text">fácil e seguro!</span>
             </h2>
             
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Muitas clínicas já trouxeram seus dados para o ProsindWeb. O processo de{" "}
+              Muitas clínicas já trouxeram seus dados para o Prosinge. O processo de{" "}
               <strong className="text-foreground">migração de sistema</strong> é feito 
               com total segurança, agilidade e sem interferir na rotina da equipe!
             </p>
@@ -42,7 +42,7 @@ export function MigrationSection() {
 
             <Button 
               size="lg"
-              className="btn-eclini px-8 h-14 text-base"
+              className="btn-prosinge px-8 h-14 text-base"
               asChild
             >
               <Link to="/cadastro" className="flex items-center gap-2">

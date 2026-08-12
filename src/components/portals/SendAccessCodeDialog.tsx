@@ -118,7 +118,7 @@ export function SendAccessCodeDialog({
     if (!codeData?.accessCode) throw new Error("Código de acesso não encontrado");
 
     // Use custom domain for portals
-    const portalDomain = "https://prosindweb.com.br";
+    const portalDomain = "https://prosinge.com.br";
     
     const portalName = type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
     const identifier = type === "accounting_office" 

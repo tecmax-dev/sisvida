@@ -201,7 +201,7 @@ const TrainingMaterial = () => {
             <ul className="text-xs space-y-2 list-disc ml-4 text-blue-900">
               <li>Verifique se a mensagem do associado tem mais de 24 horas.</li>
               <li>Tente enviar um "Modelo de Mensagem" de Utilidade.</li>
-              <li>Se persistir, acione o suporte técnico da ProsindWeb.</li>
+              <li>Se persistir, acione o suporte técnico da Prosinge.</li>
             </ul>
           </CardContent>
         </Card>

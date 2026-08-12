@@ -22,13 +22,13 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">O Módulo Financeiro</h2>
           <p className="text-muted-foreground mb-4">
-            O módulo financeiro do ProsindWeb permite gerenciar todas as movimentações da sua clínica, 
+            O módulo financeiro do Prosinge permite gerenciar todas as movimentações da sua clínica, 
             incluindo receitas, despesas, contas a receber e fluxo de caixa.
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={financeiroDashboard} 
-              alt="Dashboard Financeiro ProsindWeb" 
+              alt="Dashboard Financeiro Prosinge" 
               className="rounded-lg w-full"
             />
           </div>
@@ -98,7 +98,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Tela de Transações Financeiras ProsindWeb" 
+              alt="Tela de Transações Financeiras Prosinge" 
               className="rounded-lg w-full"
             />
           </div>
@@ -169,7 +169,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Controle de despesas ProsindWeb" 
+              alt="Controle de despesas Prosinge" 
               className="rounded-lg w-full"
             />
           </div>
@@ -262,7 +262,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Relatórios Financeiros ProsindWeb" 
+              alt="Relatórios Financeiros Prosinge" 
               className="rounded-lg w-full"
             />
           </div>

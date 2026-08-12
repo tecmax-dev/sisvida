@@ -38,7 +38,7 @@ export function AIFeatureSection() {
           {/* CTA */}
           <Button 
             size="lg"
-            className="btn-eclini px-8 h-14 text-base"
+            className="btn-prosinge px-8 h-14 text-base"
             asChild
           >
             <Link to="/cadastro">

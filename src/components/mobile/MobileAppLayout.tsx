@@ -52,9 +52,9 @@ export function MobileAppLayout({ children }: MobileAppLayoutProps) {
 
   useEffect(() => {
     // Salva o tema atual para restaurar depois (se necessário)
-    const savedTheme = localStorage.getItem("eclini-theme-backup");
+    const savedTheme = localStorage.getItem("prosinge-theme-backup");
     if (!savedTheme && resolvedTheme) {
-      localStorage.setItem("eclini-theme-backup", resolvedTheme);
+      localStorage.setItem("prosinge-theme-backup", resolvedTheme);
     }
 
     // Força modo claro no mobile app

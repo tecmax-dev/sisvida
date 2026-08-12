@@ -494,7 +494,7 @@ const TutorialSindicatoPage = () => {
         doc.rect(0, pageHeight - 10, pageWidth, 10, "F");
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(7);
-        doc.text("Tutorial ProSindWeb - Modulo Sindical | ProsindWeb 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
+        doc.text("Tutorial ProSindWeb - Modulo Sindical | Prosinge 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
       };
 
       // Helper: Draw a content box with colored left bar
@@ -595,7 +595,7 @@ const TutorialSindicatoPage = () => {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text("Guia ilustrado para usuarios e profissionais de saude", pageWidth / 2, 122, { align: "center" });
-      doc.text("Sistema ProsindWeb - Gestao Sindical Inteligente", pageWidth / 2, 132, { align: "center" });
+      doc.text("Sistema Prosinge - Gestao Sindical Inteligente", pageWidth / 2, 132, { align: "center" });
 
       // Feature cards - 6 items in 2 rows
       const features = [
@@ -638,12 +638,12 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("ProsindWeb", pageWidth / 2, pageHeight - 36, { align: "center" });
+      doc.text("Prosinge", pageWidth / 2, pageHeight - 36, { align: "center" });
       
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.text("Contato: (73) 3198-2161", pageWidth / 2, pageHeight - 27, { align: "center" });
-      doc.text("www.prosindweb.com.br", pageWidth / 2, pageHeight - 19, { align: "center" });
+      doc.text("www.prosinge.com.br", pageWidth / 2, pageHeight - 19, { align: "center" });
 
       // =====================
       // PAGE 2 - OVERVIEW
@@ -658,7 +658,7 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      const introText = "O Modulo Sindical do ProsindWeb foi desenvolvido para oferecer uma solucao completa de gestao para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utiliza-las de forma eficiente.";
+      const introText = "O Modulo Sindical do Prosinge foi desenvolvido para oferecer uma solucao completa de gestao para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utiliza-las de forma eficiente.";
       const introLines = doc.splitTextToSize(introText, contentWidth);
       doc.text(introLines, margin, yPos);
       yPos += 18;
@@ -952,7 +952,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFont("helvetica", "bold");
       doc.text("Telefone: (73) 3198-2161", margin + 10, yPos + 23);
-      doc.text("E-mail: suporte@prosindweb.com.br", margin + 10, yPos + 32);
+      doc.text("E-mail: suporte@prosinge.com.br", margin + 10, yPos + 32);
       doc.text("Chat: Disponivel no sistema (horario comercial)", margin + 10, yPos + 41);
 
       // =====================
@@ -980,7 +980,7 @@ const TutorialSindicatoPage = () => {
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
       doc.text("Obrigado por escolher", pageWidth / 2, 95, { align: "center" });
-      doc.text("o ProsindWeb!", pageWidth / 2, 108, { align: "center" });
+      doc.text("o Prosinge!", pageWidth / 2, 108, { align: "center" });
 
       // Closing message box with darker shade
       doc.setFillColor(55, 65, 81); // Slightly lighter than dark background
@@ -1000,12 +1000,12 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("ProsindWeb", pageWidth / 2, 205, { align: "center" });
+      doc.text("Prosinge", pageWidth / 2, 205, { align: "center" });
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text("(73) 3198-2161", pageWidth / 2, 218, { align: "center" });
-      doc.text("www.prosindweb.com.br", pageWidth / 2, 230, { align: "center" });
+      doc.text("www.prosinge.com.br", pageWidth / 2, 230, { align: "center" });
 
       // Version footer
       doc.setTextColor(180, 180, 180);
@@ -1013,7 +1013,7 @@ const TutorialSindicatoPage = () => {
       doc.text("Tutorial v1.0 | Janeiro 2026", pageWidth / 2, pageHeight - 18, { align: "center" });
 
       // Save PDF
-      doc.save("Tutorial-Modulo-Sindical-ProsindWeb.pdf");
+      doc.save("Tutorial-Modulo-Sindical-Prosinge.pdf");
       toast.success("Tutorial gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -1050,7 +1050,7 @@ const TutorialSindicatoPage = () => {
               
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Guia completo e ilustrado para usuários e profissionais de saúde. 
-                Domine todas as funcionalidades do sistema ProsindWeb.
+                Domine todas as funcionalidades do sistema Prosinge.
               </p>
               
               <Button 
@@ -1203,7 +1203,7 @@ const TutorialSindicatoPage = () => {
                 </h2>
                 <p className="text-white/80 mb-8 max-w-lg mx-auto">
                   Baixe agora o tutorial completo e domine todas as funcionalidades 
-                  do Módulo Sindical do ProsindWeb.
+                  do Módulo Sindical do Prosinge.
                 </p>
                 <Button 
                   size="lg" 

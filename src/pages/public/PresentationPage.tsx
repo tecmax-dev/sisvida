@@ -9,7 +9,8 @@ import clinicModule from "@/assets/presentation/clinic-module.jpg";
 import unionModule from "@/assets/presentation/union-module.jpg";
 import technologyStack from "@/assets/presentation/technology-stack.jpg";
 import portalsAccess from "@/assets/presentation/portals-access.jpg";
-import ecliniLogo from "@/assets/prosindweb-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
+
 
 export default function PresentationPage() {
   const handlePrint = () => {
@@ -76,9 +77,9 @@ export default function PresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
             <div className="w-28 h-28 print:w-24 print:h-24 bg-white rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-2xl p-3">
-              <img src={ecliniLogo} alt="eCLINI" className="w-full h-full object-contain" />
+              <img src={prosindwebLogo} alt="Prosinge" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">eCLINI</h1>
+            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">Prosinge</h1>
             <p className="text-xl print:text-lg text-blue-100">Sistema Integrado de Gestão Clínica e Sindical</p>
           </div>
 
@@ -117,7 +118,7 @@ export default function PresentationPage() {
           <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-emerald-800 mb-2">Visão Geral do Projeto</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed mb-3">
-              O <strong>eCLINI</strong> é uma plataforma completa e integrada que unifica a gestão clínica 
+              O <strong>Prosinge</strong> é uma plataforma completa e integrada que unifica a gestão clínica 
               e sindical em um único ecossistema digital, proporcionando:
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -424,7 +425,7 @@ export default function PresentationPage() {
           />
           <div className="flex flex-col justify-center">
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
-              O eCLINI foi desenvolvido utilizando as mais modernas tecnologias do mercado,
+              O Prosinge foi desenvolvido utilizando as mais modernas tecnologias do mercado,
               garantindo performance, segurança e escalabilidade.
             </p>
           </div>

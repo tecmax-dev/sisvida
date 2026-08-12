@@ -20,7 +20,7 @@ export default function LgpdPolicy() {
                 Política de Privacidade e Proteção de Dados
               </h1>
               <p className="text-lg text-muted-foreground">
-                A ProsindWeb está comprometida com a proteção dos seus dados pessoais, 
+                A Prosinge está comprometida com a proteção dos seus dados pessoais, 
                 em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
               </p>
             </div>
@@ -254,12 +254,12 @@ export default function LgpdPolicy() {
                       </p>
                       <div className="space-y-2">
                         <p className="text-foreground">
-                          <strong>Empresa:</strong> ProsindWeb
+                          <strong>Empresa:</strong> Prosinge
                         </p>
                         <p className="text-foreground">
                           <strong>E-mail:</strong>{" "}
-                          <a href="mailto:contato@prosindweb.com.br" className="text-primary hover:underline">
-                            contato@prosindweb.com.br
+                          <a href="mailto:contato@prosinge.com.br" className="text-primary hover:underline">
+                            contato@prosinge.com.br
                           </a>
                         </p>
                         <p className="text-foreground">

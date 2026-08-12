@@ -28,7 +28,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={configuracoesPainel} 
-              alt="Tela de Configurações ProsindWeb" 
+              alt="Tela de Configurações Prosinge" 
               className="rounded-lg w-full"
             />
           </div>
@@ -86,7 +86,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Níveis de Acesso</h2>
           <p className="text-muted-foreground mb-4">
-            O ProsindWeb possui diferentes perfis de usuário com permissões específicas:
+            O Prosinge possui diferentes perfis de usuário com permissões específicas:
           </p>
           <div className="space-y-3">
             <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
@@ -125,7 +125,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={usuariosPermissoes} 
-              alt="Gerenciamento de Usuários ProsindWeb" 
+              alt="Gerenciamento de Usuários Prosinge" 
               className="rounded-lg w-full"
             />
           </div>
@@ -157,7 +157,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={prescricaoDigital} 
-              alt="Configuração de Documentos ProsindWeb" 
+              alt="Configuração de Documentos Prosinge" 
               className="rounded-lg w-full"
             />
           </div>
@@ -218,7 +218,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Segurança dos Dados</h2>
           <p className="text-muted-foreground mb-4">
-            O ProsindWeb utiliza as melhores práticas de segurança para proteger os dados da sua clínica:
+            O Prosinge utiliza as melhores práticas de segurança para proteger os dados da sua clínica:
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
@@ -259,7 +259,7 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="/eclini-logo.png" 
+            src="/prosindweb-logo.png" 
             alt="Segurança ProSindWeb" 
             className="rounded-lg w-full max-w-xs mx-auto"
           />

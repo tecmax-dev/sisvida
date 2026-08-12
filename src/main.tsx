@@ -4,11 +4,11 @@ import App from "./App.tsx";
 import "./index.css";
 import { startUIIntegrityGuard } from "./hooks/useUIIntegrityGuard";
 
-const isProsindWebMarketingRoot = () => {
+const isProsingeMarketingRoot = () => {
   const host = window.location.hostname;
   const path = window.location.pathname;
   return (
-    (host === "prosindweb.com.br" || host === "www.prosindweb.com.br") &&
+    (host === "prosinge.com.br" || host === "www.prosinge.com.br") &&
     !path.startsWith("/app") &&
     !path.startsWith("/sindicato")
   );
@@ -85,7 +85,7 @@ async function renderApp() {
     console.warn("[PWA] Cache wipe falhou (não é crítico):", err);
   }
 
-  const shouldDisableServiceWorker = isPreviewOrIframe() || isProsindWebMarketingRoot();
+  const shouldDisableServiceWorker = isPreviewOrIframe() || isProsingeMarketingRoot();
 
   if (!shouldDisableServiceWorker) {
     // Registrar PWA e aplicar novas versões automaticamente para evitar shell desatualizado

@@ -188,7 +188,7 @@
     @apply bg-card/95 backdrop-blur-lg border border-border/60;
   }
   
-  /* ProsindWeb solid text color - primary */
+  /* Prosinge solid text color - primary */
   .gradient-text {
     color: hsl(var(--primary));
   }
@@ -215,7 +215,7 @@
     @apply opacity-100;
   }
   
-  /* ProsindWeb-style solid button - Azul Royal */
+  /* Prosinge-style solid button - Azul Royal */
   .btn-prosinge {
     @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
     background: hsl(var(--primary));
@@ -259,10 +259,10 @@
   }
   
   /* Legacy compatibility */
-  .btn-eclini { @apply btn-prosinge; }
-  .btn-eclini:hover { @apply btn-prosinge; }
-  .btn-eclini-outline { @apply btn-prosinge-outline; }
-  .btn-eclini-outline:hover { @apply btn-prosinge-outline; }
+  .btn-prosinge { @apply btn-prosinge; }
+  .btn-prosinge:hover { @apply btn-prosinge; }
+  .btn-prosinge-outline { @apply btn-prosinge-outline; }
+  .btn-prosinge-outline:hover { @apply btn-prosinge-outline; }
   
   .animate-float {
     animation: float 6s ease-in-out infinite;
@@ -411,7 +411,7 @@
     }
   }
   
-  /* ProsindWeb-style section header */
+  /* Prosinge-style section header */
   .section-badge {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
     background: hsl(var(--primary) / 0.1);
@@ -617,7 +617,7 @@
   @apply w-4 h-4 rounded border-border accent-primary;
 }
 
-/* Custom Scrollbar - ProsindWeb theme */
+/* Custom Scrollbar - Prosinge theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

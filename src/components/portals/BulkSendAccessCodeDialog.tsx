@@ -42,7 +42,7 @@ interface SendResult {
 }
 
 // Custom domain for portal
-const PORTAL_DOMAIN = "https://prosindweb.com.br";
+const PORTAL_DOMAIN = "https://prosinge.com.br";
 
 export function BulkSendAccessCodeDialog({
   open,
@@ -124,11 +124,11 @@ export function BulkSendAccessCodeDialog({
 
     const portalUrl = getPortalUrl();
     
-    const message = `🎉 *Novidade: Sistema ProsindWeb*
+    const message = `🎉 *Novidade: Sistema Prosinge*
 
 Olá *${office.name}*!
 
-O *${currentClinic.name}* atualizou seu sistema de gestão de contribuições para o *ProsindWeb*.
+O *${currentClinic.name}* atualizou seu sistema de gestão de contribuições para o *Prosinge*.
 
 A partir de agora, todos os boletos, consultas de empresas e serviços estarão disponíveis através do novo *Portal do Contador*.
 

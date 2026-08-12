@@ -220,7 +220,7 @@ export default function GlobalConfigPage() {
                   onChange={(e) =>
                     setConfig({ ...config, evolution_instance: e.target.value })
                   }
-                  placeholder="ex: eclini"
+                  placeholder="ex: prosinge"
                 />
               </div>
 

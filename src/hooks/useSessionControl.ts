@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-const SESSION_TOKEN_KEY = 'eclini_session_token';
+const SESSION_TOKEN_KEY = 'prosinge_session_token';
 
 function generateSessionToken(): string {
   return crypto.randomUUID() + '-' + Date.now();

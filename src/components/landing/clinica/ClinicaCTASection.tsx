@@ -32,7 +32,7 @@ export function ClinicaCTASection() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 h-14 text-base font-semibold backdrop-blur-sm" asChild>
-              <a href="https://wa.me/551151943839?text=Olá! Quero saber mais sobre o ProsindWeb Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a href="https://wa.me/551151943839?text=Olá! Quero saber mais sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" />
                 Falar com especialista
               </a>

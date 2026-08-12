@@ -275,7 +275,7 @@ export default function EditNegotiationDialog({
   const getPublicBaseUrl = () => {
     // When testing inside preview, we still want to generate the real public domain.
     const origin = window.location.origin;
-    return origin.includes("lovable.app") ? "https://prosindweb.com.br" : origin;
+    return origin.includes("lovable.app") ? "https://prosinge.com.br" : origin;
   };
 
   const handleGenerateLink = async () => {

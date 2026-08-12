@@ -213,7 +213,7 @@ export function DashboardLayout() {
   }, [user?.id, currentClinic?.id, registerSession]);
 
   useEffect(() => {
-    document.title = "ProsindWeb - Gestão Sindical e Clínica";
+    document.title = "Prosinge - Gestão Sindical e Clínica";
   }, []);
 
   useEffect(() => {

@@ -424,7 +424,7 @@ function App() {
                 <Route path="/portais" element={<PortalAccessPage />} />
                 <Route path="/apresentacao" element={<PresentationPage />} />
                 <Route path="/apresentacao-clinica" element={<ClinicPresentationPage />} />
-                <Route path="/apresentacao-eclini" element={<ApresentacaoEcliniPage />} />
+                <Route path="/apresentacao-prosinge" element={<ApresentacaoEcliniPage />} />
                 <Route path="/tutorial-sindicato" element={<TutorialSindicatoPage />} />
                 <Route path="/tutorial-sindical" element={<TutorialSindicatoPage />} />
                 <Route path="/negociacao-espelho/:token" element={<NegotiationPreviewPage />} />

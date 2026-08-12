@@ -9,11 +9,11 @@ import { MessageCircle } from "lucide-react";
 
 const faqs = [
   {
-    question: "O que é o ProsindWeb?",
-    answer: "O ProsindWeb é um sistema de gestão completo para sindicatos, associações e federações, integrando módulos administrativos, financeiros, jurídicos e de relacionamento com o associado.",
+    question: "O que é o Prosinge?",
+    answer: "O Prosinge é um sistema de gestão completo para sindicatos, associações e federações, integrando módulos administrativos, financeiros, jurídicos e de relacionamento com o associado.",
   },
   {
-    question: "O ProsindWeb atende sindicatos de qualquer porte?",
+    question: "O Prosinge atende sindicatos de qualquer porte?",
     answer: "Sim. Possuímos planos para entidades de pequeno, médio ou grande porte, com recursos escaláveis conforme o número de associados.",
   },
   {
@@ -29,7 +29,7 @@ const faqs = [
     answer: "Sim. O Portal permite emitir 2ª via de boletos, atualizar dados cadastrais, solicitar documentos e acompanhar informações junto ao sindicato.",
   },
   {
-    question: "O ProsindWeb oferece suporte?",
+    question: "O Prosinge oferece suporte?",
     answer: "Sim. Nossa equipe oferece suporte técnico dedicado, treinamentos e orientação para garantir o melhor aproveitamento do sistema.",
   },
 ];
@@ -46,7 +46,7 @@ export function FAQSection() {
             Perguntas Frequentes
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Tire suas dúvidas sobre o ProsindWeb
+            Tire suas dúvidas sobre o Prosinge
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export function FAQSection() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 font-semibold shadow-md"
             >
               <a
-                href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o ProsindWeb"
+                href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o Prosinge"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"

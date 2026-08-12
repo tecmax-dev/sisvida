@@ -12,7 +12,7 @@ const testimonials = [
     name: "Dra. Carla Mendes",
     role: "Médica clínica geral",
     image: carlaMendes,
-    quote: "Migrei do prontuário em papel para o ProsindWeb e ganhei pelo menos 1 hora por dia. A prescrição digital e o histórico do paciente em um clique mudaram minha rotina.",
+    quote: "Migrei do prontuário em papel para o Prosinge e ganhei pelo menos 1 hora por dia. A prescrição digital e o histórico do paciente em um clique mudaram minha rotina.",
   },
   {
     name: "Dr. Ricardo Oliveira",
@@ -64,7 +64,7 @@ export const ClinicaTestimonialsSection = () => {
       <div className="container relative z-10">
         <div className="text-center mb-16">
           <span className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 block">Depoimentos</span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground tracking-tight mb-4">O que clínicas dizem do ProsindWeb</h2>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground tracking-tight mb-4">O que clínicas dizem do Prosinge</h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">Histórias reais de quem transformou a gestão da clínica</p>
         </div>
 

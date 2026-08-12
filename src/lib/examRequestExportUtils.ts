@@ -133,7 +133,7 @@ export async function generateExamRequestPDF(options: ExamRequestPDFOptions): Pr
   doc.setFontSize(8);
   doc.setTextColor(128);
   doc.text(
-    "Documento gerado eletronicamente pelo sistema ProsindWeb",
+    "Documento gerado eletronicamente pelo sistema Prosinge",
     pageWidth / 2,
     doc.internal.pageSize.getHeight() - 10,
     { align: "center" }

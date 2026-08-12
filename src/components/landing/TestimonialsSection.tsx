@@ -12,13 +12,13 @@ const testimonials = [
     name: "Dra. Carla Mendes",
     role: "Presidente de Sindicato",
     image: carlaMendes,
-    quote: "O ProsindWeb transformou a gestão do nosso sindicato. Antes perdíamos tempo com controles manuais, agora tudo é automatizado. A carteirinha digital foi um sucesso entre os associados.",
+    quote: "O Prosinge transformou a gestão do nosso sindicato. Antes perdíamos tempo com controles manuais, agora tudo é automatizado. A carteirinha digital foi um sucesso entre os associados.",
   },
   {
     name: "Dr. Ricardo Oliveira",
     role: "Diretor Administrativo",
     image: ricardoOliveira,
-    quote: "Depois que adotamos o ProsindWeb, nossa arrecadação melhorou 40%. O controle financeiro é impecável e a gestão de boletos ficou muito mais simples.",
+    quote: "Depois que adotamos o Prosinge, nossa arrecadação melhorou 40%. O controle financeiro é impecável e a gestão de boletos ficou muito mais simples.",
   },
   {
     name: "Fernanda Lima",
@@ -70,7 +70,7 @@ export const TestimonialsSection = () => {
             O que nossos clientes dizem
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Veja como o ProsindWeb está transformando a gestão sindical
+            Veja como o Prosinge está transformando a gestão sindical
           </p>
         </div>
 
