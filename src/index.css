@@ -1,3 +1,4 @@
+
 @import "@fontsource/outfit/400.css";
 @import "@fontsource/outfit/500.css";
 @import "@fontsource/outfit/600.css";
@@ -11,7 +12,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ProsindWeb Design System - Azul Royal + Vermelho */
+/* ProsindWeb Design System - Azul Royal + Vermelho + Homologação Audit */
 
 @layer base {
   :root {
@@ -26,6 +27,16 @@
     --cta: 0 85% 50%;
     --cta-foreground: 0 0% 100%;
     --cta-hover: 0 85% 42%;
+    
+    /* Homologação Audit Colors */
+    --homologacao-primary: 195 85% 41%;
+    --homologacao-secondary: 265 70% 50%;
+    --homologacao-accent: 0 85% 50%;
+    --homologacao-warning: 38 92% 50%;
+    --homologacao-success: 142 71% 45%;
+    --homologacao-info: 195 85% 41%;
+    --homologacao-dark: 220 15% 10%;
+    --homologacao-light: 220 15% 95%;
     
     /* Background & Surfaces */
     --background: 0 0% 99%;
@@ -88,6 +99,7 @@
     --category-socios: 280 70% 50%;
     --category-clinica: 220 80% 50%;
     --category-admin: 340 75% 55%;
+    --category-homologacao: 195 85% 41%;
     
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(220 20% 20% / 0.04);
@@ -97,6 +109,7 @@
     --shadow-glow: 0 0 40px hsl(220 80% 45% / 0.15);
     --shadow-card: 0 1px 3px 0 hsl(220 20% 20% / 0.04), 0 1px 2px -1px hsl(220 20% 20% / 0.04);
     --shadow-float: 0 25px 50px -12px hsl(220 20% 20% / 0.2);
+    --shadow-homologacao: 0 0 30px hsl(195 85% 41% / 0.2);
     
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -224,6 +237,27 @@
     @apply text-white border-transparent;
   }
   
+  /* Homologação Audit Button Styles */
+  .btn-homologacao {
+    @apply font-semibold px-6 py-3 rounded-lg transition-all duration-300 text-white;
+    background: hsl(var(--homologacao-primary));
+    @apply hover:shadow-lg hover:-translate-y-1;
+  }
+  
+  .btn-homologacao:hover {
+    background: hsl(195 85% 35%);
+  }
+  
+  .btn-homologacao-secondary {
+    @apply font-semibold px-6 py-3 rounded-lg transition-all duration-300 text-white;
+    background: hsl(var(--homologacao-secondary));
+    @apply hover:shadow-lg hover:-translate-y-1;
+  }
+  
+  .btn-homologacao-secondary:hover {
+    background: hsl(265 70% 42%);
+  }
+  
   /* Legacy compatibility */
   .btn-eclini { @apply btn-prosindweb; }
   .btn-eclini:hover { @apply btn-prosindweb; }
@@ -248,6 +282,11 @@
   
   .animate-scale-in {
     animation: scale-in 0.3s ease-out;
+  }
+  
+  /* Homologação Audit Animation */
+  .animate-audit-pulse {
+    animation: audit-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
   /* Staggered entrance animations */
@@ -275,6 +314,34 @@
     @apply opacity-100;
   }
   
+  /* Homologação Audit Card */
+  .card-homologacao {
+    @apply relative overflow-hidden border-2 rounded-xl p-6 transition-all duration-300;
+    border-color: hsl(var(--homologacao-primary) / 0.3);
+    background: linear-gradient(135deg, hsl(var(--homologacao-primary) / 0.05) 0%, hsl(var(--homologacao-secondary) / 0.03) 100%);
+    box-shadow: var(--shadow-homologacao);
+  }
+  
+  .card-homologacao:hover {
+    border-color: hsl(var(--homologacao-primary) / 0.6);
+    transform: translateY(-4px);
+  }
+  
+  .card-homologacao.audit-status-pending {
+    border-color: hsl(var(--homologacao-warning) / 0.4);
+    background: linear-gradient(135deg, hsl(var(--homologacao-warning) / 0.05) 0%, hsl(var(--homologacao-warning) / 0.02) 100%);
+  }
+  
+  .card-homologacao.audit-status-approved {
+    border-color: hsl(var(--homologacao-success) / 0.4);
+    background: linear-gradient(135deg, hsl(var(--homologacao-success) / 0.05) 0%, hsl(var(--homologacao-success) / 0.02) 100%);
+  }
+  
+  .card-homologacao.audit-status-rejected {
+    border-color: hsl(var(--homologacao-accent) / 0.4);
+    background: linear-gradient(135deg, hsl(var(--homologacao-accent) / 0.05) 0%, hsl(var(--homologacao-accent) / 0.02) 100%);
+  }
+  
   /* Feature Card */
   .feature-card {
     @apply bg-card border border-border/40 rounded-2xl p-6 transition-all duration-300;
@@ -287,10 +354,45 @@
     color: hsl(var(--primary));
   }
   
+  /* Homologação Status Badge */
+  .badge-homologacao {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold;
+  }
+  
+  .badge-homologacao.status-pending {
+    background: hsl(var(--homologacao-warning) / 0.15);
+    color: hsl(var(--homologacao-warning));
+    border: 1px solid hsl(var(--homologacao-warning) / 0.3);
+  }
+  
+  .badge-homologacao.status-approved {
+    background: hsl(var(--homologacao-success) / 0.15);
+    color: hsl(var(--homologacao-success));
+    border: 1px solid hsl(var(--homologacao-success) / 0.3);
+  }
+  
+  .badge-homologacao.status-rejected {
+    background: hsl(var(--homologacao-accent) / 0.15);
+    color: hsl(var(--homologacao-accent));
+    border: 1px solid hsl(var(--homologacao-accent) / 0.3);
+  }
+  
+  .badge-homologacao.status-in-review {
+    background: hsl(var(--homologacao-info) / 0.15);
+    color: hsl(var(--homologacao-info));
+    border: 1px solid hsl(var(--homologacao-info) / 0.3);
+  }
+  
   /* Stat Card Decoration */
   .stat-decoration {
     @apply absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-12 translate-x-12;
     background: radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 70%);
+  }
+  
+  /* Homologação Stat Decoration */
+  .stat-decoration-homologacao {
+    @apply absolute top-0 right-0 w-40 h-40 rounded-full -translate-y-20 translate-x-20;
+    background: radial-gradient(circle, hsl(var(--homologacao-primary) / 0.08) 0%, transparent 70%);
   }
   
   /* Dashboard specific animations */
@@ -317,14 +419,81 @@
     border: 1px solid hsl(var(--primary) / 0.2);
   }
   
+  /* Homologação Section Badge */
+  .section-badge-homologacao {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold;
+    background: hsl(var(--homologacao-primary) / 0.12);
+    color: hsl(var(--homologacao-primary));
+    border: 1px solid hsl(var(--homologacao-primary) / 0.25);
+  }
+  
   /* Stats counter style */
   .stat-value {
     @apply text-4xl md:text-5xl font-bold;
     color: hsl(var(--primary));
   }
   
+  .stat-value-homologacao {
+    @apply text-4xl md:text-5xl font-bold;
+    color: hsl(var(--homologacao-primary));
+  }
+  
   .stat-label {
     @apply text-sm text-muted-foreground mt-1;
+  }
+  
+  /* Homologação Timeline Styles */
+  .timeline-item {
+    @apply relative pl-8 pb-8;
+  }
+  
+  .timeline-item::before {
+    content: '';
+    @apply absolute left-0 top-2 w-3 h-3 rounded-full;
+    background: hsl(var(--homologacao-primary));
+  }
+  
+  .timeline-item.status-completed::before {
+    background: hsl(var(--homologacao-success));
+  }
+  
+  .timeline-item.status-current::before {
+    @apply animate-audit-pulse;
+    background: hsl(var(--homologacao-info));
+  }
+  
+  .timeline-item.status-pending::before {
+    background: hsl(var(--homologacao-warning));
+  }
+  
+  .timeline-line {
+    @apply absolute left-1 top-5 w-0.5 h-12 -bottom-8;
+    background: linear-gradient(180deg, hsl(var(--homologacao-primary) / 0.3) 0%, transparent 100%);
+  }
+  
+  /* Homologação Alert Styles */
+  .alert-homologacao {
+    @apply relative p-5 rounded-lg border-l-4;
+  }
+  
+  .alert-homologacao.info {
+    border-color: hsl(var(--homologacao-info));
+    background: hsl(var(--homologacao-info) / 0.08);
+  }
+  
+  .alert-homologacao.warning {
+    border-color: hsl(var(--homologacao-warning));
+    background: hsl(var(--homologacao-warning) / 0.08);
+  }
+  
+  .alert-homologacao.success {
+    border-color: hsl(var(--homologacao-success));
+    background: hsl(var(--homologacao-success) / 0.08);
+  }
+  
+  .alert-homologacao.error {
+    border-color: hsl(var(--homologacao-accent));
+    background: hsl(var(--homologacao-accent) / 0.08);
   }
 }
 
@@ -336,6 +505,21 @@
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
+}
+
+@keyframes audit-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slide-up {
@@ -455,4 +639,13 @@
 /* Focus styles */
 .focus-ring {
   @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+}
+
+/* Homologação Custom Scrollbar */
+.homologacao-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--homologacao-primary) / 0.4);
+}
+
+.homologacao-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--homologacao-primary) / 0.6);
 }
