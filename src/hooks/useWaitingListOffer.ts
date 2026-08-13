@@ -24,6 +24,8 @@ export function useWaitingListOffer() {
     queryFn: async () => {
       if (!patientId) return null;
       
+      console.log("[useWaitingListOffer] Buscando ofertas para:", patientId);
+
       const { data, error } = await supabase
         .from("waiting_list")
         .select(`
@@ -38,37 +40,46 @@ export function useWaitingListOffer() {
           slot_offered_at
         `)
         .eq("patient_id", patientId)
-        .eq("notification_status", "notified")
+        .in("notification_status", ["notified", "notifying"])
         .eq("is_active", true)
         .order("slot_offered_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching waiting list offer:", error);
+        console.error("[useWaitingListOffer] Erro ao buscar oferta:", error);
         return null;
       }
 
-      // Check if offer is still valid (within 2 hours of slot_offered_at)
-      if (data && data.slot_offered_at) {
-        const offeredAt = new Date(data.slot_offered_at).getTime();
-        const now = new Date().getTime();
-        const twoHoursInMs = 2 * 60 * 60 * 1000;
+      if (data) {
+        console.log("[useWaitingListOffer] Oferta encontrada:", data.id, "status:", data.notification_status);
         
-        if (now - offeredAt > twoHoursInMs) {
-          return null;
+        // Check if offer is still valid (within 2 hours of slot_offered_at)
+        if (data.slot_offered_at) {
+          const offeredAt = new Date(data.slot_offered_at).getTime();
+          const now = new Date().getTime();
+          const twoHoursInMs = 2 * 60 * 60 * 1000;
+          
+          if (now - offeredAt > twoHoursInMs) {
+            console.log("[useWaitingListOffer] Oferta expirada pelo tempo");
+            return null;
+          }
         }
+      } else {
+        console.log("[useWaitingListOffer] Nenhuma oferta pendente encontrada");
       }
 
       return data as WaitingListOffer | null;
     },
     enabled: !!patientId,
-    staleTime: 30000,
+    staleTime: 10000,
   });
 
   // Realtime subscription
   useEffect(() => {
     if (!patientId) return;
+
+    console.log("[useWaitingListOffer] Inscrevendo em tempo real para:", patientId);
 
     const channel = supabase
       .channel(`waiting-list-offers-${patientId}`)
@@ -80,13 +91,17 @@ export function useWaitingListOffer() {
           table: "waiting_list",
           filter: `patient_id=eq.${patientId}`,
         },
-        () => {
+        (payload) => {
+          console.log("[useWaitingListOffer] Mudança detectada na waiting_list:", payload.eventType);
           queryClient.invalidateQueries({ queryKey: ["waiting-list-offer", patientId] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[useWaitingListOffer] Status da inscrição realtime:", status);
+      });
 
     return () => {
+      console.log("[useWaitingListOffer] Cancelando inscrição realtime");
       supabase.removeChannel(channel);
     };
   }, [patientId, queryClient]);
@@ -95,6 +110,7 @@ export function useWaitingListOffer() {
     if (!offer) return;
 
     try {
+      console.log(`[useWaitingListOffer] Respondendo oferta ${offer.id} com ${status}`);
       const { error } = await supabase
         .from("waiting_list")
         .update({ 
@@ -108,7 +124,7 @@ export function useWaitingListOffer() {
       queryClient.invalidateQueries({ queryKey: ["waiting-list-offer", patientId] });
       return { success: true };
     } catch (error) {
-      console.error("Error responding to offer:", error);
+      console.error("[useWaitingListOffer] Erro ao responder oferta:", error);
       return { success: false, error };
     }
   };
