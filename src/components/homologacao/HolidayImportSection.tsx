@@ -181,15 +181,15 @@ export default function HolidayImportSection() {
           <div className="space-y-2">
             <Label>Estado</Label>
             <Select
-              value={selectedState}
-              onValueChange={setSelectedState}
+              value={selectedState || "none"}
+              onValueChange={(v) => setSelectedState(v === "none" ? "" : v)}
               disabled={!includeStateHolidays}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Nenhum" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {states.map((state) => (
                   <SelectItem key={state.code} value={state.code}>
                     {state.name}

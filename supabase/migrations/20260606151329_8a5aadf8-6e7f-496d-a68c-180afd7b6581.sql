@@ -1,1 +1,0 @@
-ALTER TABLE public.global_config ADD COLUMN IF NOT EXISTS meta_api_active text NOT NULL DEFAULT 'v1' CHECK (meta_api_active IN ('v1', 'v2'));

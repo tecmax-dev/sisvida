@@ -8,7 +8,9 @@ import { Upload, FileCheck, Loader2, ShieldCheck, ShieldAlert, Calendar, UserChe
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { pdfToImageBase64 } from "@/utils/pdfToImage";
+import { canSubmitCardExpiryChange, isCardExpirySubmitEnabled } from "@/lib/cardExpiryPermissions";
 
 interface CardExpiryWithPayslipDialogProps {
   open: boolean;
@@ -37,6 +39,7 @@ export function CardExpiryWithPayslipDialog({
 }: CardExpiryWithPayslipDialogProps) {
   const { toast } = useToast();
   const { currentClinic } = useAuth();
+  const { isAdmin } = usePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -177,19 +180,23 @@ export function CardExpiryWithPayslipDialog({
   };
 
   const handleSave = async () => {
-    if (!newDate || verificationStatus !== "valid" || !file || !currentClinic?.id) return;
+    if (!newDate || !currentClinic?.id) return;
+    if (!canSubmitCardExpiryChange({ isAdmin, newDate, hasFile: !!file, verificationStatus })) return;
 
     setSaving(true);
     try {
-      // 1. Upload payslip to storage
-      const ext = file.name.split(".").pop() || "jpg";
-      const filePath = `${currentClinic.id}/${entityId}/${Date.now()}.${ext}`;
+      // 1. Upload payslip to storage (quando houver arquivo)
+      let filePath: string | null = null;
+      if (file) {
+        const ext = file.name.split(".").pop() || "jpg";
+        filePath = `${currentClinic.id}/${entityId}/${Date.now()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("contra-cheques")
-        .upload(filePath, file, { contentType: file.type, upsert: true });
+        const { error: uploadError } = await supabase.storage
+          .from("contra-cheques")
+          .upload(filePath, file, { contentType: file.type, upsert: true });
 
-      if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
+      }
 
       // 2. Update card expiry
       let dependentsUpdated = 0;
@@ -247,7 +254,7 @@ export function CardExpiryWithPayslipDialog({
       try {
         const { attachPayslipToMemberFolder } = await import("@/utils/attachPayslipToMemberFolder");
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        if (user && filePath) {
           await attachPayslipToMemberFolder({
             clinicId: currentClinic.id,
             patientId: entityId,
@@ -260,7 +267,7 @@ export function CardExpiryWithPayslipDialog({
       const depMsg = dependentsUpdated > 0 ? ` ${dependentsUpdated} dependente(s) também atualizado(s).` : "";
       toast({
         title: "Validade atualizada",
-        description: `Carteirinha atualizada com contracheque anexado.${depMsg}`,
+        description: `${filePath ? "Carteirinha atualizada com contracheque anexado." : "Carteirinha atualizada."}${depMsg}`,
       });
 
       onOpenChange(false);
@@ -283,7 +290,9 @@ export function CardExpiryWithPayslipDialog({
             Atualizar Validade da Carteirinha
           </DialogTitle>
           <DialogDescription>
-            Para atualizar a validade, é obrigatório o envio do contracheque do associado. O documento será verificado automaticamente.
+            {isAdmin
+              ? "Como administrador, você pode alterar a validade sem anexar o contracheque. Se anexar, o documento será verificado automaticamente."
+              : "Para atualizar a validade, é obrigatório o envio do contracheque do associado. O documento será verificado automaticamente."}
           </DialogDescription>
         </DialogHeader>
 
@@ -301,7 +310,7 @@ export function CardExpiryWithPayslipDialog({
 
           {/* Upload area */}
           <div className="space-y-2">
-            <Label>Contracheque (obrigatório)</Label>
+            <Label>Contracheque {isAdmin ? "(opcional)" : "(obrigatório)"}</Label>
             <input
               ref={fileInputRef}
               type="file"
@@ -421,7 +430,7 @@ export function CardExpiryWithPayslipDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !newDate || verificationStatus !== "valid"}
+            disabled={!isCardExpirySubmitEnabled({ isAdmin, newDate, hasFile: !!file, verificationStatus, saving })}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Atualizar Validade

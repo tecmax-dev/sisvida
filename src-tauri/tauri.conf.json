@@ -2,11 +2,11 @@
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "https://prosindweb.com.br/auth",
-    "distDir": "https://prosindweb.com.br/auth"
+    "devPath": "https://prosinge.com.br/auth",
+    "distDir": "https://prosinge.com.br/auth"
   },
   "package": {
-    "productName": "ProSindWeb",
+    "productName": "Prosinge",
     "version": "1.0.0"
   },
   "tauri": {
@@ -22,8 +22,8 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.prosindweb.app",
-      "publisher": "ProsindWeb",
+      "identifier": "com.prosinge.app",
+      "publisher": "Prosinge",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -44,7 +44,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "ProsindWeb - Gestão Sindical e Clínica",
+        "title": "Prosinge - Gestão Sindical e Clínica",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

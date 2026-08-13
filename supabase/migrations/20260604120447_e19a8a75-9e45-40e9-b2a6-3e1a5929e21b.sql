@@ -1,2 +1,0 @@
-ALTER TABLE public.patient_password_resets ADD COLUMN IF NOT EXISTS channel text;
-CREATE INDEX IF NOT EXISTS idx_patient_password_resets_patient_channel_created ON public.patient_password_resets (patient_id, channel, created_at DESC);

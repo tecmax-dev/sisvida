@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -51,6 +52,8 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
     professional_id: "",
     service_type_id: "",
     notes: "",
+    employee_whatsapp_consent: false,
+    company_whatsapp_consent: false,
   });
 
   // Fetch professionals with their schedules
@@ -157,6 +160,8 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
           notes: data.notes || null,
           clinic_id: currentClinic?.id,
           status: "scheduled",
+          employee_whatsapp_consent: data.employee_whatsapp_consent,
+          company_whatsapp_consent: data.company_whatsapp_consent,
         });
       if (error) throw error;
     },
@@ -183,6 +188,8 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
       professional_id: "",
       service_type_id: "",
       notes: "",
+      employee_whatsapp_consent: false,
+      company_whatsapp_consent: false,
     });
   };
 
@@ -258,6 +265,21 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
                   placeholder="(00) 00000-0000"
                 />
               </div>
+              <div className="flex items-start space-x-2 pt-2 md:col-span-2">
+                <Checkbox 
+                  id="employee_whatsapp_consent" 
+                  checked={formData.employee_whatsapp_consent}
+                  onCheckedChange={(checked) => setFormData({ ...formData, employee_whatsapp_consent: !!checked })}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label htmlFor="employee_whatsapp_consent" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Notificar Trabalhador via WhatsApp
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Autoriza envio de confirmação e atualizações da homologação.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -292,6 +314,21 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
                 onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
                 placeholder="(00) 00000-0000"
               />
+            </div>
+            <div className="flex items-start space-x-2 pt-2">
+              <Checkbox 
+                id="company_whatsapp_consent" 
+                checked={formData.company_whatsapp_consent}
+                onCheckedChange={(checked) => setFormData({ ...formData, company_whatsapp_consent: !!checked })}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label htmlFor="company_whatsapp_consent" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Notificar Empresa via WhatsApp
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Autoriza envio de confirmação e atualizações da homologação.
+                </p>
+              </div>
             </div>
           </div>
 

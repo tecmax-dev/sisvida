@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getBiolifeAuthorizationInfo } from "@/lib/biolifeAuthorization";
 import {
   Dialog,
   DialogContent,
@@ -591,6 +592,27 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
           </div>
         )}
       </div>
+
+      {isBiolife && (() => {
+        const info = getBiolifeAuthorizationInfo(!!authorization.is_for_dependent);
+        return (
+          <div
+            className={`rounded-md border p-3 text-xs ${
+              info.kind === "discount"
+                ? "border-amber-400 bg-amber-50"
+                : "border-emerald-400 bg-emerald-50"
+            }`}
+          >
+            <p className="font-bold uppercase text-gray-900">{info.title}</p>
+            <p className="mt-1 text-gray-800">{info.description}</p>
+            <ul className="mt-1 list-disc pl-4 text-gray-800">
+              {info.labInstructions.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* Validation Link */}
       <Button

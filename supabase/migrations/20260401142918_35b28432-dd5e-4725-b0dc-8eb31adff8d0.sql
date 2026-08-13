@@ -1,1 +1,0 @@
-UPDATE patients SET is_union_member = true WHERE clinic_id = '89e7585e-7bce-4e58-91fa-c37080d1170d' AND is_active = true AND (is_union_member = false OR is_union_member IS NULL);

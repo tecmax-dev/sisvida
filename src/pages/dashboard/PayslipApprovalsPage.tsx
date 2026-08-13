@@ -131,7 +131,7 @@ export default function PayslipApprovalsPage() {
                });
                toast({
                  title: "Contracheque aprovado",
-                 description: "O associado foi notificado via WhatsApp.",
+                  description: "O associado foi notificado via WhatsApp e SMS.",
                });
              } catch (err) {
                console.error('Error sending approval notification:', err);

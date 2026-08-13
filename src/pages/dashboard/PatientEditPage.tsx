@@ -823,6 +823,7 @@ export default function PatientEditPage() {
               <div className="flex items-start gap-6 mb-6 pb-6 border-b">
                 <PatientPhotoUpload
                   patientId={id!}
+                  clinicId={currentClinic?.id}
                   currentPhotoUrl={patientPhotoUrl}
                   patientName={formData.name}
                   onPhotoChange={setPatientPhotoUrl}

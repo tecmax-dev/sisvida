@@ -1,1 +1,0 @@
-ALTER TABLE public.union_cash_transfers ADD COLUMN IF NOT EXISTS check_number text;

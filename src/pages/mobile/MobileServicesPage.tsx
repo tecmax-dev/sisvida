@@ -92,6 +92,7 @@ function ConvencoesContent() {
   const [convencoes, setConvencoes] = useState<any[]>([]);
   const [categories, setCategories] = useState<CctCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<"principal" | "aditivos">("principal");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -158,46 +159,100 @@ function ConvencoesContent() {
   }
 
   // Filter convenções by active category
-  const filteredConvencoes = activeCategory 
+  const inCategory = activeCategory
     ? convencoes.filter(conv => conv.cct_category_id === activeCategory)
     : convencoes;
+  const principalCount = inCategory.filter(c => !c.is_aditivo).length;
+  const aditivosCount = inCategory.filter(c => !!c.is_aditivo).length;
+  const filteredConvencoes = inCategory.filter(c =>
+    activeSubTab === "aditivos" ? !!c.is_aditivo : !c.is_aditivo
+  );
+
+  const activeCat = categories.find(c => c.id === activeCategory);
+  const accent = activeCat?.color || "#0d9488";
+
+  const renderCard = (conv: any) => (
+    <Card key={conv.id} className="border-0 shadow-md overflow-hidden bg-white dark:bg-slate-900">
+      <div className="flex">
+        <div
+          className="w-1.5 flex-shrink-0"
+          style={{ backgroundColor: conv.is_aditivo ? "#f59e0b" : accent }}
+        />
+        <CardContent className="p-4 flex-1">
+          <div className="flex items-start gap-3">
+            <div
+              className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{
+                backgroundColor: `${conv.is_aditivo ? "#f59e0b" : accent}15`,
+                color: conv.is_aditivo ? "#b45309" : accent,
+              }}
+            >
+              {conv.is_aditivo ? <FileCheck className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 leading-snug">
+                  {conv.title}
+                </h4>
+                {conv.is_aditivo && (
+                  <Badge className="bg-amber-500 hover:bg-amber-500 text-white text-[10px] px-1.5 py-0">
+                    Aditivo
+                  </Badge>
+                )}
+              </div>
+              {conv.description && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{conv.description}</p>
+              )}
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {conv.metadata?.vigencia && (
+                  <Badge variant="secondary" className="text-[10px] gap-1">
+                    <Clock className="h-3 w-3" />
+                    {conv.metadata.vigencia}
+                  </Badge>
+                )}
+                {conv.file_url && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1 ml-auto"
+                    onClick={() => window.open(conv.file_url, '_blank')}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Baixar PDF
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </div>
+    </Card>
+  );
 
   // If no categories, show all conventions in simple list
   if (categories.length === 0) {
+    const principais = convencoes.filter(c => !c.is_aditivo);
+    const aditivos = convencoes.filter(c => !!c.is_aditivo);
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Consulte as Convenções Coletivas de Trabalho (CCT) e Acordos Coletivos vigentes para sua categoria.
         </p>
-        <div className="space-y-3">
-          {convencoes.map((conv) => (
-            <Card key={conv.id} className="border shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{conv.title}</h4>
-                    {conv.description && (
-                      <p className="text-xs text-muted-foreground mt-1">{conv.description}</p>
-                    )}
-                    {conv.metadata?.vigencia && (
-                      <Badge variant="secondary" className="mt-2 text-xs">{conv.metadata.vigencia}</Badge>
-                    )}
-                  </div>
-                  {conv.file_url && (
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="ml-2"
-                      onClick={() => window.open(conv.file_url, '_blank')}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {principais.length > 0 && (
+          <div className="space-y-3">
+            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Convenções</h5>
+            {principais.map(renderCard)}
+          </div>
+        )}
+        {aditivos.length > 0 && (
+          <div className="space-y-3">
+            <h5 className="text-xs font-semibold uppercase tracking-wide text-amber-600 flex items-center gap-1">
+              <FileCheck className="h-3.5 w-3.5" />
+              Aditivos
+            </h5>
+            {aditivos.map(renderCard)}
+          </div>
+        )}
       </div>
     );
   }
@@ -213,7 +268,7 @@ function ConvencoesContent() {
         {categories.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
+            onClick={() => { setActiveCategory(cat.id); setActiveSubTab("principal"); }}
             className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-md transition-all flex-shrink-0 ${
               activeCategory === cat.id
                 ? "bg-emerald-700 text-white shadow-sm"
@@ -225,41 +280,47 @@ function ConvencoesContent() {
         ))}
       </div>
 
+      {/* Sub-tabs: Principal / Aditivos */}
+      <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+        <button
+          onClick={() => setActiveSubTab("principal")}
+          className={`py-2 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 ${
+            activeSubTab === "principal"
+              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm"
+              : "text-slate-600 dark:text-slate-400"
+          }`}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          CCT Principal
+          <span className="ml-1 text-[10px] opacity-70">({principalCount})</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab("aditivos")}
+          className={`py-2 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 ${
+            activeSubTab === "aditivos"
+              ? "bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 shadow-sm"
+              : "text-slate-600 dark:text-slate-400"
+          }`}
+        >
+          <FileCheck className="h-3.5 w-3.5" />
+          Aditivos
+          <span className="ml-1 text-[10px] opacity-70">({aditivosCount})</span>
+        </button>
+      </div>
+
       {/* Convenções List */}
       <div className="space-y-3">
         {filteredConvencoes.length > 0 ? (
-          filteredConvencoes.map((conv) => (
-            <Card key={conv.id} className="border shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{conv.title}</h4>
-                    {conv.description && (
-                      <p className="text-xs text-muted-foreground mt-1">{conv.description}</p>
-                    )}
-                    {conv.metadata?.vigencia && (
-                      <Badge variant="secondary" className="mt-2 text-xs">{conv.metadata.vigencia}</Badge>
-                    )}
-                  </div>
-                  {conv.file_url && (
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="ml-2"
-                      onClick={() => window.open(conv.file_url, '_blank')}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          filteredConvencoes.map(renderCard)
         ) : (
           <div className="text-center py-6">
-            <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+            {activeSubTab === "aditivos"
+              ? <FileCheck className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+              : <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />}
             <p className="text-sm text-muted-foreground">
-              Nenhuma convenção nesta categoria.
+              {activeSubTab === "aditivos"
+                ? "Nenhum aditivo nesta categoria."
+                : "Nenhuma convenção nesta categoria."}
             </p>
           </div>
         )}
@@ -1222,7 +1283,7 @@ function DocumentosContent() {
 // ============ ATENDIMENTOS ============
 function AtendimentosContent() {
   const canais = [
-    { id: "1", titulo: "Atendimento Presencial", descricao: "De segunda a sexta, das 8h às 17h", icone: Building, info: "Rua do Sindicato, 123 - Centro" },
+    { id: "1", titulo: "Atendimento Presencial", descricao: "De segunda a sexta, das 9h às 16h", icone: Building, info: "Rua Coronel Paiva, 99 - Centro, Ilhéus - BA" },
     { id: "2", titulo: "Telefone", descricao: "Central de Atendimento", icone: Phone, info: "(73) 3231-1784" },
     { id: "3", titulo: "WhatsApp", descricao: "Atendimento via mensagem", icone: MessageCircle, info: "(73) 3223-9980" },
     { id: "4", titulo: "Atendimento Jurídico", descricao: "Terças e quintas, das 9h às 12h", icone: ClipboardList, info: "Agendar com antecedência" },

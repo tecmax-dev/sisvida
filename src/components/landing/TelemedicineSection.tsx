@@ -95,10 +95,10 @@ export function TelemedicineSection() {
               className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-8 h-14 text-base shadow-lg transition-all duration-300 hover:scale-105"
               asChild
             >
-              <Link to="/cadastro" className="flex items-center gap-2">
+              <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 Comece a atender online
                 <ArrowRight className="h-5 w-5" />
-              </Link>
+              </a>
             </Button>
           </div>
 

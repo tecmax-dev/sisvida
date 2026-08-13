@@ -38,12 +38,12 @@ export function AIFeatureSection() {
           {/* CTA */}
           <Button 
             size="lg"
-            className="btn-prosinge px-8 h-14 text-base"
+            className="btn-eclini px-8 h-14 text-base"
             asChild
           >
-            <Link to="/cadastro">
+            <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer">
               Conheça essa novidade
-            </Link>
+            </a>
           </Button>
         </div>
       </div>

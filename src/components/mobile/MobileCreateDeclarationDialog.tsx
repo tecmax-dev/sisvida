@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthorizationBlockReasons } from "@/lib/authorizationBlockReasons";
+import { AuthorizationBlockNotice } from "@/components/union/authorizations/AuthorizationBlockNotice";
 import { useToast } from "@/hooks/use-toast";
 import { addDays, format, parseISO, isPast } from "date-fns";
 import {
@@ -216,20 +218,31 @@ export function MobileCreateDeclarationDialog({
   // IDs dos benefícios Biolife disponíveis nesta entidade
   const biolifeBenefitIds = benefits.filter((b) => isBiolifeBenefit(b)).map((b) => b.id);
 
-  // Última autorização Biolife deste titular (limite: 1 a cada 12 meses)
+  // Última autorização Biolife do beneficiário selecionado (limite: 1 a cada 12 meses por beneficiário)
   const { data: lastBiolifeAuth } = useQuery({
-    queryKey: ["mobile-last-biolife-authorization", patientId, biolifeBenefitIds.join(",")],
+    queryKey: [
+      "mobile-last-biolife-authorization",
+      patientId,
+      beneficiaryType,
+      selectedDependentId,
+      biolifeBenefitIds.join(","),
+    ],
     queryFn: async () => {
       if (!patientId || biolifeBenefitIds.length === 0) return null;
-      const { data } = await supabase
+      let query = supabase
         .from("union_authorizations")
         .select("issued_at, benefit_id")
-        .eq("patient_id", patientId)
         .in("benefit_id", biolifeBenefitIds)
-        .neq("status", "revoked")
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .neq("status", "revoked");
+
+      if (beneficiaryType === "dependent") {
+        if (!selectedDependentId) return null;
+        query = query.eq("dependent_id", selectedDependentId);
+      } else {
+        query = query.eq("patient_id", patientId).eq("is_for_dependent", false);
+      }
+
+      const { data } = await query.order("issued_at", { ascending: false }).limit(1).maybeSingle();
       return data;
     },
     enabled: !!patientId && biolifeBenefitIds.length > 0 && open,
@@ -350,31 +363,18 @@ export function MobileCreateDeclarationDialog({
   });
 
   const handleSelectBenefit = (benefit: Benefit) => {
-    // Bloqueio: Biolife não pode ser emitida para dependentes
-    if (isBiolifeBenefit(benefit) && beneficiaryType === "dependent") {
+    // Bloqueios (carteirinha / regras Biolife) com motivo exato e como regularizar
+    const reasons = getAuthorizationBlockReasons({
+      isBiolife: isBiolifeBenefit(benefit),
+      isForDependent: beneficiaryType === "dependent",
+      titularIsFemale,
+      biolifeNextAvailableAt: biolifeNextAvailableAt || null,
+    });
+    if (reasons.length > 0) {
+      const r = reasons[0];
       toast({
-        title: "Benefício exclusivo para titulares",
-        description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir declaração para dependentes.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Bloqueio: Biolife restrito a associadas do sexo feminino
-    if (isBiolifeBenefit(benefit) && !titularIsFemale) {
-      toast({
-        title: "Benefício exclusivo para associadas",
-        description: "O Biolife é destinado apenas a associadas do sexo feminino.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Bloqueio: Biolife limitado a 1 autorização a cada 12 meses
-    if (isBiolifeBenefit(benefit) && biolifeNextAvailableAt) {
-      toast({
-        title: "Biolife já utilizado nos últimos 12 meses",
-        description: `Limite: 1 autorização a cada 12 meses. Nova emissão disponível a partir de ${format(biolifeNextAvailableAt, "dd/MM/yyyy")}.`,
+        title: r.title,
+        description: `${r.detail} Como regularizar: ${r.howToFix.join(" ")}`,
         variant: "destructive",
       });
       return;
@@ -439,18 +439,12 @@ export function MobileCreateDeclarationDialog({
               <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
             </div>
           ) : isCardExpired ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-              <h4 className="font-semibold text-red-700 mb-1">
-                Carteirinha Vencida
-              </h4>
-              <p className="text-sm text-red-600">
-                Sua carteirinha está vencida ou inativa. Não é possível emitir novas declarações.
-              </p>
-              <p className="text-xs text-red-500 mt-2">
-                Entre em contato com o sindicato para renovar sua carteirinha.
-              </p>
-            </div>
+            <AuthorizationBlockNotice
+              reasons={getAuthorizationBlockReasons({
+                cardMissing: !activeCard,
+                cardExpiredAt: activeCard?.expires_at ? parseISO(activeCard.expires_at) : null,
+              })}
+            />
           ) : benefits.length === 0 ? (
             <div className="text-center py-8">
               <Gift className="h-12 w-12 text-gray-300 mx-auto mb-3" />
@@ -524,10 +518,11 @@ export function MobileCreateDeclarationDialog({
               <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
-                    const blockedForDependent = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
+                    const isBiolifeDiscount = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
                     const blockedByBiolifeCooldown = isBiolifeBenefit(benefit) && !!biolifeNextAvailableAt;
-                    const blockedByGender = isBiolifeBenefit(benefit) && !titularIsFemale;
-                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedForDependent || blockedByBiolifeCooldown || blockedByGender;
+                    const blockedByGender =
+                      isBiolifeBenefit(benefit) && beneficiaryType !== "dependent" && !titularIsFemale;
+                    const isDisabled = hasActiveAuthorization(benefit.id) || blockedByBiolifeCooldown || blockedByGender;
                     
                     return (
                       <Card
@@ -552,13 +547,13 @@ export function MobileCreateDeclarationDialog({
                                     Já possui
                                   </Badge>
                                 )}
-                                {blockedForDependent && (
+                                {isBiolifeDiscount && (
                                   <Badge
                                     variant="secondary"
-                                    className="text-xs bg-red-100 text-red-700"
+                                    className="text-xs bg-amber-100 text-amber-700"
                                   >
                                     <AlertTriangle className="h-3 w-3 mr-1" />
-                                    Somente titular
+                                    Desconto 50%
                                   </Badge>
                                 )}
                                 {benefit.category && (

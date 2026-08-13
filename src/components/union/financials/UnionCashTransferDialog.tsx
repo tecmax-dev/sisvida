@@ -172,6 +172,84 @@ export function UnionCashTransferDialog({
 
       // Note: union_cash_register balance updates are handled by the
       // update_union_cash_register_balance() trigger on union_financial_transactions
+
+      // 4. Retroactive auto-reconciliation with imported OFX statements
+      // If an OFX was imported BEFORE this transfer was registered (e.g. RESGATE RDC),
+      // there may be pending_review / not_identified statement rows that match this
+      // transfer by (cash_register + date + amount). Link them now to avoid
+      // duplicate manual reconciliation and prevent the user from matching those
+      // rows against the transfer's financial_transactions later (which would
+      // double-count).
+      try {
+        const userId = (await supabase.auth.getUser()).data.user?.id || null;
+        const nowIso = new Date().toISOString();
+
+        // Side "from" = debit on source account in OFX
+        // Side "to"   = credit on destination account in OFX
+        const sides: Array<{ side: "from" | "to"; cashRegisterId: string; txType: "debit" | "credit" }> = [
+          { side: "from", cashRegisterId: data.from_register_id, txType: "debit" },
+          { side: "to", cashRegisterId: data.to_register_id, txType: "credit" },
+        ];
+
+        for (const s of sides) {
+          const { data: candidates } = await (supabase as any)
+            .from("union_bank_statement_transactions")
+            .select("id, reconciliation_status, matched_transfer_id, matched_transaction_id")
+            .eq("clinic_id", clinicId)
+            .eq("cash_register_id", s.cashRegisterId)
+            .eq("transaction_date", data.transfer_date)
+            .eq("transaction_type", s.txType)
+            .eq("amount", amount)
+            .in("reconciliation_status", ["pending_review", "not_identified"])
+            .is("matched_transfer_id", null)
+            .is("matched_transaction_id", null)
+            .limit(2);
+
+          // Only auto-link when exactly one unambiguous candidate exists —
+          // avoids picking the wrong row when multiple OFX entries share
+          // the same date/amount (e.g. two RESGATE RDC on the same day).
+          if (!candidates || candidates.length !== 1) continue;
+          const stmt = candidates[0];
+
+          // Link statement -> transfer
+          const { data: transferRow } = await supabase
+            .from("union_cash_transfers")
+            .select("id")
+            .eq("clinic_id", clinicId)
+            .eq("from_register_id", data.from_register_id)
+            .eq("to_register_id", data.to_register_id)
+            .eq("transfer_date", data.transfer_date)
+            .eq("amount", amount)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (!transferRow) continue;
+
+          await (supabase as any)
+            .from("union_bank_statement_transactions")
+            .update({
+              reconciliation_status: "auto_reconciled",
+              matched_transfer_id: transferRow.id,
+              matched_type: "transfer",
+              reconciled_by: userId,
+              reconciled_at: nowIso,
+              reconciliation_notes: "Conciliado automaticamente com transferência entre contas",
+            })
+            .eq("id", stmt.id);
+
+          const transferUpdate: Record<string, any> = s.side === "from"
+            ? { is_conciliated_from: true, conciliated_from_at: nowIso, conciliated_from_by: userId, source_statement_tx_id_from: stmt.id }
+            : { is_conciliated_to: true, conciliated_to_at: nowIso, conciliated_to_by: userId, source_statement_tx_id_to: stmt.id };
+
+          await supabase
+            .from("union_cash_transfers")
+            .update(transferUpdate)
+            .eq("id", transferRow.id);
+        }
+      } catch (err) {
+        // Non-blocking: transfer already saved. Just log.
+        console.warn("Auto-reconciliação retroativa falhou:", err);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
@@ -180,6 +258,9 @@ export function UnionCashTransferDialog({
       queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-transfers-reconciliation"] });
       toast.success("Transferência realizada com sucesso!");
       onOpenChange(false);
       form.reset({

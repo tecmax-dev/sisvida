@@ -1,0 +1,1 @@
+UPDATE public.whatsapp_one_shot_authorizations SET idempotency_key = 'one-shot-real-v2-55905552568' WHERE cpf = '55905552568' AND status = 'authorized';

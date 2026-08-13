@@ -40,11 +40,11 @@ export function MaintenanceClinicOverlay({ reason }: MaintenanceClinicOverlayPro
           <h3 className="font-medium mb-3">Precisa de ajuda urgente?</h3>
           <div className="space-y-2 text-sm">
             <a 
-              href="tel:+557331982161" 
+              href="tel:+5571982786864" 
               className="flex items-center justify-center gap-2 text-primary hover:underline"
             >
               <Phone className="h-4 w-4" />
-              (73) 3198-2161
+              (71) 98278-6864
             </a>
             <a 
               href="mailto:suporte@prosinge.com.br" 

@@ -365,7 +365,16 @@ export default function EmployerContributionsTab({
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dueDateFrom, setDueDateFrom] = useState("");
   const [dueDateTo, setDueDateTo] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    if (typeof window === "undefined") return "list";
+    const saved = window.localStorage.getItem("employerContributionsViewMode");
+    return saved === "grid" ? "grid" : "list";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("employerContributionsViewMode", viewMode);
+    }
+  }, [viewMode]);
   const [overdueCollapsed, setOverdueCollapsed] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -722,21 +731,21 @@ export default function EmployerContributionsTab({
         </Card>
       ) : viewMode === "list" ? (
         /* ===== LIST VIEW ===== */
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs w-10"></TableHead>
-                    <TableHead className="text-xs">Tipo</TableHead>
-                    <TableHead className="text-xs">Competência</TableHead>
-                    <TableHead className="text-xs">Vencimento</TableHead>
-                    <TableHead className="text-xs text-right">Valor</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs">Dt. Pagamento</TableHead>
-                    <TableHead className="text-xs text-right">Valor Pago</TableHead>
-                    <TableHead className="text-xs text-center">Ações</TableHead>
+            <ScrollArea className="max-h-[65vh]">
+              <Table className="text-xs">
+                <TableHeader className="sticky top-0 bg-muted/60 backdrop-blur z-10">
+                  <TableRow className="hover:bg-transparent border-b">
+                    <TableHead className="h-8 px-2 w-8"></TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Tipo</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[70px]">Compet.</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[86px]">Vencim.</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right w-[78px]">Valor</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[92px]">Status</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[86px]">Pago em</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right w-[78px]">V. Pago</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-center w-10">Ver</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -745,38 +754,41 @@ export default function EmployerContributionsTab({
                     const StatusIcon = statusConfig.icon;
                     const isEligible = !!(contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled");
                     return (
-                      <TableRow key={contrib.id} className="hover:bg-muted/50">
-                        <TableCell className="py-2">
+                      <TableRow key={contrib.id} className="hover:bg-muted/40 even:bg-muted/20 border-b-0">
+                        <TableCell className="py-1.5 px-1.5">
                           {isEligible ? (
                             <Checkbox
                               checked={selectedContributionIds.has(contrib.id)}
                               onCheckedChange={() => toggleSelection(contrib.id)}
+                              className="h-3.5 w-3.5"
                             />
                           ) : (
-                            <Checkbox disabled className="opacity-30" />
+                            <Checkbox disabled className="opacity-20 h-3.5 w-3.5" />
                           )}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-medium">{contrib.contribution_types?.name || "-"}</TableCell>
-                        <TableCell className="py-2 text-sm">{formatCompetence(contrib.competence_month, contrib.competence_year)}</TableCell>
-                        <TableCell className={`py-2 text-sm ${contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}`}>
+                        <TableCell className="py-1.5 px-1.5 font-medium truncate max-w-[220px]" title={contrib.contribution_types?.name || "-"}>
+                          {contrib.contribution_types?.name || "-"}
+                        </TableCell>
+                        <TableCell className="py-1.5 px-1.5 text-muted-foreground">{formatCompetence(contrib.competence_month, contrib.competence_year)}</TableCell>
+                        <TableCell className={`py-1.5 px-1.5 ${contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}`}>
                           {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy")}
                         </TableCell>
-                        <TableCell className="py-2 text-sm text-right font-medium">{formatCurrency(contrib.value)}</TableCell>
-                        <TableCell className="py-2">
-                          <Badge className={`${statusConfig.color} text-[10px] gap-0.5 h-5`}>
-                            <StatusIcon className="h-3 w-3" />
+                        <TableCell className="py-1.5 px-1.5 text-right font-semibold tabular-nums">{formatCurrency(contrib.value)}</TableCell>
+                        <TableCell className="py-1.5 px-1.5">
+                          <Badge className={`${statusConfig.color} text-[10px] gap-1 h-5 px-1.5 font-medium`}>
+                            <StatusIcon className="h-2.5 w-2.5" />
                             {statusConfig.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="py-2 text-sm text-emerald-600">
+                        <TableCell className="py-1.5 px-1.5 text-emerald-600">
                           {contrib.paid_at ? format(parseDateOnlyToLocalNoon(contrib.paid_at), "dd/MM/yyyy") : "-"}
                         </TableCell>
-                        <TableCell className="py-2 text-sm text-right text-emerald-600 font-medium">
+                        <TableCell className="py-1.5 px-1.5 text-right text-emerald-600 font-medium tabular-nums">
                           {contrib.paid_value ? formatCurrency(contrib.paid_value) : "-"}
                         </TableCell>
-                        <TableCell className="py-2 text-center">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onViewContribution(contrib)}>
-                            <Eye className="h-4 w-4" />
+                        <TableCell className="py-1.5 px-1.5 text-center">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onViewContribution(contrib)}>
+                            <Eye className="h-3.5 w-3.5" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -1019,7 +1031,7 @@ function NegotiationInstallmentsSection({ employerId, clinicId }: { employerId?:
           <CardTitle className="text-base">Parcelas de Negociação</CardTitle>
         </div>
         <CardDescription>
-          {paid.length} paga(s) • {pending.length} pendente(s) • {overdue.length} vencida(s) — Total: {formatCurrency(totalValue)} | Recebido: {formatCurrency(paidValue)}
+          {paid.length} paga(s) • {pending.length} pendente(s) • {overdue.length} vencida(s) — Total: {formatCurrency(totalValue * 100)} | Recebido: {formatCurrency(paidValue * 100)}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
@@ -1057,7 +1069,7 @@ function NegotiationInstallmentsSection({ employerId, clinicId }: { employerId?:
                           {format(parseDateOnlyToLocalNoon(inst.due_date), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell className="py-1.5 text-sm text-right font-medium">
-                          {formatCurrency(inst.value)}
+                          {formatCurrency(inst.value * 100)}
                         </TableCell>
                         <TableCell className="py-1.5">
                           <Badge className={`${sc.color} text-[10px] gap-0.5 h-5`}>
@@ -1069,7 +1081,7 @@ function NegotiationInstallmentsSection({ employerId, clinicId }: { employerId?:
                           {inst.paid_at ? format(parseDateOnlyToLocalNoon(inst.paid_at), "dd/MM/yyyy") : "—"}
                         </TableCell>
                         <TableCell className="py-1.5 text-sm text-right text-emerald-600 font-medium">
-                          {inst.paid_value ? formatCurrency(inst.paid_value) : "—"}
+                          {inst.paid_value ? formatCurrency(inst.paid_value * 100) : "—"}
                         </TableCell>
                         <TableCell className="py-1.5 text-center">
                           {inst.lytex_invoice_url && (

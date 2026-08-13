@@ -20,8 +20,8 @@ interface Professional {
   name: string;
   function: string | null;
   avatar_url: string | null;
-  phone: string | null;
-  email: string | null;
+  phone?: string | null;
+  email?: string | null;
   description: string | null;
   address: string | null;
   city: string | null;
@@ -69,7 +69,7 @@ export default function HomologacaoClinicBooking() {
       if (!clinic?.id) return [];
       const { data, error } = await supabase
         .from("homologacao_professionals")
-        .select("*")
+        .select("id, clinic_id, name, function, avatar_url, is_active, slug, description, address, city, state_code, latitude, longitude, public_booking_enabled")
         .eq("clinic_id", clinic.id)
         .eq("is_active", true)
         .eq("public_booking_enabled", true);

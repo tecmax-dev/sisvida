@@ -59,7 +59,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "prosinge_transaction_draft";
+const STORAGE_KEY = "eclini_transaction_draft";
 
 const documentTypes = [
   { value: "nota_fiscal", label: "Nota Fiscal" },

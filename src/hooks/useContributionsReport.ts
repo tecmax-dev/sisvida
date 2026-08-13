@@ -10,6 +10,7 @@ export interface ContributionReportFilters {
   contributionTypeIds?: string[]; // Array de IDs de tipos de contribuição
   origin?: string; // "all" | "pj" | "pf"
   searchTerm?: string;
+  hideZeroValue?: boolean; // se true (default), oculta contribuições com value = 0
 }
 
 export interface ContributionReportItem {
@@ -131,19 +132,17 @@ export function useContributionsReport(clinicId: string | undefined) {
         // Aplicar filtro de status NO BANCO (não no frontend)
         // Regra: qualquer contribuição com value > 0 deve aparecer no relatório,
         // independente do status (pending, overdue, awaiting_value, negotiated, etc.)
+        // Default: ocultar valores zerados (comportamento histórico).
+        // Quando hideZeroValue === false, incluir contribuições com value = 0.
+        const hideZero = filters.hideZeroValue !== false;
         if (filters.status === "hide_cancelled") {
-          // Ocultar cancelled; mostrar paid, pending, overdue, negotiated e awaiting_value com valor
-          query = query
-            .in("status", ["paid", "pending", "overdue", "negotiated", "awaiting_value"])
-            .gt("value", 0);
+          query = query.in("status", ["paid", "pending", "overdue", "negotiated", "awaiting_value"]);
+          if (hideZero) query = query.gt("value", 0);
         } else if (filters.status === "all") {
-          // Mostrar todos incluindo awaiting_value e negotiated quando têm valor preenchido
-          query = query.gt("value", 0);
+          if (hideZero) query = query.gt("value", 0);
         } else if (filters.status === "defaulting") {
-          // Relatório de inadimplência: pending, overdue e awaiting_value com valor > 0
-          query = query
-            .in("status", ["pending", "overdue", "awaiting_value"])
-            .gt("value", 0);
+          query = query.in("status", ["pending", "overdue", "awaiting_value"]);
+          if (hideZero) query = query.gt("value", 0);
         } else {
           query = query.eq("status", filters.status);
         }

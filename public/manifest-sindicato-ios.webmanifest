@@ -1,0 +1,80 @@
+{
+  "name": "SECMI",
+  "short_name": "SECMI",
+  "description": "Aplicativo oficial do SECMI para associados: carteirinha digital, agendamentos, boletos e benefícios.",
+  "theme_color": "#094798",
+  "background_color": "#094798",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "orientation": "portrait",
+  "scope": "https://sindexa.com.br/app",
+  "start_url": "https://sindexa.com.br/app?source=pwa-ios",
+  "id": "https://sindexa.com.br/app",
+  "url": "https://sindexa.com.br/app",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": ["business", "utilities", "medical"],
+  "icons": [
+    {
+      "src": "https://sindexa.com.br/sindicato-icon-192x192.png?v=secmi-ios-20260618c",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://sindexa.com.br/sindicato-icon-512x512.png?v=secmi-ios-20260618c",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://sindexa.com.br/sindicato-icon-192x192.png?v=secmi-ios-20260618c",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://sindexa.com.br/sindicato-icon-512x512.png?v=secmi-ios-20260618c",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://sindexa.com.br/sindicato-icon-180x180.png?v=secmi-ios-20260618c",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://sindexa.com.br/screenshots/screenshot-1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tela inicial do app SECMI"
+    },
+    {
+      "src": "https://sindexa.com.br/screenshots/screenshot-2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Carteirinha digital do associado"
+    },
+    {
+      "src": "https://sindexa.com.br/screenshots/screenshot-3.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Agendamento de consultas"
+    },
+    {
+      "src": "https://sindexa.com.br/screenshots/screenshot-wide-1.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Carteirinha digital em tela ampla"
+    }
+  ]
+}

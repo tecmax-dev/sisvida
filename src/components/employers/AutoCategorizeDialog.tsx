@@ -34,6 +34,14 @@ interface Summary {
   no_match: number;
   errors: number;
   dry_run: boolean;
+  batch_size?: number;
+  offset?: number;
+  total_pending?: number;
+  has_more?: boolean;
+  next_offset?: number;
+  next_after_id?: string | null;
+  rate_limited?: boolean;
+  stopped_by_deadline?: boolean;
 }
 
 export function AutoCategorizeDialog({ open, onOpenChange, clinicId, onComplete }: AutoCategorizeDialogProps) {
@@ -41,27 +49,72 @@ export function AutoCategorizeDialog({ open, onOpenChange, clinicId, onComplete 
   const [dryRun, setDryRun] = useState(true);
   const [results, setResults] = useState<ResultItem[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   const handleExecute = async () => {
     setLoading(true);
     setResults(null);
     setSummary(null);
+    setProgress(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('auto-categorize-employers', {
-        body: { clinic_id: clinicId, dry_run: dryRun }
-      });
+      const allResults: ResultItem[] = [];
+      let totalMatched = 0;
+      let totalNoMatch = 0;
+      let totalErrors = 0;
+      let offset = 0;
+      let afterId: string | null = null;
+      let totalPending = 0;
+      const BATCH_SIZE = 5;
+      let safety = 300; // até 1500 empresas por execução da tela
 
-      if (error) throw error;
+      while (safety-- > 0) {
+        const { data, error } = await supabase.functions.invoke('auto-categorize-employers', {
+          body: { clinic_id: clinicId, dry_run: dryRun, batch_size: BATCH_SIZE, offset, after_id: afterId },
+        });
+        if (error) throw error;
+        if (data?.ok === false) {
+          throw new Error(data.error || "Falha ao executar categorização");
+        }
 
-      setResults(data.results);
-      setSummary(data.summary);
+        if (!data?.summary) {
+          throw new Error(data?.error || "Resposta inválida da função de categorização");
+        }
 
-      if (data.summary.matched > 0) {
+        const s = data.summary as Summary;
+        totalPending = s.total_pending ?? totalPending;
+        totalMatched += s.matched;
+        totalNoMatch += s.no_match;
+        totalErrors += s.errors;
+        allResults.push(...(data.results as ResultItem[]));
+
+        const done = dryRun ? allResults.length : totalMatched + totalNoMatch + totalErrors;
+        setProgress({ done, total: totalPending || done });
+        setResults([...allResults]);
+        setSummary({
+          total: allResults.length,
+          matched: totalMatched,
+          no_match: totalNoMatch,
+          errors: totalErrors,
+          dry_run: dryRun,
+        });
+
+        if (s.rate_limited) {
+          toast.warning("A BrasilAPI limitou temporariamente as consultas. Aguarde alguns minutos e execute novamente.");
+          break;
+        }
+
+        if (!s.has_more || s.total === 0) break;
+        offset = dryRun ? (s.next_offset ?? offset + s.total) : 0;
+        afterId = s.next_after_id ?? afterId;
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+
+      if (totalMatched > 0) {
         if (dryRun) {
-          toast.info(`Simulação concluída: ${data.summary.matched} empresas seriam categorizadas`);
+          toast.info(`Simulação concluída: ${totalMatched} empresas seriam categorizadas`);
         } else {
-          toast.success(`${data.summary.matched} empresas categorizadas com sucesso!`);
+          toast.success(`${totalMatched} empresas categorizadas com sucesso!`);
           onComplete();
         }
       } else {
@@ -188,7 +241,7 @@ export function AutoCategorizeDialog({ open, onOpenChange, clinicId, onComplete 
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processando...
+                {progress ? `Processando ${progress.done}/${progress.total}...` : "Processando..."}
               </>
             ) : (
               <>

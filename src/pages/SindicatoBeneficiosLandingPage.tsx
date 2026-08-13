@@ -42,7 +42,7 @@ const OG_IMAGE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object
 const PERFIL_ELINEY_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/union-app-content/convenios/eliney-silva-v2.jpg?v=20260529-landing";
 
 const FILIACAO_URL = `/sindical/filiacao/${SINDICATO_UNION_ENTITY_ID}`;
-const WHATSAPP_URL = "https://wa.me/557331982324?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
+const WHATSAPP_URL = "https://wa.me/557332239980?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
 
 interface Benefit {
   name: string;
@@ -147,7 +147,7 @@ export default function SindicatoBeneficiosLandingPage() {
               <span className="text-[10px] text-gray-500 uppercase tracking-wider">Ilhéus • Itacaré • Ubaitaba • Una • Uruçuca</span>
             </div>
           </a>
-          <Button className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-6 text-sm font-semibold shadow-md" asChild>
+          <Button className="bg-[#094798] hover:bg-[#138a7d] text-white rounded-full px-6 text-sm font-semibold shadow-md" asChild>
             <a href={FILIACAO_URL}>Filiar-se agora</a>
           </Button>
         </div>
@@ -215,7 +215,7 @@ export default function SindicatoBeneficiosLandingPage() {
       </section>
 
       {/* Value Proposition Strip */}
-      <section className="bg-[#16a394] py-4">
+      <section className="bg-[#094798] py-4">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-white text-sm font-medium">
             <span className="flex items-center gap-2"><BadgePercent className="w-5 h-5" /> Até 50% de desconto</span>
@@ -237,7 +237,7 @@ export default function SindicatoBeneficiosLandingPage() {
               { value: "12", label: "Especialidades médicas", suffix: "" },
             ].map((stat, i) => (
               <div key={i} className="text-center p-4">
-                <div className="text-3xl md:text-4xl font-extrabold text-[#16a394] mb-1">{stat.value}</div>
+                <div className="text-3xl md:text-4xl font-extrabold text-[#094798] mb-1">{stat.value}</div>
                 <div className="text-sm text-gray-500 font-medium">{stat.label}</div>
               </div>
             ))}
@@ -249,7 +249,7 @@ export default function SindicatoBeneficiosLandingPage() {
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-14">
-            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Convênios Exclusivos</span>
+            <span className="inline-block text-xs font-bold tracking-widest text-[#094798] uppercase mb-3">Convênios Exclusivos</span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
               Economia real para sua família
             </h2>
@@ -297,7 +297,7 @@ export default function SindicatoBeneficiosLandingPage() {
                           {cat === "juridico" && "Orientação jurídica trabalhista especializada para proteger seus direitos."}
                         </p>
                         <Button
-                          className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-6 font-semibold shadow-md"
+                          className="bg-[#094798] hover:bg-[#138a7d] text-white rounded-full px-6 font-semibold shadow-md"
                           asChild
                         >
                           <a href={FILIACAO_URL} className="flex items-center gap-2">
@@ -340,7 +340,7 @@ export default function SindicatoBeneficiosLandingPage() {
                           </div>
                         )}
                         <div>
-                          <div className="font-semibold text-gray-900 text-sm group-hover:text-[#16a394] transition-colors">{b.name}</div>
+                          <div className="font-semibold text-gray-900 text-sm group-hover:text-[#094798] transition-colors">{b.name}</div>
                           <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{b.description}</div>
                         </div>
                       </a>
@@ -379,7 +379,7 @@ export default function SindicatoBeneficiosLandingPage() {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-14">
-            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Depoimentos</span>
+            <span className="inline-block text-xs font-bold tracking-widest text-[#094798] uppercase mb-3">Depoimentos</span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
               Quem é associado, recomenda
             </h2>
@@ -388,10 +388,10 @@ export default function SindicatoBeneficiosLandingPage() {
             {testimonials.map((t, i) => (
               <Card key={i} className="border-gray-200 bg-gray-50 hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
-                  <Quote className="w-8 h-8 text-[#16a394]/20 mb-3" />
+                  <Quote className="w-8 h-8 text-[#094798]/20 mb-3" />
                   <p className="text-gray-600 text-sm leading-relaxed mb-4 italic">"{t.text}"</p>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#16a394] text-white flex items-center justify-center font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-[#094798] text-white flex items-center justify-center font-bold text-sm">
                       {t.avatar}
                     </div>
                     <div>
@@ -410,7 +410,7 @@ export default function SindicatoBeneficiosLandingPage() {
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-14">
-            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Vantagens</span>
+            <span className="inline-block text-xs font-bold tracking-widest text-[#094798] uppercase mb-3">Vantagens</span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
               Por que se associar ao SECMI?
             </h2>
@@ -425,12 +425,12 @@ export default function SindicatoBeneficiosLandingPage() {
               { icon: Zap, title: "Serviços Digitais", desc: "App exclusivo com carteirinha digital e agendamento online." },
             ].map((r, i) => (
               <a key={i} href={FILIACAO_URL} className="block group">
-                <Card className="border-gray-200 bg-white hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#16a394]/30 h-full">
+                <Card className="border-gray-200 bg-white hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#094798]/30 h-full">
                   <CardContent className="p-6">
-                    <div className="w-12 h-12 rounded-xl bg-[#16a394]/10 flex items-center justify-center mb-4 group-hover:bg-[#16a394]/20 transition-colors">
-                      <r.icon className="w-6 h-6 text-[#16a394]" />
+                    <div className="w-12 h-12 rounded-xl bg-[#094798]/10 flex items-center justify-center mb-4 group-hover:bg-[#094798]/20 transition-colors">
+                      <r.icon className="w-6 h-6 text-[#094798]" />
                     </div>
-                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-[#16a394] transition-colors">{r.title}</h3>
+                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-[#094798] transition-colors">{r.title}</h3>
                     <p className="text-sm text-gray-500 leading-relaxed">{r.desc}</p>
                   </CardContent>
                 </Card>
@@ -444,7 +444,7 @@ export default function SindicatoBeneficiosLandingPage() {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-14">
-            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Como associar-se</span>
+            <span className="inline-block text-xs font-bold tracking-widest text-[#094798] uppercase mb-3">Como associar-se</span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
               3 passos simples
             </h2>
@@ -456,7 +456,7 @@ export default function SindicatoBeneficiosLandingPage() {
               { step: "3", title: "Use seus benefícios!", desc: "Receba sua carteirinha digital e comece a economizar em todos os convênios!" },
             ].map((item, i) => (
               <div key={i} className="text-center">
-                <div className="w-16 h-16 rounded-2xl bg-[#16a394] text-white text-2xl font-extrabold flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-[#094798] text-white text-2xl font-extrabold flex items-center justify-center mx-auto mb-4 shadow-lg">
                   {item.step}
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2 text-lg">{item.title}</h3>
@@ -467,7 +467,7 @@ export default function SindicatoBeneficiosLandingPage() {
           <div className="text-center mt-10">
             <Button
               size="lg"
-              className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-10 h-14 text-base font-bold shadow-xl transition-all hover:scale-105"
+              className="bg-[#094798] hover:bg-[#138a7d] text-white rounded-full px-10 h-14 text-base font-bold shadow-xl transition-all hover:scale-105"
               asChild
             >
               <a href={FILIACAO_URL} className="flex items-center gap-2">
@@ -483,7 +483,7 @@ export default function SindicatoBeneficiosLandingPage() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <MapPin className="w-8 h-8 text-[#16a394] mx-auto mb-4" />
+            <MapPin className="w-8 h-8 text-[#094798] mx-auto mb-4" />
             <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-4">
               Abrangência regional
             </h2>
@@ -492,7 +492,7 @@ export default function SindicatoBeneficiosLandingPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               {["Ilhéus", "Itacaré", "Ubaitaba", "Una", "Uruçuca"].map((city) => (
-                <span key={city} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#16a394]/10 text-[#16a394] font-semibold text-sm">
+                <span key={city} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#094798]/10 text-[#094798] font-semibold text-sm">
                   <CheckCircle2 className="w-4 h-4" />
                   {city}
                 </span>

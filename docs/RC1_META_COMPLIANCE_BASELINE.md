@@ -93,3 +93,62 @@ Proibido: novos templates, automações, fluxos, lembretes, webhooks, integraç�
 - Compliance Engine, Safe Mode, Strict Mode, Template Governance, Circuit Breaker, Meta Health Dashboard: **intactos**.
 
 RC1 está **congelado** como baseline oficial. Próximas evoluções → RC2/v1.1.
+
+## Apêndice A — Alinhamento Final do Catálogo Meta (2026-06-10)
+
+Objetivo: consolidar oficialmente o catálogo Meta no padrão RC1. Sem alterações estruturais; apenas classificação.
+
+### Template oficial de lembrete
+
+- **`lembrete_consulta_v3`** — UTILITY, sem botões, sem quick reply, sem CTA. Texto definido em "Template padrão" acima. Único template autorizado para lembretes de consulta após APPROVED.
+
+### Template legado (DEPRECATED em RC1)
+
+- **`lembrete_consulta_v2`** — APPROVED na Meta, porém **DEPRECATED em RC1** por possuir Quick Reply (Confirmar/Cancelar), incompatível com a política informativa. **Não utilizar em nenhum fluxo automático.** Mantido apenas por compatibilidade histórica até remoção pela Meta.
+
+### Classificação do catálogo
+
+**ATIVOS (RC1):**
+- `retomar_atendimento`
+- `lembrete_consulta_v3`
+- `recuperacao_senha`
+- `boleto_disponivel`
+- `homologacao_confirmada`
+- `comunicado_marketing`
+
+**LEGACY / DEPRECATED (não usar, manter por histórico):**
+- `lembrete_consulta_v2`
+- `iniciar_atendimento`
+- `iniciar_atendimento_v2`
+- `hello_world`
+
+### Política RC1 reafirmada
+
+- WhatsApp = canal **exclusivamente informativo**.
+- Aplicativo oficial = **único canal** para confirmar, alterar ou cancelar atendimentos.
+- Lembretes não devem conter botões, Quick Replies, CTA de resposta, "SIM", "NÃO", "Confirmar", "Cancelar" ou "Clique".
+- Qualquer tentativa de fluxo automático usar `lembrete_consulta_v2` deve ser registrada como `LEGACY_TEMPLATE_ATTEMPT` (auditoria apenas, sem alterar Compliance Engine).
+
+### Go-Live
+
+- Não registrar novos templates além dos estritamente necessários. Catálogo Meta deve permanecer **pequeno, limpo e estável**.
+
+### Relatório final
+
+- Fluxos ativos: lembrete informativo único (`lembrete_consulta_v3`), confirmação pós-agendamento, boletos, carteirinha, homologação sem botões em lembretes, IA receptiva na janela 24h.
+- Fluxos deprecated: `lembrete_consulta_v2`, lembretes com botões, segundo lembrete, follow-up automático.
+- Nenhum lembrete utiliza botões ou Quick Replies.
+- WhatsApp confirmado como exclusivamente informativo.
+- Aplicativo confirmado como único canal oficial de gestão.
+- **Nenhuma alteração estrutural foi realizada.** RC1 permanece congelado.
+
+### Declaração final
+
+RC1 é a **baseline oficial do projeto**. Qualquer nova automação, template, integração ou alteração comportamental deve ser classificada para **RC2 / v1.1**. Prioridades permanentes, em ordem:
+
+1. Reputação do número Meta
+2. Experiência do associado
+3. Estabilidade operacional
+4. Compliance
+5. Governança
+6. Simplicidade

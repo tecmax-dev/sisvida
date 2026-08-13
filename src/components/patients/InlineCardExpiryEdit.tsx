@@ -30,9 +30,18 @@ export function InlineCardExpiryEdit({
   requirePayslip = false,
 }: InlineCardExpiryEditProps) {
   const { toast } = useToast();
-  const { hasPermission, isAdmin } = usePermissions();
-  const canEditExpiry = isAdmin || hasPermission("manage_card_expiry") || hasPermission("manage_card_expiry_clinic");
+  const { isAdmin } = usePermissions();
+  // Admins podem alterar a validade diretamente.
+  // Demais usuários podem clicar para abrir o fluxo de envio de contracheque
+  // (validação automática via Vision), que renova a carteirinha após aprovação.
+  const normalizedInsurancePlanEarly = insurancePlanName?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
+  const isRodoviarioEarly = normalizedInsurancePlanEarly.includes("rodoviario");
+  const payslipFlowAvailable = requirePayslip || (entityType === "patient" && !isRodoviarioEarly);
+  // Sem carteirinha ainda: qualquer usuário pode emitir a primeira, com validade fixa de 30 dias
+  const isFirstIssue = !currentExpiryDate;
+  const canEditExpiry = isAdmin || payslipFlowAvailable || isFirstIssue;
   const [isEditing, setIsEditing] = useState(false);
+  const [lockedFirstIssue, setLockedFirstIssue] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newDate, setNewDate] = useState("");
   const [showPayslipDialog, setShowPayslipDialog] = useState(false);
@@ -52,9 +61,8 @@ export function InlineCardExpiryEdit({
   const isExpiringSoon =
     daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0;
 
-  const normalizedInsurancePlan = insurancePlanName?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
-  const isRodoviario = normalizedInsurancePlan.includes("rodoviario");
-  const shouldRequirePayslip = requirePayslip || (entityType === "patient" && !isRodoviario);
+  const isRodoviario = isRodoviarioEarly;
+  const shouldRequirePayslip = payslipFlowAvailable;
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -72,11 +80,24 @@ export function InlineCardExpiryEdit({
       requirePayslip,
       shouldRequirePayslip,
     });
-    
+
+    // Primeira emissão: validade fixa de 30 dias (também para usuários não admin)
+    if (isFirstIssue && !isAdmin) {
+      const in30Days = new Date();
+      in30Days.setDate(in30Days.getDate() + 30);
+      setNewDate(in30Days.toISOString().split("T")[0]);
+      setLockedFirstIssue(true);
+      setIsEditing(true);
+      return;
+    }
+
     if (shouldRequirePayslip) {
       setShowPayslipDialog(true);
       return;
     }
+
+    // Edição direta da data só para admins (fluxo sem contracheque, ex.: Rodoviário)
+    if (!isAdmin) return;
     
     if (currentExpiryDate) {
       setNewDate(currentExpiryDate.split("T")[0]);
@@ -90,6 +111,7 @@ export function InlineCardExpiryEdit({
 
   const handleCancel = () => {
     setIsEditing(false);
+    setLockedFirstIssue(false);
     setNewDate("");
   };
 
@@ -171,6 +193,7 @@ export function InlineCardExpiryEdit({
       });
 
       setIsEditing(false);
+      setLockedFirstIssue(false);
       onUpdate?.();
     } catch (error: any) {
       console.error("Error updating card expiry:", error);
@@ -202,7 +225,9 @@ export function InlineCardExpiryEdit({
           onChange={(e) => setNewDate(e.target.value)}
           onKeyDown={handleKeyDown}
           className="h-7 w-32 text-xs"
-          disabled={saving}
+          disabled={saving || lockedFirstIssue}
+          readOnly={lockedFirstIssue}
+          title={lockedFirstIssue ? "Primeira carteirinha: validade fixa de 30 dias" : undefined}
         />
         <Button
           variant="ghost"

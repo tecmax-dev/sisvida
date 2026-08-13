@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { 
@@ -39,8 +40,8 @@ interface Professional {
   name: string;
   function: string | null;
   avatar_url: string | null;
-  phone: string | null;
-  email: string | null;
+  phone?: string | null;
+  email?: string | null;
   description: string | null;
   address: string | null;
   city: string | null;
@@ -83,8 +84,10 @@ interface FormData {
   company_phone: string;
   company_email: string;
   company_contact_name: string;
-  notes: string;
-}
+    notes: string;
+    employee_whatsapp_consent: boolean;
+    company_whatsapp_consent: boolean;
+  }
 
 // Collapsible Section Component
 function CollapsibleSection({ 
@@ -218,6 +221,8 @@ export default function HomologacaoPublicBooking() {
     company_email: prefillCompanyEmail,
     company_contact_name: '',
     notes: fromPortal ? `Agendado via Portal do ${fromPortal === 'contador' ? 'Contador' : 'Empregador'}` : '',
+    employee_whatsapp_consent: false,
+    company_whatsapp_consent: false,
   });
   
   // Collapsible sections state - if coming from portal with prefilled data, start on employee section
@@ -238,15 +243,34 @@ export default function HomologacaoPublicBooking() {
     queryKey: ["homologacao-professional-public", slug],
     queryFn: async () => {
       if (!slug) return null;
+      const columns =
+        "id, clinic_id, name, function, avatar_url, is_active, slug, description, address, city, state_code, latitude, longitude, public_booking_enabled";
+
+      // 1) Busca pelo slug
       const { data, error } = await supabase
         .from("homologacao_professionals")
-        .select("*")
+        .select(columns)
         .eq("slug", slug)
         .eq("is_active", true)
-        .single();
-      
+        .maybeSingle();
+
       if (error) throw error;
-      return data as Professional;
+      if (data) return data as Professional;
+
+      // 2) Fallback: links antigos que usam o ID do profissional
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      if (isUuid) {
+        const { data: byId, error: byIdError } = await supabase
+          .from("homologacao_professionals")
+          .select(columns)
+          .eq("id", slug)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (byIdError) throw byIdError;
+        if (byId) return byId as Professional;
+      }
+
+      return null;
     },
     enabled: !!slug,
   });
@@ -378,6 +402,8 @@ export default function HomologacaoPublicBooking() {
         company_email: formData.company_email || null,
         company_contact_name: formData.company_contact_name || null,
         notes: formData.notes || null,
+        employee_whatsapp_consent: formData.employee_whatsapp_consent,
+        company_whatsapp_consent: formData.company_whatsapp_consent,
       });
 
       // Build the result object locally for the confirmation screen
@@ -416,6 +442,11 @@ export default function HomologacaoPublicBooking() {
   const getAvailableSlots = (): TimeSlot[] => {
     if (!selectedDate || !schedules) return [];
 
+    const hasFullDayBlockFromAvailability = appointments?.some(apt =>
+      apt.status === "blocked" && !apt.start_time
+    );
+    if (hasFullDayBlockFromAvailability) return [];
+
     const dayOfWeek = selectedDate.getDay();
     const daySchedule = schedules.find(s => s.day_of_week === dayOfWeek);
     
@@ -446,9 +477,13 @@ export default function HomologacaoPublicBooking() {
         (b.start_time as string).slice(0, 5) === timeStr
       );
 
+      const isSlotBlockedFromAvailability = appointments?.some(apt =>
+        apt.status === "blocked" && apt.start_time?.slice(0, 5) === timeStr
+      );
+
       slots.push({
         time: timeStr,
-        available: !isSlotBlocked && bookedCount < daySchedule.capacity,
+        available: !isSlotBlocked && !isSlotBlockedFromAvailability && bookedCount < daySchedule.capacity,
         capacity: daySchedule.capacity,
         booked: bookedCount,
       });
@@ -615,7 +650,7 @@ export default function HomologacaoPublicBooking() {
         <div className="max-w-2xl mx-auto">
           <HomologacaoProtocolReceipt
             appointment={createdAppointment}
-            professional={professional}
+            professional={{ ...professional, phone: professional.phone ?? "" }}
             clinic={clinic}
           />
         </div>
@@ -714,10 +749,30 @@ export default function HomologacaoPublicBooking() {
                     />
                   </div>
                 </div>
+
+                <div className="flex items-start space-x-3 mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                  <Checkbox 
+                    id="company_whatsapp_consent" 
+                    checked={formData.company_whatsapp_consent}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, company_whatsapp_consent: !!checked }))}
+                    className="mt-1"
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="company_whatsapp_consent"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Receber notificações por WhatsApp (Empresa)
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Autorizo o uso do WhatsApp para confirmação, alterações e informações sobre este agendamento.
+                    </p>
+                  </div>
+                </div>
                 
                 <Button
                   type="button"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 mt-4"
                   onClick={() => setOpenSections(prev => ({ ...prev, employer: false, employee: true }))}
                   disabled={!formData.company_name || !formData.company_phone}
                 >
@@ -782,10 +837,30 @@ export default function HomologacaoPublicBooking() {
                     />
                   </div>
                 </div>
+
+                <div className="flex items-start space-x-3 mt-4 p-3 bg-green-50/50 rounded-lg border border-green-100">
+                  <Checkbox 
+                    id="employee_whatsapp_consent" 
+                    checked={formData.employee_whatsapp_consent}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, employee_whatsapp_consent: !!checked }))}
+                    className="mt-1"
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="employee_whatsapp_consent"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Receber notificações por WhatsApp (Trabalhador)
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Autorizo o uso do WhatsApp para confirmação, alterações e informações sobre este agendamento.
+                    </p>
+                  </div>
+                </div>
                 
                 <Button
                   type="button"
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="w-full bg-green-600 hover:bg-green-700 mt-4"
                   onClick={() => setOpenSections(prev => ({ ...prev, employee: false, professional: true }))}
                   disabled={!formData.employee_name || !formData.employee_phone}
                 >

@@ -1,16 +1,20 @@
 ---
-name: Biolife exclusivo para titulares
-description: Biolife — exclusivo do titular, somente sexo feminino, limitado a 1 autorização a cada 12 meses
+name: Biolife — dois tipos de autorização
+description: Biolife — titular (feminino) = cobertura 100% pelo sindicato; dependente = desconto de 50% do laboratório (restante pago no ato pelo dependente); 1 emissão/12 meses por beneficiário
 type: constraint
 ---
-O benefício **Biolife** (qualquer benefício cujo `name`/`partner_name`/`category` contenha "biolife", case-insensitive) é **exclusivo do titular**. Bloquear emissão de autorização/declaração para dependentes em:
-- `src/components/union/authorizations/CreateAuthorizationDialog.tsx` (admin /sindicato)
-- `src/components/mobile/MobileCreateDeclarationDialog.tsx` (PWA app do associado)
+O benefício **Biolife** (qualquer benefício cujo `name`/`partner_name`/`category` contenha "biolife") tem **dois tipos distintos de autorização**:
 
-Mostrar alerta claro (toast + banner) e desabilitar botão/card quando dependente estiver selecionado.
+1. **Titular** → *Cobertura integral (100%) pelo sindicato*. Somente associadas do **sexo feminino** (`patients.gender` = `f`/`fem...`). O laboratório fatura ao sindicato; nada é cobrado da associada.
+2. **Dependente** → *Desconto de 50% concedido pelo próprio laboratório; os 50% restantes são pagos no ato pelo dependente no laboratório*. **O sindicato NÃO custeia**. O laboratório não deve faturar ao sindicato; cobra os 50% restantes do dependente no ato.
 
-**Somente sexo feminino:** Biolife é destinado **apenas a associadas do sexo feminino**. Checar `patients.gender` do titular — considerar feminino quando o valor (trim+lowercase) for `"f"` ou começar com `"fem"` (cobre `F`/`feminino`). Bloquear emissão com toast + banner + card desabilitado caso contrário.
+**Cooldown:** 1 autorização a cada 12 meses **por beneficiário** (titular e cada dependente contam separadamente).
 
-**Cooldown de 12 meses:** o titular só pode emitir **1 autorização Biolife a cada 12 meses**. A checagem busca a última autorização Biolife (qualquer status exceto `revoked`) e calcula `issued_at + 1 ano`. Se ainda futuro, bloquear nova emissão (toast + banner + card desabilitado) e informar a data de próxima emissão disponível.
+Textos e helpers centralizados em `src/lib/biolifeAuthorization.ts` (`isBiolifeBenefit`, `getBiolifeAuthorizationInfo`), exibidos em:
+- `src/pages/AuthorizationValidationPage.tsx` (página pública lida pelo laboratório)
+- `src/components/union/authorizations/AuthorizationViewDialog.tsx` (impressão/painel)
+- `src/pages/mobile/MobileAuthorizationsPage.tsx` (PWA)
+Emissão: `CreateAuthorizationDialog.tsx` (painel) e `MobileCreateDeclarationDialog.tsx` (PWA).
+Regras no banco: trigger `enforce_biolife_authorization_rules`.
 
-**Why:** regra de negócio do parceiro Biolife.
+**Why:** regra de negócio do parceiro Biolife — dependente não tem custeio sindical.

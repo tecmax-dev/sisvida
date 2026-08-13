@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SendAuthorizationWhatsAppDialog } from "./SendAuthorizationWhatsAppDialog";
+import { isBiolifeBenefit, getBiolifeAuthorizationInfo } from "@/lib/biolifeAuthorization";
 
 interface Authorization {
   id: string;
@@ -55,12 +56,10 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
   const printRef = useRef<HTMLDivElement>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
-  const isBiolife = (() => {
-    const b = authorization?.benefit;
-    if (!b) return false;
-    const hay = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
-    return hay.includes("biolife");
-  })();
+  const isBiolife = isBiolifeBenefit(authorization?.benefit);
+  const biolifeInfo = isBiolife
+    ? getBiolifeAuthorizationInfo(!!authorization?.is_for_dependent)
+    : null;
 
   // Fetch union entity data (includes logo, president name, and signature)
   const { data: unionEntity } = useQuery({
@@ -348,6 +347,24 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
                 desta entidade sindical, apto(a) a utilizar o benefício mencionado.
               </p>
             </div>
+
+            {biolifeInfo && (
+              <div
+                className={`declaration p-3 rounded text-xs mt-2 border ${
+                  biolifeInfo.kind === "discount"
+                    ? "border-amber-400 bg-amber-50"
+                    : "border-emerald-400 bg-emerald-50"
+                }`}
+              >
+                <p className="font-bold uppercase">{biolifeInfo.title}</p>
+                <p className="mt-1">{biolifeInfo.description}</p>
+                <ul className="mt-1 list-disc pl-4">
+                  {biolifeInfo.labInstructions.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* QR Code and Signature side by side */}

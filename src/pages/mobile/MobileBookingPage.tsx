@@ -138,6 +138,7 @@ export default function MobileBookingPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [queueLocked, setQueueLocked] = useState(false);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const [noShowBlock, setNoShowBlock] = useState<{ professionalId: string; until: string } | null>(null);
   const [cardExpired, setCardExpired] = useState(false);
@@ -394,11 +395,19 @@ export default function MobileBookingPage() {
           method: "POST",
           cache: "no-store",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ professionalId: selectedProfessionalId, date: dateStr }),
+          body: JSON.stringify({ professionalId: selectedProfessionalId, date: dateStr, patientId }),
         }
       );
       const slotData = slotResponse.ok ? await slotResponse.json() : { appointments: [] };
       const existingAppointments = slotData.appointments || [];
+      const isQueueLocked = slotData.queueLocked === true;
+      setQueueLocked(isQueueLocked);
+
+      // Fila de espera ativa: nenhuma vaga livre é liberada para outros associados
+      if (isQueueLocked) {
+        setAvailableSlots([]);
+        return;
+      }
 
       // Get applicable blocks for this date
       const applicableBlocks = getBlocksForDate(selectedDate, professional.schedule);
@@ -999,8 +1008,10 @@ export default function MobileBookingPage() {
               selectedTime={selectedTime}
               setSelectedTime={setSelectedTime}
               availableSlots={availableSlots}
+              queueLocked={queueLocked}
               professionals={professionals}
               selectedProfessionalId={selectedProfessionalId}
+              clinicId={clinicIdRef.current}
               isDateEnabled={isDateEnabled}
               submitting={submitting}
               onSubmit={handleSubmit}

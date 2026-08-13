@@ -342,6 +342,19 @@ export default function SignatureAuthorizationPage() {
                 <strong>{tokenData?.union_entity?.razao_social || "Sindicato"}</strong>, 
                 conforme estabelecido em convenção coletiva de trabalho ou estatuto social.
               </p>
+              <p className="mb-3">
+                O desconto em folha referente à <strong>Mensalidade Sindical</strong> corresponde a{" "}
+                <strong>2% sobre o menor piso atual da categoria (Piso Nível 1)</strong>.
+              </p>
+              <p className="mb-3">
+                Caso já exista em meu contracheque desconto em folha lançado sob a
+                denominação <strong>Taxa Negocial</strong>, <strong>Taxa Assistencial</strong> ou{" "}
+                <strong>Taxa Sindical</strong>, autorizo que essa rubrica seja apenas{" "}
+                <strong>renomeada para “Mensalidade Sindical”</strong>, permanecendo como um
+                único desconto mensal. Fica garantido que{" "}
+                <strong>não haverá cobrança em duplicidade</strong>: o novo desconto substitui
+                integralmente o anterior, não sendo somado a ele.
+              </p>
               <p>
                 Esta autorização é válida a partir desta data e permanecerá em vigor até que 
                 seja expressamente revogada por mim, por escrito.

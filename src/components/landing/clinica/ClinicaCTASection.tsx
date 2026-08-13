@@ -26,13 +26,13 @@ export function ClinicaCTASection() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button size="lg" className="bg-white text-primary hover:bg-white/90 rounded-full px-8 h-14 text-base font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5" asChild>
-              <Link to="/cadastro" className="flex items-center gap-2">
+              <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 Começar teste grátis
                 <ArrowRight className="h-5 w-5" />
-              </Link>
+              </a>
             </Button>
             <Button size="lg" variant="outline" className="border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 h-14 text-base font-semibold backdrop-blur-sm" asChild>
-              <a href="https://wa.me/551151943839?text=Olá! Quero saber mais sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a href="https://wa.me/5571982786864?text=Olá! Quero saber mais sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" />
                 Falar com especialista
               </a>

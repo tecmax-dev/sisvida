@@ -1,2 +1,0 @@
-DROP INDEX IF EXISTS idx_patient_dependents_unique_cpf_clinic;
-CREATE UNIQUE INDEX idx_patient_dependents_unique_cpf_clinic ON public.patient_dependents USING btree (clinic_id, cpf) WHERE ((cpf IS NOT NULL) AND (cpf <> ''::text) AND (is_active = true));

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Receipt, DollarSign, Handshake, TrendingUp, TrendingDown, Calendar, Loader2 } from "lucide-react";
 import { PushNotificationSetup } from "@/components/union/PushNotificationSetup";
+import { NonAdminUnionHome } from "@/components/union/NonAdminUnionHome";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface DashboardStats {
@@ -209,28 +210,7 @@ export default function UnionDashboard() {
 
   // Non-admin users see a placeholder
   if (!isAdmin) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Módulo Sindical</h1>
-          <p className="text-muted-foreground">
-            Visão geral do gerenciamento sindical de {displayName}
-          </p>
-        </div>
-
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="rounded-full bg-muted p-4 mb-4">
-              <Loader2 className="h-8 w-8 text-muted-foreground animate-pulse" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">Aguardando dados...</h3>
-            <p className="text-sm text-muted-foreground text-center max-w-md">
-              Os dados do painel serão exibidos em breve. Entre em contato com o administrador para mais informações.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <NonAdminUnionHome entityName={displayName} />;
   }
 
   return (

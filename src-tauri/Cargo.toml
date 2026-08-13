@@ -1,8 +1,8 @@
 [package]
-name = "prosindweb"
+name = "prosinge"
 version = "1.0.0"
-description = "ProsindWeb - Sistema de Gestão Sindical e Clínica"
-authors = ["ProsindWeb"]
+description = "Prosinge - Sistema de Gestão Sindical e Clínica"
+authors = ["Prosinge"]
 license = ""
 repository = ""
 edition = "2021"

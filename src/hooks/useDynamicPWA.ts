@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Target clinic for the mobile app
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-// Default system branding (ProSindWeb)
+// Default system branding (Prosinge)
 const DEFAULT_BRANDING = {
   name: "Prosinge - Gestão Sindical e Clínica",
   shortName: "Prosinge",

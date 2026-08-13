@@ -1,1 +1,0 @@
-ALTER TABLE public.patients ADD COLUMN IF NOT EXISTS union_affiliation_date DATE;

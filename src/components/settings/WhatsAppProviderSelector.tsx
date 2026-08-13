@@ -123,7 +123,7 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
         body: {
           phone: testPhone,
-          message: "Este é um envio de teste do sistema ProSindWeb para validar sua configuração de WhatsApp.",
+          message: "Este é um envio de teste do sistema Prosinge para validar sua configuração de WhatsApp.",
           clinicId: clinicId,
           type: "custom",
           sendAsTextOnly: true

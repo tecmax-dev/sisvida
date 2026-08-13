@@ -56,6 +56,7 @@ const adminNavItems = [
   { path: "/admin/whatsapp-templates", label: "Templates WhatsApp", icon: FileCode },
   { path: "/admin/whatsapp-status", label: "Status WhatsApp", icon: Sparkles },
   { path: "/admin/whatsapp-audit", label: "Auditoria WhatsApp", icon: ClipboardList },
+  { path: "/admin/whatsapp-simulation", label: "Simulação Carteirinha", icon: ClipboardList },
   { path: "/admin/meta-webhook-health", label: "Saúde Webhook Meta", icon: Activity },
   { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle, hasBadge: true },
   { path: "/admin/addon-requests", label: "Solicitações Add-ons", icon: Sparkles, hasBadge: true },
@@ -270,7 +271,7 @@ export function AdminLayout() {
             </span>
           )}
           <span className="text-muted-foreground">
-            © 2026 ProSindWeb - Todos os Direitos Reservados | VERSÃO <span className="font-semibold text-primary">{SYSTEM_VERSION}</span>
+            © 2026 Prosinge - Todos os Direitos Reservados | VERSÃO <span className="font-semibold text-primary">{SYSTEM_VERSION}</span>
           </span>
         </div>
 

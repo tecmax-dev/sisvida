@@ -35,7 +35,7 @@ export default function LgpdPolicy() {
               <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
                 <p className="text-muted-foreground leading-relaxed">
                   Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos 
-                  seus dados pessoais quando você utiliza o sistema ProSindWeb. Ao utilizar nossos serviços, 
+                  seus dados pessoais quando você utiliza o sistema Prosinge. Ao utilizar nossos serviços, 
                   você concorda com os termos desta política.
                 </p>
               </div>
@@ -264,8 +264,8 @@ export default function LgpdPolicy() {
                         </p>
                         <p className="text-foreground">
                           <strong>WhatsApp:</strong>{" "}
-                          <a href="https://wa.me/557331982161" className="text-primary hover:underline">
-                            (73) 3198-2161
+                          <a href="https://wa.me/5571982786864" className="text-primary hover:underline">
+                            (71) 98278-6864
                           </a>
                         </p>
                       </div>

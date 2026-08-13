@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { RefreshDataButton } from "@/components/common/RefreshDataButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -464,12 +465,17 @@ export default function UnionExpensesPage() {
             {filteredTransactions.length} de {processedTransactions.length} registros
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <RefreshDataButton
+            queryKeys={[["union-financial-transactions"], ["union-suppliers"], ["union-cash-registers"]]}
+          />
         {canManageExpenses() && (
           <Button size="sm" onClick={() => { setEditingTransaction(null); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" />
             Nova Despesa
           </Button>
         )}
+        </div>
       </div>
 
       {/* Compact Summary Cards */}

@@ -4,6 +4,8 @@ import { Upload, Loader2, CheckCircle2, X, FileText, Camera } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { uploadWithProgress } from "@/lib/uploadWithProgress";
 
 interface DocumentUploadProps {
   sindicatoId: string;
@@ -29,6 +31,8 @@ export function DocumentUpload({
   className,
 }: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -46,41 +50,61 @@ export function DocumentUpload({
   const handleFileUpload = useCallback(async (file: File) => {
     if (!file) return;
 
-    // Validar tamanho (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validar tamanho (max 20MB)
+    if (file.size > 20 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
-        description: "O tamanho máximo é de 10MB.",
+        description: "O tamanho máximo é de 20MB.",
         variant: "destructive",
       });
       return;
     }
 
     setUploading(true);
+    setProgress(0);
+    setProgressMessage("Preparando arquivo...");
     setCameraActive(false);
 
     try {
-      const fileExt = file.name.split(".").pop() || "jpg";
+      const fileExt = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "jpg";
       const fileName = `${sindicatoId}/${Date.now()}_${type}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("sindical-documentos")
-        .upload(fileName, file);
+      await uploadWithProgress({
+        bucket: "sindical-documentos",
+        path: fileName,
+        file,
+        onProgress: (s) => {
+          if (!mountedRef.current) return;
+          setProgress(s.percent);
+          setProgressMessage(s.message);
+        },
+      });
 
-      if (uploadError) throw uploadError;
+      if (mountedRef.current) setProgressMessage("Gerando link seguro do documento...");
 
-      // Bucket é privado: gerar signed URL de longa duração (10 anos)
-      const { data: signed, error: signedError } = await supabase.storage
+      // Bucket é privado. Usuários anônimos não têm permissão de SELECT,
+      // então a URL assinada é gerada no servidor (edge function).
+      let publicUrl: string | null = null;
+      const { data: signed } = await supabase.storage
         .from("sindical-documentos")
         .createSignedUrl(fileName, 60 * 60 * 24 * 365 * 10);
+      publicUrl = signed?.signedUrl ?? null;
 
-      if (signedError || !signed?.signedUrl) {
-        throw signedError || new Error("Falha ao gerar URL assinada");
+      if (!publicUrl) {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          "sindical-doc-sign",
+          { body: { path: fileName } }
+        );
+        if (fnError || !fnData?.signedUrl) {
+          throw new Error(fnData?.error || fnError?.message || "Falha ao gerar URL do documento");
+        }
+        publicUrl = fnData.signedUrl as string;
       }
-      const publicUrl = signed.signedUrl;
 
       if (mountedRef.current) {
         onUpload(publicUrl);
+        setProgress(100);
+        setProgressMessage("Envio concluído!");
         toast({
           title: "Documento enviado",
           description: "Arquivo enviado com sucesso.",
@@ -89,6 +113,7 @@ export function DocumentUpload({
     } catch (error: any) {
       console.error("Upload error:", error);
       if (mountedRef.current) {
+        setProgressMessage("");
         toast({
           title: "Erro no upload",
           description: error.message || "Não foi possível enviar o arquivo.",
@@ -159,9 +184,13 @@ export function DocumentUpload({
             </Button>
           </div>
         ) : uploading ? (
-          <div className="flex flex-col items-center gap-2 p-3">
+          <div className="flex flex-col items-center gap-2 p-3 w-full">
             <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-            <span className="text-xs text-gray-500">Enviando...</span>
+            <Progress value={progress} className="h-1.5 w-[85%]" />
+            <span className="text-[10px] sm:text-xs text-gray-500 text-center leading-tight">
+              {progressMessage || "Enviando..."}
+            </span>
+            <span className="text-[10px] text-gray-400">Não feche esta página</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 p-3">

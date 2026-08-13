@@ -45,6 +45,7 @@ const filiacaoSchema = z.object({
   data_admissao: z.string().optional(),
   forma_pagamento: z.string().optional(),
   aceite_lgpd: z.boolean().refine(val => val === true, "Você deve aceitar os termos"),
+  aceite_whatsapp: z.boolean().optional(),
 });
 
 type FiliacaoFormData = z.infer<typeof filiacaoSchema>;
@@ -179,6 +180,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       data_admissao: "",
       forma_pagamento: "",
       aceite_lgpd: false,
+      aceite_whatsapp: false,
     },
   });
 
@@ -389,6 +391,24 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
         });
 
       if (associadoError) throw associadoError;
+
+      // WhatsApp Consent Auditável (Etapa 5.2)
+      if (data.aceite_whatsapp) {
+        const WHATSAPP_CONSENT_TERM_VERSION = "whatsapp_operational_v1_2026";
+        const WHATSAPP_CONSENT_TEXT = "Autorizo o Sindicato a utilizar meu número de WhatsApp para comunicações relacionadas ao meu cadastro, carteirinha, atendimentos, agendamentos e serviços solicitados, conforme a Política de Privacidade.";
+        
+        await supabase.from("whatsapp_consents").insert({
+          tenant_id: sindicato.id,
+          phone: data.celular.replace(/\D/g, ""),
+          consent_status: "granted",
+          purpose: "SERVICE_OPERATIONAL",
+          source: "APP",
+          term_version: WHATSAPP_CONSENT_TERM_VERSION,
+          consent_text: WHATSAPP_CONSENT_TEXT,
+          person_id: associadoId,
+          user_agent: navigator.userAgent
+        });
+      }
 
       if (dependents.length > 0) {
         const dependentesInsert = dependents.map(dep => ({
@@ -983,6 +1003,8 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                 <div className="space-y-3">
                   <p className="text-xs text-gray-600">
                     Autorizo o desconto em folha de pagamento referente à mensalidade sindical.
+                    O desconto referente à <strong>Mensalidade Sindical</strong> corresponde a{" "}
+                    <strong>2% sobre o menor piso atual da categoria (Piso Nível 1)</strong>.
                   </p>
                   <SignatureCapture
                     onSign={setSignatureUrl}
@@ -1008,6 +1030,36 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                         Aceito os termos de uso e política de privacidade (LGPD) *
                       </FormLabel>
                       <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {/* WhatsApp Consent - Etapa 5.2 */}
+              <FormField
+                control={form.control}
+                name="aceite_whatsapp"
+                render={({ field }) => (
+                  <FormItem className="p-4 rounded-xl border-2 border-emerald-100 bg-emerald-50/50 mb-4">
+                    <div className="flex items-start space-x-3">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="mt-1 h-5 w-5 border-2 data-[state=checked]:bg-emerald-600 border-emerald-200"
+                        />
+                      </FormControl>
+                      <div className="space-y-1">
+                        <FormLabel className="text-sm font-semibold text-gray-800">
+                          WhatsApp Institucional
+                        </FormLabel>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          Autorizo o Sindicato a utilizar meu número de WhatsApp para comunicações relacionadas ao meu cadastro, carteirinha, atendimentos e serviços solicitados.
+                        </p>
+                        <p className="text-[9px] font-mono text-emerald-600/70 uppercase pt-1">
+                          Versão: whatsapp_operational_v1_2026
+                        </p>
+                      </div>
                     </div>
                   </FormItem>
                 )}

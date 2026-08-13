@@ -559,6 +559,11 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [queueBlock, setQueueBlock] = useState<{
+    patientId: string;
+    patientName: string;
+    queueCount: number;
+  } | null>(null);
   
   // View mode - also persisted
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
@@ -1585,6 +1590,50 @@ export default function CalendarPage() {
       return;
     }
 
+    // Fila de espera: apenas vagas LIBERADAS (cancelamento/no-show) ficam
+    // reservadas para a fila. A agenda regular segue disponível.
+    try {
+      const { data: queueEntries } = await supabase
+        .from('waiting_list')
+        .select('id, patient_id, created_at, patient:patients!waiting_list_patient_id_fkey(id, name)')
+        .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true)
+        .eq('queue_status', 'ATIVO')
+        .eq('professional_id', formProfessional)
+        .order('created_at', { ascending: true });
+
+      if (queueEntries && queueEntries.length > 0) {
+        const first = queueEntries[0] as any;
+        // O associado é privilegiado se estiver em QUALQUER posição da fila
+        // DESTE profissional (filas de outros profissionais não interferem).
+        const isInThisQueue = (queueEntries as any[]).some(
+          (q) => q.patient_id === formPatient
+        );
+        if (!isInThisQueue) {
+          const { data: freedSlot } = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('professional_id', formProfessional)
+            .eq('appointment_date', toDateKey(selectedDate))
+            .eq('start_time', effectiveTime)
+            .in('status', ['cancelled', 'no_show'])
+            .limit(1);
+
+          if (freedSlot && freedSlot.length > 0) {
+            setQueueBlock({
+              patientId: first.patient_id,
+              patientName: first.patient?.name || 'Primeiro da fila',
+              queueCount: queueEntries.length,
+            });
+            setSaving(false);
+            return;
+          }
+        }
+      }
+    } catch (wlErr) {
+      console.error('[calendar] waiting list check failed', wlErr);
+    }
+
     // Validação de carteirinha válida
     const { data: cardValidity } = await supabase.rpc('is_patient_card_valid', {
       p_patient_id: formPatient,
@@ -1773,12 +1822,16 @@ export default function CalendarPage() {
       
       // Verificar erro de limite de CPF (titular)
       const isCpfLimitError = error.message?.includes('LIMITE_AGENDAMENTO_CPF');
+
+      // Conflito: mesmo associado/dependente já agendado nesse horário (outro profissional)
+      const isPatientOverlapError = error.message?.includes('CONFLITO_HORARIO_PACIENTE');
       
       const getErrorTitle = () => {
         if (isCardExpiredError) return "Carteirinha vencida";
         if (isBookingWindowError) return "Período indisponível";
         if (isDependentLimitError) return "Limite de dependente atingido";
         if (isCpfLimitError) return "Limite de agendamento atingido";
+        if (isPatientOverlapError) return "Conflito de horário do associado";
         if (isScheduleError) return "Horário indisponível";
         return "Erro ao agendar";
       };
@@ -1791,6 +1844,10 @@ export default function CalendarPage() {
         if (isBookingWindowError) return "Agendamento indisponível para este período";
         if (isDependentLimitError) return "O limite de agendamentos de dependentes para este profissional neste período já foi atingido.";
         if (isCpfLimitError) return "Já existe agendamento para este profissional neste mês.";
+        if (isPatientOverlapError) {
+          const match = error.message?.match(/CONFLITO_HORARIO_PACIENTE:\s*(.+)/);
+          return match?.[1] || "Esta pessoa já possui um agendamento neste mesmo horário com outro profissional.";
+        }
         return message;
       };
       
@@ -2052,15 +2109,19 @@ export default function CalendarPage() {
             {
               appointmentDate: cancellingAppointment.appointment_date,
               startTime: cancellingAppointment.start_time,
+              endTime: (cancellingAppointment as any).end_time,
               professionalId: cancellingAppointment.professional_id,
               professionalName: cancellingAppointment.professional?.name || 'Profissional',
+              appointmentId: cancellingAppointment.id,
             }
           );
 
           if (result.notified) {
             toast({
-              title: "Lista de espera notificada",
-              description: `${result.patientName} foi notificado sobre a vaga disponível via WhatsApp.`,
+              title: "Fila de espera notificada",
+              description: result.offerCreated
+                ? "A vaga foi ofertada automaticamente ao primeiro associado da fila."
+                : `${result.patientName} foi notificado sobre a vaga disponível via WhatsApp.`,
             });
           } else if (result.waitingCount > 0) {
             toast({
@@ -2218,15 +2279,19 @@ const updateData: Record<string, any> = {
             {
               appointmentDate: appointment.appointment_date,
               startTime: appointment.start_time,
+              endTime: (appointment as any).end_time,
               professionalId: appointment.professional_id,
               professionalName: appointment.professional?.name || 'Profissional',
+              appointmentId: appointment.id,
             }
           );
 
           if (result.notified) {
             toast({
-              title: "Falta registrada + Lista de espera notificada",
-              description: `${result.patientName} foi notificado sobre a vaga disponível.`,
+              title: "Falta registrada + Fila de espera notificada",
+              description: result.offerCreated
+                ? "A vaga foi ofertada automaticamente ao primeiro associado da fila."
+                : `${result.patientName} foi notificado sobre a vaga disponível.`,
             });
           } else {
             toast({
@@ -2560,7 +2625,7 @@ const updateData: Record<string, any> = {
     });
   };
 
-  const openNewAppointmentWithTime = (time: string, date?: Date) => {
+  const openNewAppointmentWithTime = (time: string, date?: Date, professionalId?: string) => {
     // Check permission before opening dialog
     if (!hasPermission('manage_calendar')) return;
 
@@ -2579,6 +2644,9 @@ const updateData: Record<string, any> = {
     }
 
     resetForm();
+    if (professionalId) {
+      setFormProfessional(professionalId);
+    }
     setFormTime(time);
     if (date) {
       setSelectedDate(normalizeCalendarDate(date));
@@ -5790,6 +5858,34 @@ const updateData: Record<string, any> = {
         patientName={getAppointmentDisplayName(auditAppointment)}
         patientPhone={auditAppointment?.patient?.phone}
       />
+
+      <AlertDialog open={!!queueBlock} onOpenChange={(open) => { if (!open) setQueueBlock(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Fila de espera ativa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Existem {queueBlock?.queueCount} associado(s) na fila de espera deste profissional.
+              As vagas livres estão reservadas para a fila e não podem ser agendadas para outras pessoas.
+              <br /><br />
+              <strong>Primeiro da fila: {queueBlock?.patientName}</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (queueBlock) {
+                  setFormPatient(queueBlock.patientId);
+                  setFormDependentId(null);
+                }
+                setQueueBlock(null);
+              }}
+            >
+              Agendar para {queueBlock?.patientName?.split(' ')[0]}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </DndContext>
   );

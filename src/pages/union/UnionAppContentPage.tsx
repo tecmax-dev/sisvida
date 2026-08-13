@@ -128,6 +128,7 @@ interface FormData {
   is_pinned: boolean;
   metadata: Record<string, unknown>;
   cct_category_id: string | null;
+  is_aditivo: boolean;
 }
 
 const defaultFormData: FormData = {
@@ -142,6 +143,7 @@ const defaultFormData: FormData = {
   is_pinned: false,
   metadata: {},
   cct_category_id: null,
+  is_aditivo: false,
 };
 
 type TabType = ContentType | "ouvidoria" | "push" | "tabs" | "cct-categories" | "availability";
@@ -262,6 +264,7 @@ export default function UnionAppContentPage() {
       is_pinned: content.is_pinned || false,
       metadata: (content.metadata as Record<string, unknown>) || {},
       cct_category_id: content.cct_category_id || null,
+      is_aditivo: (content as any).is_aditivo || false,
     });
     setIsDialogOpen(true);
   };
@@ -722,6 +725,25 @@ export default function UnionAppContentPage() {
                       Nenhuma categoria CCT cadastrada. Adicione em "Categorias CCT".
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Aditivo toggle - for CCT only */}
+              {formData.content_type === 'convencao' && (
+                <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/60 dark:bg-amber-900/10 p-3">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                      <FileCheck className="h-4 w-4" />
+                      É um Aditivo de CCT?
+                    </Label>
+                    <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
+                      Quando marcado, aparece na sub-aba "Aditivos" da categoria escolhida no aplicativo.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.is_aditivo}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_aditivo: checked }))}
+                  />
                 </div>
               )}
 

@@ -1,1 +1,0 @@
-ALTER TABLE public.popup_notices ADD COLUMN navigate_to_dependents boolean DEFAULT false;

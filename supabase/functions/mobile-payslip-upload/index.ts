@@ -1,208 +1,100 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
-
-/**
- * MOBILE PAYSLIP UPLOAD - Edge Function
- * 
- * Handles payslip file upload and payslip_requests creation using SERVICE_ROLE_KEY
- * to bypass RLS issues when mobile JWT is expired.
- * 
- * Accepts multipart/form-data with:
- * - file: the payslip file (image or PDF)
- * - patientId: string
- * - clinicId: string
- * - cardId: string
- */
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Cache-Control": "no-store, no-cache, must-revalidate",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+const BUILD_ID = "SYNC-UPLOAD-2026-08-11-01";
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
 
   try {
-    const contentType = req.headers.get("content-type") || "";
-    
-    if (!contentType.includes("multipart/form-data")) {
-      return new Response(
-        JSON.stringify({ error: "Expected multipart/form-data" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const patientId = formData.get("patientId") as string | null;
-    const clinicId = formData.get("clinicId") as string | null;
-    const cardId = formData.get("cardId") as string | null;
+    const file = formData.get('file') as File;
+    const patientId = formData.get('patientId') as string;
+    const clinicId = formData.get('clinicId') as string;
+    const cardId = formData.get('cardId') as string;
 
-    // Validate inputs
     if (!file || !patientId || !clinicId || !cardId) {
-      return new Response(
-        JSON.stringify({ error: "missing required fields: file, patientId, clinicId, cardId" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: 'MISSING_FIELDS' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // UUID validation
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(patientId) || !uuidRegex.test(clinicId) || !uuidRegex.test(cardId)) {
-      return new Response(
-        JSON.stringify({ error: "invalid UUID format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${clinicId}/${patientId}/${crypto.randomUUID()}.${fileExt}`;
 
-    // Validate file type
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!allowedTypes.includes(file.type)) {
-      return new Response(
-        JSON.stringify({ error: "invalid file type. Allowed: JPG, PNG, WebP, PDF" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return new Response(
-        JSON.stringify({ error: "file too large. Max 10MB" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Verify patient exists and belongs to clinic
-    const { data: patient, error: patientError } = await supabase
-      .from("patients")
-      .select("id, clinic_id")
-      .eq("id", patientId)
-      .eq("clinic_id", clinicId)
-      .single();
-
-    if (patientError || !patient) {
-      console.error("[mobile-payslip-upload] Patient not found:", patientError);
-      return new Response(
-        JSON.stringify({ error: "patient_not_found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify card exists and belongs to patient
-    const { data: card, error: cardError } = await supabase
-      .from("patient_cards")
-      .select("id")
-      .eq("id", cardId)
-      .eq("patient_id", patientId)
-      .single();
-
-    if (cardError || !card) {
-      console.error("[mobile-payslip-upload] Card not found:", cardError);
-      return new Response(
-        JSON.stringify({ error: "card_not_found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Upload file to contra-cheques bucket
-    const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const fileName = `${clinicId}/${patientId}/${Date.now()}.${fileExt}`;
-
-    const fileBuffer = await file.arrayBuffer();
     const { error: uploadError } = await supabase.storage
-      .from("contra-cheques")
-      .upload(fileName, fileBuffer, {
-        contentType: file.type,
-        cacheControl: "3600",
-        upsert: true,
-      });
+      .from('payslips')
+      .upload(filePath, file);
 
-    if (uploadError) {
-      console.error("[mobile-payslip-upload] Storage upload error:", uploadError);
-      return new Response(
-        JSON.stringify({ error: "upload_failed", details: uploadError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (uploadError) throw uploadError;
+
+    const { data: request, error: requestError } = await supabase
+      .from('payslip_requests')
+      .insert({
+        patient_id: patientId,
+        clinic_id: clinicId,
+        card_id: cardId,
+        attachment_path: filePath,
+        status: 'received',
+        requested_at: new Date().toISOString(),
+        received_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (requestError) throw requestError;
+
+    const { data: patient } = await supabase.from('patients').select('name, phone').eq('id', patientId).single();
+    
+    // Disparar orquestração de confirmação sem bloquear o upload
+    if (patient) {
+        edgeNotify(supabase, patientId, clinicId, request.id, patient.name, patient.phone);
     }
 
-    // Check for existing pending request (system-generated) to update instead of creating new
-    const { data: existingRequest } = await supabase
-      .from("payslip_requests")
-      .select("id")
-      .eq("patient_id", patientId)
-      .eq("clinic_id", clinicId)
-      .eq("status", "pending")
-      .is("attachment_path", null)
-      .order("created_at", { ascending: false })
+    return new Response(JSON.stringify({ success: true, requestId: request.id, build_id: BUILD_ID }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+});
+
+async function edgeNotify(supabase: any, patientId: string, clinicId: string, requestId: string, patientName: string, phone: string) {
+  try {
+    const { data: lastLog } = await supabase
+      .from('whatsapp_compliance_logs')
+      .select('conversation_id')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    let payslipRequest;
-    let requestError;
-
-    if (existingRequest) {
-      // Update existing pending request with the uploaded file
-      const result = await supabase
-        .from("payslip_requests")
-        .update({
-          card_id: cardId,
-          status: "received",
-          received_at: new Date().toISOString(),
-          attachment_path: fileName,
-          notes: "Enviado via app mobile - Atualização de Carteirinha",
-        })
-        .eq("id", existingRequest.id)
-        .select("id, status")
-        .single();
-      payslipRequest = result.data;
-      requestError = result.error;
-    } else {
-      // Create new payslip request record
-      const result = await supabase
-        .from("payslip_requests")
-        .insert({
-          clinic_id: clinicId,
-          patient_id: patientId,
-          card_id: cardId,
-          status: "received",
-          received_at: new Date().toISOString(),
-          attachment_path: fileName,
-          notes: "Enviado via app mobile - Atualização de Carteirinha",
-        })
-        .select("id, status")
-        .single();
-      payslipRequest = result.data;
-      requestError = result.error;
+    if (lastLog?.conversation_id) {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/n8n-orchestrator-v2-synchro`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                event: 'payslip_received',
+                conversation_id: lastLog.conversation_id,
+                patient_id: patientId,
+                patient_name: patientName,
+                request_id: requestId
+            })
+        });
     }
-
-    if (requestError) {
-      console.error("[mobile-payslip-upload] DB error:", requestError);
-      return new Response(
-        JSON.stringify({ error: "request_creation_failed", details: requestError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`[mobile-payslip-upload] Success: patient=${patientId}, request=${payslipRequest.id}`);
-
-    return new Response(
-      JSON.stringify({ success: true, requestId: payslipRequest.id }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err) {
-    console.error("[mobile-payslip-upload] Error:", err);
-    return new Response(
-      JSON.stringify({ error: "internal_error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  } catch (e) {
+    console.error("Notification error:", e.message);
   }
-});
+}

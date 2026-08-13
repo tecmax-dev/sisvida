@@ -39,6 +39,7 @@ interface Contribution {
   lytex_invoice_id?: string | null;
   portal_reissue_count?: number;
   portal_value_change_count?: number;
+  portal_due_date_change_count?: number;
   negotiation_id?: string | null;
   negotiation?: {
     id: string;
@@ -65,6 +66,7 @@ interface PortalContributionsListProps {
   onReissue: (contribution: Contribution) => void;
   onSetValue: (contribution: Contribution) => void;
   onChangeValue?: (contribution: Contribution) => void;
+  onChangeDueDate?: (contribution: Contribution) => void;
   onGenerateInvoice?: (contribution: Contribution) => void;
   generatingInvoiceId?: string | null;
   onClearEmployerFilter?: () => void;
@@ -122,6 +124,7 @@ export function PortalContributionsList({
   onReissue,
   onSetValue,
   onChangeValue,
+  onChangeDueDate,
   onGenerateInvoice,
   generatingInvoiceId,
   onClearEmployerFilter
@@ -368,6 +371,7 @@ export function PortalContributionsList({
                               onReissue={onReissue}
                               onSetValue={onSetValue}
                               onChangeValue={onChangeValue}
+                              onChangeDueDate={onChangeDueDate}
                               onGenerateInvoice={onGenerateInvoice}
                               generatingInvoiceId={generatingInvoiceId}
                               formatCurrency={formatCurrency}
@@ -396,6 +400,7 @@ interface ContributionCardProps {
   onReissue: (contribution: Contribution) => void;
   onSetValue: (contribution: Contribution) => void;
   onChangeValue?: (contribution: Contribution) => void;
+  onChangeDueDate?: (contribution: Contribution) => void;
   onGenerateInvoice?: (contribution: Contribution) => void;
   generatingInvoiceId?: string | null;
   formatCurrency: (value: number) => string;
@@ -409,6 +414,7 @@ function ContributionCard({
   onReissue,
   onSetValue,
   onChangeValue,
+  onChangeDueDate,
   onGenerateInvoice,
   generatingInvoiceId,
   formatCurrency,
@@ -453,6 +459,13 @@ function ContributionCard({
     !!invoiceUrl &&
     value > 0 &&
     valueChangeCount < 1;
+
+  const dueDateChangeCount = contrib.portal_due_date_change_count || 0;
+  const canChangeDueDate =
+    !!onChangeDueDate &&
+    !isInActiveNegotiation &&
+    contrib.status === "overdue" &&
+    dueDateChangeCount < 1;
 
   return (
     <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors gap-3">
@@ -591,6 +604,27 @@ function ContributionCard({
               </TooltipTrigger>
               <TooltipContent>
                 Alterar valor do boleto (apenas 1 vez pelo portal)
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {canChangeDueDate && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs hover:bg-purple-50 hover:text-purple-700"
+                  onClick={() => onChangeDueDate?.(contrib)}
+                >
+                  <Calendar className="h-3.5 w-3.5 mr-1" />
+                  Alterar Vencimento
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Alterar data de vencimento (apenas 1 vez pelo portal)
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

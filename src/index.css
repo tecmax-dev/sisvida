@@ -1,42 +1,42 @@
-
 @import "@fontsource/outfit/400.css";
 @import "@fontsource/outfit/500.css";
 @import "@fontsource/outfit/600.css";
 @import "@fontsource/outfit/700.css";
+@import "@fontsource/sora/400.css";
+@import "@fontsource/sora/600.css";
+@import "@fontsource/sora/700.css";
+@import "@fontsource/sora/800.css";
+@import "@fontsource/manrope/400.css";
+@import "@fontsource/manrope/500.css";
+@import "@fontsource/manrope/600.css";
+@import "@fontsource/manrope/700.css";
 
 #lovable-badge {
-  display: none !important;
+  display: none !important; visibility: hidden !important; pointer-events: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Prosinge Design System - Azul Royal + Vermelho + Homologação Audit */
+/* Prosinge Design System - Azul Royal + Vermelho */
 
 @layer base {
   :root {
-    /* Primary - Azul Royal */
-    --primary: 220 80% 45%;
+    /* Primary - Navy Trust */
+    /* Primary - Prosinge Blue #094798 */
+    --primary: 214 89% 32%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 220 60% 96%;
-    --primary-glow: 220 90% 55%;
-    --primary-dark: 220 80% 35%;
+    --primary-soft: 214 70% 95%;
+    --primary-glow: 214 90% 45%;
+    --primary-dark: 214 90% 22%;
     
-    /* CTA - Vermelho (Action Color) */
-    --cta: 0 85% 50%;
+    /* CTA - Azul médio (Action Color) */
+    --cta: 214 89% 42%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 0 85% 42%;
-    
-    /* Homologação Audit Colors */
-    --homologacao-primary: 195 85% 41%;
-    --homologacao-secondary: 265 70% 50%;
-    --homologacao-accent: 0 85% 50%;
-    --homologacao-warning: 38 92% 50%;
-    --homologacao-success: 142 71% 45%;
-    --homologacao-info: 195 85% 41%;
-    --homologacao-dark: 220 15% 10%;
-    --homologacao-light: 220 15% 95%;
+    --cta-hover: 214 89% 32%;
     
     /* Background & Surfaces */
     --background: 0 0% 99%;
@@ -56,12 +56,12 @@
     --muted: 220 15% 94%;
     --muted-foreground: 220 10% 50%;
     
-    /* Accent - Vermelho suave */
-    --accent: 0 50% 96%;
-    --accent-foreground: 0 70% 40%;
+    /* Accent - Vermelho Prosinge #E31925 */
+    --accent: 356 80% 96%;
+    --accent-foreground: 356 78% 46%;
     
-    /* Destructive */
-    --destructive: 0 72% 51%;
+    /* Destructive - alinhado com vermelho de marca */
+    --destructive: 356 78% 52%;
     --destructive-foreground: 0 0% 100%;
     
     /* Success */
@@ -79,15 +79,15 @@
     /* Borders & Inputs */
     --border: 220 15% 90%;
     --input: 220 15% 90%;
-    --ring: 220 80% 45%;
+    --ring: 214 89% 42%;
     
     --radius: 0.75rem;
     
-    /* Sidebar - Azul Royal Premium */
-    --sidebar-background: 220 75% 30%;
+    /* Sidebar - Azul Royal Prosinge */
+    --sidebar-background: 214 90% 28%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 220 75% 30%;
+    --sidebar-primary-foreground: 214 90% 28%;
     --sidebar-accent: 0 0% 100% / 0.12;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 100% / 0.15;
@@ -99,7 +99,6 @@
     --category-socios: 280 70% 50%;
     --category-clinica: 220 80% 50%;
     --category-admin: 340 75% 55%;
-    --category-homologacao: 195 85% 41%;
     
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(220 20% 20% / 0.04);
@@ -109,13 +108,18 @@
     --shadow-glow: 0 0 40px hsl(220 80% 45% / 0.15);
     --shadow-card: 0 1px 3px 0 hsl(220 20% 20% / 0.04), 0 1px 2px -1px hsl(220 20% 20% / 0.04);
     --shadow-float: 0 25px 50px -12px hsl(220 20% 20% / 0.2);
-    --shadow-homologacao: 0 0 30px hsl(195 85% 41% / 0.2);
     
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Prosinge Landing — Paleta suave inspirada na logomarca */
+    --prosinge-emerald: 220 60% 16%;       /* navy profundo ~ #0f1b3d */
+    --prosinge-emerald-mid: 211 45% 43%;   /* azul médio    ~ #3b6fa0 */
+    --prosinge-gold: 211 55% 50%;          /* azul vibrante ~ #3b82c4 */
+    --prosinge-cream: 215 30% 94%;         /* off-white frio~ #e8edf3 */
   }
 
   .dark {
@@ -172,6 +176,16 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Safety net: prevent accidental horizontal scroll on the whole app.
+       Individual scroll containers (tables, kanbans) keep their own overflow-x-auto. */
+    overflow-x: hidden;
+  }
+
+  /* Media never break their container on small screens.
+     SVG excluded on purpose (icons rely on fixed sizing utilities). */
+  img, video, canvas {
+    max-width: 100%;
+    height: auto;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -217,14 +231,9 @@
   
   /* Prosinge-style solid button - Azul Royal */
   .btn-prosinge {
-    font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    border-radius: 9999px;
-    transition-property: all;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
-    color: white;
+    @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
     background: hsl(var(--primary));
+    @apply hover:shadow-lg hover:-translate-y-0.5;
   }
   
   .btn-prosinge:hover {
@@ -242,27 +251,11 @@
     @apply text-white border-transparent;
   }
   
-  /* Homologação Audit Button Styles */
-  .btn-homologacao {
-    @apply font-semibold px-6 py-3 rounded-lg transition-all duration-300 text-white;
-    background: hsl(var(--homologacao-primary));
-    @apply hover:shadow-lg hover:-translate-y-1;
-  }
-  
-  .btn-homologacao:hover {
-    background: hsl(195 85% 35%);
-  }
-  
-  .btn-homologacao-secondary {
-    @apply font-semibold px-6 py-3 rounded-lg transition-all duration-300 text-white;
-    background: hsl(var(--homologacao-secondary));
-    @apply hover:shadow-lg hover:-translate-y-1;
-  }
-  
-  .btn-homologacao-secondary:hover {
-    background: hsl(265 70% 42%);
-  }
-  
+  /* Legacy compatibility */
+  .btn-eclini { @apply btn-prosinge; }
+  .btn-eclini:hover { @apply btn-prosinge; }
+  .btn-eclini-outline { @apply btn-prosinge-outline; }
+  .btn-eclini-outline:hover { @apply btn-prosinge-outline; }
   
   .animate-float {
     animation: float 6s ease-in-out infinite;
@@ -282,11 +275,6 @@
   
   .animate-scale-in {
     animation: scale-in 0.3s ease-out;
-  }
-  
-  /* Homologação Audit Animation */
-  .animate-audit-pulse {
-    animation: audit-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
   /* Staggered entrance animations */
@@ -314,34 +302,6 @@
     @apply opacity-100;
   }
   
-  /* Homologação Audit Card */
-  .card-homologacao {
-    @apply relative overflow-hidden border-2 rounded-xl p-6 transition-all duration-300;
-    border-color: hsl(var(--homologacao-primary) / 0.3);
-    background: linear-gradient(135deg, hsl(var(--homologacao-primary) / 0.05) 0%, hsl(var(--homologacao-secondary) / 0.03) 100%);
-    box-shadow: var(--shadow-homologacao);
-  }
-  
-  .card-homologacao:hover {
-    border-color: hsl(var(--homologacao-primary) / 0.6);
-    transform: translateY(-4px);
-  }
-  
-  .card-homologacao.audit-status-pending {
-    border-color: hsl(var(--homologacao-warning) / 0.4);
-    background: linear-gradient(135deg, hsl(var(--homologacao-warning) / 0.05) 0%, hsl(var(--homologacao-warning) / 0.02) 100%);
-  }
-  
-  .card-homologacao.audit-status-approved {
-    border-color: hsl(var(--homologacao-success) / 0.4);
-    background: linear-gradient(135deg, hsl(var(--homologacao-success) / 0.05) 0%, hsl(var(--homologacao-success) / 0.02) 100%);
-  }
-  
-  .card-homologacao.audit-status-rejected {
-    border-color: hsl(var(--homologacao-accent) / 0.4);
-    background: linear-gradient(135deg, hsl(var(--homologacao-accent) / 0.05) 0%, hsl(var(--homologacao-accent) / 0.02) 100%);
-  }
-  
   /* Feature Card */
   .feature-card {
     @apply bg-card border border-border/40 rounded-2xl p-6 transition-all duration-300;
@@ -354,45 +314,10 @@
     color: hsl(var(--primary));
   }
   
-  /* Homologação Status Badge */
-  .badge-homologacao {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold;
-  }
-  
-  .badge-homologacao.status-pending {
-    background: hsl(var(--homologacao-warning) / 0.15);
-    color: hsl(var(--homologacao-warning));
-    border: 1px solid hsl(var(--homologacao-warning) / 0.3);
-  }
-  
-  .badge-homologacao.status-approved {
-    background: hsl(var(--homologacao-success) / 0.15);
-    color: hsl(var(--homologacao-success));
-    border: 1px solid hsl(var(--homologacao-success) / 0.3);
-  }
-  
-  .badge-homologacao.status-rejected {
-    background: hsl(var(--homologacao-accent) / 0.15);
-    color: hsl(var(--homologacao-accent));
-    border: 1px solid hsl(var(--homologacao-accent) / 0.3);
-  }
-  
-  .badge-homologacao.status-in-review {
-    background: hsl(var(--homologacao-info) / 0.15);
-    color: hsl(var(--homologacao-info));
-    border: 1px solid hsl(var(--homologacao-info) / 0.3);
-  }
-  
   /* Stat Card Decoration */
   .stat-decoration {
     @apply absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-12 translate-x-12;
     background: radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 70%);
-  }
-  
-  /* Homologação Stat Decoration */
-  .stat-decoration-homologacao {
-    @apply absolute top-0 right-0 w-40 h-40 rounded-full -translate-y-20 translate-x-20;
-    background: radial-gradient(circle, hsl(var(--homologacao-primary) / 0.08) 0%, transparent 70%);
   }
   
   /* Dashboard specific animations */
@@ -419,81 +344,14 @@
     border: 1px solid hsl(var(--primary) / 0.2);
   }
   
-  /* Homologação Section Badge */
-  .section-badge-homologacao {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold;
-    background: hsl(var(--homologacao-primary) / 0.12);
-    color: hsl(var(--homologacao-primary));
-    border: 1px solid hsl(var(--homologacao-primary) / 0.25);
-  }
-  
   /* Stats counter style */
   .stat-value {
     @apply text-4xl md:text-5xl font-bold;
     color: hsl(var(--primary));
   }
   
-  .stat-value-homologacao {
-    @apply text-4xl md:text-5xl font-bold;
-    color: hsl(var(--homologacao-primary));
-  }
-  
   .stat-label {
     @apply text-sm text-muted-foreground mt-1;
-  }
-  
-  /* Homologação Timeline Styles */
-  .timeline-item {
-    @apply relative pl-8 pb-8;
-  }
-  
-  .timeline-item::before {
-    content: '';
-    @apply absolute left-0 top-2 w-3 h-3 rounded-full;
-    background: hsl(var(--homologacao-primary));
-  }
-  
-  .timeline-item.status-completed::before {
-    background: hsl(var(--homologacao-success));
-  }
-  
-  .timeline-item.status-current::before {
-    @apply animate-audit-pulse;
-    background: hsl(var(--homologacao-info));
-  }
-  
-  .timeline-item.status-pending::before {
-    background: hsl(var(--homologacao-warning));
-  }
-  
-  .timeline-line {
-    @apply absolute left-1 top-5 w-0.5 h-12 -bottom-8;
-    background: linear-gradient(180deg, hsl(var(--homologacao-primary) / 0.3) 0%, transparent 100%);
-  }
-  
-  /* Homologação Alert Styles */
-  .alert-homologacao {
-    @apply relative p-5 rounded-lg border-l-4;
-  }
-  
-  .alert-homologacao.info {
-    border-color: hsl(var(--homologacao-info));
-    background: hsl(var(--homologacao-info) / 0.08);
-  }
-  
-  .alert-homologacao.warning {
-    border-color: hsl(var(--homologacao-warning));
-    background: hsl(var(--homologacao-warning) / 0.08);
-  }
-  
-  .alert-homologacao.success {
-    border-color: hsl(var(--homologacao-success));
-    background: hsl(var(--homologacao-success) / 0.08);
-  }
-  
-  .alert-homologacao.error {
-    border-color: hsl(var(--homologacao-accent));
-    background: hsl(var(--homologacao-accent) / 0.08);
   }
 }
 
@@ -505,21 +363,6 @@
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
-}
-
-@keyframes audit-pulse {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 @keyframes slide-up {
@@ -641,11 +484,8 @@
   @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
 }
 
-/* Homologação Custom Scrollbar */
-.homologacao-scrollbar::-webkit-scrollbar-thumb {
-  background: hsl(var(--homologacao-primary) / 0.4);
-}
-
-.homologacao-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--homologacao-primary) / 0.6);
+#lovable-badge {
+  display: none !important; visibility: hidden !important; pointer-events: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }

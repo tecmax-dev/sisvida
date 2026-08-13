@@ -7,7 +7,7 @@ import { PageNumber } from "@/components/print/PageNumber";
 import coverHero from "@/assets/presentation/cover-hero.jpg";
 import clinicModule from "@/assets/presentation/clinic-module.jpg";
 import technologyStack from "@/assets/presentation/technology-stack.jpg";
-import prosindClinicaLogo from "@/assets/prosindweb-logo.png";
+import prosingeClinicaLogo from "@/assets/prosinge-clinica-logo.png";
 
 export default function ClinicPresentationPage() {
   const handlePrint = () => {
@@ -74,7 +74,7 @@ export default function ClinicPresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
             <div className="w-28 h-28 print:w-24 print:h-24 bg-white rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-2xl p-3">
-              <img src={prosindClinicaLogo} alt="Prosinge" className="w-full h-full object-contain" />
+              <img src={prosingeClinicaLogo} alt="ProsingeClinica" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">Prosinge Clínica</h1>
             <p className="text-xl print:text-lg text-cyan-100">Sistema de Gestão para Clínicas e Consultórios</p>
@@ -594,7 +594,7 @@ export default function ClinicPresentationPage() {
                 </div>
                 <div>
                   <p className="text-cyan-300 text-[10px]">Telefone</p>
-                  <p className="text-base font-semibold">(73) 3198-2161</p>
+                  <p className="text-base font-semibold">(71) 98278-6864</p>
                 </div>
               </div>
 

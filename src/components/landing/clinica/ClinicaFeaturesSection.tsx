@@ -48,10 +48,10 @@ function FeatureBlock({ title, subtitle, description, features, imagePosition, i
               ))}
             </ul>
             <Button variant="link" className="p-0 h-auto text-primary font-semibold group text-base" asChild>
-              <Link to="/cadastro" className="flex items-center gap-2">
+              <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 Quero conhecer
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
+              </a>
             </Button>
           </div>
         </div>

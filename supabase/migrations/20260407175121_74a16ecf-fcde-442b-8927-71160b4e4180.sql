@@ -1,1 +1,0 @@
-DELETE FROM homologacao_appointments WHERE id = '6459f62b-6b25-4857-905c-2d554c1a0287';

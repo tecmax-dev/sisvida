@@ -1,0 +1,1 @@
+delete from public.card_update_tokens where token = 'EXPIRED_TEST_TOKEN_0001';

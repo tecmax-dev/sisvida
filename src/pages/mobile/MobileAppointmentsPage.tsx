@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MobileWaitingListOffer } from "@/components/mobile/MobileWaitingListOffer";
 import { supabase } from "@/integrations/supabase/client";
 import { eachDayOfInterval, endOfMonth, getDay, isSameDay, isBefore as isBeforeDate } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -630,6 +629,12 @@ function MobileAppointmentsPageContent() {
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-lg font-semibold flex-1">Agendamentos</h1>
+          <button
+            onClick={() => navigate("/app/filas")}
+            className="text-xs font-medium bg-white/20 rounded-full px-3 py-1.5"
+          >
+            Filas de espera
+          </button>
         </div>
       </div>
 
@@ -671,7 +676,6 @@ function MobileAppointmentsPageContent() {
         </TabsList>
 
         <TabsContent value="upcoming" className="mt-0">
-          <MobileWaitingListOffer />
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />

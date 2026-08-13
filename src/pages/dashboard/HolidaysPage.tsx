@@ -42,9 +42,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 interface Holiday {
   id: string;
@@ -292,7 +293,7 @@ export default function HolidaysPage() {
 
     setSaving(true);
     try {
-      const date = parseISO(newHolidayDate);
+      const date = parseDateOnlyToLocalNoon(newHolidayDate);
       const insertData: any = {
         clinic_id: currentClinic.id,
         name: newHolidayName.trim(),
@@ -335,11 +336,12 @@ export default function HolidaysPage() {
 
     setSaving(true);
     try {
-      const date = parseISO(newHolidayDate);
+      const date = parseDateOnlyToLocalNoon(newHolidayDate);
       const insertData: any = {
         state_code: newHolidayStateCode,
         name: newHolidayName.trim(),
         holiday_date: newHolidayDate,
+        year: date.getFullYear(),
         is_recurring: newHolidayRecurring,
       };
 
@@ -378,7 +380,7 @@ export default function HolidaysPage() {
 
     setSaving(true);
     try {
-      const date = parseISO(newHolidayDate);
+      const date = parseDateOnlyToLocalNoon(newHolidayDate);
       const insertData: any = {
         state_code: newHolidayStateCode,
         city: newHolidayCity.trim(),
@@ -468,7 +470,7 @@ export default function HolidaysPage() {
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR });
+      return format(parseDateOnlyToLocalNoon(dateStr), "dd/MM/yyyy", { locale: ptBR });
     } catch {
       return dateStr;
     }

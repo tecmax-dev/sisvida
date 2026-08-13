@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -16,6 +15,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Outfit", "system-ui", "sans-serif"],
+        display: ["Sora", "Outfit", "system-ui", "sans-serif"],
+        body: ["Manrope", "Outfit", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -35,15 +36,11 @@ export default {
           foreground: "hsl(var(--cta-foreground))",
           hover: "hsl(var(--cta-hover))",
         },
-        homologacao: {
-          primary: "hsl(var(--homologacao-primary))",
-          secondary: "hsl(var(--homologacao-secondary))",
-          accent: "hsl(var(--homologacao-accent))",
-          warning: "hsl(var(--homologacao-warning))",
-          success: "hsl(var(--homologacao-success))",
-          info: "hsl(var(--homologacao-info))",
-          dark: "hsl(var(--homologacao-dark))",
-          light: "hsl(var(--homologacao-light))",
+        prosinge: {
+          emerald: "hsl(var(--prosinge-emerald))",
+          "emerald-mid": "hsl(var(--prosinge-emerald-mid))",
+          gold: "hsl(var(--prosinge-gold))",
+          cream: "hsl(var(--prosinge-cream))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -105,7 +102,6 @@ export default {
         glow: "var(--shadow-glow)",
         card: "var(--shadow-card)",
         float: "var(--shadow-float)",
-        homologacao: "var(--shadow-homologacao)",
       },
       backgroundImage: {},
       keyframes: {
@@ -169,23 +165,55 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        blink: {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.25", transform: "scale(0.92)" },
+        },
+        bounce: {
+          "0%, 100%": { transform: "translateY(-5%)", animationTimingFunction: "cubic-bezier(0.8, 0, 1, 1)" },
+          "50%": { transform: "translateY(0)", animationTimingFunction: "cubic-bezier(0, 0, 0.2, 1)" },
+        },
+        shake: {
+          "0%, 100%": { transform: "rotate(0deg)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "rotate(-3deg)" },
+          "20%, 40%, 60%, 80%": { transform: "rotate(3deg)" },
+        },
+        "fade-slide-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateY(0px)" },
+        },
+        "slide-right-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateX(0px)" },
+        },
+        "testimonial-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateY(0px) scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.5s ease-out",
-        "fade-out": "fade-out 0.5s ease-out",
+        "fade-in": "fade-in 0.3s ease-out",
+        "fade-out": "fade-out 0.3s ease-out",
         "slide-in-from-top": "slide-in-from-top 0.3s ease-out",
         "slide-in-from-bottom": "slide-in-from-bottom 0.3s ease-out",
         "slide-in-from-left": "slide-in-from-left 0.3s ease-out",
         "slide-in-from-right": "slide-in-from-right 0.3s ease-out",
-        "scale-in": "scale-in 0.3s ease-out",
-        "slide-up-fade": "slide-up-fade 0.5s ease-out",
-        "scale-in-fade": "scale-in-fade 0.5s ease-out",
-        "slide-in-right-fade": "slide-in-right-fade 0.5s ease-out",
+        "scale-in": "scale-in 0.2s ease-out",
+        "slide-up-fade": "slide-up-fade 0.6s ease-out forwards",
+        "slide-up-fade-delay-1": "slide-up-fade 0.6s ease-out 0.1s forwards",
+        "slide-up-fade-delay-2": "slide-up-fade 0.6s ease-out 0.2s forwards",
+        "slide-up-fade-delay-3": "slide-up-fade 0.6s ease-out 0.3s forwards",
+        "slide-up-fade-delay-4": "slide-up-fade 0.6s ease-out 0.4s forwards",
+        "scale-in-fade": "scale-in-fade 0.7s ease-out 0.15s forwards",
+        "slide-in-right-fade": "slide-in-right-fade 0.6s ease-out 0.25s forwards",
         "bounce-soft": "bounce-soft 2s ease-in-out infinite",
-        shimmer: "shimmer 2s linear infinite",
+        shimmer: "shimmer 8s ease-in-out infinite",
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        blink: "blink 1s ease-in-out infinite",
+        bounce: "bounce 1s infinite",
+        shake: "shake 0.5s ease-in-out infinite",
+        "element": "fade-slide-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "slide-right": "slide-right-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "testimonial": "testimonial-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards",
       },
     },
   },

@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 import { 
   Building2, 
   FileText, 
@@ -45,6 +46,8 @@ import { PortalConventionsSection } from "@/components/portal/PortalServicesSect
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { PortalTutorialVideo } from "@/components/portal/PortalTutorialVideo";
 import { PlayCircle } from "lucide-react";
+import { ChatwootIntegrationConfig } from "@/components/portals/ChatwootIntegrationConfig";
+
 
 interface Clinic {
   id: string;
@@ -73,6 +76,7 @@ interface Contribution {
   paid_at: string | null;
   portal_reissue_count: number;
   portal_value_change_count?: number;
+  portal_due_date_change_count?: number;
   contribution_type: { name: string } | null;
   negotiation_id: string | null;
   negotiation?: {
@@ -157,6 +161,9 @@ export default function EmployerPortal() {
   const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
   const [changeValue, setChangeValue] = useState("");
   const [isChangingValue, setIsChangingValue] = useState(false);
+  const [showChangeDueDateDialog, setShowChangeDueDateDialog] = useState(false);
+  const [changeDueDate, setChangeDueDate] = useState("");
+  const [isChangingDueDate, setIsChangingDueDate] = useState(false);
   const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("home");
   const [activeTab, setActiveTab] = useState<ContributionTab>("pending");
@@ -422,10 +429,9 @@ const [showTutorial, setShowTutorial] = useState(false);
       });
 
       if (error) {
-        // Extrair mensagem de erro detalhada do edge function
-        const errorMessage = error.message || "Erro ao emitir boleto";
+        const { message } = await extractFunctionsErrorAsync(error);
         console.error("[EmployerPortal] Set value error:", error);
-        toast.error(`Erro ao emitir boleto: ${errorMessage}`);
+        toast.error(message || "Erro ao emitir boleto");
         return;
       }
       
@@ -503,6 +509,45 @@ const [showTutorial, setShowTutorial] = useState(false);
   };
 
   const handleGenerateInvoice = async (contrib: Contribution) => {
+    return _handleGenerateInvoiceImpl(contrib);
+  };
+
+  const handleChangeDueDate = async () => {
+    if (!selectedContribution || !employer || !changeDueDate) {
+      toast.error("Informe a nova data de vencimento");
+      return;
+    }
+    setIsChangingDueDate(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("change-contribution-due-date", {
+        body: {
+          contribution_id: selectedContribution.id,
+          due_date: changeDueDate,
+          portal_type: "employer",
+          portal_id: employer.id,
+        },
+      });
+      if (error) {
+        toast.error(`Erro ao alterar vencimento: ${error.message || "Erro"}`);
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success(data.message || "Data de vencimento atualizada!");
+      setShowChangeDueDateDialog(false);
+      setChangeDueDate("");
+      setSelectedContribution(null);
+      loadContributions(employer.id);
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsChangingDueDate(false);
+    }
+  };
+
+  const _handleGenerateInvoiceImpl = async (contrib: Contribution) => {
     if (!employer) {
       toast.error("Sessão expirada. Faça login novamente.");
       return;
@@ -760,17 +805,29 @@ const [showTutorial, setShowTutorial] = useState(false);
               <Input type="text" placeholder="0,00" value={newValue} onChange={(e) => setNewValue(e.target.value.replace(/[^0-9,]/g, ""))} className="mt-2 h-10 text-lg font-medium border-slate-200" />
               <p className="text-xs text-slate-500 mt-2">Após definir o valor, o boleto será gerado automaticamente.</p>
             </div>
-            {selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && (
-              <div>
-                <Label className="text-slate-700 text-sm font-medium">Nova Data de Vencimento</Label>
-                <Input type="date" value={setValueDueDate} onChange={(e) => setSetValueDueDate(e.target.value)} min={getMinDate()} className="mt-2 h-10 border-slate-200" />
-                <p className="text-xs text-slate-500 mt-2">Este boleto está vencido. Informe uma nova data para emissão.</p>
-              </div>
-            )}
+            {selectedContribution && (() => {
+              const isOverdue = parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0);
+              return (
+                <div>
+                  <Label className="text-slate-700 text-sm font-medium">Data de Vencimento</Label>
+                  {isOverdue ? (
+                    <>
+                      <Input type="date" value={setValueDueDate} onChange={(e) => setSetValueDueDate(e.target.value)} min={getMinDate()} className="mt-2 h-10 border-slate-200" />
+                      <p className="text-xs text-slate-500 mt-2">Este boleto está vencido. Informe uma nova data para emissão.</p>
+                    </>
+                  ) : (
+                    <>
+                      <Input type="date" value={setValueDueDate} readOnly disabled className="mt-2 h-10 border-slate-200 bg-slate-50" />
+                      <p className="text-xs text-slate-500 mt-2">A data de vencimento só pode ser alterada em contribuições vencidas.</p>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>Cancelar</Button>
-            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue || (!!selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && !setValueDueDate)} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue || !setValueDueDate} className="bg-purple-600 hover:bg-purple-700">
               {isSettingValue ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando...</> : <><FileText className="h-4 w-4 mr-2" />Gerar Boleto</>}
             </Button>
           </DialogFooter>
@@ -813,6 +870,48 @@ const [showTutorial, setShowTutorial] = useState(false);
                 <><Loader2 className="h-4 w-4 animate-spin mr-2" />Alterando...</>
               ) : (
                 <><FileText className="h-4 w-4 mr-2" />Confirmar Alteração</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showChangeDueDateDialog} onOpenChange={(open) => {
+        setShowChangeDueDateDialog(open);
+        if (!open) { setChangeDueDate(""); setSelectedContribution(null); }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <Calendar className="h-5 w-5 text-purple-600" />
+              Alterar Data de Vencimento
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Esta alteração só pode ser feita <strong>1 vez</strong> pelo portal e apenas para boletos <strong>a vencer</strong>. Após esta alteração, qualquer nova alteração deverá ser solicitada ao gestor do sindicato.
+            </div>
+            <div>
+              <Label className="text-slate-700 text-sm font-medium">Nova data de vencimento</Label>
+              <Input
+                type="date"
+                value={changeDueDate}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setChangeDueDate(e.target.value)}
+                className="mt-2 h-10 text-base border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowChangeDueDateDialog(false)}>Cancelar</Button>
+            <Button onClick={handleChangeDueDate} disabled={isChangingDueDate || !changeDueDate} className="bg-purple-600 hover:bg-purple-700">
+              {isChangingDueDate ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Alterando...</>
+              ) : (
+                <><Calendar className="h-4 w-4 mr-2" />Confirmar Alteração</>
               )}
             </Button>
           </DialogFooter>
@@ -1113,6 +1212,9 @@ const [showTutorial, setShowTutorial] = useState(false);
                                     variant="outline"
                                     onClick={() => {
                                       setSelectedContribution(contrib);
+                                      const original = String(contrib.due_date || "").slice(0, 10);
+                                      const today = getMinDate();
+                                      setSetValueDueDate(original && original >= today ? original : today);
                                       setShowSetValueDialog(true);
                                     }}
                                     className="h-8 text-xs border-[#2c5282] text-[#2c5282] hover:bg-[#2c5282]/10"
@@ -1200,6 +1302,30 @@ const [showTutorial, setShowTutorial] = useState(false);
                                           </DropdownMenuItem>
                                         );
                                       })()}
+                                      {(() => {
+                                        const todayMidnight = new Date();
+                                        todayMidnight.setHours(0, 0, 0, 0);
+                                        const dueDateOnly = new Date(contrib.due_date + "T12:00:00");
+                                        const isPendingFuture =
+                                          contrib.status === "pending" &&
+                                          dueDateOnly.getTime() >= todayMidnight.getTime();
+                                        const alreadyChanged = (contrib.portal_due_date_change_count || 0) >= 1;
+                                        if (!isPendingFuture) return null;
+                                        return (
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              if (alreadyChanged) return;
+                                              setSelectedContribution(contrib);
+                                              setChangeDueDate(String(contrib.due_date).slice(0, 10));
+                                              setShowChangeDueDateDialog(true);
+                                            }}
+                                            disabled={alreadyChanged}
+                                          >
+                                            <Calendar className="h-4 w-4 mr-2" />
+                                            {alreadyChanged ? "Vencimento já alterado" : "Alterar Vencimento"}
+                                          </DropdownMenuItem>
+                                        );
+                                      })()}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -1279,11 +1405,17 @@ const [showTutorial, setShowTutorial] = useState(false);
             </div>
 
             {clinic?.id && (
-              <PortalConventionsSection 
-                clinicId={clinic.id} 
-                employerCategoryId={employer?.category_id}
-              />
+              <>
+                <div className="mt-8 mb-8">
+                  <ChatwootIntegrationConfig clinicId={employer.clinic_id} />
+                </div>
+                <PortalConventionsSection 
+                  clinicId={clinic.id} 
+                  employerCategoryId={employer?.category_id}
+                />
+              </>
             )}
+
 
             <div className="flex gap-3 mt-6">
               <Button 

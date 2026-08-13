@@ -1,1 +1,0 @@
-UPDATE appointments SET status = 'cancelled', cancellation_reason = 'Conflito de horário - reagendamento administrativo', cancelled_at = now(), updated_at = now() WHERE id = '5c9028f6-2339-4127-ba8a-84639354e529';

@@ -1,22 +1,6 @@
 <!doctype html>
 <html lang="pt-BR">
    <head>
-      <script>
-        // Redirecionamento crítico do QR/links antigos antes do React e antes do Service Worker.
-        (function() {
-          var FILIACAO_REDIRECT_URL = "https://prosinge.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28";
-          var path = window.location.pathname.replace(/\/+$/, "").replace(/\/+/g, "/");
-          var host = window.location.hostname;
-          var domains = ["app.eclini.com.br", "www.app.eclini.com.br", "prosinge.com.br", "www.prosinge.com.br"];
-          var mustRedirect =
-            domains.indexOf(host) > -1 &&
-            (path === "/instalar" || path === "/app/instalar" || path === "/sindicato/instalar");
-
-          if (mustRedirect) {
-            window.location.replace(FILIACAO_REDIRECT_URL);
-          }
-        })();
-      </script>
      <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
@@ -36,8 +20,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png?v=prosinge-final-20260517c" />
     <link rel="shortcut icon" href="/favicon.ico?v=prosinge-final-20260517c" />
-    <link rel="apple-touch-icon" href="/prosinge-apple-touch-icon.png?v=prosinge-final-20260517c" />
-    <link rel="manifest" href="/manifest-prosinge.webmanifest?v=prosinge-final-20260517c" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-sindicato.png?v=secmi-ios-20260618c" />
+    <meta name="apple-mobile-web-app-title" content="SECMI" />
+    <meta name="application-name" content="SECMI" />
+    <!-- Manifest inicial precisa ser SECMI: PWABuilder não executa o script abaixo ao ler /app. -->
+    <link rel="manifest" href="/manifest-sindicato-ios.webmanifest?v=secmi-ios-20260618c" />
     
     <!--
       Critérios para o Chrome Android mostrar o prompt de instalação (qualquer versão):
@@ -60,33 +47,43 @@
         if (isSindicato) {
           // --- SECMI / Sindicato branding ---
           var manifest = document.querySelector('link[rel="manifest"]');
-          if (manifest) manifest.href = '/manifest-sindicato.webmanifest?v=sindicato-20260517c';
+          // iOS Safari/PWABuilder precisam de id == scope (sem querystring).
+          // Apenas em iOS apontamos para o manifest dedicado, preservando o
+          // manifest Android/TWA já publicado em todos os outros dispositivos.
+          var ua = navigator.userAgent || '';
+          var isIOS = /iPad|iPhone|iPod/.test(ua) ||
+            (ua.indexOf('Mac') !== -1 && 'ontouchend' in document);
+          if (manifest) {
+            manifest.href = isIOS
+              ? '/manifest-sindicato-ios.webmanifest?v=secmi-ios-20260618c'
+              : '/manifest-sindicato.webmanifest?v=sindicato-20260517c';
+          }
 
           // Favicon sindicato
           var favicon = document.createElement('link');
           favicon.rel = 'icon';
           favicon.type = 'image/png';
-          favicon.href = '/apple-touch-icon-sindicato.png';
+          favicon.href = '/apple-touch-icon-sindicato.png?v=secmi-ios-20260618c';
           document.head.appendChild(favicon);
           
           // Apple touch icon sindicato
           var appleIcon = document.createElement('link');
           appleIcon.rel = 'apple-touch-icon';
-          appleIcon.href = '/apple-touch-icon-sindicato.png';
+          appleIcon.href = '/apple-touch-icon-sindicato.png?v=secmi-ios-20260618c';
           document.head.appendChild(appleIcon);
           
           // Apple app title sindicato
-          var appTitleMeta = document.createElement('meta');
+          var appTitleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]') || document.createElement('meta');
           appTitleMeta.name = 'apple-mobile-web-app-title';
-          appTitleMeta.content = 'Comerciários';
-          document.head.appendChild(appTitleMeta);
+          appTitleMeta.content = 'SECMI';
+          if (!appTitleMeta.parentNode) document.head.appendChild(appTitleMeta);
           
-          var appNameMeta = document.createElement('meta');
+          var appNameMeta = document.querySelector('meta[name="application-name"]') || document.createElement('meta');
           appNameMeta.name = 'application-name';
-          appNameMeta.content = 'Comerciários';
-          document.head.appendChild(appNameMeta);
+          appNameMeta.content = 'SECMI';
+          if (!appNameMeta.parentNode) document.head.appendChild(appNameMeta);
         } else {
-          // --- ProSindWeb branding (padrão) ---
+          // --- Prosinge branding (padrão) ---
           var manifest = document.querySelector('link[rel="manifest"]');
           if (manifest) manifest.href = '/manifest-prosinge.webmanifest?v=prosinge-final-20260517c';
 
@@ -106,15 +103,15 @@
           appleIcon.href = '/prosinge-apple-touch-icon.png?v=prosinge-final-20260517c';
           document.head.appendChild(appleIcon);
           
-          var appTitleMeta = document.createElement('meta');
+          var appTitleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]') || document.createElement('meta');
           appTitleMeta.name = 'apple-mobile-web-app-title';
           appTitleMeta.content = 'Prosinge';
-          document.head.appendChild(appTitleMeta);
+          if (!appTitleMeta.parentNode) document.head.appendChild(appTitleMeta);
           
-          var appNameMeta = document.createElement('meta');
+          var appNameMeta = document.querySelector('meta[name="application-name"]') || document.createElement('meta');
           appNameMeta.name = 'application-name';
           appNameMeta.content = 'Prosinge';
-          document.head.appendChild(appNameMeta);
+          if (!appNameMeta.parentNode) document.head.appendChild(appNameMeta);
         }
       })();
     </script>
@@ -141,7 +138,7 @@
     <!-- Splash Screen Background Color for PWA -->
     <style>
       html, body, #root {
-        background-color: #16a394 !important;
+        background-color: #094798 !important;
       }
     </style>
     
@@ -165,8 +162,8 @@
     <meta name="twitter:image" content="https://prosinge.com.br/pwa-512x512.png" />
     
     <!-- Theme Color -->
-    <meta name="theme-color" content="#16a394" />
-    <meta name="msapplication-TileColor" content="#16a394" />
+    <meta name="theme-color" content="#094798" />
+    <meta name="msapplication-TileColor" content="#094798" />
     
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -198,8 +195,10 @@
         try {
           var host = window.location.hostname;
           var isProsinge = host === 'prosinge.com.br' || host === 'www.prosinge.com.br';
+          var isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+          var isIosStandalone = navigator.standalone === true;
           var FLAG = 'prosinge-cache-cleared-20260520a';
-          if (isProsinge && !localStorage.getItem(FLAG)) {
+          if (isProsinge && (isStandalone || isIosStandalone) && !localStorage.getItem(FLAG)) {
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.getRegistrations().then(function(regs) {
                 regs.forEach(function(r) { r.unregister(); });
@@ -226,8 +225,8 @@
     </script>
   </head>
 
-  <body style="background-color: #16a394;">
-    <div id="root" style="background-color: #16a394; min-height: 100vh;"></div>
+  <body style="background-color: #094798;">
+    <div id="root" style="background-color: #094798; min-height: 100vh;"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

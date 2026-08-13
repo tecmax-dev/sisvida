@@ -40,6 +40,8 @@ interface UnionTransactionDialogProps {
   clinicId: string;
   defaultType?: "income" | "expense";
   cashRegisterId?: string;
+  /** Quando true (ex.: extrato de portador), o lançamento já nasce com data de pagamento = hoje */
+  defaultPaid?: boolean;
   onSuccess: () => void;
 }
 
@@ -70,6 +72,7 @@ export function UnionTransactionDialog({
   clinicId,
   defaultType = "expense",
   cashRegisterId: defaultCashRegisterId,
+  defaultPaid = false,
   onSuccess,
 }: UnionTransactionDialogProps) {
   const queryClient = useQueryClient();
@@ -77,6 +80,7 @@ export function UnionTransactionDialog({
   const [type, setType] = useState<"income" | "expense">(defaultType);
   const [dueDateStr, setDueDateStr] = useState("");
   const [paidDateStr, setPaidDateStr] = useState("");
+  const [paidTouched, setPaidTouched] = useState(false);
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   const [defaultsSelectorOpen, setDefaultsSelectorOpen] = useState(false);
@@ -248,10 +252,11 @@ export function UnionTransactionDialog({
         discount_value: "",
       });
       setDueDateStr("");
-      setPaidDateStr("");
+      setPaidDateStr(defaultPaid ? new Date().toISOString().slice(0, 10) : "");
       setValuesOpen(false);
     }
-  }, [transaction, open, defaultType, defaultCashRegisterId]);
+    setPaidTouched(false);
+  }, [transaction, open, defaultType, defaultCashRegisterId, defaultPaid]);
 
   // Sync amount with gross_value when not using decomposed values
   useEffect(() => {
@@ -355,27 +360,8 @@ export function UnionTransactionDialog({
         }
         console.log("[UnionTransaction] Inserido com sucesso:", insertResult);
 
-        // Update cash register balance only if paid
-        if (hasPaidDate && data.cash_register_id) {
-          const balanceChange = type === "income" ? finalAmount : -finalAmount;
-          const { data: register, error: regError } = await supabase
-            .from("union_cash_registers")
-            .select("current_balance")
-            .eq("id", data.cash_register_id)
-            .single();
-          
-          if (regError) {
-            console.error("[UnionTransaction] Cash register fetch error:", JSON.stringify(regError));
-          }
-          
-          if (register) {
-            const newBalance = Number(register.current_balance || 0) + balanceChange;
-            await supabase
-              .from("union_cash_registers")
-              .update({ current_balance: newBalance })
-              .eq("id", data.cash_register_id);
-          }
-        }
+        // O saldo do portador é recalculado automaticamente pelo banco
+        // (trigger sobre union_financial_transactions).
 
         toast.success(type === "expense" ? "Débito lançado!" : "Crédito lançado!");
       }
@@ -583,7 +569,14 @@ export function UnionTransactionDialog({
                 <Input
                   type="date"
                   value={dueDateStr}
-                  onChange={(e) => setDueDateStr(e.target.value)}
+                  onChange={(e) => {
+                    setDueDateStr(e.target.value);
+                    // No extrato do portador o lançamento é efetivado: espelha a data
+                    // de pagamento enquanto o usuário não a alterar manualmente.
+                    if (defaultPaid && !transaction?.id && !paidTouched) {
+                      setPaidDateStr(e.target.value);
+                    }
+                  }}
                   className="h-9 text-xs"
                 />
               </div>
@@ -593,9 +586,17 @@ export function UnionTransactionDialog({
                 <Input
                   type="date"
                   value={paidDateStr}
-                  onChange={(e) => setPaidDateStr(e.target.value)}
+                  onChange={(e) => {
+                    setPaidTouched(true);
+                    setPaidDateStr(e.target.value);
+                  }}
                   className="h-9 text-xs"
                 />
+                {!paidDateStr && (
+                  <p className="mt-1 text-[11px] leading-tight text-amber-600">
+                    Sem data de pagamento o lançamento fica <strong>pendente</strong> e não aparece no extrato do portador.
+                  </p>
+                )}
               </div>
 
               <div>

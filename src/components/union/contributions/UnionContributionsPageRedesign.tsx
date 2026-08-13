@@ -324,6 +324,9 @@ export default function UnionContributionsPageRedesign() {
       if (response.error) {
         throw new Error(response.error.message);
       }
+      if ((response.data as any)?.error) {
+        throw new Error((response.data as any).error);
+      }
 
       toast.success("Boleto gerado com sucesso!");
       setViewDialogOpen(false);

@@ -4,8 +4,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 const DEFAULT_BRANDING = {
-  name: "ProSindWeb - Sistema de Gestão Sindical",
-  shortName: "ProSindWeb",
+  name: "Prosinge - Sistema de Gestão Sindical",
+  shortName: "Prosinge",
   description: "Sistema de gestão para sindicatos e clínicas.",
   logo: "/favicon-prosinge.png",
 };
@@ -22,8 +22,8 @@ describe("useDynamicPWA - Branding Isolation", () => {
 
   describe("Default Branding", () => {
     it("should have correct default branding values", () => {
-      expect(DEFAULT_BRANDING.name).toBe("ProSindWeb - Sistema de Gestão Sindical");
-      expect(DEFAULT_BRANDING.shortName).toBe("ProSindWeb");
+      expect(DEFAULT_BRANDING.name).toBe("Prosinge - Sistema de Gestão Sindical");
+      expect(DEFAULT_BRANDING.shortName).toBe("Prosinge");
       expect(DEFAULT_BRANDING.logo).toBe("/favicon-prosinge.png");
     });
 
@@ -80,12 +80,12 @@ describe("PWA Manifest Configuration", () => {
       name: "Sindicato - App do Associado",
       short_name: "Sindicato",
       start_url: "/app",
-      theme_color: "#16a394",
+      theme_color: "#094798",
     };
 
     expect(expectedManifest.name).toContain("Sindicato");
     expect(expectedManifest.start_url).toBe("/app");
-    expect(expectedManifest.theme_color).toBe("#16a394");
+    expect(expectedManifest.theme_color).toBe("#094798");
   });
 
   it("should use local Sindicato icon for PWA branding", () => {

@@ -2,36 +2,36 @@
   "name": "Prosinge - Gestão Sindical e Clínica",
   "short_name": "Prosinge",
   "description": "Sistema completo de gestão sindical e clínica. Agendamento online, prontuário eletrônico e controle financeiro.",
-  "theme_color": "#16a394",
-  "background_color": "#16a394",
+  "theme_color": "#094798",
+  "background_color": "#094798",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "any",
   "scope": "/",
   "start_url": "/?source=pwa",
-  "id": "/?app=prosindweb",
+  "id": "/?app=prosinge",
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/favicon.png?v=prosindweb-final-20260517c",
+      "src": "/favicon.png?v=prosinge-final-20260517c",
       "sizes": "64x64",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/prosindweb-apple-touch-icon.png?v=prosindweb-final-20260517c",
+      "src": "/prosinge-apple-touch-icon.png?v=prosinge-final-20260517c",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/prosindweb-pwa-192x192.png?v=prosindweb-final-20260517c",
+      "src": "/prosinge-pwa-192x192.png?v=prosinge-final-20260517c",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/prosindweb-pwa-512x512.png?v=prosindweb-final-20260517c",
+      "src": "/prosinge-pwa-512x512.png?v=prosinge-final-20260517c",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

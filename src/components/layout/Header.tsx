@@ -42,10 +42,10 @@ export function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-card/70 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] border-b border-white/10 py-2"
-          : "bg-transparent py-4"
+          ? "bg-card/95 backdrop-blur-lg shadow-sm border-b border-border/40"
+          : "bg-transparent"
       }`}
     >
       <div className="container flex h-16 lg:h-20 items-center justify-between">
@@ -91,7 +91,7 @@ export function Header() {
                   <Link to="/auth">Entrar</Link>
                 </Button>
                 <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 text-sm font-semibold shadow-md" asChild>
-                  <Link to="/cadastro">Solicitar Demo</Link>
+                  <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer">Solicitar Demo</a>
                 </Button>
               </div>
               <Button
@@ -123,9 +123,9 @@ export function Header() {
             {!user && (
               <div className="flex flex-col gap-3 pt-4 mt-2 border-t border-border">
                 <Button className="w-full bg-primary text-primary-foreground rounded-full font-semibold" asChild>
-                  <Link to="/cadastro" onClick={() => setIsMenuOpen(false)}>
+                  <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)}>
                     Solicitar Demo
-                  </Link>
+                  </a>
                 </Button>
                 <Button variant="outline" className="w-full rounded-full" asChild>
                   <Link to="/auth" onClick={() => setIsMenuOpen(false)}>

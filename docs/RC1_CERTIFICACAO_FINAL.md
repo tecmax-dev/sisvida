@@ -67,7 +67,7 @@ Valores nunca são exibidos; gerenciamento exclusivo via cofre de secrets do Lov
 
 - WhatsApp é **exclusivamente informativo** — sem CTA de resposta, sem botões Confirmar/Cancelar, sem segundo lembrete.
 - IA é **exclusivamente receptiva** — só responde quando o associado inicia conversa dentro da janela de 24h. Nunca insiste, nunca reenvia.
-- Aplicativo oficial (PWA `prosindweb.com.br`) é o **único canal** para confirmar, cancelar, reagendar ou gerenciar atendimentos, boletos e cadastros.
+- Aplicativo oficial (PWA `sindexa.com.br`) é o **único canal** para confirmar, cancelar, reagendar ou gerenciar atendimentos, boletos e cadastros.
 
 ## 6. Go-Live gradual
 
@@ -96,3 +96,37 @@ Controle via `meta_safe_mode_config.go_live_stage`.
 - Fonte única para qualquer rollback futuro.
 
 RC1 está **certificado e congelado**. Quaisquer evoluções devem ocorrer em RC2 / v1.1.
+
+## 8. Alinhamento Final do Catálogo Meta (2026-06-10)
+
+Classificação: CONFIGURAÇÃO + DOCUMENTAÇÃO + HARDENING. Sem novas funcionalidades, sem migrations, sem novas edge functions, sem alteração de Compliance Engine, Safe Mode, Strict Mode, Template Governance, Circuit Breaker, Meta Health Dashboard, `assertCanSend`, `wa_can_send`, `meta-send-template`, `meta-send-text`, `meta-webhook` ou `meta-sync-templates`.
+
+### Template oficial de lembrete
+
+- **`lembrete_consulta_v3`** (UTILITY) — único template autorizado para lembretes. Sem botões, sem Quick Reply, sem CTA. Texto fixo definido no baseline.
+
+### Template legado
+
+- **`lembrete_consulta_v2`** — APPROVED na Meta, **DEPRECATED em RC1**. Não utilizar. Mantido apenas por compatibilidade histórica.
+
+### Catálogo classificado
+
+**ATIVOS:** `retomar_atendimento`, `lembrete_consulta_v3`, `recuperacao_senha`, `boleto_disponivel`, `homologacao_confirmada`, `comunicado_marketing`.
+
+**LEGACY (não usar):** `lembrete_consulta_v2`, `iniciar_atendimento`, `iniciar_atendimento_v2`, `hello_world`.
+
+### Auditoria de uso legado
+
+Qualquer tentativa automática de envio com `lembrete_consulta_v2` deve ser registrada como `LEGACY_TEMPLATE_ATTEMPT` (apenas auditoria; sem bloqueio adicional, sem alteração do Compliance Engine).
+
+### Confirmações finais
+
+- Nenhum lembrete utiliza botões ou Quick Replies.
+- WhatsApp é **exclusivamente informativo**.
+- Aplicativo oficial é o **único canal** para confirmar, alterar ou cancelar atendimentos.
+- **Nenhuma alteração estrutural foi realizada.**
+- RC1 permanece **congelado** como baseline oficial do projeto.
+
+### Declaração
+
+Novas automações, templates ou alterações comportamentais → **RC2 / v1.1**. Prioridades permanentes: (1) Reputação do número Meta, (2) Experiência do associado, (3) Estabilidade operacional, (4) Compliance, (5) Governança, (6) Simplicidade.

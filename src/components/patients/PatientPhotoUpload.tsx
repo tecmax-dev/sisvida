@@ -3,10 +3,14 @@ import { Camera, X, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { uploadWithProgress } from "@/lib/uploadWithProgress";
 
 interface PatientPhotoUploadProps {
   patientId: string;
+  clinicId?: string;
   currentPhotoUrl?: string | null;
   patientName?: string;
   onPhotoChange?: (url: string | null) => void;
@@ -16,6 +20,7 @@ interface PatientPhotoUploadProps {
 
 export function PatientPhotoUpload({
   patientId,
+  clinicId,
   currentPhotoUrl,
   patientName = "",
   onPhotoChange,
@@ -23,9 +28,19 @@ export function PatientPhotoUpload({
   className,
 }: PatientPhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(currentPhotoUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { currentClinic } = useAuth();
+  const resolvedClinicId = clinicId || currentClinic?.id;
+
+  // Extrai o caminho interno do bucket a partir da URL pública
+  const extractPath = (url: string): string | null => {
+    const match = url.match(/patient-photos\/(.+?)(\?|$)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  };
 
   // Sync with prop changes
   if (currentPhotoUrl !== undefined && currentPhotoUrl !== photoUrl && !uploading) {
@@ -57,23 +72,41 @@ export function PatientPhotoUpload({
     }
 
     setUploading(true);
+    setProgress(0);
+    setProgressMessage("Preparando foto...");
 
     try {
+      if (!resolvedClinicId) {
+        throw new Error("Clínica não identificada. Recarregue a página e tente novamente.");
+      }
+
       // Delete old photo if exists
       if (photoUrl) {
-        const oldPath = photoUrl.split("/").slice(-2).join("/");
-        await supabase.storage.from("patient-photos").remove([oldPath]);
+        setProgressMessage("Removendo foto anterior...");
+        const oldPath = extractPath(photoUrl);
+        if (oldPath) {
+          await supabase.storage.from("patient-photos").remove([oldPath]);
+        }
       }
 
       // Upload new photo
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${patientId}/photo-${Date.now()}.${fileExt}`;
+      const fileExt =
+        (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "jpg";
+      // O caminho DEVE começar pelo clinic_id (exigido pelas políticas de storage)
+      const filePath = `${resolvedClinicId}/${patientId}/photo-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("patient-photos")
-        .upload(filePath, file, { upsert: true });
+      await uploadWithProgress({
+        bucket: "patient-photos",
+        path: filePath,
+        file,
+        upsert: true,
+        onProgress: (s) => {
+          setProgress(s.percent);
+          setProgressMessage(s.message);
+        },
+      });
 
-      if (uploadError) throw uploadError;
+      setProgressMessage("Salvando no cadastro...");
 
       // Get public URL
       const { data: urlData } = supabase.storage
@@ -92,16 +125,19 @@ export function PatientPhotoUpload({
 
       setPhotoUrl(newPhotoUrl);
       onPhotoChange?.(newPhotoUrl);
+      setProgress(100);
+      setProgressMessage("");
 
       toast({
         title: "Foto atualizada",
         description: "A foto do associado foi atualizada com sucesso.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading photo:", error);
+      setProgressMessage("");
       toast({
         title: "Erro ao enviar foto",
-        description: "Não foi possível enviar a foto. Tente novamente.",
+        description: error?.message || "Não foi possível enviar a foto. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -119,9 +155,9 @@ export function PatientPhotoUpload({
 
     try {
       // Extract path from URL
-      const pathMatch = photoUrl.match(/patient-photos\/(.+)$/);
-      if (pathMatch) {
-        await supabase.storage.from("patient-photos").remove([pathMatch[1]]);
+      const oldPath = extractPath(photoUrl);
+      if (oldPath) {
+        await supabase.storage.from("patient-photos").remove([oldPath]);
       }
 
       // Update patient record
@@ -177,6 +213,15 @@ export function PatientPhotoUpload({
           </div>
         )}
       </div>
+
+      {uploading && (
+        <div className="mt-2 space-y-1">
+          <Progress value={progress} className="h-1.5" />
+          <p className="text-[10px] text-muted-foreground text-center leading-tight">
+            {progressMessage || "Enviando..."}
+          </p>
+        </div>
+      )}
 
       {/* Action buttons */}
       {editable && (

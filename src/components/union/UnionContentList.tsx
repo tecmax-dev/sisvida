@@ -133,6 +133,11 @@ export function UnionContentList({
                     {cctCategoryName}
                   </Badge>
                 )}
+                {(item as any).is_aditivo && (
+                  <Badge className="bg-amber-500 text-white shadow-sm">
+                    Aditivo
+                  </Badge>
+                )}
               </div>
 
               {/* Order indicator */}

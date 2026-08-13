@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -91,6 +92,7 @@ const schema = z.object({
   contribution_value: z.string().optional().or(z.literal("")),
   payment_method: z.string().optional().or(z.literal("")),
   observations: z.string().optional().or(z.literal("")),
+  whatsapp_consent: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -203,6 +205,7 @@ export function UnionCreateMemberDialog({
       contribution_value: "",
       payment_method: "desconto_folha",
       observations: "",
+      whatsapp_consent: false,
     },
   });
 
@@ -351,8 +354,9 @@ export function UnionCreateMemberDialog({
         neighborhood: values.neighborhood || null,
         city: values.city || null,
         state: values.state || null,
-        job_title: values.job_function || null,
-        employer_id: employerData?.employer_id || null,
+        job_function: values.job_function || null,
+        employer_cnpj: employerData?.cnpj ? onlyDigits(employerData.cnpj) : null,
+        employer_name: employerData?.razao_social || employerData?.nome_fantasia || null,
         ...unionPatch,
       };
 
@@ -402,6 +406,23 @@ export function UnionCreateMemberDialog({
         if (failedDeps.length > 0) {
           toast.error(`Erro ao incluir dependente(s): ${failedDeps.join(", ")}. Verifique se o CPF já está cadastrado.`);
         }
+      }
+
+      // WhatsApp Consent Auditável (Etapa 5.2)
+      if (values.whatsapp_consent) {
+        const WHATSAPP_CONSENT_TERM_VERSION = "whatsapp_operational_v1_2026";
+        const WHATSAPP_CONSENT_TEXT = "Autorizo o Sindicato a utilizar meu número de WhatsApp para comunicações relacionadas ao meu cadastro, carteirinha, atendimentos, agendamentos e serviços solicitados, conforme a Política de Privacidade.";
+        
+        await supabase.from("whatsapp_consents").insert({
+          tenant_id: clinicId,
+          phone: phoneDigits,
+          consent_status: "granted",
+          purpose: "SERVICE_OPERATIONAL",
+          source: "PRESENCIAL",
+          term_version: WHATSAPP_CONSENT_TERM_VERSION,
+          consent_text: WHATSAPP_CONSENT_TEXT,
+          person_id: patientId,
+        });
       }
 
       // Audit log
@@ -864,6 +885,33 @@ export function UnionCreateMemberDialog({
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="whatsapp_consent"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border-2 border-primary/10 bg-primary/5 p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="mt-1"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm font-semibold text-gray-800 cursor-pointer">
+                          Autorizar WhatsApp Operacional
+                        </FormLabel>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          O associado autorizou (presencialmente ou via ficha) o envio de avisos sobre cadastro, carteirinha e agendamentos?
+                        </p>
+                        <p className="text-[9px] font-mono text-muted-foreground uppercase pt-1">
+                          Versão: whatsapp_operational_v1_2026 | Fonte: PRESENCIAL
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}

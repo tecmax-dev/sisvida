@@ -133,7 +133,7 @@ export function PaymentReceiptPreview({
 
       {/* Footer */}
       <div className="mt-8 text-center text-xs text-gray-400">
-        <p>Documento gerado eletronicamente pelo sistema ProSindWeb</p>
+        <p>Documento gerado eletronicamente pelo sistema Prosinge</p>
         <p>
           Emitido em:{" "}
           {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}

@@ -249,7 +249,6 @@ export default function UnionMemberNewPage() {
           city: formData.city.trim() || null,
           state: formData.state || null,
           complement: formData.complement.trim() || null,
-          tag: formData.tag.trim() || null,
           referral: formData.referral.trim() || null,
           send_notifications: formData.sendNotifications,
           landline: formData.landline.replace(/\D/g, '').trim() || null,
@@ -265,6 +264,10 @@ export default function UnionMemberNewPage() {
           union_affiliation_date: formData.affiliationDate || null,
           registration_number: regData || undefined,
           is_active: true,
+          is_union_member: true,
+          union_member_status: 'ativo',
+          union_joined_at: new Date().toISOString(),
+          tag: (formData.tag && formData.tag.trim()) || 'Ativo',
         })
         .select('id')
         .single();

@@ -4,7 +4,7 @@ import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, CreditCard, FileText, Image, Loader2, Calendar, FileCheck, MessageSquare } from "lucide-react";
+import { Settings, CreditCard, FileText, Image, Loader2, Calendar, FileCheck, MessageSquare, Bot, Share2, ShieldCheck, Activity, Users2 } from "lucide-react";
 import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
 import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
 import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
@@ -14,7 +14,15 @@ import { TitularBookingLimitSettings } from "@/components/union/settings/Titular
 import { PayslipAcceptanceSettings } from "@/components/union/settings/PayslipAcceptanceSettings";
 import { ReminderIntervalSettings } from "@/components/union/settings/ReminderIntervalSettings";
 import { AppointmentSmsTemplateSettings } from "@/components/union/settings/AppointmentSmsTemplateSettings";
+import { ChatwootIntegrationConfig } from "@/components/portals/ChatwootIntegrationConfig";
+import { N8nIntegrationConfig } from "@/components/portals/N8nIntegrationConfig";
+import { N8nWorkflowViewer } from "@/components/portals/N8nWorkflowViewer";
+import { MetaTokenConfig } from "@/components/portals/MetaTokenConfig";
+import { N8nDryRunTool } from "@/components/portals/N8nDryRunTool";
 import { useQuery } from "@tanstack/react-query";
+import { WhatsAppAuditTab } from "@/components/union/settings/WhatsAppAuditTab";
+import { CardAutomationAuditTab } from "@/components/union/settings/CardAutomationAuditTab";
+import { HomologacaoAuditTab } from "@/components/union/settings/HomologacaoAuditTab";
 import { supabase } from "@/integrations/supabase/client";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
@@ -99,6 +107,26 @@ export default function UnionConfigPage() {
           <TabsTrigger value="sms-template" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             SMS Lembrete
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp-integration" className="gap-2">
+            <Bot className="h-4 w-4" />
+            Integração WhatsApp
+          </TabsTrigger>
+          <TabsTrigger value="n8n-integration" className="gap-2">
+            <Share2 className="h-4 w-4" />
+            Integração n8n
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp-audit" className="gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Auditoria WhatsApp
+          </TabsTrigger>
+          <TabsTrigger value="card-automation" className="gap-2">
+            <Activity className="h-4 w-4" />
+            Auditoria Carteirinha
+          </TabsTrigger>
+          <TabsTrigger value="homologacao-audit" className="gap-2">
+            <Users2 className="h-4 w-4" />
+            Auditoria Homologação
           </TabsTrigger>
         </TabsList>
 
@@ -219,6 +247,50 @@ export default function UnionConfigPage() {
 
         <TabsContent value="sms-template">
           <AppointmentSmsTemplateSettings />
+        </TabsContent>
+
+        <TabsContent value="whatsapp-integration">
+          {resolvedClinic?.id ? (
+            <ChatwootIntegrationConfig clinicId={resolvedClinic.id} />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  Configure uma clínica para gerenciar a integração WhatsApp.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="n8n-integration">
+          {resolvedClinic?.id ? (
+            <div className="space-y-6">
+              <N8nIntegrationConfig clinicId={resolvedClinic.id} />
+              <N8nWorkflowViewer 
+                clinicId={resolvedClinic.id} 
+                workflowId="0oODKEUC2mDvrZp5" 
+              />
+              <N8nDryRunTool clinicId={resolvedClinic.id} />
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  Configure uma clínica para gerenciar a integração n8n.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        <TabsContent value="whatsapp-audit">
+          <WhatsAppAuditTab />
+        </TabsContent>
+        <TabsContent value="card-automation">
+          <CardAutomationAuditTab />
+        </TabsContent>
+        <TabsContent value="homologacao-audit">
+          <HomologacaoAuditTab />
         </TabsContent>
       </Tabs>
     </div>

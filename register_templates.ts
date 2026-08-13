@@ -11,8 +11,9 @@
 //   - CONFIRM_REGISTER=true  (caso contrário roda em DRY RUN)
 // =============================================================================
 
-const WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"];
-const TOKEN = process.env.META_WHATSAPP_TOKEN;
+const WABA_IDS = ["2063797207822998"]; // CANONICAL WABA
+const LEGACY_WABA_IDS = ["2080967275794470", "998516322649692", "1030747186799321"]; // INACTIVE
+const TOKEN = process.env.META_WHATSAPP_TOKEN_V2;
 const GRAPH_VERSION = "v21.0";
 
 // ---------- Governança espelhada (alinhada com template-governance.ts) -------
@@ -231,7 +232,12 @@ async function register() {
   }
 
   for (const wabaId of WABA_IDS) {
-    console.log(`\n→ WABA ID: ${wabaId}`);
+    if (wabaId !== "2063797207822998") {
+       console.error(`⛔ Tentativa de escrita em WABA não canônico: ${wabaId}`);
+       continue;
+    }
+
+    console.log(`\n→ WABA ID (CANONICAL): ${wabaId}`);
     const url = `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/message_templates`;
     for (const tpl of lot) {
       try {

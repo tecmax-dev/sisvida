@@ -1,519 +1,239 @@
-import { Button } from "@/components/ui/button";
+// SindicalLandingPage — layout inspirado em progess.com.br, identidade Prosinge.
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { PublicPageWrapper } from "@/components/layout/PublicLayout";
+import prosingeLogo from "@/assets/prosinge-logo.png";
+import heroPerson from "@/assets/sindical-hero-person.jpg";
+import devicesImg from "@/assets/sindical-devices.jpg";
+import { useTrialSignupEnabled } from "@/hooks/useTrialSignupEnabled";
 import {
-  Building2,
-  Users,
-  Receipt,
-  PiggyBank,
-  FileBarChart,
-  Shield,
-  Handshake,
   ArrowRight,
-  MessageCircle,
-  CheckCircle2,
-  BarChart3,
-  Globe,
-  HeadphonesIcon,
-  Layers,
-  Scale,
+  LogIn,
+  Menu,
+  X,
   Phone,
   Mail,
   MapPin,
-  Menu,
-  X,
-  ChevronRight,
-  ChevronDown,
-  Zap,
-  ClipboardCheck,
-  Stethoscope,
-  AlertTriangle,
-  RefreshCw,
-  Database,
-  CalendarCheck,
+  Users,
+  Laptop,
+  IdCard,
+  Wallet,
+  FileText,
   Check,
-  Star,
+  ChevronLeft,
+  ChevronRight,
+  Building2,
+  Landmark,
+  Fish,
+  Facebook,
+  Instagram,
+  Zap,
+  AlertCircle,
+  XCircle,
+  ShieldCheck,
+  Send,
 } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { PublicPageWrapper } from "@/components/layout/PublicLayout";
-import prosindwebLogo from "@/assets/prosindweb-logo.png";
-import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
-import sindicalContribuicoes from "@/assets/sindical-contribuicoes.jpg";
-import sindicalRelatorios from "@/assets/sindical-relatorios.jpg";
 
 /* ═══════════════════════════════════════════════════════════════
-   DESIGN SYSTEM — Cores sólidas (sem gradientes)
-   Azul Royal: hsl(215,85%,25%)  →  hsl(215,85%,50%)
-   Vermelho CTA: hsl(0,85%,50%)
+   TOKENS (Progess-like palette)
+   navy   #1f2a3a   |   orange #f5871f   |   teal #2aa5b8
    ═══════════════════════════════════════════════════════════════ */
+const NAVY = "#1f2a3a";
+const ORANGE = "#f5871f";
+const TEAL = "#2aa5b8";
 
-// ─── Animated Counter ───────────────────────────────────────────
-function AnimatedCounter({ end, suffix = "", prefix = "" }: { end: number; suffix?: string; prefix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const hasAnimated = useRef(false);
+const NAV = [
+  { href: "#inicio", label: "Início" },
+  { href: "#plataforma", label: "Plataforma" },
+  { href: "#solucoes", label: "Soluções" },
+  { href: "#depoimentos", label: "Depoimentos" },
+  { href: "#contato", label: "Contato" },
+];
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          const startTime = Date.now();
-          const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / 2000, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setCount(Math.floor(eased * end));
-            if (progress < 1) requestAnimationFrame(animate);
-          };
-          requestAnimationFrame(animate);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [end]);
+const FEATURES = [
+  { icon: Laptop,   title: "100% online", desc: "O Prosinge não necessita de instalação. Acesse de qualquer computador ou celular com internet." },
+  { icon: IdCard,   title: "Ficha & Carteirinha", desc: "Ficha de inscrição sindical com confecção automática da carteira digital ou física." },
+  { icon: Wallet,   title: "Financeiro completo", desc: "Módulo financeiro com contas a pagar e a receber, saldos atuais e conciliação bancária." },
+  { icon: FileText, title: "Relatórios", desc: "Diversos relatórios personalizados, gerados em tempo real, prontos para impressão." },
+];
 
-  return <div ref={ref}>{prefix}{count}{suffix}</div>;
-}
+const CHECKLIST = [
+  "Ficha de afiliados com impressão automática do formulário de desconto",
+  "Atendimento de afiliados com protocolo",
+  "Recibo de contribuições e prestação de serviços",
+  "Lista de presença em reuniões online ou presenciais",
+  "Cobranças automáticas e remessa/retorno bancário (CNAB)",
+  "Portal do associado e carteirinha digital com QR Code",
+];
 
-// ─── FAQ Accordion Item ─────────────────────────────────────────
-function FAQItem({ question, answer }: { question: string; answer: string }) {
+const SOLUCOES = [
+  { icon: Building2, title: "Associação",         desc: "Mais praticidade no dia a dia da sua associação." },
+  { icon: Landmark,  title: "Sindicatos",         desc: "Agilize a gestão do seu sindicato com processos digitais." },
+  { icon: Fish,      title: "Entidades de pesca", desc: "Facilite a gestão dos seus afiliados e colônias." },
+];
+
+const DEPOIMENTOS = [
+  { nome: "Maria Rios",   cargo: "Pres. Sinspum — Riachão do Jacuípe/BA", texto: "O Prosinge é excelente, usamos há muitos anos, o pessoal está sempre atualizando o sistema com novidades." },
+  { nome: "Antônio",      cargo: "Pres. do Sindpesca — Chapadinha/MA",     texto: "O Prosinge faz parte do nosso sindicato. Emitimos todos os documentos pelo sistema e o suporte é ótimo." },
+  { nome: "Genival",      cargo: "Pres. do Sindsmur — Retirolândia/BA",    texto: "Usamos o sistema há mais de 10 anos, ele oferece tudo que precisamos para gerenciar o sindicato." },
+  { nome: "Maria Roseane",cargo: "Pres. do SindVargem — Vargem Grande/MT", texto: "Temos o Prosinge há vários anos, o suporte é presente e o sistema é simples, completo e seguro." },
+];
+
+const WHATSAPP_URL = "https://wa.me/557331989980?text=Ol%C3%A1!%20Gostaria%20de%20conhecer%20o%20Sindexa.";
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════ */
+function SiteHeader() {
   const [open, setOpen] = useState(false);
-  return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-6 text-left hover:bg-gray-50 transition-colors"
-      >
-        <span className="font-bold text-gray-900 pr-4">{question}</span>
-        <ChevronDown className={`h-5 w-5 text-gray-400 flex-shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="px-6 pb-6 text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
-          {answer}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Header ─────────────────────────────────────────────────────
-function SindicalHeader() {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const on = () => setScrolled(window.scrollY > 20);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
   }, []);
 
-  const links = [
-    { href: "#recursos", label: "Recursos" },
-    { href: "#modulos", label: "Módulos" },
-    { href: "#resultados", label: "Resultados" },
-    { href: "#depoimentos", label: "Clientes" },
-    { href: "#planos", label: "Planos" },
-    { href: "#contato", label: "Contato" },
-  ];
-
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled
-        ? "bg-white border-b border-gray-200 shadow-sm"
-        : "bg-white"
-    }`}>
-      <div className="container">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/sindical" className="flex items-center">
-            <img src={prosindwebLogo} alt="Prosinge" className="h-9 w-auto" />
-          </Link>
+    <header
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+        scrolled ? "bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm" : "bg-transparent"
+      }`}
+    >
+      <div className="container flex h-16 md:h-20 items-center justify-between gap-4">
+        <Link to="/" className="flex items-center gap-2 shrink-0">
+          <img
+            src={prosingeLogo}
+            alt="Prosinge"
+            className={`h-8 md:h-10 w-auto ${scrolled ? "" : "brightness-0 invert"}`}
+          />
+        </Link>
 
-          <nav className="hidden lg:flex items-center gap-7">
-            {links.map((l) => (
+        <nav className="hidden lg:flex items-center gap-8">
+          {NAV.map((n) => (
+            <a
+              key={n.href}
+              href={n.href}
+              className={`text-sm font-semibold transition-colors ${
+                scrolled ? "text-slate-700 hover:text-[color:var(--pw-orange)]" : "text-white/85 hover:text-white"
+              }`}
+              style={{ ["--pw-orange" as any]: ORANGE }}
+            >
+              {n.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2 md:gap-3">
+          <a
+            href="tel:+551151943839"
+            className={`hidden md:inline-flex items-center gap-2 text-sm font-semibold ${
+              scrolled ? "text-slate-700" : "text-white"
+            }`}
+          >
+            <Phone className="h-4 w-4" style={{ color: ORANGE }} />
+            (11) 5194-3839
+          </a>
+          <Button
+            asChild
+            size="sm"
+            className="rounded-md font-semibold text-white"
+            style={{ backgroundColor: ORANGE }}
+          >
+            <Link to="/entidade-sindical" className="flex items-center gap-2">
+              <LogIn className="h-4 w-4" /> Entrar
+            </Link>
+          </Button>
+          <button
+            className={`lg:hidden p-2 rounded-md ${scrolled ? "text-slate-700" : "text-white"}`}
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Menu"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="lg:hidden border-t border-slate-200 bg-white">
+          <div className="container py-4 flex flex-col gap-1">
+            {NAV.map((n) => (
               <a
-                key={l.href}
-                href={l.href}
-                className="text-sm font-medium text-gray-600 hover:text-[hsl(215,85%,35%)] transition-colors"
+                key={n.href}
+                href={n.href}
+                onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-3 text-base font-semibold text-slate-700 hover:bg-slate-100"
               >
-                {l.label}
+                {n.label}
               </a>
             ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="hidden sm:flex font-semibold text-gray-600 border-gray-300 hover:border-[hsl(215,85%,50%)] hover:text-[hsl(215,85%,35%)]"
+            <a
+              href="tel:+551151943839"
+              className="mt-2 flex items-center gap-2 rounded-md px-3 py-3 text-base font-semibold text-slate-700"
             >
-              <Link to="/entidade-sindical">Entrar</Link>
-            </Button>
-            <Button
-              size="sm"
-              className="font-bold bg-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,28%)] text-white"
-              asChild
-            >
-              <a href="#contato">Solicite uma demonstração</a>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden text-gray-700"
-              onClick={() => setMobileOpen(!mobileOpen)}
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
+              <Phone className="h-4 w-4" style={{ color: ORANGE }} /> (11) 5194-3839
+            </a>
           </div>
         </div>
-
-        {mobileOpen && (
-          <div className="lg:hidden py-4 border-t border-gray-100">
-            <nav className="flex flex-col gap-1">
-              {links.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  className="text-gray-600 hover:text-[hsl(215,85%,35%)] px-4 py-3 rounded-lg hover:bg-gray-50 font-medium"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {l.label}
-                </a>
-              ))}
-              <Link
-                to="/entidade-sindical"
-                className="text-gray-600 hover:text-[hsl(215,85%,35%)] px-4 py-3 rounded-lg hover:bg-gray-50 font-medium"
-                onClick={() => setMobileOpen(false)}
-              >
-                Entrar
-              </Link>
-            </nav>
-          </div>
-        )}
-      </div>
+      )}
     </header>
   );
 }
 
-// ─── Hero Section — Clean White ─────────────────────────────────
-function HeroSection() {
-  const [current, setCurrent] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const heroSlides = [
-    { src: sindicalHeroDashboard, alt: "Painel Intuitivo - Dashboard completo" },
-    { src: sindicalContribuicoes, alt: "Contribuições Sindicais" },
-    { src: sindicalRelatorios, alt: "Relatórios Financeiros" },
-  ];
-
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => setCurrent((p) => (p + 1) % heroSlides.length), 5000);
-  }, []);
-
-  useEffect(() => {
-    startTimer();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [startTimer]);
-
+/* ═══════════════════════════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════════════════════════ */
+function Hero() {
+  const { enabled: trialEnabled } = useTrialSignupEnabled();
   return (
-    <section className="pt-32 pb-16 lg:pt-40 lg:pb-24 bg-white relative overflow-hidden">
-      {/* Subtle background pattern */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-[hsl(215,85%,96%)] -translate-y-1/3 translate-x-1/4" />
+    <section id="inicio" className="relative pt-24 md:pt-28 pb-12 md:pb-20 overflow-hidden" style={{ background: NAVY }}>
+      <div className="container grid gap-10 md:gap-12 lg:grid-cols-2 items-center">
+        {/* Texto */}
+        <div className="text-white">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
+            Gestão moderna para <br className="hidden md:block" />
+            <span style={{ color: ORANGE }}>entidades sindicais</span>
+          </h1>
+          <p className="mt-6 text-lg text-slate-300 max-w-lg leading-relaxed">
+            Uma plataforma completa, 100% online e integrada para automatizar a rotina administrativa e financeira do seu sindicato ou associação.
+          </p>
 
-      <div className="container relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left content */}
-          <div>
-            <span className="text-sm font-semibold text-[hsl(215,85%,45%)] tracking-wide mb-4 block">
-              Sistema para gestão sindical
-            </span>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-black leading-[1.1] tracking-tight text-gray-900 mb-6">
-              Simplifique a gestão{" "}
-              <span className="text-[hsl(215,85%,45%)]">da sua entidade</span>
-            </h1>
-
-            <p className="text-lg text-gray-500 leading-relaxed max-w-lg mb-8">
-              Simplifique sua rotina com arrecadação inteligente, gestão de associados,
-              financeiro integrado e WhatsApp automatizado.
-            </p>
-
-            {/* Benefit list */}
-            <div className="space-y-3 mb-10">
-              {[
-                "Aumente em até 45% a arrecadação",
-                "Reduza inadimplência com cobrança automatizada",
-                "Mais de 500 entidades atendidas",
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-[hsl(215,85%,45%)] flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">{item}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
+          <div className="mt-8 flex flex-wrap gap-4">
+            {trialEnabled && (
               <Button
-                size="lg"
-                className="h-13 px-8 text-base font-bold bg-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,28%)] text-white shadow-lg"
                 asChild
+                size="lg"
+                className="h-12 rounded-full px-8 text-base font-bold text-white shadow-lg"
+                style={{ backgroundColor: ORANGE }}
               >
-                <a href="#contato" className="flex items-center gap-2">
-                  Começar Grátis
-                  <ArrowRight className="h-5 w-5" />
-                </a>
+                <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">Começar agora</a>
               </Button>
-            </div>
-          </div>
-
-          {/* Right — Hero mockup carousel */}
-          <div className="relative">
-            <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-gray-200">
-              {heroSlides.map((slide, i) => (
-                <img
-                  key={i}
-                  src={slide.src}
-                  alt={slide.alt}
-                  className={`w-full h-auto transition-opacity duration-700 ${
-                    i === current ? "opacity-100 relative" : "opacity-0 absolute inset-0"
-                  }`}
-                  loading={i === 0 ? "eager" : "lazy"}
-                />
-              ))}
-            </div>
-
-            {/* Floating cards */}
-            <div className="absolute -left-4 top-1/4 bg-white rounded-xl shadow-xl border border-gray-100 p-4 hidden lg:block">
-              <div className="text-xs text-gray-400 mb-1">Agendamentos</div>
-              <div className="text-2xl font-black text-gray-900">450</div>
-              <div className="flex gap-0.5 mt-1">
-                {[1, 2, 3, 4].map(i => <div key={i} className="w-2 h-6 rounded-sm bg-[hsl(215,85%,50%)]" style={{ height: `${12 + i * 6}px` }} />)}
-              </div>
-            </div>
-
-            <div className="absolute -right-4 bottom-1/4 bg-white rounded-xl shadow-xl border border-gray-100 p-4 hidden lg:block">
-              <div className="text-xs text-gray-400 mb-1">Resumo financeiro</div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-gray-500">Total a receber</span>
-                <span className="font-bold text-[hsl(0,85%,45%)]">R$ 2.000,00</span>
-              </div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-gray-500">A vencer</span>
-                <span className="font-semibold">R$ 1.000,00</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-500">Vencidos</span>
-                <span className="font-semibold text-[hsl(0,85%,45%)]">R$ 1.000,00</span>
-              </div>
-            </div>
-
-            {/* Dots */}
-            <div className="flex justify-center gap-2 mt-4">
-              {heroSlides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setCurrent(i); startTimer(); }}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    i === current ? "w-8 bg-[hsl(215,85%,45%)]" : "w-2 bg-gray-300"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Testimonials Section ───────────────────────────────────────
-const testimonials = [
-  {
-    quote: "O Prosinge revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças da entidade.",
-    name: "Maria Santos",
-    role: "Diretora Administrativa",
-    org: "SINDICOMÉRCIO",
-    stars: 5,
-  },
-  {
-    quote: "Encontramos uma forma de inovar com a arrecadação. Um software que proporciona economia de tempo e conta com equipe especializada.",
-    name: "Carlos Oliveira",
-    role: "Assessor Técnico",
-    org: "FECOMÉRCIO",
-    stars: 5,
-  },
-  {
-    quote: "O sistema estabeleceu qualidade nas informações e padronização no atendimento. Suporte competente e prestativo em todos os momentos.",
-    name: "Ana Ramos",
-    role: "Gerente Administrativa",
-    org: "SINCOMERCIÁRIOS",
-    stars: 5,
-  },
-  {
-    quote: "A praticidade do sistema é incrível. O controle de contribuições ficou muito mais eficiente e a gestão dos associados simplificada.",
-    name: "Roberto Lima",
-    role: "Presidente",
-    org: "SINDMETAL",
-    stars: 5,
-  },
-];
-
-function TestimonialsSection() {
-  return (
-    <section id="depoimentos" className="py-20 lg:py-28 bg-white">
-      <div className="container">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4">
-            Opiniões reais de quem usa nosso software
-          </h2>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {testimonials.map((t, i) => (
-            <div
-              key={i}
-              className="p-8 rounded-2xl border border-gray-200 bg-white hover:shadow-lg transition-all duration-300"
-            >
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: t.stars }).map((_, j) => (
-                  <Star key={j} className="h-4 w-4 fill-[hsl(45,90%,50%)] text-[hsl(45,90%,50%)]" />
-                ))}
-              </div>
-              <p className="text-gray-600 leading-relaxed mb-6 italic">"{t.quote}"</p>
-              <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
-                <div className="w-12 h-12 rounded-full bg-[hsl(215,85%,25%)] flex items-center justify-center text-white font-bold text-lg">
-                  {t.name.charAt(0)}
-                </div>
-                <div>
-                  <div className="font-bold text-gray-900">{t.name}</div>
-                  <div className="text-sm text-gray-500">{t.role} · {t.org}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Problem Section — What happens with wrong software ─────────
-function ProblemSection() {
-  return (
-    <section className="py-20 lg:py-28 bg-[hsl(215,30%,97%)]">
-      <div className="container">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left — Problem card */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 lg:p-10 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[hsl(0,85%,95%)] flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-[hsl(0,85%,50%)]" />
-              </div>
-              <h3 className="font-bold text-gray-900 text-lg">Software inadequado</h3>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">Pode causar prejuízos</p>
-            <div className="flex flex-wrap gap-2">
-              {["Agenda duplicada", "Dados perdidos", "Falta de suporte"].map((item, i) => (
-                <span key={i} className="px-3 py-1.5 bg-[hsl(0,85%,97%)] text-[hsl(0,85%,45%)] text-xs font-semibold rounded-full">
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Right — Description */}
-          <div>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-6">
-              O que pode acontecer se você utilizar o software errado?
-            </h2>
-            <ul className="space-y-4">
-              {[
-                "A entidade fica desorganizada, faltam processos padronizados",
-                "Alto índice de inadimplência e perda de receita",
-                "Controlar contribuições e cobranças é complicado",
-                "Dificuldade na tomada de decisão e excesso de planilhas",
-                "Prejuízos financeiros por falta de controle nos repasses",
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <X className="h-5 w-5 text-[hsl(0,85%,50%)] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-600">{item}</span>
-                </li>
-              ))}
-            </ul>
+            )}
             <Button
+              variant="outline"
               size="lg"
-              className="mt-8 h-13 px-8 font-bold bg-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,28%)] text-white"
-              asChild
+              className="h-12 rounded-full px-8 text-base font-bold text-white border-white/20 hover:bg-white/10"
             >
-              <a href="#contato">Solicite uma demonstração</a>
+              <a href="#plataforma">Conhecer mais</a>
             </Button>
           </div>
         </div>
-      </div>
-    </section>
-  );
-}
 
-// ─── Migration Section ──────────────────────────────────────────
-function MigrationSection() {
-  return (
-    <section className="py-20 lg:py-28 bg-white">
-      <div className="container">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
-              Migrar para o Prosinge é fácil e seguro!
-            </h2>
-            <p className="text-gray-500 leading-relaxed mb-8">
-              Muitas entidades já trouxeram seus dados para o Prosinge. O processo de{" "}
-              <strong className="text-gray-800">migração de sistema</strong> é feito com total segurança,
-              agilidade e sem interferir na rotina da equipe!
-            </p>
-            <div className="space-y-4 mb-8">
-              {[
-                "Migração com total segurança",
-                "Processo ágil e sem interrupções",
-                "Seus dados preservados 100%",
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Check className="h-5 w-5 text-[hsl(145,60%,40%)]" />
-                  <span className="text-gray-700 font-medium">{item}</span>
-                </div>
-              ))}
-            </div>
-            <Button
-              size="lg"
-              className="h-13 px-8 font-bold bg-[hsl(0,85%,50%)] hover:bg-[hsl(0,85%,42%)] text-white"
-              asChild
-            >
-              <a href="#contato">Solicitar migração</a>
-            </Button>
-          </div>
-
-          {/* Migration card */}
-          <div className="bg-[hsl(215,30%,97%)] rounded-2xl border border-gray-200 p-8 lg:p-10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[hsl(215,85%,25%)] flex items-center justify-center">
-                <RefreshCw className="h-5 w-5 text-white" />
-              </div>
-              <h3 className="font-bold text-gray-900">Migração completa</h3>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">Transferência segura</p>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { icon: Users, label: "Associados" },
-                { icon: Receipt, label: "Contribuições" },
-                { icon: PiggyBank, label: "Financeiro" },
-                { icon: CalendarCheck, label: "Agendamentos" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white rounded-xl p-4 border border-gray-100">
-                  <item.icon className="h-5 w-5 text-[hsl(215,85%,45%)]" />
-                  <span className="text-sm font-semibold text-gray-700">{item.label}</span>
-                </div>
-              ))}
-            </div>
+        {/* Imagem / Mockup */}
+        <div className="relative hidden lg:block">
+          <div
+            className="absolute -right-20 top-0 h-[500px] w-[500px] rounded-full blur-[120px]"
+            style={{ backgroundColor: TEAL, opacity: 0.15 }}
+          />
+          <div className="relative z-10 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+            <img
+              src={heroPerson}
+              alt="Gestão Sindical"
+              className="rounded-xl shadow-2xl w-full h-auto object-cover aspect-[4/3]"
+              width={800}
+              height={600}
+            />
           </div>
         </div>
       </div>
@@ -521,175 +241,39 @@ function MigrationSection() {
   );
 }
 
-// ─── Feature Tabs Section ───────────────────────────────────────
-const featureTabs = [
-  {
-    tag: "GESTÃO DE ASSOCIADOS",
-    title: "Gestão de Associados",
-    description: "Chega de fichas de papel. Com o cadastro digital, sua entidade torna todo o processo muito mais rápido, organizado e eficiente.",
-    benefits: [
-      "Carteirinhas digitais com QR Code",
-      "Portal do associado com autoatendimento",
-      "Comunicação automática via WhatsApp",
-      "Gestão de dependentes e benefícios",
-      "Controle de filiação e desfiliação",
-    ],
-  },
-  {
-    tag: "ARRECADAÇÃO",
-    title: "Arrecadação Inteligente",
-    description: "Todos os seus boletos, cobranças e contribuições podem ser gerenciados de maneira rápida e prática com a arrecadação automatizada.",
-    benefits: [
-      "Emissão de boletos em lote",
-      "Integração bancária automática",
-      "Controle de inadimplência",
-      "Relatórios detalhados de arrecadação",
-      "Cobranças recorrentes automatizadas",
-    ],
-  },
-  {
-    tag: "FINANCEIRO",
-    title: "Controle Financeiro",
-    description: "Nunca mais perca dinheiro! Nosso sistema proporciona visão completa do financeiro. Saiba quem pagou, quem está pendente e o fluxo de caixa.",
-    benefits: [
-      "Controle total de fluxo de caixa",
-      "Contas a pagar e receber",
-      "Relatórios gerenciais e fiscais",
-      "Conciliação bancária",
-      "Exportação para contabilidade",
-    ],
-  },
-  {
-    tag: "HOMOLOGAÇÃO",
-    title: "Homologação Online",
-    description: "Agendamento de homologações com calendário exclusivo, notificações automáticas e controle completo de protocolos e documentos.",
-    benefits: [
-      "Agendamento online para associados",
-      "Notificações via WhatsApp",
-      "Protocolos automáticos",
-      "Calendário exclusivo por profissional",
-      "Portal do empregador",
-    ],
-  },
-];
-
-function FeaturesSection() {
-  const [activeTab, setActiveTab] = useState(0);
-  const tab = featureTabs[activeTab];
-
+/* ═══════════════════════════════════════════════════════════════
+   PLATAFORMA COMPLETA
+   ═══════════════════════════════════════════════════════════════ */
+function Plataforma() {
   return (
-    <section id="recursos" className="py-20 lg:py-28 bg-white">
+    <section id="plataforma" className="py-16 md:py-24 bg-white">
       <div className="container">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4">
-            Simplifique a gestão da sua entidade com funcionalidades inteligentes.
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: NAVY }}>
+            Uma plataforma completa
           </h2>
-        </div>
-
-        {/* Tab nav */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
-          {featureTabs.map((t, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveTab(i)}
-              className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                i === activeTab
-                  ? "bg-[hsl(215,85%,25%)] text-white shadow-lg"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {t.tag}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          <div>
-            <span className="text-xs font-bold text-[hsl(215,85%,45%)] tracking-wider uppercase mb-3 block">
-              {tab.tag}
-            </span>
-            <h3 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">{tab.title}</h3>
-            <p className="text-gray-500 leading-relaxed mb-8">{tab.description}</p>
-            <ul className="space-y-3 mb-8">
-              {tab.benefits.map((b, i) => (
-                <li key={i} className="flex items-center gap-3">
-                  <Check className="h-5 w-5 text-[hsl(215,85%,45%)]" />
-                  <span className="text-gray-700">{b}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              size="lg"
-              className="h-13 px-8 font-bold bg-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,28%)] text-white"
-              asChild
-            >
-              <a href="#contato">Conheça todos os recursos</a>
-            </Button>
-          </div>
-
-          {/* Feature image placeholder with dashboard screenshot */}
-          <div className="relative">
-            <div className="rounded-2xl overflow-hidden shadow-xl border border-gray-200">
-              <img
-                src={activeTab === 0 ? sindicalHeroDashboard : activeTab === 1 ? sindicalContribuicoes : activeTab === 2 ? sindicalRelatorios : sindicalHeroDashboard}
-                alt={tab.title}
-                className="w-full h-auto"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Modules Section — Grid Cards ───────────────────────────────
-const modules = [
-  { icon: Receipt, title: "Arrecadação", desc: "Emissão de boletos em lote, integração bancária e controle de inadimplência.", highlights: ["Boletos em lote", "Inadimplência", "Relatórios"] },
-  { icon: PiggyBank, title: "Contas a Pagar e Receber", desc: "Controle de convênios, guias e pagamentos com alertas de vencimento.", highlights: ["Vencimentos", "Categorização", "Alertas"] },
-  { icon: BarChart3, title: "Fluxo de Caixa", desc: "Visão consolidada de entradas e saídas com relatórios comparativos.", highlights: ["Consolidado", "Comparativos", "Projeções"] },
-  { icon: Building2, title: "Gestão de Empresas", desc: "Cadastro completo com dados fiscais, portal do contador e histórico.", highlights: ["CNPJ", "Portal contador", "Portal empresa"] },
-  { icon: Users, title: "Sócios e Dependentes", desc: "Carteirinhas digitais, portal do sócio e comunicação via WhatsApp.", highlights: ["Carteirinha", "Portal sócio", "WhatsApp"] },
-  { icon: Handshake, title: "Negociações e Acordos", desc: "Parcelamento de débitos, acordos automatizados e histórico completo.", highlights: ["Parcelamento", "Acordos", "Parcelas"] },
-  { icon: FileBarChart, title: "Relatórios Gerenciais", desc: "Relatórios para assembleias, auditorias. Exportação PDF e Excel.", highlights: ["Assembleias", "PDF/Excel", "KPIs"] },
-  { icon: Shield, title: "Auditoria e Segurança", desc: "Log de auditoria, permissões por perfil e proteção de dados.", highlights: ["Auditoria", "Permissões", "Segurança"] },
-  { icon: ClipboardCheck, title: "Homologação", desc: "Agendamento online com notificações WhatsApp e controle de protocolos.", highlights: ["Agendamento", "WhatsApp", "Protocolos"] },
-  { icon: Stethoscope, title: "Módulo Clínica", desc: "Agenda médica, prontuário eletrônico, anamnese digital e convênios.", highlights: ["Agenda médica", "Prontuário", "Anamnese"] },
-];
-
-function ModulesSection() {
-  return (
-    <section id="modulos" className="py-20 lg:py-28 bg-[hsl(215,30%,97%)]">
-      <div className="container">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4">
-            10 módulos. <span className="text-[hsl(215,85%,45%)]">Uma plataforma.</span>
-          </h2>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            Cada módulo foi projetado para resolver um problema real da gestão sindical.
+          <p className="mt-4 text-base md:text-lg text-slate-600">
+            O Prosinge foi arquitetado por profissionais capacitados que entendem
+            as necessidades dos sindicatos e associações.
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {modules.map((mod, i) => (
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map((f) => (
             <div
-              key={i}
-              className="group bg-white rounded-2xl border border-gray-200 p-7 hover:shadow-lg hover:border-[hsl(215,85%,80%)] transition-all duration-300"
+              key={f.title}
+              className="group rounded-2xl border border-slate-200 bg-white p-6 md:p-7 text-center transition-all hover:-translate-y-1 hover:shadow-xl"
             >
-              <div className="w-12 h-12 rounded-xl bg-[hsl(215,85%,25%)] flex items-center justify-center mb-4 group-hover:bg-[hsl(0,85%,50%)] transition-colors duration-300">
-                <mod.icon className="h-6 w-6 text-white" />
+              <div
+                className="mx-auto grid h-16 w-16 place-items-center rounded-full border-2 transition-colors"
+                style={{ borderColor: TEAL, color: TEAL }}
+              >
+                <f.icon className="h-7 w-7" strokeWidth={1.5} />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{mod.title}</h3>
-              <p className="text-sm text-gray-500 mb-4 leading-relaxed">{mod.desc}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {mod.highlights.map((h, j) => (
-                  <span key={j} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-                    <CheckCircle2 className="h-3 w-3 text-[hsl(215,85%,45%)]" />
-                    {h}
-                  </span>
-                ))}
-              </div>
+              <h3 className="mt-5 font-bold text-lg" style={{ color: NAVY }}>
+                {f.title}
+              </h3>
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
@@ -698,151 +282,109 @@ function ModulesSection() {
   );
 }
 
-// ─── Stats Section ──────────────────────────────────────────────
-function StatsSection() {
+/* ═══════════════════════════════════════════════════════════════
+   CREDIBILIDADE (split checklist + imagem)
+   ═══════════════════════════════════════════════════════════════ */
+function Credibilidade() {
+  const { enabled: trialEnabled } = useTrialSignupEnabled();
   return (
-    <section id="resultados" className="py-20 lg:py-28 bg-white">
-      <div className="container">
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 text-center">
-          {[
-            { end: 500, suffix: "+", label: "Entidades" },
-            { end: 98, suffix: "%", label: "Satisfação" },
-            { end: 45, suffix: "%", label: "Mais arrecadação" },
-            { end: 10, suffix: "+", label: "Anos de experiência" },
-            { end: 99, suffix: "%", label: "Uptime" },
-          ].map((s, i) => (
-            <div key={i}>
-              <div className="text-3xl md:text-4xl lg:text-5xl font-black text-[hsl(215,85%,35%)]">
-                <AnimatedCounter end={s.end} suffix={s.suffix} />
-              </div>
-              <div className="text-sm text-gray-500 font-medium mt-1">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Mini Features Grid ─────────────────────────────────────────
-function MiniFeatures() {
-  const items = [
-    { icon: Receipt, title: "Faturamento", desc: "Controle de contribuições automatizado com relatórios detalhados." },
-    { icon: Building2, title: "Gestão de Empresas", desc: "Cadastro completo de empresas contribuintes e portal do contador." },
-    { icon: Users, title: "Atendimento de Associados", desc: "Portal de autoatendimento e comunicação via WhatsApp." },
-    { icon: MessageCircle, title: "WhatsApp Integrado", desc: "Ferramentas para comunicação direta com associados e empresas." },
-  ];
-
-  return (
-    <section className="py-20 lg:py-28 bg-[hsl(215,30%,97%)]">
-      <div className="container">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {items.map((item, i) => (
-            <div key={i} className="bg-white rounded-2xl p-7 border border-gray-200 hover:shadow-lg transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[hsl(215,85%,93%)] flex items-center justify-center mb-4">
-                <item.icon className="h-6 w-6 text-[hsl(215,85%,40%)]" />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Pricing Section ────────────────────────────────────────────
-function PricingSection() {
-  return (
-    <section id="planos" className="py-20 lg:py-28 bg-white">
-      <div className="container">
-        <div className="text-center mb-16">
-          <span className="text-sm font-semibold text-[hsl(215,85%,45%)] mb-2 block">Planos e preços</span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4">
-            Escolha o plano ideal
+    <section className="py-16 md:py-24 bg-slate-50">
+      <div className="container grid gap-12 lg:grid-cols-2 items-center">
+        <div>
+          <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: NAVY }}>
+            Mais credibilidade e profissionalismo
           </h2>
-          <p className="text-gray-500">Sem fidelidade, cancele quando quiser. Todos os planos incluem suporte técnico.</p>
+          <p className="mt-4 text-slate-600">
+            Ferramentas pensadas para dar mais confiança e agilidade aos processos
+            do seu sindicato ou associação.
+          </p>
+          <ul className="mt-8 space-y-4">
+            {CHECKLIST.map((item) => (
+              <li key={item} className="flex items-start gap-3">
+                <span
+                  className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-white"
+                  style={{ backgroundColor: TEAL }}
+                >
+                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                </span>
+                <span className="text-slate-700">{item}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-9">
+            {trialEnabled && (
+              <Button
+                asChild
+                size="lg"
+                className="h-12 rounded-full px-8 text-base font-bold text-white"
+                style={{ backgroundColor: ORANGE }}
+              >
+                <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Teste gratuitamente</a>
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          {/* Essence */}
-          <div className="rounded-2xl border border-gray-200 p-8 bg-white">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Essence</h3>
-            <p className="text-sm text-gray-500 mb-6">Recursos essenciais para sua entidade</p>
-            <div className="mb-6">
-              <span className="text-4xl font-black text-gray-900">R$299</span>
-              <span className="text-gray-500">/mês</span>
-            </div>
-            <ul className="space-y-3 mb-8">
-              {[
-                "Gestão de associados",
-                "Arrecadação de contribuições",
-                "Relatórios básicos",
-                "3 usuários inclusos",
-                "Carteirinha digital",
-                "Portal do associado",
-                "WhatsApp básico",
-                "Exportação de relatórios",
-              ].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-sm">
-                  <Check className="h-4 w-4 text-[hsl(215,85%,45%)]" />
-                  <span className="text-gray-600">{item}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              className="w-full h-12 font-bold bg-white border-2 border-[hsl(215,85%,35%)] text-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,97%)]"
-              asChild
-            >
-              <a href="#contato">Testar grátis</a>
-            </Button>
+        <div className="relative">
+          <div
+            className="absolute -left-4 top-6 hidden md:block h-3 w-40 rounded-full rotate-[-20deg]"
+            style={{ backgroundColor: TEAL, opacity: 0.35 }}
+          />
+          <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-white">
+            <img
+              src={devicesImg}
+              alt="Painel do Prosinge em laptop e celular"
+              className="w-full h-auto"
+              width={1280}
+              height={960}
+              loading="lazy"
+            />
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-          {/* Sob Medida */}
-          <div className="rounded-2xl border-2 border-[hsl(215,85%,45%)] p-8 bg-white relative">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[hsl(215,85%,45%)] text-white text-xs font-bold rounded-full">
-              Mais Popular
-            </span>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Sob Medida</h3>
-            <p className="text-sm text-gray-500 mb-6">Personalizado para sua necessidade</p>
-            <div className="mb-6">
-              <span className="text-4xl font-black text-[hsl(215,85%,35%)]">Sob Medida</span>
-            </div>
-            <ul className="space-y-3 mb-8">
-              {[
-                "Tudo do plano Essencial, mais:",
-                "Preços sob medida",
-                "Suporte personalizado exclusivo",
-                "Consultoria e recursos avançados",
-                "Módulo de Homologação",
-                "Módulo Clínica integrado",
-                "API para integrações",
-                "IA Assistente WhatsApp",
-              ].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-sm">
-                  <Check className="h-4 w-4 text-[hsl(215,85%,45%)]" />
-                  <span className="text-gray-600">{item}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              className="w-full h-12 font-bold bg-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,28%)] text-white"
-              asChild
+/* ═══════════════════════════════════════════════════════════════
+   SOLUÇÕES
+   ═══════════════════════════════════════════════════════════════ */
+function Solucoes() {
+  return (
+    <section id="solucoes" className="py-16 md:py-24 bg-white">
+      <div className="container">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: NAVY }}>
+            Gestão simples e intuitiva
+          </h2>
+          <p className="mt-4 text-slate-600">
+            Temos ótimas soluções para diversos tipos de instituição.
+          </p>
+        </div>
+
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {SOLUCOES.map((s) => (
+            <div
+              key={s.title}
+              className="rounded-2xl border border-slate-200 bg-white p-8 text-center transition-all hover:-translate-y-1 hover:shadow-xl"
             >
-              <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer">
-                Vamos conversar
+              <div
+                className="mx-auto grid h-20 w-20 place-items-center rounded-2xl"
+                style={{ backgroundColor: `${TEAL}15`, color: TEAL }}
+              >
+                <s.icon className="h-10 w-10" strokeWidth={1.5} />
+              </div>
+              <h3 className="mt-6 text-xl font-bold" style={{ color: NAVY }}>
+                {s.title}
+              </h3>
+              <p className="mt-3 text-sm text-slate-600">{s.desc}</p>
+              <a
+                href="#contato"
+                className="mt-5 inline-flex items-center gap-2 text-sm font-bold"
+                style={{ color: ORANGE }}
+              >
+                Saiba mais <ArrowRight className="h-4 w-4" />
               </a>
-            </Button>
-          </div>
-        </div>
-
-        {/* Trust badges */}
-        <div className="flex flex-wrap justify-center gap-6 mt-12 text-sm text-gray-400">
-          {["Sem taxas ocultas", "Suporte à migração", "Dados seguros (LGPD)"].map((item, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Check className="h-4 w-4" />
-              {item}
             </div>
           ))}
         </div>
@@ -851,45 +393,125 @@ function PricingSection() {
   );
 }
 
-// ─── FAQ Section ────────────────────────────────────────────────
-function FAQSection() {
-  const faqs = [
-    { q: "Como funciona o período de teste gratuito?", a: "Oferecemos um período de teste gratuito para que você conheça todas as funcionalidades do sistema. Durante esse período, você tem acesso completo a todas as ferramentas sem compromisso." },
-    { q: "Preciso instalar algum software?", a: "Não! O Prosinge é 100% na nuvem. Basta acessar pelo navegador de qualquer dispositivo — computador, tablet ou celular." },
-    { q: "Meus dados estão seguros?", a: "Sim. Utilizamos criptografia de ponta e seguimos todas as normas da LGPD para garantir a segurança e privacidade dos seus dados." },
-    { q: "Posso cancelar a qualquer momento?", a: "Sim, não há fidelidade. Você pode cancelar seu plano a qualquer momento sem multas ou taxas adicionais." },
-    { q: "Como funciona o suporte técnico?", a: "Oferecemos suporte técnico por WhatsApp, e-mail e telefone em horário comercial. Nosso time é especializado em gestão sindical." },
-    { q: "O sistema funciona no celular?", a: "Sim! O Prosinge é totalmente responsivo e funciona em qualquer dispositivo. Além disso, oferecemos um aplicativo PWA para acesso rápido." },
-  ];
+/* ═══════════════════════════════════════════════════════════════
+   REFERÊNCIA (stats dark)
+   ═══════════════════════════════════════════════════════════════ */
+function Referencia() {
+  const { enabled: trialEnabled } = useTrialSignupEnabled();
+  return (
+    <section className="relative py-20 md:py-28 overflow-hidden" style={{ background: NAVY }}>
+      <div
+        className="absolute -top-16 -left-16 h-72 w-72 rounded-full blur-3xl opacity-30"
+        style={{ backgroundColor: TEAL }}
+      />
+      <div
+        className="absolute -bottom-16 -right-16 h-72 w-72 rounded-full blur-3xl opacity-20"
+        style={{ backgroundColor: ORANGE }}
+      />
+      <div className="container relative text-center text-white">
+        <p className="text-xs md:text-sm font-bold tracking-[0.25em] uppercase" style={{ color: TEAL }}>
+          Referência em gestão sindical
+        </p>
+        <h2 className="mt-4 text-3xl md:text-5xl font-extrabold">
+          Presente em centenas de <br className="hidden md:block" />
+          instituições pelo Brasil
+        </h2>
+        <p className="mt-5 mx-auto max-w-2xl text-white/75">
+          O Sindexa tem ajudado milhares de instituições por todo o Brasil a aumentarem
+          sua produtividade e controle sobre seus processos.
+        </p>
+        <div className="mt-10">
+          {trialEnabled && (
+            <Button
+              asChild
+              size="lg"
+              className="h-12 md:h-14 rounded-full px-8 md:px-10 text-base font-bold text-white"
+              style={{ backgroundColor: ORANGE }}
+            >
+              <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Teste gratuitamente</a>
+            </Button>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DEPOIMENTOS (carousel simples)
+   ═══════════════════════════════════════════════════════════════ */
+function Depoimentos() {
+  const [i, setI] = useState(0);
+  const prev = () => setI((n) => (n - 1 + DEPOIMENTOS.length) % DEPOIMENTOS.length);
+  const next = () => setI((n) => (n + 1) % DEPOIMENTOS.length);
+  const d = DEPOIMENTOS[i];
 
   return (
-    <section className="py-20 lg:py-28 bg-[hsl(215,30%,97%)]">
+    <section id="depoimentos" className="py-16 md:py-24 bg-slate-50">
       <div className="container">
-        <div className="text-center mb-12">
-          <span className="text-sm font-semibold text-[hsl(215,85%,45%)] mb-2 block">Tire suas dúvidas</span>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
-            Perguntas Frequentes
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: NAVY }}>
+            Veja o que nossos clientes falam sobre nós
           </h2>
-          <p className="text-gray-500">Encontre respostas para as dúvidas mais comuns sobre o Prosinge</p>
+          <p className="mt-4 text-slate-600">
+            Depois experimente também a nossa plataforma de forma gratuita.
+          </p>
         </div>
 
-        <div className="max-w-3xl mx-auto space-y-3">
-          {faqs.map((faq, i) => (
-            <FAQItem key={i} question={faq.q} answer={faq.a} />
-          ))}
+        <div className="mt-12 mx-auto max-w-3xl">
+          <div className="relative rounded-3xl bg-white shadow-xl p-8 md:p-12 text-center">
+            <div
+              className="mx-auto grid h-20 w-20 place-items-center rounded-full text-white text-2xl font-bold"
+              style={{ backgroundColor: TEAL }}
+            >
+              {d.nome.charAt(0)}
+            </div>
+            <p className="mt-6 text-lg md:text-xl italic text-slate-700 leading-relaxed">"{d.texto}"</p>
+            <p className="mt-6 font-bold" style={{ color: NAVY }}>{d.nome}</p>
+            <p className="text-sm text-slate-500">{d.cargo}</p>
+
+            <button
+              onClick={prev}
+              aria-label="Anterior"
+              className="absolute left-2 md:-left-6 top-1/2 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full bg-white shadow-md border border-slate-200 hover:bg-slate-50"
+              style={{ color: NAVY }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={next}
+              aria-label="Próximo"
+              className="absolute right-2 md:-right-6 top-1/2 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full bg-white shadow-md border border-slate-200 hover:bg-slate-50"
+              style={{ color: NAVY }}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="mt-6 flex justify-center gap-2">
+            {DEPOIMENTOS.map((_, k) => (
+              <button
+                key={k}
+                onClick={() => setI(k)}
+                aria-label={`Depoimento ${k + 1}`}
+                className="h-2.5 rounded-full transition-all"
+                style={{
+                  width: k === i ? 28 : 10,
+                  backgroundColor: k === i ? ORANGE : "#cbd5e1",
+                }}
+              />
+            ))}
+          </div>
         </div>
 
-        <div className="text-center mt-10">
-          <p className="text-gray-500 mb-4">Ainda tem dúvidas? Fale com nossa equipe</p>
+        <div className="mt-12 text-center">
           <Button
-            variant="outline"
-            className="font-bold border-[hsl(215,85%,35%)] text-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,97%)]"
             asChild
+            size="lg"
+            className="h-12 rounded-full px-8 text-base font-bold text-white"
+            style={{ backgroundColor: ORANGE }}
           >
-            <a href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o Prosinge" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Falar no WhatsApp
-            </a>
+            <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Testar gratuitamente</a>
           </Button>
         </div>
       </div>
@@ -897,131 +519,244 @@ function FAQSection() {
   );
 }
 
-// ─── CTA Section ────────────────────────────────────────────────
-function CTASection() {
+/* ═══════════════════════════════════════════════════════════════
+   CONTATO
+   ═══════════════════════════════════════════════════════════════ */
+function Contato() {
+  const [sent, setSent] = useState(false);
+
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const nome = fd.get("nome");
+    const email = fd.get("email");
+    const tel = fd.get("telefone");
+    const msg = fd.get("mensagem");
+    const text =
+      `Olá! Gostaria de mais informações sobre o Sindexa.%0A%0A` +
+      `Nome: ${nome}%0AE-mail: ${email}%0ATelefone: ${tel}%0A%0A${msg}`;
+    window.open(`https://wa.me/557331989980?text=${text}`, "_blank");
+    setSent(true);
+  };
+
   return (
-    <section id="contato" className="py-20 lg:py-28 bg-[hsl(215,85%,25%)]">
-      <div className="container">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight mb-6">
-            Pronto para transformar sua entidade?
+    <section id="contato" className="py-16 md:py-24 bg-white">
+      <div className="container grid gap-12 lg:grid-cols-2">
+        <div>
+          <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: NAVY }}>
+            Precisa de mais informações <br /> sobre o nosso sistema?
           </h2>
-          <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto">
-            Junte-se a centenas de entidades sindicais que já simplificaram sua gestão com o Prosinge.
+          <p className="mt-4 text-slate-600 max-w-md">
+            Preencha o formulário ao lado e nossa equipe entrará em contato o mais breve possível.
+            Ou fale conosco pelos canais abaixo.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="h-14 px-10 text-base font-bold shadow-lg bg-[hsl(0,85%,50%)] hover:bg-[hsl(0,85%,42%)] text-white"
-              asChild
+          <ul className="mt-8 space-y-4">
+            <li className="flex items-center gap-3 text-slate-700">
+              <span className="grid h-10 w-10 place-items-center rounded-full text-white" style={{ backgroundColor: TEAL }}>
+                <Phone className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-500">Telefone</p>
+                <a href="tel:+551151943839" className="font-semibold">(11) 5194-3839</a>
+              </div>
+            </li>
+            <li className="flex items-center gap-3 text-slate-700">
+              <span className="grid h-10 w-10 place-items-center rounded-full text-white" style={{ backgroundColor: TEAL }}>
+                <Mail className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-500">E-mail</p>
+                <a href="mailto:contato@sindexa.com.br" className="font-semibold">contato@sindexa.com.br</a>
+              </div>
+            </li>
+            <li className="flex items-center gap-3 text-slate-700">
+              <span className="grid h-10 w-10 place-items-center rounded-full text-white" style={{ backgroundColor: TEAL }}>
+                <MapPin className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-500">Atendimento</p>
+                <span className="font-semibold">Segunda a sexta · 8h às 18h</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <form
+          onSubmit={onSubmit}
+          className="rounded-3xl bg-slate-50 border border-slate-200 p-6 md:p-8 shadow-sm"
+        >
+          {sent && (
+            <div
+              className="mb-4 rounded-lg p-3 text-sm font-semibold text-white"
+              style={{ backgroundColor: TEAL }}
             >
-              <a href="mailto:contato@prosinge.com.br?subject=Demonstração Prosinge" className="flex items-center gap-2">
-                Começar grátis agora
-                <ArrowRight className="h-5 w-5" />
-              </a>
-            </Button>
+              Obrigado! Abrimos o WhatsApp para finalizar seu contato.
+            </div>
+          )}
+          <div className="grid gap-4">
+            <div>
+              <label className="text-sm font-semibold text-slate-700">Nome</label>
+              <input
+                name="nome"
+                required
+                className="mt-1 w-full h-12 rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-[color:var(--pw-teal)] focus:ring-2 focus:ring-[color:var(--pw-teal)]/20"
+                style={{ ["--pw-teal" as any]: TEAL }}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold text-slate-700">E-mail</label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  className="mt-1 w-full h-12 rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-[color:var(--pw-teal)] focus:ring-2 focus:ring-[color:var(--pw-teal)]/20"
+                  style={{ ["--pw-teal" as any]: TEAL }}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-slate-700">Telefone</label>
+                <input
+                  name="telefone"
+                  className="mt-1 w-full h-12 rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-[color:var(--pw-teal)] focus:ring-2 focus:ring-[color:var(--pw-teal)]/20"
+                  style={{ ["--pw-teal" as any]: TEAL }}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-slate-700">Mensagem</label>
+              <textarea
+                name="mensagem"
+                rows={4}
+                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none focus:border-[color:var(--pw-teal)] focus:ring-2 focus:ring-[color:var(--pw-teal)]/20"
+                style={{ ["--pw-teal" as any]: TEAL }}
+              />
+            </div>
             <Button
+              type="submit"
               size="lg"
-              className="h-14 px-10 text-base font-bold border border-white/30 bg-transparent text-white hover:bg-white/10"
-              asChild
+              className="h-12 rounded-full text-base font-bold text-white"
+              style={{ backgroundColor: ORANGE }}
             >
-              <a
-                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o Prosinge."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="h-5 w-5" />
-                Falar pelo WhatsApp
-              </a>
+              Enviar mensagem
             </Button>
           </div>
-        </div>
+        </form>
       </div>
     </section>
   );
 }
 
-// ─── Footer ─────────────────────────────────────────────────────
-function SindicalFooter() {
+/* ═══════════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════════ */
+function SiteFooter() {
   return (
-    <footer className="bg-[hsl(215,85%,10%)] text-white/60 py-16">
-      <div className="container">
-        <div className="grid md:grid-cols-4 gap-12">
-          <div className="md:col-span-2">
-            <img src={prosindwebLogo} alt="Prosinge" className="h-10 w-auto mb-4 brightness-0 invert" />
-            <p className="text-white/40 mb-6 max-w-sm text-sm leading-relaxed">
-              Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
-            </p>
-            <div className="flex gap-3">
-              <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
-                <MessageCircle className="h-5 w-5" />
-              </a>
-              <a href="mailto:contato@prosinge.com.br" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
-                <Mail className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-white mb-4 text-sm">Contato</h4>
-            <ul className="space-y-3 text-white/40 text-sm">
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(11) 5194-3839</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosinge.com.br</li>
-              <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />São Paulo, SP - Brasil</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-bold text-white mb-4 text-sm">Links</h4>
-            <ul className="space-y-3 text-white/40 text-sm">
-              <li><a href="#recursos" className="hover:text-white transition-colors">Recursos</a></li>
-              <li><a href="#modulos" className="hover:text-white transition-colors">Módulos</a></li>
-              <li><a href="#depoimentos" className="hover:text-white transition-colors">Depoimentos</a></li>
-              <li><Link to="/politica-privacidade" className="hover:text-white transition-colors">Privacidade</Link></li>
-              <li><Link to="/termos-uso" className="hover:text-white transition-colors">Termos de Uso</Link></li>
-            </ul>
+    <footer className="text-white" style={{ background: NAVY }}>
+      <div className="container grid gap-10 py-14 md:grid-cols-4">
+        <div>
+          <img src={prosingeLogo} alt="Sindexa" className="h-10 w-auto brightness-0 invert" />
+          <p className="mt-4 text-sm text-white/70 max-w-xs">
+            Sistema completo de gestão para sindicatos, associações e federações de todo o Brasil.
+          </p>
+          <div className="mt-5 flex gap-2">
+            <a
+              href="https://facebook.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Facebook"
+              className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+            >
+              <Facebook className="h-4 w-4" />
+            </a>
+            <a
+              href="https://instagram.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Instagram"
+              className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+            >
+              <Instagram className="h-4 w-4" />
+            </a>
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
-          <p>© {new Date().getFullYear()} Prosinge - Todos os direitos reservados.</p>
+        <div>
+          <h4 className="text-sm font-bold uppercase tracking-wider">Institucional</h4>
+          <ul className="mt-4 space-y-2 text-sm text-white/75">
+            <li><a href="#plataforma" className="hover:text-white">A plataforma</a></li>
+            <li><a href="#solucoes" className="hover:text-white">Soluções</a></li>
+            <li><a href="#depoimentos" className="hover:text-white">Depoimentos</a></li>
+            <li><Link to="/lgpd" className="hover:text-white">LGPD</Link></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-bold uppercase tracking-wider">Contato</h4>
+          <ul className="mt-4 space-y-2 text-sm text-white/75">
+            <li className="flex items-center gap-2"><Phone className="h-4 w-4" style={{ color: ORANGE }} />(11) 5194-3839</li>
+            <li className="flex items-center gap-2"><Mail className="h-4 w-4" style={{ color: ORANGE }} />contato@sindexa.com.br</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-bold uppercase tracking-wider">Comece agora</h4>
+          <p className="mt-4 text-sm text-white/75">
+            Solicite uma demonstração e conheça todas as funcionalidades do Sindexa.
+          </p>
+          <Button
+            asChild
+            className="mt-4 h-11 rounded-full px-6 text-sm font-bold text-white"
+            style={{ backgroundColor: ORANGE }}
+          >
+            <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Testar gratuitamente</a>
+          </Button>
         </div>
       </div>
+
+      <div className="border-t border-white/10">
+        <div className="container flex flex-col md:flex-row items-center justify-between gap-3 py-5 text-xs text-white/60">
+          <p>© {new Date().getFullYear()} Sindexa — Todos os direitos reservados</p>
+          <p>CNPJ oculto · Em conformidade com a LGPD</p>
+        </div>
+      </div>
+
+      {/* WhatsApp flutuante */}
+      <a
+        href={WHATSAPP_URL}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Fale no WhatsApp"
+        className="fixed bottom-6 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#25d366] text-white shadow-2xl hover:scale-105 transition-transform"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="h-7 w-7" fill="currentColor">
+          <path d="M19.11 17.29c-.29-.14-1.7-.84-1.96-.93-.26-.1-.45-.14-.64.14-.19.29-.74.93-.9 1.12-.16.19-.33.21-.62.07-.29-.14-1.22-.45-2.33-1.44-.86-.77-1.44-1.72-1.61-2.01-.17-.29-.02-.45.12-.59.13-.13.29-.33.43-.5.14-.16.19-.29.29-.48.1-.19.05-.36-.02-.5-.07-.14-.64-1.54-.88-2.11-.23-.55-.47-.48-.64-.49l-.55-.01a1.05 1.05 0 0 0-.76.36c-.26.29-1 1-1 2.43s1.02 2.83 1.16 3.02c.14.19 2 3.06 4.85 4.29.68.29 1.21.47 1.62.6.68.22 1.3.19 1.79.11.55-.08 1.7-.7 1.94-1.37.24-.67.24-1.24.17-1.37-.07-.13-.26-.21-.55-.35zM16 4C9.37 4 4 9.37 4 16c0 2.11.55 4.1 1.6 5.86L4 28l6.28-1.55A11.94 11.94 0 0 0 16 28c6.63 0 12-5.37 12-12S22.63 4 16 4zm0 21.86a9.83 9.83 0 0 1-5.02-1.38l-.36-.21-3.73.92 1-3.63-.24-.37A9.86 9.86 0 1 1 16 25.86z"/>
+        </svg>
+      </a>
     </footer>
   );
 }
 
-// ─── Main Page ──────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
+   PAGE
+   ═══════════════════════════════════════════════════════════════ */
 export default function SindicalLandingPage() {
-  useEffect(() => {
-    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    const originalHref = favicon?.href || "/favicon.ico";
-    if (favicon) favicon.href = "/favicon.png?v=prosinge-final-20260517c";
-    document.title = "Prosinge - Sistema de Gestão Sindical";
-    return () => {
-      if (favicon) favicon.href = originalHref;
-      document.title = "ProSindWeb - Sistema de Gestão Sindical";
-    };
-  }, []);
-
   return (
     <PublicPageWrapper>
-      <SindicalHeader />
-      <main>
-        <HeroSection />
-        <StatsSection />
-        <TestimonialsSection />
-        <ProblemSection />
-        <MigrationSection />
-        <FeaturesSection />
-        <ModulesSection />
-        <MiniFeatures />
-        <FAQSection />
-        <CTASection />
-      </main>
-      <SindicalFooter />
+      <div className="min-h-screen bg-white antialiased">
+        <SiteHeader />
+        <main>
+          <Hero />
+          <Plataforma />
+          <Credibilidade />
+          <Solucoes />
+          <Referencia />
+          <Depoimentos />
+          <Contato />
+        </main>
+        <SiteFooter />
+      </div>
     </PublicPageWrapper>
   );
 }

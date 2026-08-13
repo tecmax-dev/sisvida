@@ -23,10 +23,6 @@ export default function InstallPage() {
      const isAndroidUA = userAgent.indexOf("android") > -1;
      setIsAndroid(isAndroidUA);
 
-     // /app/instalar deve sempre direcionar para a página de filiação do SECMI.
-     window.location.replace("https://prosinge.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28");
-     return;
-
      setIsDesktop(window.innerWidth >= 1024);
     // Verificar se já está instalado como PWA
     if (window.matchMedia('(display-mode: standalone)').matches) {

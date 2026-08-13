@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 import { useToast } from "@/hooks/use-toast";
+import { isBiolifeBenefit, getBiolifeAuthorizationInfo } from "@/lib/biolifeAuthorization";
 
 export default function AuthorizationValidationPage() {
   const { slug, hash } = useParams<{ slug: string; hash: string }>();
@@ -129,12 +130,8 @@ export default function AuthorizationValidationPage() {
   const isExpired = data.status === "expired" || new Date(data.valid_until) < new Date();
   const isRevoked = data.status === "revoked";
 
-  const isBiolife = (() => {
-    const b = data.benefit;
-    if (!b) return false;
-    const hay = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
-    return hay.includes("biolife");
-  })();
+  const isBiolife = isBiolifeBenefit(data.benefit);
+  const biolifeInfo = isBiolife ? getBiolifeAuthorizationInfo(!!data.is_for_dependent) : null;
   
   const unionEntity = data.union_entity as any;
   const entityName = unionEntity?.nome_fantasia || unionEntity?.razao_social || data.clinic?.name;
@@ -237,6 +234,26 @@ export default function AuthorizationValidationPage() {
                 </p>
               </div>
             </div>
+
+            {biolifeInfo && (
+              <div
+                className={`rounded-md border p-4 text-left ${
+                  biolifeInfo.kind === "discount"
+                    ? "border-amber-400 bg-amber-50"
+                    : "border-emerald-400 bg-emerald-50"
+                }`}
+              >
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-900">
+                  {biolifeInfo.title}
+                </p>
+                <p className="mt-2 text-sm text-gray-800">{biolifeInfo.description}</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-800">
+                  {biolifeInfo.labInstructions.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <Separator />
 

@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Save, Globe, Wifi, CheckCircle, XCircle, Scale, MessageSquare, Copy } from "lucide-react";
+import { Loader2, Save, Globe, Wifi, CheckCircle, XCircle, Scale, MessageSquare, Copy, Rocket, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UnionPlanProfessionalsConfig } from "@/components/admin/UnionPlanProfessionalsConfig";
 
 interface GlobalConfig {
@@ -15,6 +17,7 @@ interface GlobalConfig {
   evolution_api_key: string;
   evolution_instance: string;
   meta_api_active: "v1" | "v2";
+  trial_signup_enabled: boolean;
 }
 
 export default function GlobalConfigPage() {
@@ -23,6 +26,7 @@ export default function GlobalConfigPage() {
     evolution_api_key: "",
     evolution_instance: "",
     meta_api_active: "v1",
+    trial_signup_enabled: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,6 +61,10 @@ export default function GlobalConfigPage() {
           evolution_api_key: data.evolution_api_key || "",
           evolution_instance: data.evolution_instance || "",
           meta_api_active: ((data as any).meta_api_active as "v1" | "v2") || "v1",
+          trial_signup_enabled:
+            typeof (data as any).trial_signup_enabled === "boolean"
+              ? (data as any).trial_signup_enabled
+              : true,
         });
       }
     } catch (error: any) {
@@ -78,6 +86,7 @@ export default function GlobalConfigPage() {
             evolution_api_key: config.evolution_api_key,
             evolution_instance: config.evolution_instance,
             meta_api_active: config.meta_api_active,
+            trial_signup_enabled: config.trial_signup_enabled,
             updated_at: new Date().toISOString(),
           } as any)
           .eq("id", config.id);
@@ -91,6 +100,7 @@ export default function GlobalConfigPage() {
             evolution_api_key: config.evolution_api_key,
             evolution_instance: config.evolution_instance,
             meta_api_active: config.meta_api_active,
+            trial_signup_enabled: config.trial_signup_enabled,
           } as any);
 
         if (error) throw error;
@@ -173,6 +183,10 @@ export default function GlobalConfigPage() {
             <Scale className="h-4 w-4" />
             Planos Sindicato
           </TabsTrigger>
+          <TabsTrigger value="landing" className="gap-2">
+            <Rocket className="h-4 w-4" />
+            Landing Page
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="integrations">
@@ -180,76 +194,28 @@ export default function GlobalConfigPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="h-5 w-5" />
-                Evolution API
+                Evolution API (LEGADO)
               </CardTitle>
               <CardDescription>
-                Configure a URL e chave da Evolution API para envio de mensagens WhatsApp
+                A integração direta com a Evolution API está desativada.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="evolution_api_url">URL da API</Label>
-                <Input
-                  id="evolution_api_url"
-                  value={config.evolution_api_url}
-                  onChange={(e) =>
-                    setConfig({ ...config, evolution_api_url: e.target.value })
-                  }
-                  placeholder="https://api.evolution.com.br"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="evolution_api_key">Chave da API (API Key)</Label>
-                <Input
-                  id="evolution_api_key"
-                  type="password"
-                  value={config.evolution_api_key}
-                  onChange={(e) =>
-                    setConfig({ ...config, evolution_api_key: e.target.value })
-                  }
-                  placeholder="Sua chave de API"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="evolution_instance">Nome da Instância</Label>
-                <Input
-                  id="evolution_instance"
-                  value={config.evolution_instance}
-                  onChange={(e) =>
-                    setConfig({ ...config, evolution_instance: e.target.value })
-                  }
-                  placeholder="ex: prosinge"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
-                  Salvar Configurações
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  onClick={handleTestConnection} 
-                  disabled={testing || !config.evolution_api_url || !config.evolution_api_key || !config.evolution_instance}
-                >
-                  {testing ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : connectionStatus === "connected" ? (
-                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  ) : connectionStatus === "error" ? (
-                    <XCircle className="h-4 w-4 mr-2 text-red-500" />
-                  ) : (
-                    <Wifi className="h-4 w-4 mr-2" />
-                  )}
-                  Testar Conexão
-                </Button>
+            <CardContent className="space-y-4 opacity-50 grayscale pointer-events-none">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Este provedor é considerado LEGADO e não deve ser utilizado.
+                </AlertDescription>
+              </Alert>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="evolution_api_url">URL da API</Label>
+                  <Input id="evolution_api_url" value={config.evolution_api_url} readOnly />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="evolution_api_key">Chave da API</Label>
+                  <Input id="evolution_api_key" type="password" value={config.evolution_api_key} readOnly />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -257,6 +223,51 @@ export default function GlobalConfigPage() {
 
         <TabsContent value="union-plans">
           <UnionPlanProfessionalsConfig />
+        </TabsContent>
+
+        <TabsContent value="landing">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Rocket className="h-5 w-5" />
+                Página principal (Prosinge SaaS)
+              </CardTitle>
+              <CardDescription>
+                Controla elementos exibidos na landing pública do sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+                <div className="space-y-1">
+                  <Label htmlFor="trial_signup_enabled" className="text-base font-semibold">
+                    Botão "Teste gratuitamente"
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Quando desativado, o botão de criar conta teste é removido da página
+                    principal (hero, seção de credibilidade e CTA de referência).
+                  </p>
+                </div>
+                <Switch
+                  id="trial_signup_enabled"
+                  checked={config.trial_signup_enabled}
+                  onCheckedChange={(checked) =>
+                    setConfig({ ...config, trial_signup_enabled: checked })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Salvar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="meta">
@@ -267,35 +278,19 @@ export default function GlobalConfigPage() {
                 Meta WhatsApp Cloud API
               </CardTitle>
               <CardDescription>
-                Selecione qual conta Meta está ativa para envios (toggle global). As credenciais
-                são armazenadas como secrets (META_WHATSAPP_TOKEN / _V2).
+                A integração direta com a Meta via API Cloud está desativada. O sistema utiliza agora o ZapResponde como gateway oficial.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="meta_api_active">API ativa</Label>
-                <select
-                  id="meta_api_active"
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={config.meta_api_active}
-                  onChange={(e) =>
-                    setConfig({ ...config, meta_api_active: e.target.value as "v1" | "v2" })
-                  }
-                >
-                  <option value="v1">V1 — Conta atual (META_WHATSAPP_TOKEN)</option>
-                  <option value="v2">V2 — Nova conta (META_WHATSAPP_TOKEN_V2)</option>
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Lembrete: o webhook da Meta precisa apontar para o mesmo endpoint nas duas
-                  WABAs para receber mensagens das duas contas.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar
-                </Button>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Esta configuração é LEGADA e não deve ser utilizada para novos envios.
+                </AlertDescription>
+              </Alert>
+              <div className="space-y-2 opacity-50 pointer-events-none">
+                <Label htmlFor="meta_api_active">API ativa (Bloqueado)</Label>
+                <Input value={config.meta_api_active || "v1"} readOnly />
               </div>
 
               <div className="border-t pt-4 space-y-3">

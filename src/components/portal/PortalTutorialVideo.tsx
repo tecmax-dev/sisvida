@@ -81,7 +81,7 @@ export function PortalTutorialVideo({ open, onOpenChange }: { open: boolean, onO
       const doc = new jsPDF();
       
       // Header
-      doc.setFillColor(44, 82, 130); // #2c5282 (ProSind Blue)
+      doc.setFillColor(44, 82, 130); // #2c5282 (Prosinge Blue)
       doc.rect(0, 0, 210, 40, 'F');
       
       doc.setTextColor(255, 255, 255);
@@ -133,7 +133,7 @@ export function PortalTutorialVideo({ open, onOpenChange }: { open: boolean, onO
       // Footer
       doc.setFontSize(9);
       doc.setTextColor(148, 163, 184);
-      doc.text("© ProSindWeb - Sistema de Gestao Sindical", 105, 285, { align: "center" });
+      doc.text("© Prosinge - Sistema de Gestao Sindical", 105, 285, { align: "center" });
 
       doc.save("Guia_Rapido_Portal_Empresa.pdf");
       toast.success("Guia em PDF baixado com sucesso!");

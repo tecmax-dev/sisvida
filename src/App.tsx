@@ -48,6 +48,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const ProfessionalAuth = lazy(() => import("./pages/ProfessionalAuth"));
 const ClinicSetup = lazy(() => import("./pages/ClinicSetup"));
 const InstallPage = lazy(() => import("./pages/InstallPage"));
+const SindicatoInstallIphonePage = lazy(() => import("./pages/SindicatoInstallIphonePage"));
 
 // Páginas públicas
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
@@ -85,14 +86,21 @@ const TutorialSindicatoPage = lazy(() => import("./pages/TutorialSindicatoPage")
 const SindicatoPrivacyPolicy = lazy(() => import("./pages/SindicatoPrivacyPolicy"));
 const SindicatoExclusaoConta = lazy(() => import("./pages/SindicatoExclusaoConta"));
 const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
+const CardUpdatePage = lazy(() => import("./pages/public/CardUpdatePage"));
+const HomologacaoConsultPage = lazy(() => import("./pages/public/HomologacaoConsultPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const WhatsAppTemplatesPage = lazy(() => import("./pages/admin/WhatsAppTemplatesPage"));
 const SindicatoTemplatesPage = lazy(() => import("./pages/SindicatoTemplatesPage"));
 const WhatsAppTemplatesGuidePage = lazy(() => import("./pages/admin/WhatsAppTemplatesGuidePage"));
 const WhatsAppStatusPage = lazy(() => import("./pages/admin/WhatsAppStatusPage"));
 const WhatsAppAuditPage = lazy(() => import("./pages/admin/WhatsAppAuditPage"));
+const WhatsAppSimulationPage = lazy(() => import("./pages/admin/WhatsAppSimulationPage"));
 const MetaWebhookHealthPage = lazy(() => import("./pages/admin/MetaWebhookHealthPage"));
 const MetaHealthDashboard = lazy(() => import("./pages/admin/MetaHealthDashboard"));
+const WhatsappConsentPublicPage = lazy(() => import("./pages/public/WhatsappConsentPublicPage"));
+const DryRunCreationPage = lazy(() => import("./pages/DryRunSetup"));
+
+
 
 
 // Mobile App Pages - lazy load
@@ -103,6 +111,7 @@ const MobilePublicHomePage = lazy(() => import("./pages/mobile/MobilePublicHomeP
 const MobileAppointmentsPage = lazy(() => import("./pages/mobile/MobileAppointmentsPage"));
 const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"));
 const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
+const MobileWaitingListPage = lazy(() => import("./pages/mobile/MobileWaitingListPage"));
 const MobilePasswordResetPage = lazy(() => import("./pages/mobile/MobilePasswordResetPage"));
 const MobileDependentsPage = lazy(() => import("./pages/mobile/MobileDependentsPage"));
 const MobileChangePasswordPage = lazy(() => import("./pages/mobile/MobileChangePasswordPage"));
@@ -138,6 +147,9 @@ import AnamnesisPage from "./pages/dashboard/AnamnesisPage";
 import AnamneseTemplatesPage from "./pages/dashboard/AnamneseTemplatesPage";
 import DynamicAnamnesisPage from "./pages/dashboard/DynamicAnamnesisPage";
 import WaitingListPage from "./pages/dashboard/WaitingListPage";
+import WaitingListQueuePage from "./pages/dashboard/WaitingListQueuePage";
+import WaitingListReportPage from "./pages/dashboard/WaitingListReportPage";
+import WaitingListMemberReportPage from "./pages/dashboard/WaitingListMemberReportPage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
 import AppointmentReportsPage from "./pages/dashboard/AppointmentReportsPage";
 import SubscriptionPage from "./pages/dashboard/SubscriptionPage";
@@ -206,6 +218,7 @@ import UnionCashRegistersPage from "./pages/union/UnionCashRegistersPage";
 import UnionSuppliersPage from "./pages/union/UnionSuppliersPage";
 import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
 import UnionReportsPage from "./pages/union/UnionReportsPage";
+import UnionOverdueReportPage from "./pages/union/UnionOverdueReportPage";
 import UnionLytexReportsPage from "./pages/union/UnionLytexReportsPage";
 import UnionAppointmentReportsPage from "./pages/union/UnionAppointmentReportsPage";
 import UnionMembersReportPage from "./pages/union/UnionMembersReportPage";
@@ -220,6 +233,7 @@ import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
 import UnionAccessGroupsPage from "./pages/union/UnionAccessGroupsPage";
 import UnionHolidaysPage from "./pages/union/UnionHolidaysPage";
+import UnionAuditLogsPage from "./pages/union/UnionAuditLogsPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
 import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
@@ -389,7 +403,9 @@ function App() {
                   <DomainRedirect />
                   <Suspense fallback={<LoadingFallback />}>
                     <Routes>
-                <Route path="/" element={<HubLandingPage />} />
+                <Route path="/" element={<SindicalLandingPage />} />
+                <Route path="/dry-run-setup" element={<Suspense fallback={<LoadingFallback />}><DryRunCreationPage /></Suspense>} />
+                <Route path="/hub" element={<HubLandingPage />} />
                 <Route path="/clinica" element={<ClinicaLandingPage />} />
                 <Route path="/c/:token" element={<AppointmentSmsConfirm />} />
                 <Route path="/sindicato-saas" element={<SindicalLandingPage />} />
@@ -407,6 +423,8 @@ function App() {
                 <Route path="/sindicato/exclusao-de-conta" element={<SindicatoExclusaoConta />} />
                 <Route path="/excluir-conta" element={<SindicatoExclusaoConta />} />
                 <Route path="/sindicato/instalar" element={<InstallPage />} />
+                <Route path="/sindicato/instalar-iphone" element={<SindicatoInstallIphonePage />} />
+                <Route path="/sindicato/instalar-ios" element={<SindicatoInstallIphonePage />} />
                 {/* Novo link dedicado para instalação do PWA do Sindicato */}
                 <Route path="/sindicato/baixar-app" element={<MobileInstallPage />} />
                 <Route path="/sindicato/app/*" element={<Navigate to="/app" replace />} />
@@ -424,12 +442,14 @@ function App() {
                 <Route path="/portais" element={<PortalAccessPage />} />
                 <Route path="/apresentacao" element={<PresentationPage />} />
                 <Route path="/apresentacao-clinica" element={<ClinicPresentationPage />} />
-                <Route path="/apresentacao-prosinge" element={<ApresentacaoEcliniPage />} />
+                <Route path="/apresentacao-eclini" element={<ApresentacaoEcliniPage />} />
                 <Route path="/tutorial-sindicato" element={<TutorialSindicatoPage />} />
                 <Route path="/tutorial-sindical" element={<TutorialSindicatoPage />} />
                 <Route path="/negociacao-espelho/:token" element={<NegotiationPreviewPage />} />
                 {/* Signature Authorization Page - Public */}
                 <Route path="/assinar/:token" element={<SignatureAuthorizationPage />} />
+                <Route path="/atualizar-carteirinha" element={<CardUpdatePage />} />
+                <Route path="/homologacao/consulta" element={<HomologacaoConsultPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/sindicato/treinamento" element={<TrainingMaterial />} />
@@ -478,6 +498,7 @@ function App() {
                 <Route path="/anamnese/:token" element={<PublicAnamnesis />} />
                 {/* Public NPS survey */}
                 <Route path="/nps/:token" element={<PublicNPS />} />
+                <Route path="/whatsapp/consentimento" element={<WhatsappConsentPublicPage />} />
                 {/* Appointment confirmation via token */}
                 <Route path="/consulta/:token" element={<AppointmentConfirmation />} />
                 {/* Telemedicine patient room */}
@@ -539,6 +560,7 @@ function App() {
                   <Route path="whatsapp-templates" element={<WhatsAppTemplatesPage />} />
                   <Route path="whatsapp-status" element={<WhatsAppStatusPage />} />
                   <Route path="whatsapp-audit" element={<WhatsAppAuditPage />} />
+                  <Route path="whatsapp-simulation" element={<WhatsAppSimulationPage />} />
                   <Route path="meta-webhook-health" element={<MetaWebhookHealthPage />} />
                   <Route path="meta-health" element={<MetaHealthDashboard />} />
                   <Route path="hero" element={<HeroSettingsPage />} />
@@ -575,6 +597,9 @@ function App() {
                   <Route path="anamnesis-templates" element={<AnamneseTemplatesPage />} />
                   <Route path="anamnesis-dynamic" element={<DynamicAnamnesisPage />} />
                   <Route path="waiting-list" element={<WaitingListPage />} />
+                  <Route path="fila-espera" element={<WaitingListQueuePage />} />
+                  <Route path="fila-espera/relatorio" element={<WaitingListReportPage />} />
+                  <Route path="fila-espera/associado" element={<WaitingListMemberReportPage />} />
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="reports/appointments" element={<AppointmentReportsPage />} />
                   <Route path="subscription" element={<SubscriptionPage />} />
@@ -658,6 +683,7 @@ function App() {
                   <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
                   <Route path="relatorios/agendamentos" element={<UnionAppointmentReportsPage />} />
                   <Route path="relatorios/associados" element={<UnionMembersReportPage />} />
+                  <Route path="relatorios/inadimplencia" element={<UnionOverdueReportPage />} />
                   <Route path="associados" element={<UnionAssociadosPage />} />
                   <Route path="filiacoes" element={<UnionFiliacoesPage />} />
                   <Route path="aprovacao-dependentes" element={<UnionDependentApprovalsPage />} />
@@ -691,6 +717,7 @@ function App() {
                   <Route path="configuracoes/feriados" element={<UnionHolidaysPage />} />
                   <Route path="configuracoes/grupos-acesso" element={<UnionAccessGroupsPage />} />
                   <Route path="contatos" element={<UnionContactsPage />} />
+                  <Route path="auditoria" element={<UnionAuditLogsPage />} />
                 </Route>
                 {/* Mobile App Routes - Rotas fixas declarativas (decisão de navegação feita no bootstrap imperativo) */}
                 <Route
@@ -708,8 +735,7 @@ function App() {
                   <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
                   <Route path="primeiro-acesso" element={<MobileFirstAccessPage />} />
                   <Route path="home-publico" element={<MobilePublicHomePage />} />
-                  {/* /app/instalar foi convertido em redirect para filiação.
-                      A página real de instalação do PWA agora está em /app/baixar-app */}
+                  {/* Página de instalação do PWA */}
                   <Route path="instalar" element={<InstallPage />} />
                   <Route path="baixar-app" element={<MobileInstallPage />} />
                   <Route path="faq" element={<MobileFAQPage />} />
@@ -721,6 +747,7 @@ function App() {
                   <Route path="agendamentos" element={<MobileAppointmentsPage />} />
                   <Route path="agendamentos-juridicos" element={<MobileLegalAppointmentsPage />} />
                   <Route path="agendar" element={<MobileBookingPage />} />
+                  <Route path="filas" element={<MobileWaitingListPage />} />
                   <Route path="perfil" element={<MobileProfilePage />} />
                   <Route path="dependentes" element={<MobileDependentsPage />} />
                   <Route path="alterar-senha" element={<MobileChangePasswordPage />} />

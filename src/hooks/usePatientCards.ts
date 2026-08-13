@@ -127,10 +127,50 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
       notes?: string;
     }) => {
       if (!clinicId) throw new Error('Clinic not selected');
-      
-      const cardNumber = await generateCardNumber(clinicId, cardData.patient_id);
+
+      // Se já existir uma carteirinha (mesmo inativa) para o paciente, reaproveita
+      // em vez de inserir outra (o número é a matrícula → violaria a constraint única).
+      const { data: existing } = await supabase
+        .from('patient_cards')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('patient_id', cardData.patient_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const { data: updated, error: updateError } = await supabase
+          .from('patient_cards')
+          .update({
+            expires_at: cardData.expires_at,
+            is_active: true,
+            notes: cardData.notes || null,
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        return updated;
+      }
+
+      let cardNumber = await generateCardNumber(clinicId, cardData.patient_id);
       if (!cardNumber) throw new Error('Failed to generate card number');
-      
+
+      // Garante que o número não colida com outro registro da mesma clínica
+      const { data: numberTaken } = await supabase
+        .from('patient_cards')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('card_number', cardNumber)
+        .limit(1)
+        .maybeSingle();
+
+      if (numberTaken) {
+        cardNumber = `${cardNumber}-${Date.now().toString().slice(-5)}`;
+      }
+
       const { data, error } = await supabase
         .from('patient_cards')
         .insert({

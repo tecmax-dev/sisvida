@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Check,
   ChevronsUpDown,
+  MessageSquare,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,7 @@ function WaitingListContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [smsSendingId, setSmsSendingId] = useState<string | null>(null);
 
   // Form state
   const [selectedPatient, setSelectedPatient] = useState("");
@@ -303,6 +305,45 @@ function WaitingListContent() {
   };
 
   const handleSchedulePatient = async (entry: WaitingListEntry) => {
+    return _handleSchedulePatient(entry);
+  };
+
+  const handleNotifyPatientSms = async (entry: WaitingListEntry) => {
+    if (!entry.patient?.phone) {
+      toast({ title: "Paciente sem telefone cadastrado", variant: "destructive" });
+      return;
+    }
+    setSmsSendingId(entry.id);
+    try {
+      const firstName = entry.patient.name.split(" ")[0];
+      const slotText =
+        entry.offered_appointment_date && entry.offered_appointment_time
+          ? ` em ${new Date(entry.offered_appointment_date + "T12:00:00").toLocaleDateString("pt-BR")} as ${entry.offered_appointment_time.slice(0, 5)}${entry.offered_professional_name ? ` com ${entry.offered_professional_name}` : ""}`
+          : "";
+      const message = `${firstName}, abriu uma vaga${slotText}. Confirme pelo app ou entre em contato. ${currentClinic?.name ?? ""}`.trim();
+
+      const { data, error } = await supabase.functions.invoke("sindicato-send-sms", {
+        body: { body: message, recipients: [{ phone: entry.patient.phone, name: entry.patient.name }] },
+      });
+      if (error) throw error;
+      const failed = (data?.results ?? []).find((r: any) => r.status !== "sent");
+      if (failed) throw new Error(failed.error || "Falha no envio do SMS");
+
+      await supabase
+        .from("waiting_list")
+        .update({ notified_at: new Date().toISOString() })
+        .eq("id", entry.id);
+
+      toast({ title: "SMS enviado!", description: `Vaga informada para ${entry.patient.name}` });
+      fetchWaitingList();
+    } catch (error: any) {
+      toast({ title: "Erro ao enviar SMS", description: error.message, variant: "destructive" });
+    } finally {
+      setSmsSendingId(null);
+    }
+  };
+
+  const _handleSchedulePatient = async (entry: WaitingListEntry) => {
     // Mark as inactive and confirmed
     await supabase
       .from('waiting_list')
@@ -625,6 +666,19 @@ function WaitingListContent() {
                        <Send className="h-4 w-4 mr-1" />
                        Notificar
                      </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={smsSendingId === entry.id}
+                      onClick={() => handleNotifyPatientSms(entry)}
+                    >
+                      {smsSendingId === entry.id ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                      )}
+                      Notificar SMS
+                    </Button>
                      <Button
                        variant="default"
                        size="sm"

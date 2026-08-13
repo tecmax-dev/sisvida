@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import prosindwebLogo from "@/assets/prosindweb-logo.png";
-
+import prosingeLogo from "@/assets/prosinge-logo.png";
 
 interface LogoProps {
   variant?: "light" | "dark";
@@ -19,9 +18,8 @@ export function Logo({ variant = "dark", size = "md", showText = true, customSrc
   return (
     <Link to="/" className="flex items-center gap-2 group">
       <img 
-        src={customSrc || prosindwebLogo} 
-        alt="Prosinge - Gestão Sindical" 
-
+        src={customSrc || prosingeLogo} 
+        alt="Prosinge - Sistema para Clínicas" 
         className={`${sizes[size]} w-auto object-contain`}
       />
     </Link>

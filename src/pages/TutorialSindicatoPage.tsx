@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import prosindwebLogo from "@/assets/prosindweb-logo.png";
+import prosingeLogo from "@/assets/prosinge-logo.png";
 
 // Import illustrations
 import ilustracaoEmpresas from "@/assets/illustrations/tutorial-empresas.png";
@@ -57,7 +57,7 @@ const TutorialSindicatoPage = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch(prosindwebLogo);
+        const response = await fetch(prosingeLogo);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -339,7 +339,7 @@ const TutorialSindicatoPage = () => {
       title: "Primeiros Passos", 
       desc: "Como acessar e navegar no sistema",
       fullContent: {
-        overview: "Aprenda como acessar o sistema ProSindWeb pela primeira vez, configurar sua conta e navegar pelas principais funcionalidades.",
+        overview: "Aprenda como acessar o sistema Prosinge pela primeira vez, configurar sua conta e navegar pelas principais funcionalidades.",
         steps: [
           { title: "Acessar o sistema", desc: "Acesse o endereço fornecido pela sua entidade e faça login com e-mail e senha cadastrados." },
           { title: "Conhecer o dashboard", desc: "A tela inicial mostra um resumo com estatísticas importantes: empresas, sócios e finanças." },
@@ -494,7 +494,7 @@ const TutorialSindicatoPage = () => {
         doc.rect(0, pageHeight - 10, pageWidth, 10, "F");
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(7);
-        doc.text("Tutorial ProSindWeb - Modulo Sindical | Prosinge 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
+        doc.text("Tutorial Prosinge - Modulo Sindical | Prosinge 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
       };
 
       // Helper: Draw a content box with colored left bar
@@ -642,7 +642,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text("Contato: (73) 3198-2161", pageWidth / 2, pageHeight - 27, { align: "center" });
+      doc.text("Contato: (71) 98278-6864", pageWidth / 2, pageHeight - 27, { align: "center" });
       doc.text("www.prosinge.com.br", pageWidth / 2, pageHeight - 19, { align: "center" });
 
       // =====================
@@ -951,7 +951,7 @@ const TutorialSindicatoPage = () => {
       doc.text("Precisa de ajuda? Entre em contato conosco:", margin + 10, yPos + 12);
       
       doc.setFont("helvetica", "bold");
-      doc.text("Telefone: (73) 3198-2161", margin + 10, yPos + 23);
+      doc.text("Telefone: (71) 98278-6864", margin + 10, yPos + 23);
       doc.text("E-mail: suporte@prosinge.com.br", margin + 10, yPos + 32);
       doc.text("Chat: Disponivel no sistema (horario comercial)", margin + 10, yPos + 41);
 
@@ -1004,7 +1004,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("(73) 3198-2161", pageWidth / 2, 218, { align: "center" });
+      doc.text("(71) 98278-6864", pageWidth / 2, 218, { align: "center" });
       doc.text("www.prosinge.com.br", pageWidth / 2, 230, { align: "center" });
 
       // Version footer

@@ -176,6 +176,12 @@ export default function UnionContributionsReportsTab({
   const [endDate, setEndDate] = useState<string>(
     savedFilters?.endDate || toInputDate(endOfMonth(new Date()))
   );
+  const [hideZeroValue, setHideZeroValue] = useState<boolean>(
+    savedFilters?.hideZeroValue !== undefined ? !!savedFilters.hideZeroValue : true
+  );
+  const [treatPendingAsDebt, setTreatPendingAsDebt] = useState<boolean>(
+    savedFilters?.treatPendingAsDebt !== undefined ? !!savedFilters.treatPendingAsDebt : false
+  );
 
   // Track if user manually touched dates
   const dateTouchedRef = useRef(false);
@@ -191,13 +197,15 @@ export default function UnionContributionsReportsTab({
       dateFilterType,
       startDate,
       endDate,
+      hideZeroValue,
+      treatPendingAsDebt,
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filtersToSave));
     } catch (e) {
       console.warn("Erro ao salvar filtros:", e);
     }
-  }, [reportType, statusFilter, selectedEmployer, selectedContributionTypes, originFilter, dateFilterType, startDate, endDate, STORAGE_KEY]);
+  }, [reportType, statusFilter, selectedEmployer, selectedContributionTypes, originFilter, dateFilterType, startDate, endDate, hideZeroValue, treatPendingAsDebt, STORAGE_KEY]);
 
   // Use the hook for data fetching with SQL filters
   const {
@@ -226,8 +234,9 @@ export default function UnionContributionsReportsTab({
       employerId: selectedEmployer?.id,
       contributionTypeIds: selectedContributionTypes.length > 0 ? selectedContributionTypes : undefined,
       origin: originFilter !== "all" ? originFilter : undefined,
+      hideZeroValue,
     };
-  }, [startDate, endDate, dateFilterType, statusFilter, selectedEmployer, selectedContributionTypes, originFilter, reportType]);
+  }, [startDate, endDate, dateFilterType, statusFilter, selectedEmployer, selectedContributionTypes, originFilter, reportType, hideZeroValue]);
 
   // Reset filters to defaults
   const handleResetFilters = useCallback(() => {
@@ -240,6 +249,8 @@ export default function UnionContributionsReportsTab({
     setDateFilterType("due_date");
     setStartDate(getDefaultStartDate());
     setEndDate(toInputDate(endOfMonth(new Date())));
+    setHideZeroValue(true);
+    setTreatPendingAsDebt(false);
     toast.success("Filtros resetados");
   }, [STORAGE_KEY, getDefaultStartDate, toInputDate]);
 
@@ -322,13 +333,13 @@ export default function UnionContributionsReportsTab({
       totalCharged,
       totalSurcharge,
       paid,
-      pending,
-      overdue,
+      pending: treatPendingAsDebt ? 0 : pending,
+      overdue: treatPendingAsDebt ? overdue + pending : overdue,
       count: displayContributions.length,
       totalFees,
       totalNet,
     };
-  }, [displayContributions]);
+  }, [displayContributions, treatPendingAsDebt]);
 
   // Recalculate by employer for display
   const displayByEmployerReport = useMemo(() => {
@@ -359,7 +370,8 @@ export default function UnionContributionsReportsTab({
       if (c.status === "paid") {
         existing.paid += c.paid_value || c.value;
       } else if (c.status === "pending") {
-        existing.pending += c.value;
+        if (treatPendingAsDebt) existing.overdue += c.value;
+        else existing.pending += c.value;
       } else if (c.status === "overdue") {
         existing.overdue += c.value;
       }
@@ -368,7 +380,7 @@ export default function UnionContributionsReportsTab({
     });
 
     return Array.from(data.values()).sort((a, b) => b.total - a.total);
-  }, [displayContributions]);
+  }, [displayContributions, treatPendingAsDebt]);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -627,6 +639,36 @@ export default function UnionContributionsReportsTab({
               )}
               Buscar
             </Button>
+          </div>
+
+          {/* Toggle: ocultar valores zerados */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="hide-zero-value"
+              checked={hideZeroValue}
+              onCheckedChange={(v) => setHideZeroValue(v === true)}
+            />
+            <label
+              htmlFor="hide-zero-value"
+              className="text-sm text-muted-foreground cursor-pointer select-none"
+            >
+              Não listar contribuições com valor zerado (R$ 0,00)
+            </label>
+          </div>
+
+          {/* Toggle: tratar pendentes (a vencer) como dívida */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="treat-pending-as-debt"
+              checked={treatPendingAsDebt}
+              onCheckedChange={(v) => setTreatPendingAsDebt(v === true)}
+            />
+            <label
+              htmlFor="treat-pending-as-debt"
+              className="text-sm text-muted-foreground cursor-pointer select-none"
+            >
+              Incluir contribuições a vencer como dívida (somar pendentes ao vencido)
+            </label>
           </div>
 
           {/* Selected Employer Badge */}

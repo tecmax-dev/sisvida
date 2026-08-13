@@ -46,7 +46,7 @@ const defaultSettings: SmtpSettings = {
   username: "",
   password: "",
   from_email: "",
-  from_name: "ProSindWeb",
+  from_name: "Prosinge",
   encryption: "tls",
   is_active: true,
 };
@@ -592,7 +592,7 @@ export default function SmtpSettingsPage() {
                 <Label htmlFor="from_name">Nome do Remetente</Label>
                 <Input
                   id="from_name"
-                  placeholder="ProSindWeb"
+                  placeholder="Prosinge"
                   value={settings.from_name}
                   onChange={(e) => setSettings(prev => ({ ...prev, from_name: e.target.value }))}
                 />

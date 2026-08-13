@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Camera, Upload, Loader2, CheckCircle2, X, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { uploadWithProgress } from "@/lib/uploadWithProgress";
 
 interface PhotoUploadWithCameraProps {
   sindicatoId: string;
@@ -25,6 +27,8 @@ export function PhotoUploadWithCamera({
   className,
 }: PhotoUploadWithCameraProps) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -63,30 +67,49 @@ export function PhotoUploadWithCamera({
     }
 
     setUploading(true);
+    setProgress(0);
+    setProgressMessage("Preparando foto...");
     setCameraActive(false);
 
     try {
-      const fileExt = file.name.split(".").pop() || "jpg";
+      const fileExt = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "jpg";
       const fileName = `${sindicatoId}/${Date.now()}_foto.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("sindical-documentos")
-        .upload(fileName, file);
+      await uploadWithProgress({
+        bucket: "sindical-documentos",
+        path: fileName,
+        file,
+        onProgress: (s) => {
+          if (!mountedRef.current) return;
+          setProgress(s.percent);
+          setProgressMessage(s.message);
+        },
+      });
 
-      if (uploadError) throw uploadError;
+      if (mountedRef.current) setProgressMessage("Gerando link seguro da foto...");
 
-      // Bucket é privado: gerar signed URL de longa duração (10 anos)
-      const { data: signed, error: signedError } = await supabase.storage
+      // Bucket é privado. Usuários anônimos não têm SELECT, então a URL
+      // assinada é gerada no servidor (edge function) como fallback.
+      const { data: signed } = await supabase.storage
         .from("sindical-documentos")
         .createSignedUrl(fileName, 60 * 60 * 24 * 365 * 10);
 
-      if (signedError || !signed?.signedUrl) {
-        throw signedError || new Error("Falha ao gerar URL assinada");
+      let publicUrl = signed?.signedUrl ?? null;
+      if (!publicUrl) {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          "sindical-doc-sign",
+          { body: { path: fileName } }
+        );
+        if (fnError || !fnData?.signedUrl) {
+          throw new Error(fnData?.error || fnError?.message || "Falha ao gerar URL da foto");
+        }
+        publicUrl = fnData.signedUrl as string;
       }
-      const publicUrl = signed.signedUrl;
 
       if (mountedRef.current) {
         onUpload(publicUrl);
+        setProgress(100);
+        setProgressMessage("Envio concluído!");
         toast({
           title: "Foto enviada",
           description: "Sua foto foi enviada com sucesso.",
@@ -95,6 +118,7 @@ export function PhotoUploadWithCamera({
     } catch (error: any) {
       console.error("Upload error:", error);
       if (mountedRef.current) {
+        setProgressMessage("");
         toast({
           title: "Erro no upload",
           description: error.message || "Não foi possível enviar a foto.",
@@ -173,9 +197,13 @@ export function PhotoUploadWithCamera({
             </div>
           </div>
         ) : uploading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-50/50 dark:bg-blue-950/30">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-2" />
-            <p className="text-xs text-muted-foreground">Enviando...</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 bg-blue-50/50 dark:bg-blue-950/30">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Progress value={progress} className="h-1.5 w-[85%]" />
+            <p className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">
+              {progressMessage || "Enviando..."}
+            </p>
+            <p className="text-[10px] text-muted-foreground/70">Não feche esta página</p>
           </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-3">

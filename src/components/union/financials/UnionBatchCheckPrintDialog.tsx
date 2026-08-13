@@ -64,7 +64,7 @@ export function UnionBatchCheckPrintDialog({
         .eq("type", "expense")
         .not("check_number", "is", null)
         .neq("check_number", "")
-        .order("paid_date", { ascending: true, nullsFirst: false });
+        .order("paid_date", { ascending: false, nullsFirst: false });
 
       if (dueDateFrom) query = query.gte("due_date", dueDateFrom);
       if (dueDateTo) query = query.lte("due_date", dueDateTo);
@@ -79,6 +79,54 @@ export function UnionBatchCheckPrintDialog({
   });
 
   // Apply check number range filter client-side (numeric comparison)
+  // OFX: datas de compensação vindas do extrato bancário importado
+  const { data: ofxRows } = useQuery({
+    queryKey: ["union-batch-check-ofx", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("union_bank_statement_transactions")
+        .select(
+          "transaction_date, check_number, matched_transaction_id, generated_transaction_id"
+        )
+        .eq("clinic_id", clinicId)
+        .limit(5000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!clinicId,
+  });
+
+  const normCheck = (v?: string | null) => {
+    const digits = String(v ?? "").replace(/\D/g, "");
+    return digits ? String(parseInt(digits, 10)) : "";
+  };
+
+  const ofxMaps = useMemo(() => {
+    const byTx = new Map<string, string>();
+    const byCheck = new Map<string, string>();
+    for (const row of ofxRows || []) {
+      const date = (row.transaction_date || "").slice(0, 10);
+      if (!date) continue;
+      for (const id of [row.matched_transaction_id, row.generated_transaction_id]) {
+        if (id && !byTx.has(id)) byTx.set(id, date);
+      }
+      const key = normCheck(row.check_number);
+      // mantém a compensação mais recente por cheque
+      if (key && (!byCheck.has(key) || date > byCheck.get(key)!)) byCheck.set(key, date);
+    }
+    return { byTx, byCheck };
+  }, [ofxRows]);
+
+  /** Data de compensação conciliada: OFX > pagamento > vencimento */
+  const compensationDate = (e: any): { date: string; source: "ofx" | "paid" | "due" | "" } => {
+    const ofx =
+      ofxMaps.byTx.get(e.id) || ofxMaps.byCheck.get(normCheck(e.check_number));
+    if (ofx) return { date: ofx, source: "ofx" };
+    if (e.paid_date) return { date: String(e.paid_date).slice(0, 10), source: "paid" };
+    if (e.due_date) return { date: String(e.due_date).slice(0, 10), source: "due" };
+    return { date: "", source: "" };
+  };
+
   const filteredExpenses = useMemo(() => {
     if (!allExpenses) return [];
     let result = allExpenses;
@@ -113,16 +161,29 @@ export function UnionBatchCheckPrintDialog({
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(e);
     }
-    // Sort by check number numerically
+    // Ordena pelos cheques com data de compensação (pagamento) mais recente primeiro
+    const compDate = (items: typeof filteredExpenses) =>
+      items.reduce((max, e) => {
+        const d = compensationDate(e).date;
+        return d > max ? d : max;
+      }, "");
+
     return Array.from(map.entries()).sort((a, b) => {
+      const da = compDate(a[1]);
+      const db = compDate(b[1]);
+      if (da !== db) {
+        if (!da) return 1;
+        if (!db) return -1;
+        return db.localeCompare(da); // decrescente
+      }
       const na = parseInt(a[0], 10);
       const nb = parseInt(b[0], 10);
-      if (isNaN(na) && isNaN(nb)) return a[0].localeCompare(b[0]);
+      if (isNaN(na) && isNaN(nb)) return b[0].localeCompare(a[0]);
       if (isNaN(na)) return 1;
       if (isNaN(nb)) return -1;
-      return na - nb;
+      return nb - na;
     });
-  }, [filteredExpenses]);
+  }, [filteredExpenses, ofxMaps]);
 
   const toggleCheck = (checkNum: string) => {
     setSelectedChecks((prev) =>
@@ -224,11 +285,13 @@ export function UnionBatchCheckPrintDialog({
           .filter((e) => e.status === "paid")
           .reduce((sum, e) => sum + Number(e.net_value || e.amount), 0);
 
-        // Sort by paid_date (payment date) for print
+        // Ordena pela data de compensação conciliada com o OFX (decrescente)
         const sorted = [...expenses].sort((a, b) => {
-          const da = a.paid_date || a.due_date || "";
-          const db = b.paid_date || b.due_date || "";
-          return da.localeCompare(db);
+          const da = compensationDate(a).date;
+          const db = compensationDate(b).date;
+          if (!da) return 1;
+          if (!db) return -1;
+          return db.localeCompare(da);
         });
 
         return `
@@ -273,7 +336,7 @@ export function UnionBatchCheckPrintDialog({
                       <th style="width: 30%;">Descrição</th>
                       <th style="width: 20%;">Fornecedor</th>
                       <th style="width: 12%;">Vencimento</th>
-                      <th style="width: 12%;">Pagamento</th>
+                      <th style="width: 12%;">Compensação</th>
                       <th style="width: 14%; text-align: right;">Valor</th>
                       <th style="width: 12%;">Status</th>
                     </tr>
@@ -286,7 +349,11 @@ export function UnionBatchCheckPrintDialog({
                         <td class="font-medium">${escapeHtml(e.description)}</td>
                         <td>${escapeHtml(e.supplier?.name || "-")}</td>
                         <td>${formatDateBR(e.due_date) || "-"}</td>
-                        <td>${formatDateBR(e.paid_date) || "-"}</td>
+                        <td>${(() => {
+                          const c = compensationDate(e);
+                          if (!c.date) return "-";
+                          return `${formatDateBR(c.date)}${c.source === "ofx" ? " <span style=\"font-size:8px;color:#0f766e;\">OFX</span>" : ""}`;
+                        })()}</td>
                         <td class="text-right font-semibold">${formatCurrency(Number(e.net_value || e.amount))}</td>
                         <td class="text-center">
                           <span class="status status-${e.status}">
@@ -613,10 +680,11 @@ export function UnionBatchCheckPrintDialog({
                         const paidCount = expenses.filter(
                           (e) => e.status === "paid"
                         ).length;
-                        const firstPaidDate = expenses
-                          .filter((e) => e.paid_date)
-                          .sort((a, b) => (a.paid_date || "").localeCompare(b.paid_date || ""))[0]
-                          ?.paid_date;
+                        const comps = expenses
+                          .map((e) => compensationDate(e))
+                          .filter((c) => c.date && c.source !== "due")
+                          .sort((a, b) => b.date.localeCompare(a.date));
+                        const compDateInfo = comps[0];
                         const lastDueDate = expenses
                           .sort((a, b) => (b.due_date || "").localeCompare(a.due_date || ""))[0]
                           ?.due_date;
@@ -665,11 +733,12 @@ export function UnionBatchCheckPrintDialog({
                                     <span>Venc: {formatDateBR(lastDueDate)}</span>
                                   </>
                                 )}
-                                {firstPaidDate && (
+                                {compDateInfo && (
                                   <>
                                     <span>•</span>
                                     <span className="text-emerald-600">
-                                      Pgto: {formatDateBR(firstPaidDate)}
+                                      Compensação: {formatDateBR(compDateInfo.date)}
+                                      {compDateInfo.source === "ofx" ? " (OFX)" : ""}
                                     </span>
                                   </>
                                 )}

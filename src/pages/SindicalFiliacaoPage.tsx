@@ -67,6 +67,7 @@ const filiacaoSchema = z.object({
   data_admissao: z.string().optional(),
   forma_pagamento: z.string().optional(),
   aceite_lgpd: z.boolean().refine(val => val === true, "Você deve aceitar os termos"),
+  aceite_whatsapp: z.boolean().optional(),
 });
 
 type FiliacaoFormData = z.infer<typeof filiacaoSchema>;
@@ -76,7 +77,9 @@ interface UnionEntity {
   razao_social: string;
   nome_fantasia?: string | null;
   cnpj: string;
-  entity_type: string;
+  entity_type?: string | null;
+  logo_url?: string | null;
+  status?: string | null;
   clinic_id?: string | null;
   allowed_relationship_types?: unknown;
 }
@@ -95,6 +98,11 @@ interface PaymentMethod {
 }
 
 const EXCLUSIVE_PAYMENT_METHODS = ["desconto_folha", "desconto_contracheque"];
+
+// ===== WhatsApp Consent (Meta/LGPD) =====
+const WHATSAPP_CONSENT_TERM_VERSION = "whatsapp_operational_v1_2026";
+const WHATSAPP_CONSENT_TEXT =
+  "Autorizo o Sindicato a utilizar meu número de WhatsApp para comunicações relacionadas ao meu cadastro, carteirinha, atendimentos, agendamentos e serviços solicitados, conforme a Política de Privacidade.";
 
 interface EmployerData {
   employer_id?: string;
@@ -284,6 +292,7 @@ export default function SindicalFiliacaoPage() {
       data_admissao: "",
       forma_pagamento: "",
       aceite_lgpd: false,
+      aceite_whatsapp: false,
     },
   });
 
@@ -376,6 +385,7 @@ export default function SindicalFiliacaoPage() {
         data_admissao: f.data_admissao || "",
         forma_pagamento: f.forma_pagamento || "",
         aceite_lgpd: f.aceite_lgpd || false,
+        aceite_whatsapp: true,
       });
 
       // Populate employer data
@@ -427,7 +437,9 @@ export default function SindicalFiliacaoPage() {
       try {
         const { data: sindicatoData, error: sindicatoError } = await supabase
           .from("union_entities")
-          .select("*")
+          .select(
+            "id, cnpj, razao_social, nome_fantasia, logo_url, clinic_id, status, allowed_relationship_types"
+          )
           .or(`cnpj.eq.${sindicatoSlug},id.eq.${sindicatoSlug}`)
           .eq("status", "ativa")
           .single();
@@ -694,6 +706,36 @@ export default function SindicalFiliacaoPage() {
         });
 
       if (associadoError) throw associadoError;
+
+      // ===== WhatsApp Consent (Meta/LGPD) =====
+      try {
+        let ipAddress: string | null = null;
+        try {
+          const ipRes = await fetch("https://api.ipify.org?format=json");
+          if (ipRes.ok) {
+            const ipJson = await ipRes.json();
+            ipAddress = ipJson?.ip || null;
+          }
+        } catch {
+          // best-effort; consent is still recorded
+        }
+
+        await supabase.from("whatsapp_consents").insert({
+          tenant_id: sindicato.clinic_id || sindicato.id,
+          person_id: associadoId,
+          phone: data.celular.replace(/\D/g, ""),
+          name: data.nome,
+          consent_status: data.aceite_whatsapp ? "granted" : "unknown",
+          source: "FILIACAO",
+          purpose: "SERVICE_OPERATIONAL",
+          term_version: WHATSAPP_CONSENT_TERM_VERSION,
+          consent_text: WHATSAPP_CONSENT_TEXT,
+          ip_address: ipAddress,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        });
+      } catch (consentErr) {
+        console.error("Erro ao registrar consentimento WhatsApp:", consentErr);
+      }
 
       if (dependents.length > 0) {
         const dependentesInsert = dependents.map(dep => ({
@@ -1613,6 +1655,7 @@ export default function SindicalFiliacaoPage() {
                       />
                       <p className="text-xs text-gray-500 mt-2">
                         Sua assinatura autoriza o desconto da contribuição sindical conforme a forma de pagamento selecionada.
+                        O desconto referente à <strong>Mensalidade Sindical</strong> corresponde a <strong>2% sobre o menor piso atual da categoria (Piso Nível 1)</strong>.
                       </p>
                     </div>
 
@@ -1642,6 +1685,39 @@ export default function SindicalFiliacaoPage() {
                                   Declaro que li e concordo com os termos de uso e a política de privacidade. 
                                   Autorizo o tratamento dos meus dados pessoais para fins de filiação sindical, 
                                   conforme a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* WhatsApp Consent Auditável (Etapa 5.2) */}
+                    <FormField
+                      control={form.control}
+                      name="aceite_whatsapp"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="bg-primary/5 rounded-xl p-6 border-2 border-primary/10 shadow-sm transition-all hover:bg-primary/10">
+                            <div className="flex items-start gap-4">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="mt-1 h-5 w-5 border-2 data-[state=checked]:bg-primary"
+                                />
+                              </FormControl>
+                              <div className="space-y-2 flex-1 leading-none">
+                                <FormLabel className="text-base font-semibold text-gray-800 cursor-pointer">
+                                  Comunicações via WhatsApp
+                                </FormLabel>
+                                <p className="text-sm text-gray-600 leading-relaxed">
+                                  {WHATSAPP_CONSENT_TEXT}
+                                </p>
+                                <p className="text-[10px] font-mono text-muted-foreground uppercase mt-2">
+                                  Versão: {WHATSAPP_CONSENT_TERM_VERSION} | Finalidade: SERVICE_OPERATIONAL
                                 </p>
                               </div>
                             </div>

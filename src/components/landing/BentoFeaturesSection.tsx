@@ -1,126 +1,113 @@
-
-import { 
-  Users, 
-  ShieldCheck, 
-  Zap, 
-  LayoutDashboard, 
-  Smartphone, 
-  FileText,
-  CreditCard,
-  MessageCircle,
-  BarChart3,
-  ArrowRight
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-
-const features = [
-  {
-    title: "Dashboard 360º",
-    description: "Visão em tempo real da saúde financeira e administrativa da sua entidade com KPIs inteligentes.",
-    icon: LayoutDashboard,
-    className: "lg:col-span-2 lg:row-span-2 bg-slate-900 text-white overflow-hidden",
-    visual: (
-      <div className="absolute bottom-0 right-0 w-3/4 h-2/3 bg-slate-800 rounded-tl-3xl border-t border-l border-white/10 p-4 transform translate-y-4 translate-x-4 transition-transform group-hover:translate-y-2 group-hover:translate-x-2">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <div className="text-[10px] font-medium text-slate-400">STATUS DA ARRECADAÇÃO</div>
-        </div>
-        <div className="space-y-3">
-          <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 w-[78%]" />
-          </div>
-          <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 w-[62%]" />
-          </div>
-          <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-amber-500 w-[45%]" />
-          </div>
-        </div>
-      </div>
-    )
-  },
-  {
-    title: "App do Associado",
-    description: "Carteirinha digital e autoatendimento completo no celular.",
-    icon: Smartphone,
-    className: "lg:col-span-1 lg:row-span-1 bg-emerald-50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30",
-    color: "text-emerald-600"
-  },
-  {
-    title: "Segurança de Dados",
-    description: "Conformidade total com a LGPD e criptografia de ponta.",
-    icon: ShieldCheck,
-    className: "lg:col-span-1 lg:row-span-1 bg-blue-50 border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/30",
-    color: "text-blue-600"
-  },
-  {
-    title: "Financeiro Automatizado",
-    description: "Emissão de boletos, cobrança via WhatsApp e conciliação bancária em segundos.",
-    icon: CreditCard,
-    className: "lg:col-span-1 lg:row-span-2 bg-indigo-50 border-indigo-100 dark:bg-indigo-950/20 dark:border-indigo-900/30",
-    visual: (
-      <div className="mt-6 flex flex-col gap-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/50 border border-indigo-100/50 dark:bg-indigo-950/40">
-            <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50" />
-            <div className="h-1.5 w-12 bg-indigo-200 dark:bg-indigo-800 rounded-full" />
-            <div className="h-1.5 w-8 bg-emerald-200 dark:bg-emerald-800 rounded-full" />
-          </div>
-        ))}
-      </div>
-    )
-  },
-  {
-    title: "Inteligência Artificial",
-    description: "Predição de evasão e automação de rotinas via IA especializada.",
-    icon: Zap,
-    className: "lg:col-span-2 lg:row-span-1 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20",
-    color: "text-primary"
-  }
-];
+import { Users, Wallet, Scale, MessageCircle, Smartphone, ArrowRight } from "lucide-react";
 
 export function BentoFeaturesSection() {
   return (
-    <section className="py-24 lg:py-32 bg-background relative overflow-hidden">
-      <div className="container">
-        <div className="text-center mb-20">
-          <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6">
-            Gestão inteligente, <span className="text-primary italic">resultados reais.</span>
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Combinamos tecnologia de ponta com a experiência de décadas no setor sindical para entregar a solução definitiva.
+    <section id="features" className="bg-prosinge-cream px-6 py-24 font-body">
+      <div className="mx-auto max-w-7xl">
+        {/* Magazine header */}
+        <div className="mb-12 flex flex-col gap-4 border-b border-prosinge-emerald/10 pb-8 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-prosinge-emerald-mid">
+              Edição · Plataforma
+            </div>
+            <h2 className="font-display text-4xl font-bold leading-tight text-prosinge-emerald md:text-5xl">
+              Ecossistema Integrado<br />de Gestão Sindical
+            </h2>
+          </div>
+          <p className="max-w-md text-prosinge-emerald-mid">
+            Ferramentas modulares desenhadas para suprir todas as demandas
+            da diretoria e do corpo administrativo.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 lg:grid-rows-3 gap-6 auto-rows-[160px]">
-          {features.map((feature, i) => (
-            <div
-              key={i}
-              className={cn(
-                "group relative rounded-[2rem] border p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
-                feature.className
-              )}
-            >
-              <div className="relative z-10 flex flex-col h-full">
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-6 bg-white/10 backdrop-blur-md shadow-sm", feature.color)}>
-                  <feature.icon className="w-6 h-6" />
+        {/* Magazine grid: featured + secondary stories */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          {/* Featured story */}
+          <article className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-prosinge-emerald p-10 lg:col-span-7 lg:min-h-[480px]">
+            <div className="relative z-10">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-prosinge-cream/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-prosinge-cream/80">
+                <Users className="h-3 w-3" /> Capa
+              </div>
+              <h3 className="mb-4 font-display text-3xl font-bold leading-tight text-prosinge-cream md:text-4xl">
+                Gestão estratégica de associados, do cadastro à carteirinha digital
+              </h3>
+              <p className="max-w-lg text-prosinge-cream/70">
+                Ficha completa, dependentes, histórico de contribuições,
+                carteirinha digital e controle de acesso integrado em uma
+                única plataforma.
+              </p>
+            </div>
+            <div className="relative z-10 mt-10 flex items-center gap-2 text-sm font-semibold text-prosinge-cream">
+              Ler matéria completa
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </div>
+            <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-prosinge-emerald-mid/40 blur-3xl" />
+          </article>
+
+          {/* Secondary column */}
+          <div className="flex flex-col gap-6 lg:col-span-5">
+            <article className="group rounded-3xl border border-prosinge-emerald/10 bg-white p-7 transition-all hover:-translate-y-0.5 hover:shadow-xl">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-prosinge-cream text-prosinge-emerald">
+                  <Wallet className="h-5 w-5" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-sm opacity-80 leading-relaxed font-medium">
-                    {feature.description}
-                  </p>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-prosinge-emerald-mid">
+                  Financeiro
+                </span>
+              </div>
+              <h3 className="mb-2 font-display text-xl font-bold text-prosinge-emerald">
+                Arrecadação automatizada
+              </h3>
+              <p className="text-sm text-prosinge-emerald-mid/80">
+                Boletos, PIX e repasses bancários com baixa automática em
+                tempo real.
+              </p>
+            </article>
+
+            <article className="group rounded-3xl border border-prosinge-emerald/10 bg-white p-7 transition-all hover:-translate-y-0.5 hover:shadow-xl">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-prosinge-cream text-prosinge-emerald">
+                  <Scale className="h-5 w-5" />
                 </div>
-                
-                <div className="mt-auto pt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-wider group-hover:gap-3 transition-all cursor-pointer">
-                  Explorar
-                  <ArrowRight className="w-3 h-3" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-prosinge-emerald-mid">
+                  Jurídico
+                </span>
+              </div>
+              <h3 className="mb-2 font-display text-xl font-bold text-prosinge-emerald">
+                Processos sob controle
+              </h3>
+              <p className="text-sm text-prosinge-emerald-mid/80">
+                Pautas, prazos e honorários integrados ao módulo financeiro.
+              </p>
+            </article>
+          </div>
+
+          {/* Wide bottom story */}
+          <article className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-prosinge-emerald/10 bg-white p-10 lg:col-span-12">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-prosinge-emerald-mid">
+                  Comunicação
+                </div>
+                <h3 className="mb-3 font-display text-2xl font-bold text-prosinge-emerald md:text-3xl">
+                  App PWA & WhatsApp oficial conectando a base de filiados
+                </h3>
+                <p className="text-prosinge-emerald-mid/80">
+                  Push notifications, chatbot inteligente, carteirinha
+                  digital e canal de atendimento humano — tudo na palma da
+                  mão do associado.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-prosinge-emerald px-4 py-2 text-xs font-bold uppercase tracking-wider text-prosinge-cream">
+                  <Smartphone className="h-4 w-4" /> App PWA
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-prosinge-emerald-mid px-4 py-2 text-xs font-bold uppercase tracking-wider text-prosinge-cream">
+                  <MessageCircle className="h-4 w-4" /> WhatsApp
                 </div>
               </div>
-
-              {feature.visual && feature.visual}
             </div>
-          ))}
+          </article>
         </div>
       </div>
     </section>

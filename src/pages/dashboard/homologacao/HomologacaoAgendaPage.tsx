@@ -56,6 +56,7 @@ import {
 } from "@/lib/homologacaoUtils";
 import { HomologacaoSendNotificationDialog } from "@/components/homologacao/HomologacaoSendNotificationDialog";
 import { HomologacaoNotificationHistory } from "@/components/homologacao/HomologacaoNotificationHistory";
+import { HomologacaoPrintProtocolDialog } from "@/components/homologacao/HomologacaoPrintProtocolDialog";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 import { cn } from "@/lib/utils";
@@ -66,7 +67,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Pencil, Trash2, MessageCircle, FileText, Mail, History } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, MessageCircle, FileText, Mail, History, Printer } from "lucide-react";
 import { 
   useHomologacaoProfessionalsWithSchedules,
   filterProfessionalsByDayOfWeek,
@@ -153,6 +154,7 @@ export default function HomologacaoAgendaPage() {
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [notificationType, setNotificationType] = useState<"reminder" | "protocol">("reminder");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [printProtocolOpen, setPrintProtocolOpen] = useState(false);
 
   // Data hooks
   const {
@@ -367,6 +369,12 @@ export default function HomologacaoAgendaPage() {
   const handleOpenHistory = (apt: HomologacaoAppointment) => {
     setSelectedAppointment(apt);
     setHistoryOpen(true);
+  };
+
+  // Opens the printable protocol dialog
+  const handlePrintProtocol = (apt: HomologacaoAppointment) => {
+    setSelectedAppointment(apt);
+    setPrintProtocolOpen(true);
   };
 
   // Confirm appointment + send WhatsApp confirmation
@@ -605,6 +613,15 @@ export default function HomologacaoAgendaPage() {
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={() => handlePrintProtocol(apt)}
+            title="Imprimir Protocolo"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
             onClick={() => handleOpenHistory(apt)}
             title="Histórico de Envios"
           >
@@ -622,6 +639,10 @@ export default function HomologacaoAgendaPage() {
             <DropdownMenuItem onClick={() => handleEdit(apt)}>
               <Pencil className="w-4 h-4 mr-2" />
               Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePrintProtocol(apt)}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir Protocolo
             </DropdownMenuItem>
             
             {isActive && (
@@ -1299,6 +1320,13 @@ export default function HomologacaoAgendaPage() {
           company_name: selectedAppointment.company_name,
           protocol_number: selectedAppointment.protocol_number,
         } : undefined}
+      />
+
+      {/* Print protocol */}
+      <HomologacaoPrintProtocolDialog
+        open={printProtocolOpen}
+        onOpenChange={setPrintProtocolOpen}
+        appointment={selectedAppointment}
       />
     </div>
   );

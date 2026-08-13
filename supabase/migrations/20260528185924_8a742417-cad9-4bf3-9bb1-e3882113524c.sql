@@ -1,1 +1,0 @@
-GRANT SELECT ON public.union_entities TO anon;

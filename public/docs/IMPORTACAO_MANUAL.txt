@@ -23,7 +23,7 @@
 
 Antes de iniciar a importação, certifique-se de que:
 
-[x] Projeto ProsindWeb com Cloud habilitado
+[x] Projeto Prosinge com Cloud habilitado
 [x] Usuário Super Admin configurado na tabela super_admins
 [x] Todas as tabelas do schema público criadas (mesma estrutura)
 [x] Edge Function clinic-json-import disponível

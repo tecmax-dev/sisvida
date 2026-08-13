@@ -27,6 +27,7 @@ const DEFAULT_PLACEMENTS: WidgetPlacement[] = [
   { id: "twilio-config", column: "left", order: 10 },
   { id: "zap-responder-unified", column: "left", order: 11 },
   { id: "hide-pending-contributions", column: "left", order: 12 },
+  { id: "waiting-list", column: "left", order: 13 },
   // Right column
   { id: "map-view", column: "right", order: 0 },
   { id: "online-booking", column: "right", order: 1 },

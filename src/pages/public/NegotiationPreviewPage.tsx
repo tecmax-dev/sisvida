@@ -61,7 +61,7 @@ interface Clinic {
 interface UnionEntity {
   id: string;
   razao_social: string;
-  cnpj: string | null;
+  cnpj?: string | null;
 }
 
 type UnavailableReason = "not_found" | "expired" | "cancelled";
@@ -135,7 +135,7 @@ export default function NegotiationPreviewPage() {
       // Fetch union entity
       const { data: entityData } = await supabase
         .from("union_entities")
-        .select("id, razao_social, cnpj")
+        .select("id, razao_social")
         .eq("clinic_id", data.clinic_id)
         .eq("status", "ativa")
         .single();

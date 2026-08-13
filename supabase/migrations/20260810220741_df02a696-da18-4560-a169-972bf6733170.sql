@@ -1,0 +1,2 @@
+INSERT INTO public.signature_request_tokens (token, patient_id, clinic_id, expires_at) 
+VALUES ('c1c243a059b6c000f0742f53d4c39f1c3f585d776412e879a8383e547372c918', '1475014d-e9e2-42ff-917c-cf89fd417a4c', '78ab4a91-fb13-47d4-97ad-5df4460b8ecd', now() + interval '24 hours');

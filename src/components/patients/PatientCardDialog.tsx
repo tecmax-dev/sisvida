@@ -30,6 +30,8 @@ interface PatientCardDialogProps {
   isLoading?: boolean;
   mode?: 'create' | 'renew';
   currentExpiresAt?: string;
+  /** Quando true, limita a validade a 30 dias (primeira emissão por usuário não admin) */
+  restrictTo30Days?: boolean;
 }
 
 export function PatientCardDialog({
@@ -41,14 +43,25 @@ export function PatientCardDialog({
   isLoading,
   mode = 'create',
   currentExpiresAt,
+  restrictTo30Days = false,
 }: PatientCardDialogProps) {
-  const [validityType, setValidityType] = useState<string>('1year');
+  const [validityType, setValidityType] = useState<string>(restrictTo30Days ? '30days' : '1year');
   const [customDate, setCustomDate] = useState('');
   const [notes, setNotes] = useState('');
 
   const calculateExpiryDate = (): string => {
     const now = new Date();
+    if (restrictTo30Days) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 30);
+      return d.toISOString();
+    }
     switch (validityType) {
+      case '30days': {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 30);
+        return d.toISOString();
+      }
       case '3months':
         return addMonths(now, 3).toISOString();
       case '6months':
@@ -65,7 +78,7 @@ export function PatientCardDialog({
   };
 
   const handleSubmit = () => {
-    if (validityType === 'custom' && !customDate) return;
+    if (!restrictTo30Days && validityType === 'custom' && !customDate) return;
     
     onSubmit({
       patient_id: patientId,
@@ -75,7 +88,7 @@ export function PatientCardDialog({
   };
 
   const handleClose = () => {
-    setValidityType('1year');
+    setValidityType(restrictTo30Days ? '30days' : '1year');
     setCustomDate('');
     setNotes('');
     onOpenChange(false);
@@ -108,11 +121,17 @@ export function PatientCardDialog({
 
           <div className="space-y-2">
             <Label>Validade</Label>
+            {restrictTo30Days ? (
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                30 dias (validade padrão para primeira emissão)
+              </div>
+            ) : (
             <Select value={validityType} onValueChange={setValidityType}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a validade" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="30days">30 dias</SelectItem>
                 <SelectItem value="3months">3 meses</SelectItem>
                 <SelectItem value="6months">6 meses</SelectItem>
                 <SelectItem value="1year">1 ano</SelectItem>
@@ -120,9 +139,10 @@ export function PatientCardDialog({
                 <SelectItem value="custom">Data personalizada</SelectItem>
               </SelectContent>
             </Select>
+            )}
           </div>
 
-          {validityType === 'custom' && (
+          {!restrictTo30Days && validityType === 'custom' && (
             <div className="space-y-2">
               <Label>Data de expiração</Label>
               <div className="relative">
@@ -148,7 +168,7 @@ export function PatientCardDialog({
             />
           </div>
 
-          {validityType !== 'custom' && (
+          {(restrictTo30Days || validityType !== 'custom') && (
             <div className="p-3 bg-primary/10 rounded-lg">
               <p className="text-sm text-muted-foreground">Nova validade</p>
               <p className="font-medium text-primary">
@@ -164,7 +184,7 @@ export function PatientCardDialog({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={isLoading || (validityType === 'custom' && !customDate)}
+            disabled={isLoading || (!restrictTo30Days && validityType === 'custom' && !customDate)}
           >
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {mode === 'create' ? 'Emitir Carteirinha' : 'Renovar'}

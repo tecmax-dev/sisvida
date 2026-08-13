@@ -1,1 +1,0 @@
-UPDATE clinics SET whatsapp_provider = 'meta_official' WHERE id = '89e7585e-7bce-4e58-91fa-c37080d1170d';

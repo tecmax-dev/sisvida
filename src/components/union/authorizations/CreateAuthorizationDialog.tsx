@@ -19,6 +19,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  isBiolifeBenefit as isBiolifeBenefitShared,
+} from "@/lib/biolifeAuthorization";
+import { getAuthorizationBlockReasons } from "@/lib/authorizationBlockReasons";
+import { AuthorizationBlockNotice } from "@/components/union/authorizations/AuthorizationBlockNotice";
+import {
+  getBiolifeAuthorizationInfo,
+} from "@/lib/biolifeAuthorization";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -89,6 +97,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
   const beneficiaryType = form.watch("beneficiary_type");
   const patientId = form.watch("patient_id");
   const benefitId = form.watch("benefit_id");
+  const dependentId = form.watch("dependent_id");
 
   const isFemaleGender = (g?: string | null) => {
     if (!g) return false;
@@ -96,12 +105,9 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     return v === "f" || v.startsWith("fem");
   };
 
-  // Biolife é exclusivo para titulares
-  const isBiolifeBenefit = (b?: { name?: string | null; partner_name?: string | null } | null) => {
-    if (!b) return false;
-    const haystack = `${b.name ?? ""} ${b.partner_name ?? ""}`.toLowerCase();
-    return haystack.includes("biolife");
-  };
+  // Biolife: titular = cobertura 100% pelo sindicato / dependente = somente desconto do laboratório
+  const isBiolifeBenefit = (b?: { name?: string | null; partner_name?: string | null } | null) =>
+    isBiolifeBenefitShared(b);
 
   // Fetch patients (union members)
   const { data: patients = [] } = useQuery({
@@ -194,20 +200,32 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     .filter((b) => isBiolifeBenefit(b))
     .map((b) => b.id);
 
-  // Última autorização Biolife do titular (qualquer benefício Biolife, qualquer status exceto revogada)
+  // Última autorização Biolife do beneficiário selecionado (titular ou dependente),
+  // qualquer status exceto revogada — o cooldown de 12 meses é contado separadamente.
   const { data: lastBiolifeAuth } = useQuery({
-    queryKey: ["last-biolife-authorization", patientId, biolifeBenefitIds.join(",")],
+    queryKey: [
+      "last-biolife-authorization",
+      patientId,
+      beneficiaryType,
+      dependentId,
+      biolifeBenefitIds.join(","),
+    ],
     queryFn: async () => {
       if (!patientId || biolifeBenefitIds.length === 0) return null;
-      const { data } = await supabase
+      let query = supabase
         .from("union_authorizations")
         .select("issued_at, benefit_id")
-        .eq("patient_id", patientId)
         .in("benefit_id", biolifeBenefitIds)
-        .neq("status", "revoked")
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .neq("status", "revoked");
+
+      if (beneficiaryType === "dependent") {
+        if (!dependentId) return null;
+        query = query.eq("dependent_id", dependentId);
+      } else {
+        query = query.eq("patient_id", patientId).eq("is_for_dependent", false);
+      }
+
+      const { data } = await query.order("issued_at", { ascending: false }).limit(1).maybeSingle();
       return data;
     },
     enabled: !!patientId && biolifeBenefitIds.length > 0 && open,
@@ -246,6 +264,29 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
         });
     }
   }, [preselectedPatientId, open, form]);
+
+  // Carteirinha do titular: vencida bloqueia qualquer emissão de autorização
+  const { data: activeCard } = useQuery({
+    queryKey: ["authorization-patient-card", patientId, currentClinic?.id],
+    queryFn: async () => {
+      if (!patientId) return null;
+      const { data } = await supabase
+        .from("patient_cards")
+        .select("id, card_number, expires_at")
+        .eq("patient_id", patientId)
+        .eq("is_active", true)
+        .order("expires_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!patientId && open,
+  });
+
+  const cardExpiredAt =
+    activeCard?.expires_at && new Date(activeCard.expires_at) < new Date()
+      ? new Date(activeCard.expires_at)
+      : null;
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -294,24 +335,47 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     },
   });
 
+  const selectedBenefit = benefits.find((b) => b.id === benefitId);
+  const blockReasons = getAuthorizationBlockReasons({
+    cardExpiredAt: cardExpiredAt || null,
+    isBiolife: isBiolifeBenefit(selectedBenefit),
+    isForDependent: beneficiaryType === "dependent",
+    titularIsFemale: selectedPatient ? isFemaleGender(selectedPatient?.gender) : undefined,
+    biolifeNextAvailableAt: biolifeNextAvailableAt || null,
+  });
+
   const onSubmit = (data: FormData) => {
     if (data.beneficiary_type === "dependent" && !data.dependent_id) {
       toast({ title: "Selecione um dependente", variant: "destructive" });
       return;
     }
-    const benefit = benefits.find((b) => b.id === data.benefit_id);
-    if (isBiolifeBenefit(benefit) && data.beneficiary_type === "dependent") {
+    if (blockReasons.length > 0) {
+      const r = blockReasons[0];
       toast({
-        title: "Benefício exclusivo para titulares",
-        description: "O benefício Biolife é permitido somente ao titular. Não é possível emitir autorização para dependentes.",
+        title: r.title,
+        description: `${r.detail} Como regularizar: ${r.howToFix.join(" ")}`,
         variant: "destructive",
       });
       return;
     }
-    if (isBiolifeBenefit(benefit) && !isFemaleGender(selectedPatient?.gender)) {
+    if (cardExpiredAt) {
+      toast({
+        title: "Carteirinha vencida",
+        description: `A carteirinha do associado venceu em ${format(cardExpiredAt, "dd/MM/yyyy")}. Renove a carteirinha para emitir autorizações.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const benefit = benefits.find((b) => b.id === data.benefit_id);
+    if (
+      isBiolifeBenefit(benefit) &&
+      data.beneficiary_type === "titular" &&
+      !isFemaleGender(selectedPatient?.gender)
+    ) {
       toast({
         title: "Benefício exclusivo para associadas",
-        description: "O benefício Biolife é destinado apenas a associadas do sexo feminino.",
+        description:
+          "A cobertura integral Biolife é destinada apenas a associadas do sexo feminino.",
         variant: "destructive",
       });
       return;
@@ -319,7 +383,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     if (isBiolifeBenefit(benefit) && biolifeNextAvailableAt) {
       toast({
         title: "Biolife já utilizado nos últimos 12 meses",
-        description: `Este associado só poderá emitir nova autorização Biolife a partir de ${format(biolifeNextAvailableAt, "dd/MM/yyyy")}. Limite: 1 autorização a cada 12 meses.`,
+        description: `Este beneficiário só poderá emitir nova autorização Biolife a partir de ${format(biolifeNextAvailableAt, "dd/MM/yyyy")}. Limite: 1 autorização a cada 12 meses.`,
         variant: "destructive",
       });
       return;
@@ -501,23 +565,24 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
               )}
             />
 
-            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent" && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                <strong>Atenção:</strong> O benefício Biolife é exclusivo para titulares. Não é permitido emitir autorização/declaração para dependentes.
+            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && (
+              <div
+                className={`rounded-md border p-3 text-sm ${
+                  beneficiaryType === "dependent"
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : "border-emerald-500/40 bg-emerald-500/10"
+                }`}
+              >
+                <p className="font-semibold">
+                  {getBiolifeAuthorizationInfo(beneficiaryType === "dependent").title}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {getBiolifeAuthorizationInfo(beneficiaryType === "dependent").description}
+                </p>
               </div>
             )}
 
-            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "titular" && selectedPatient && !isFemaleGender(selectedPatient?.gender) && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                <strong>Benefício exclusivo para associadas:</strong> O Biolife é destinado apenas a associadas do <strong>sexo feminino</strong>.
-              </div>
-            )}
-
-            {isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "titular" && biolifeNextAvailableAt && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                <strong>Limite anual atingido:</strong> O benefício Biolife pode ser emitido apenas <strong>1 vez a cada 12 meses</strong>. Próxima emissão disponível em <strong>{format(biolifeNextAvailableAt, "dd/MM/yyyy")}</strong>.
-              </div>
-            )}
+            <AuthorizationBlockNotice reasons={blockReasons} />
 
             {/* Validity */}
             <FormField
@@ -561,7 +626,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
                 type="submit"
                 disabled={
                   mutation.isPending ||
-                  (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "dependent") ||
+                  !!cardExpiredAt ||
                   (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && beneficiaryType === "titular" && !!selectedPatient && !isFemaleGender(selectedPatient?.gender)) ||
                   (isBiolifeBenefit(benefits.find((b) => b.id === benefitId)) && !!biolifeNextAvailableAt)
                 }

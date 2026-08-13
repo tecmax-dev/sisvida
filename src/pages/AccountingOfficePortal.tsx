@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { 
@@ -22,7 +23,8 @@ import {
   Barcode,
   FolderOpen,
   Sun,
-  Mail
+  Mail,
+  Calendar
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SindicatoWhatsappBanner } from "@/components/portals/SindicatoWhatsappBanner";
@@ -41,8 +43,10 @@ import { PortalContributionsList } from "@/components/portal/PortalContributions
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { formatCompetence } from "@/lib/competence-format";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
+import { ChatwootIntegrationConfig } from "@/components/portals/ChatwootIntegrationConfig";
 
 interface AccountingOffice {
+
   id: string;
   name: string;
   email: string;
@@ -147,6 +151,11 @@ export default function AccountingOfficePortal() {
   const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
   const [changeValue, setChangeValue] = useState("");
   const [isChangingValue, setIsChangingValue] = useState(false);
+
+  // Dialog de alterar data de vencimento (boleto a vencer)
+  const [showChangeDueDateDialog, setShowChangeDueDateDialog] = useState(false);
+  const [changeDueDate, setChangeDueDate] = useState("");
+  const [isChangingDueDate, setIsChangingDueDate] = useState(false);
 
   // Employer selecionado para homologação
   const [selectedEmployerForHomologacao, setSelectedEmployerForHomologacao] = useState<Employer | null>(null);
@@ -472,10 +481,9 @@ export default function AccountingOfficePortal() {
       });
 
       if (error) {
-        // Extrair mensagem de erro detalhada do edge function
-        const errorMessage = error.message || "Erro ao emitir boleto";
+        const { message } = await extractFunctionsErrorAsync(error);
         console.error("[AccountingPortal] Set value error:", error);
-        toast.error(`Erro ao emitir boleto: ${errorMessage}`);
+        toast.error(message || "Erro ao emitir boleto");
         return;
       }
       
@@ -558,6 +566,45 @@ export default function AccountingOfficePortal() {
       toast.error("Nenhuma empresa para imprimir");
       return;
     }
+    return _handlePrintEmployersList_inner();
+  };
+
+  const handleChangeDueDate = async () => {
+    if (!selectedContribution || !accountingOffice || !changeDueDate) {
+      toast.error("Informe a nova data de vencimento");
+      return;
+    }
+    setIsChangingDueDate(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("change-contribution-due-date", {
+        body: {
+          contribution_id: selectedContribution.id,
+          due_date: changeDueDate,
+          portal_type: "accounting_office",
+          portal_id: accountingOffice.id,
+        },
+      });
+      if (error) {
+        toast.error(`Erro ao alterar vencimento: ${error.message || "Erro"}`);
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success(data.message || "Data de vencimento atualizada!");
+      setShowChangeDueDateDialog(false);
+      setChangeDueDate("");
+      setSelectedContribution(null);
+      loadData(accountingOffice.id);
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsChangingDueDate(false);
+    }
+  };
+
+  const _handlePrintEmployersList_inner = () => {
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -837,11 +884,17 @@ export default function AccountingOfficePortal() {
             // Mostrar convenções filtradas pela categoria
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
               {clinic?.id && (
-                <PortalConventionsSection 
-                  clinicId={clinic.id} 
-                  employerCategoryId={selectedEmployerForDocuments.category_id}
-                />
+                <>
+                  <div className="mt-8 mb-8">
+                    <ChatwootIntegrationConfig clinicId={accountingOffice.clinic_id} />
+                  </div>
+                  <PortalConventionsSection 
+                    clinicId={clinic.id} 
+                    employerCategoryId={selectedEmployerForDocuments.category_id}
+                  />
+                </>
               )}
+
             </div>
           )}
 
@@ -994,6 +1047,9 @@ export default function AccountingOfficePortal() {
             }}
             onSetValue={(contrib) => {
               setSelectedContribution(contrib as any);
+              const original = String((contrib as any).due_date || "").slice(0, 10);
+              const today = getMinDate();
+              setSetValueDueDate(original && original >= today ? original : today);
               setShowSetValueDialog(true);
             }}
             onChangeValue={(contrib) => {
@@ -1003,6 +1059,12 @@ export default function AccountingOfficePortal() {
                 .replace(".", ",");
               setChangeValue(initialValue);
               setShowChangeValueDialog(true);
+            }}
+            onChangeDueDate={(contrib) => {
+              setSelectedContribution(contrib as any);
+              const iso = String(contrib.due_date || "").slice(0, 10);
+              setChangeDueDate(iso);
+              setShowChangeDueDateDialog(true);
             }}
           />
         </div>
@@ -1125,21 +1187,37 @@ export default function AccountingOfficePortal() {
                 Após definir o valor, o boleto será gerado automaticamente.
               </p>
             </div>
-            {selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && (
-              <div>
-                <Label className="text-slate-700 text-sm font-medium">Nova Data de Vencimento</Label>
-                <Input
-                  type="date"
-                  value={setValueDueDate}
-                  onChange={(e) => setSetValueDueDate(e.target.value)}
-                  min={getMinDate()}
-                  className="mt-2 h-10 border-slate-200"
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  Este boleto está vencido. Informe uma nova data para emissão.
-                </p>
-              </div>
-            )}
+            {selectedContribution && (() => {
+              const isOverdue = parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0);
+              return (
+                <div>
+                  <Label className="text-slate-700 text-sm font-medium">Data de Vencimento</Label>
+                  {isOverdue ? (
+                    <>
+                      <Input
+                        type="date"
+                        value={setValueDueDate}
+                        onChange={(e) => setSetValueDueDate(e.target.value)}
+                        min={getMinDate()}
+                        className="mt-2 h-10 border-slate-200"
+                      />
+                      <p className="text-xs text-slate-500 mt-2">Este boleto está vencido. Informe uma nova data para emissão.</p>
+                    </>
+                  ) : (
+                    <>
+                      <Input
+                        type="date"
+                        value={setValueDueDate}
+                        readOnly
+                        disabled
+                        className="mt-2 h-10 border-slate-200 bg-slate-50"
+                      />
+                      <p className="text-xs text-slate-500 mt-2">A data de vencimento só pode ser alterada em contribuições vencidas.</p>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)} className="border-slate-200">
@@ -1147,7 +1225,7 @@ export default function AccountingOfficePortal() {
             </Button>
             <Button 
               onClick={handleSetValue} 
-              disabled={isSettingValue || !newValue || (!!selectedContribution && parseDateOnlyToLocalNoon(selectedContribution.due_date).getTime() < new Date().setHours(0, 0, 0, 0) && !setValueDueDate)}
+              disabled={isSettingValue || !newValue || !setValueDueDate}
               className="bg-purple-600 hover:bg-purple-700"
             >
               {isSettingValue ? (
@@ -1223,6 +1301,67 @@ export default function AccountingOfficePortal() {
               ) : (
                 <>
                   <FileText className="h-4 w-4 mr-2" />
+                  Confirmar Alteração
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showChangeDueDateDialog} onOpenChange={(open) => {
+        setShowChangeDueDateDialog(open);
+        if (!open) {
+          setChangeDueDate("");
+          setSelectedContribution(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <Calendar className="h-5 w-5 text-purple-600" />
+              Alterar Data de Vencimento
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && (
+                <span className="text-slate-600">
+                  {selectedContribution.employer?.name} • {MONTHS_FULL[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Esta alteração só pode ser feita <strong>1 vez</strong> pelo portal e apenas para boletos <strong>a vencer</strong>. Após esta alteração, qualquer nova alteração deverá ser solicitada ao gestor do sindicato.
+            </div>
+            <div>
+              <Label className="text-slate-700 text-sm font-medium">Nova data de vencimento</Label>
+              <Input
+                type="date"
+                value={changeDueDate}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setChangeDueDate(e.target.value)}
+                className="mt-2 h-10 text-base border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowChangeDueDateDialog(false)} className="border-slate-200">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleChangeDueDate}
+              disabled={isChangingDueDate || !changeDueDate}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isChangingDueDate ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Alterando...
+                </>
+              ) : (
+                <>
+                  <Calendar className="h-4 w-4 mr-2" />
                   Confirmar Alteração
                 </>
               )}

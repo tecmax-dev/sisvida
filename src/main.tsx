@@ -55,6 +55,11 @@ async function bootstrapApp() {
  * Registra Service Worker e renderiza React
  */
 async function renderApp() {
+  const isStandaloneApp =
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  const isServiceWorkerControlled = Boolean(navigator.serviceWorker?.controller);
+
   /**
    * ONE-SHOT CACHE WIPE — disparado por mudança de ícone/branding.
    *
@@ -62,10 +67,10 @@ async function renderApp() {
    * e os ícones cacheados pelo Chrome WebAPK na primeira carga após a atualização.
    * Roda apenas uma vez por dispositivo (flag salva em localStorage).
    */
-  const CACHE_WIPE_VERSION = "20260604-comtele-sms-cache-wipe";
+  const CACHE_WIPE_VERSION = "20260616-app-instalar-redirect-fix";
   try {
     const last = localStorage.getItem("__pwa_cache_wipe_version");
-    if (last !== CACHE_WIPE_VERSION) {
+    if (last !== CACHE_WIPE_VERSION && (isStandaloneApp || isServiceWorkerControlled)) {
       console.info(`[PWA] Cache wipe ${CACHE_WIPE_VERSION} — limpando caches antigos…`);
       if ("caches" in window) {
         const keys = await caches.keys();
@@ -80,6 +85,9 @@ async function renderApp() {
       // Marcamos a flag ANTES do reload para não entrar em loop.
       window.location.reload();
       return;
+    }
+    if (last !== CACHE_WIPE_VERSION) {
+      localStorage.setItem("__pwa_cache_wipe_version", CACHE_WIPE_VERSION);
     }
   } catch (err) {
     console.warn("[PWA] Cache wipe falhou (não é crítico):", err);

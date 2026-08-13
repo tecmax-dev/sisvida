@@ -1,1 +1,0 @@
-SELECT public.set_patient_password('e3fdf328-bc2f-495f-a0ca-2d2c62e4a09a'::uuid, 'A@play2026');

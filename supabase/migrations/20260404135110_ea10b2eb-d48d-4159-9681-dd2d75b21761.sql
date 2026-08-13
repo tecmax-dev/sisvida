@@ -1,1 +1,0 @@
-ALTER TABLE public.whazing_tickets ADD COLUMN IF NOT EXISTS profile_pic_url TEXT;

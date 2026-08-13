@@ -924,7 +924,7 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;">
   <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-    <div style="background:#16a394;padding:24px;text-align:center;color:#ffffff;">
+    <div style="background:#094798;padding:24px;text-align:center;color:#ffffff;">
       <h1 style="margin:0;font-size:22px;">Comunicado do Sindicato</h1>
     </div>
     <div style="padding:32px 24px;color:#334155;line-height:1.6;">

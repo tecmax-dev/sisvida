@@ -43,6 +43,7 @@ import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAp
 import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
 import { DependentAppointmentsList } from "@/components/union/members/DependentAppointmentsList";
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
+import { MemberQuickSearch } from "@/components/union/members/MemberQuickSearch";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface InsurancePlan {
@@ -873,13 +874,17 @@ export default function UnionMemberDetailPage() {
   return (
     <div className="space-y-4">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/union/socios')} className="gap-2 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/union/socios')} className="gap-2 flex-shrink-0 self-start">
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex-1 flex justify-center lg:px-4 w-full">
+          <MemberQuickSearch clinicId={resolvedClinic?.id} currentMemberId={id} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
           <AutoSaveIndicator status={autoSaveStatus} />
           <Badge variant="outline" className={currentStatus.color}>
             {currentStatus.label}
@@ -963,6 +968,7 @@ export default function UnionMemberDetailPage() {
               <div className="flex items-start gap-6 mb-6 pb-6 border-b">
                 <PatientPhotoUpload
                   patientId={id!}
+                  clinicId={resolvedClinic?.id}
                   currentPhotoUrl={patientPhotoUrl}
                   patientName={formData.name}
                   onPhotoChange={setPatientPhotoUrl}

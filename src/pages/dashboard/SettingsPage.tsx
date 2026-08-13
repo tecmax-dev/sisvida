@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff, Monitor, MessageSquare } from "lucide-react";
 import { HidePendingContributionsConfig } from "@/components/settings/HidePendingContributionsConfig";
+import { WaitingListSettings } from "@/components/settings/WaitingListSettings";
 import { SessionPolicySettings } from "@/components/settings/SessionPolicySettings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
@@ -1348,6 +1349,16 @@ export default function SettingsPage() {
       feature: null,
       isComponent: true,
       component: <HidePendingContributionsConfig />,
+    },
+    {
+      id: "waiting-list",
+      title: "Fila de Espera",
+      description: "Ative a fila de espera automática para agendamentos",
+      icon: <Clock className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      isComponent: true,
+      component: <WaitingListSettings />,
     },
   ], [
     clinicName, user, profile, reminderEnabled, reminderTime, whatsappHeaderImage, 

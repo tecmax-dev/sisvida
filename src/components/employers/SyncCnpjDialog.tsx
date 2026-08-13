@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, RefreshCw, Play, CheckCircle, XCircle, AlertCircle, AlertTriangle, Building2, Phone, Mail, MapPin } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
 interface SyncCnpjDialogProps {
   open: boolean;
@@ -48,6 +49,11 @@ interface Summary {
   inactive: number;
   errors: number;
   dry_run: boolean;
+  total_pending?: number;
+  has_more?: boolean;
+  next_offset?: number;
+  next_after_id?: string | null;
+  rate_limited?: boolean;
 }
 
 export function SyncCnpjDialog({ open, onOpenChange, clinicId, onComplete }: SyncCnpjDialogProps) {
@@ -55,27 +61,77 @@ export function SyncCnpjDialog({ open, onOpenChange, clinicId, onComplete }: Syn
   const [dryRun, setDryRun] = useState(true);
   const [results, setResults] = useState<ResultItem[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   const handleExecute = async () => {
     setLoading(true);
     setResults(null);
     setSummary(null);
+    setProgress(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('sync-employer-cnpj', {
-        body: { clinic_id: clinicId, dry_run: dryRun }
-      });
+      const allResults: ResultItem[] = [];
+      let totalUpdated = 0;
+      let totalNoChanges = 0;
+      let totalInvalid = 0;
+      let totalInactive = 0;
+      let totalErrors = 0;
+      let offset = 0;
+      let afterId: string | null = null;
+      let totalPending = 0;
+      const BATCH_SIZE = 2;
+      let safety = 800;
 
-      if (error) throw error;
+      while (safety-- > 0) {
+        const { data, error } = await supabase.functions.invoke('sync-employer-cnpj', {
+          body: { clinic_id: clinicId, dry_run: dryRun, batch_size: BATCH_SIZE, offset, after_id: afterId }
+        });
 
-      setResults(data.results);
-      setSummary(data.summary);
+        if (error) {
+          const extracted = await extractFunctionsErrorAsync(error);
+          throw new Error(extracted.message);
+        }
 
-      if (data.summary.updated > 0) {
+        if (data?.ok === false) throw new Error(data.error || "Falha ao sincronizar CNPJ");
+        if (!data?.summary) throw new Error(data?.error || "Resposta inválida da função de CNPJ");
+
+        const s = data.summary as Summary;
+        totalPending = s.total_pending ?? totalPending;
+        totalUpdated += s.updated;
+        totalNoChanges += s.no_changes;
+        totalInvalid += s.invalid_cnpj;
+        totalInactive += s.inactive;
+        totalErrors += s.errors;
+        allResults.push(...(data.results as ResultItem[]));
+
+        setResults([...allResults]);
+        setSummary({
+          total: allResults.length,
+          updated: totalUpdated,
+          no_changes: totalNoChanges,
+          invalid_cnpj: totalInvalid,
+          inactive: totalInactive,
+          errors: totalErrors,
+          dry_run: dryRun,
+        });
+        setProgress({ done: allResults.length, total: totalPending || allResults.length });
+
+        if (s.rate_limited) {
+          toast.warning("A BrasilAPI limitou temporariamente as consultas. Aguarde alguns minutos e execute novamente.");
+          break;
+        }
+
+        if (!s.has_more || s.total === 0) break;
+        offset = s.next_offset ?? offset + s.total;
+        afterId = s.next_after_id ?? afterId;
+        await new Promise((resolve) => setTimeout(resolve, 1_500));
+      }
+
+      if (totalUpdated > 0) {
         if (dryRun) {
-          toast.info(`Simulação concluída: ${data.summary.updated} empresas seriam atualizadas`);
+          toast.info(`Simulação concluída: ${totalUpdated} empresas seriam atualizadas`);
         } else {
-          toast.success(`${data.summary.updated} empresas atualizadas com sucesso!`);
+          toast.success(`${totalUpdated} empresas atualizadas com sucesso!`);
           onComplete();
         }
       } else {
@@ -270,7 +326,7 @@ export function SyncCnpjDialog({ open, onOpenChange, clinicId, onComplete }: Syn
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processando...
+                {progress ? `Processando ${progress.done}/${progress.total}...` : "Processando..."}
               </>
             ) : (
               <>

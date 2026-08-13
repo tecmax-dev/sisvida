@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parse, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
+import { format, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2, ArrowLeftRight } from "lucide-react";
 import {
@@ -78,6 +78,25 @@ interface StatementSummary {
   finalBalance: number;
 }
 
+const parseBrDateDigitsToLocalNoon = (digits: string) => {
+  if (digits.length !== 8) return null;
+
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+  const parsed = parseDateOnlyToLocalNoon(`${year}-${month}-${day}`);
+
+  if (
+    parsed.getFullYear() !== Number(year) ||
+    parsed.getMonth() !== Number(month) - 1 ||
+    parsed.getDate() !== Number(day)
+  ) {
+    return null;
+  }
+
+  return parsed;
+};
+
 export function UnionStatementPanel() {
   const { currentClinic } = useAuth();
   const clinicId = currentClinic?.id;
@@ -97,7 +116,7 @@ export function UnionStatementPanel() {
 
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
-    queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
+    queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance-v3"] });
     queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
     queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
   }, [queryClient]);
@@ -122,21 +141,7 @@ export function UnionStatementPanel() {
           notes: `Estorno do lançamento ID ${transaction.id}`,
         });
       if (insertError) throw insertError;
-
-      // Update cash register balance
-      const balanceChange = transaction.type === "expense" ? transaction.amount : -transaction.amount;
-      const { data: register } = await supabase
-        .from("union_cash_registers")
-        .select("current_balance")
-        .eq("id", cashRegisterId)
-        .single();
-
-      if (register) {
-        await supabase
-          .from("union_cash_registers")
-          .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
-          .eq("id", cashRegisterId);
-      }
+      // Saldo do portador é recalculado automaticamente pelo banco.
     },
     onSuccess: () => {
       toast.success("Lançamento estornado com sucesso!");
@@ -150,23 +155,6 @@ export function UnionStatementPanel() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (transaction: Transaction) => {
-      // If paid, reverse the balance effect first
-      if (transaction.status === "paid" && cashRegisterId) {
-        const balanceChange = transaction.type === "expense" ? transaction.amount : -transaction.amount;
-        const { data: register } = await supabase
-          .from("union_cash_registers")
-          .select("current_balance")
-          .eq("id", cashRegisterId)
-          .single();
-
-        if (register) {
-          await supabase
-            .from("union_cash_registers")
-            .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
-            .eq("id", cashRegisterId);
-        }
-      }
-
       // Update status to cancelled first to bypass paid deletion trigger
       if (transaction.status === "paid") {
         const { error: statusError } = await supabase
@@ -252,6 +240,9 @@ export function UnionStatementPanel() {
     return cashRegisters?.find((r) => r.id === cashRegisterId);
   }, [cashRegisters, cashRegisterId]);
 
+  const previousBalanceDate = useMemo(() => subDays(startDate, 1), [startDate]);
+  const previousBalanceDateLabel = useMemo(() => format(previousBalanceDate, "dd/MM/yyyy"), [previousBalanceDate]);
+
   const handleStartInitialBalanceDateEdit = useCallback(() => {
     if (!selectedRegister) return;
 
@@ -322,8 +313,9 @@ export function UnionStatementPanel() {
           .eq("status", "paid")
           .gte("paid_date", startStr)
           .lte("paid_date", endStr)
-          .order("paid_date")
-          .order("created_at")
+          .order("paid_date", { ascending: true })
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
           .range(offset, offset + batchSize - 1);
 
         if (error) throw error;
@@ -354,7 +346,7 @@ export function UnionStatementPanel() {
 
   // Calculate initial balance (saldo anterior) - fetch register data directly to avoid cache issues
   const { data: previousBalance } = useQuery({
-    queryKey: ["union-statement-previous-balance", clinicId, cashRegisterId, startDate],
+    queryKey: ["union-statement-previous-balance-v3", clinicId, cashRegisterId, startDate],
     queryFn: async () => {
       // Fetch register data directly to get initial_balance and initial_balance_date
       const { data: registerData, error: regError } = await supabase
@@ -370,23 +362,24 @@ export function UnionStatementPanel() {
 
       const startDateOnly = format(startDate, "yyyy-MM-dd");
 
-      let base = 0;
+      // Base = initial_balance (saldo declarado na initial_balance_date).
+      // Only apply o gate de initial_balance_date quando initial_balance != 0,
+      // pois nesse caso as transações anteriores a essa data já estão
+      // representadas dentro do saldo inicial. Quando initial_balance é 0,
+      // somamos todas as transações pagas anteriores à startDate para
+      // refletir o current_balance real da conta.
+      let base = initialBalanceValue;
       let lowerBoundDate: string | undefined;
 
-      if (initialBalanceDate) {
+      if (initialBalanceDate && initialBalanceValue !== 0) {
         const initDateLocalNoon = parseDateOnlyToLocalNoon(initialBalanceDate);
         const startDateNoon = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 12, 0, 0, 0);
 
         if (startDateNoon.getTime() > initDateLocalNoon.getTime()) {
-          // Start date is after initial balance date - use initial balance as base
-          // and sum transactions between initial_balance_date and startDate
-          base = initialBalanceValue;
           lowerBoundDate = initialBalanceDate;
         } else {
-          // Start date is on or before the initial balance date
-          // The account had no recorded balance before its initial_balance_date
-          // So the "previous balance" is simply R$ 0,00
-          return 0;
+          // Período começa em/antes da data do saldo inicial declarado.
+          return initialBalanceValue;
         }
       }
 
@@ -399,11 +392,14 @@ export function UnionStatementPanel() {
       while (prevHasMore) {
         let query = supabase
           .from("union_financial_transactions")
-          .select("type, amount, paid_date")
+          .select("id, type, amount, paid_date, created_at")
           .eq("clinic_id", clinicId!)
           .eq("cash_register_id", cashRegisterId)
           .eq("status", "paid")
           .lt("paid_date", startDateOnly)
+          .order("paid_date", { ascending: true })
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
           .range(prevOffset, prevOffset + prevBatch - 1);
 
         if (lowerBoundDate) {
@@ -561,11 +557,10 @@ export function UnionStatementPanel() {
     yPos += 10;
 
     // Previous balance table
-    const prevBalanceDateStr = format(subDays(startDate, 1), "dd/MM/yyyy");
     autoTable(doc, {
       startY: yPos,
       head: [["DATA", "SALDO ANTERIOR"]],
-      body: [[prevBalanceDateStr, formatCurrency(summary.initialBalance)]],
+      body: [[previousBalanceDateLabel, formatCurrency(summary.initialBalance)]],
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
       styles: { fontSize: 9 },
@@ -683,8 +678,7 @@ export function UnionStatementPanel() {
 
     // Previous balance
     wsData.push(["DATA", "SALDO ANTERIOR"]);
-    const prevBalanceDateExcel = format(subDays(startDate, 1), "dd/MM/yyyy");
-    wsData.push([prevBalanceDateExcel, summary.initialBalance]);
+    wsData.push([previousBalanceDateLabel, summary.initialBalance]);
     wsData.push([]);
 
     // Transactions header
@@ -840,21 +834,15 @@ export function UnionStatementPanel() {
                           onChange={(e) => {
                             const val = e.target.value;
                             // Auto-format: insert slashes
-                            const digits = val.replace(/\D/g, "");
-                            if (digits.length === 8) {
-                              const parsed = parse(digits, "ddMMyyyy", new Date());
-                              if (isValid(parsed)) {
-                                handleStartDateChange(parsed);
-                              }
+                            const parsed = parseBrDateDigitsToLocalNoon(val.replace(/\D/g, ""));
+                            if (parsed) {
+                              handleStartDateChange(parsed);
                             }
                           }}
                           onBlur={(e) => {
-                            const val = e.target.value.replace(/\D/g, "");
-                            if (val.length === 8) {
-                              const parsed = parse(val, "ddMMyyyy", new Date());
-                              if (isValid(parsed)) {
-                                handleStartDateChange(parsed);
-                              }
+                            const parsed = parseBrDateDigitsToLocalNoon(e.target.value.replace(/\D/g, ""));
+                            if (parsed) {
+                              handleStartDateChange(parsed);
                             }
                           }}
                         />
@@ -885,22 +873,15 @@ export function UnionStatementPanel() {
                           placeholder="dd/mm/aaaa"
                           value={format(endDate, "dd/MM/yyyy")}
                           onChange={(e) => {
-                            const val = e.target.value;
-                            const digits = val.replace(/\D/g, "");
-                            if (digits.length === 8) {
-                              const parsed = parse(digits, "ddMMyyyy", new Date());
-                              if (isValid(parsed)) {
-                                handleEndDateChange(parsed);
-                              }
+                            const parsed = parseBrDateDigitsToLocalNoon(e.target.value.replace(/\D/g, ""));
+                            if (parsed) {
+                              handleEndDateChange(parsed);
                             }
                           }}
                           onBlur={(e) => {
-                            const val = e.target.value.replace(/\D/g, "");
-                            if (val.length === 8) {
-                              const parsed = parse(val, "ddMMyyyy", new Date());
-                              if (isValid(parsed)) {
-                                handleEndDateChange(parsed);
-                              }
+                            const parsed = parseBrDateDigitsToLocalNoon(e.target.value.replace(/\D/g, ""));
+                            if (parsed) {
+                              handleEndDateChange(parsed);
                             }
                           }}
                         />
@@ -973,54 +954,55 @@ export function UnionStatementPanel() {
                   <TableBody>
                     <TableRow>
                       <TableCell>
-                        {isEditingInitialBalanceDate ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="date"
-                              value={initialBalanceDateInput}
-                              onChange={(e) => setInitialBalanceDateInput(e.target.value)}
-                              onKeyDown={handleInitialBalanceDateKeyDown}
-                              className="h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                              disabled={savingInitialBalanceDate}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => void handleSaveInitialBalanceDate()}
-                              disabled={savingInitialBalanceDate || !initialBalanceDateInput}
-                              title="Salvar data"
+                        <div className="space-y-1">
+                          <div className="font-medium">{previousBalanceDateLabel}</div>
+                          {isEditingInitialBalanceDate ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="date"
+                                value={initialBalanceDateInput}
+                                onChange={(e) => setInitialBalanceDateInput(e.target.value)}
+                                onKeyDown={handleInitialBalanceDateKeyDown}
+                                className="h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                disabled={savingInitialBalanceDate}
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => void handleSaveInitialBalanceDate()}
+                                disabled={savingInitialBalanceDate || !initialBalanceDateInput}
+                                title="Salvar data-base"
+                              >
+                                {savingInitialBalanceDate ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Check className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={handleCancelInitialBalanceDateEdit}
+                                disabled={savingInitialBalanceDate}
+                                title="Cancelar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ) : (selectedRegister as any)?.initial_balance_date ? (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              title="Ajustar data-base do saldo cadastrado"
+                              onClick={handleStartInitialBalanceDateEdit}
                             >
-                              {savingInitialBalanceDate ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Check className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={handleCancelInitialBalanceDateEdit}
-                              disabled={savingInitialBalanceDate}
-                              title="Cancelar"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-transparent hover:border-input hover:bg-muted/50 cursor-pointer text-sm transition-colors"
-                            title="Clique para alterar a data do saldo inicial"
-                            onClick={handleStartInitialBalanceDateEdit}
-                          >
-                            {(selectedRegister as any)?.initial_balance_date
-                              ? formatDateBR(String((selectedRegister as any).initial_balance_date))
-                              : format(subDays(startDate, 1), "dd/MM/yyyy")}
-                            <Pencil className="h-3 w-3 text-muted-foreground" />
-                          </button>
-                        )}
+                              Base: {formatDateBR(String((selectedRegister as any).initial_balance_date))}
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-bold">
                         {formatCurrency(summary.initialBalance)}
@@ -1201,10 +1183,11 @@ export function UnionStatementPanel() {
           transaction={editTransaction}
           clinicId={clinicId}
           cashRegisterId={cashRegisterId || undefined}
+          defaultPaid
           onSuccess={() => {
             setEditTransaction(null);
             queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
-            queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
+            queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance-v3"] });
             queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
             queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
           }}

@@ -37,14 +37,18 @@ export function Footer() {
                  { href: "/#features", label: "Funcionalidades" },
                  { href: "/apresentacao-clinica", label: "Módulo Clínica" },
                  { href: "/#pricing", label: "Planos" },
-                 { href: "/cadastro", label: "Solicitar Demo" },
+                 { href: "https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20solicitar%20uma%20demo%20do%20Prosinge.", label: "Solicitar Demo", external: true },
                  { href: "/ajuda", label: "Central de Ajuda" },
               ].map((link) => (
-                <li key={link.href}>
-                  <a href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </a>
-                </li>
+                 <li key={link.href}>
+                   <a
+                     href={link.href}
+                     {...((link as any).external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                   >
+                     {link.label}
+                   </a>
+                 </li>
               ))}
             </ul>
           </div>
@@ -71,13 +75,13 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://wa.me/551151943839"
+                  href="https://wa.me/5571982786864"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  (11) 5194-3839
+                  (71) 98278-6864
                 </a>
               </li>
               <li>
@@ -97,6 +101,9 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground">
                © 2025 Prosinge — Todos os direitos reservados
+            </p>
+            <p className="text-xs text-muted-foreground">
+              CNPJ: 03.025.212/0001-11
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Shield className="h-3.5 w-3.5" />

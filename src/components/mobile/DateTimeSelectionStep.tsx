@@ -9,6 +9,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { format, addDays, startOfDay, endOfMonth, addMonths, isToday } from "date-fns";
+import { WaitingListJoinCard } from "./WaitingListJoinCard";
 import { ptBR } from "date-fns/locale";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 interface Professional {
@@ -32,10 +33,12 @@ interface DateTimeSelectionStepProps {
   availableSlots: TimeSlot[];
   professionals: Professional[];
   selectedProfessionalId: string;
+  clinicId?: string | null;
   isDateEnabled: (date: Date, professional: Professional | undefined) => boolean;
   submitting: boolean;
   onSubmit: () => void;
   bookingMonthsAhead?: number;
+  queueLocked?: boolean;
 }
 
 export function DateTimeSelectionStep({
@@ -46,10 +49,12 @@ export function DateTimeSelectionStep({
   availableSlots,
   professionals,
   selectedProfessionalId,
+  clinicId,
   isDateEnabled,
   submitting,
   onSubmit,
   bookingMonthsAhead = 1,
+  queueLocked = false,
 }: DateTimeSelectionStepProps) {
   const professional = professionals.find(p => p.id === selectedProfessionalId);
 
@@ -156,6 +161,11 @@ export function DateTimeSelectionStep({
                 : "Nenhuma data disponível para este profissional."
               }
             </p>
+            {selectedProfessionalId && (
+              <div className="px-3">
+                <WaitingListJoinCard professionalId={selectedProfessionalId} clinicId={clinicId} />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -197,7 +207,16 @@ export function DateTimeSelectionStep({
           ) : (
             <div className="text-center py-6 bg-muted/50 rounded-lg">
               <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground text-sm">Nenhum horário disponível para esta data.</p>
+              <p className="text-muted-foreground text-sm">
+                {queueLocked
+                  ? "Há associados na fila de espera deste profissional. As vagas livres estão reservadas para a fila e só serão liberadas quando ela estiver vazia."
+                  : "Nenhum horário disponível para esta data."}
+              </p>
+              {selectedProfessionalId && (
+                <div className="px-3">
+                  <WaitingListJoinCard professionalId={selectedProfessionalId} clinicId={clinicId} />
+                </div>
+              )}
             </div>
           )}
         </div>

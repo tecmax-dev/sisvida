@@ -75,7 +75,7 @@ export function FAQSection() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 font-semibold shadow-md"
             >
               <a
-                href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o Prosinge"
+                href="https://wa.me/5571982786864?text=Olá! Tenho uma dúvida sobre o Prosinge"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"

@@ -259,8 +259,8 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="/prosindweb-logo.png" 
-            alt="Segurança ProSindWeb" 
+            src="/eclini-logo.png" 
+            alt="Segurança Prosinge" 
             className="rounded-lg w-full max-w-xs mx-auto"
           />
         </div>

@@ -71,6 +71,7 @@ import { ptBR } from "date-fns/locale";
 import { RealisticOdontogram } from "@/components/medical/RealisticOdontogram";
 import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
 import { PatientMedicalHistory } from "@/components/appointments/PatientMedicalHistory";
+import { PreviousRecordsInherit } from "@/components/appointments/PreviousRecordsInherit";
 import { PrintDialog } from "@/components/medical/PrintDialog";
 import { MedicationSearch } from "@/components/medical/MedicationSearch";
 import { cn } from "@/lib/utils";
@@ -1489,7 +1490,37 @@ export default function AttendancePageRedesign() {
                     )}
                   </div>
                 </div>
-                
+
+                <PreviousRecordsInherit
+                  records={medicalHistory}
+                  loading={loadingData}
+                  disabled={isCompleted}
+                  onInherit={(values, mode) => {
+                    setRecordForm((prev) => {
+                      if (mode === "replace") {
+                        return {
+                          ...prev,
+                          chief_complaint: values.chief_complaint ?? "",
+                          diagnosis: values.diagnosis ?? "",
+                          treatment_plan: values.treatment_plan ?? "",
+                          notes: values.notes ?? "",
+                        };
+                      }
+                      return {
+                        ...prev,
+                        chief_complaint: prev.chief_complaint || values.chief_complaint || "",
+                        diagnosis: prev.diagnosis || values.diagnosis || "",
+                        treatment_plan: prev.treatment_plan || values.treatment_plan || "",
+                        notes: prev.notes || values.notes || "",
+                      };
+                    });
+                    toast({
+                      title: mode === "replace" ? "Dados substituídos" : "Campos vazios preenchidos",
+                      description: "Revise as informações antes de salvar.",
+                    });
+                  }}
+                />
+
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                   <div>
                     <Label className="text-xs md:text-sm">Queixa Principal</Label>

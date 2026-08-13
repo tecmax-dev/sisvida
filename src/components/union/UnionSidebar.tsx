@@ -263,6 +263,15 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/configuracoes/feriados", icon: CalendarX, label: "Feriados", permission: "union_module_access" },
       { href: "/union/configuracoes/grupos-acesso", icon: Shield, label: "Grupos de Acesso", permission: "union_module_access" },
     ]
+  },
+  {
+    id: "auditoria",
+    label: "Auditoria",
+    icon: ScrollText,
+    color: "juridico",
+    items: [
+      { href: "/union/auditoria", icon: ScrollText, label: "Log de Atividades", permission: "union_view_audit" },
+    ]
   }
 ];
 

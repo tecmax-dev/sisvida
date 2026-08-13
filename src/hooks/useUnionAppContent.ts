@@ -40,6 +40,7 @@ export interface UnionAppContent {
   is_pinned: boolean;
   metadata: Record<string, unknown> | null;
   cct_category_id: string | null;
+  is_aditivo: boolean;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -134,6 +135,7 @@ export function useCreateUnionAppContent() {
           is_active: content.is_active,
           metadata: content.metadata ? JSON.parse(JSON.stringify(content.metadata)) : null,
           cct_category_id: content.cct_category_id || null,
+          is_aditivo: !!content.is_aditivo,
           clinic_id: currentClinic.id,
           created_by: user?.id || null,
         })
@@ -186,6 +188,7 @@ export function useUpdateUnionAppContent() {
       if (updates.is_pinned !== undefined) updateData.is_pinned = updates.is_pinned;
       if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
       if (updates.cct_category_id !== undefined) updateData.cct_category_id = updates.cct_category_id;
+      if (updates.is_aditivo !== undefined) updateData.is_aditivo = updates.is_aditivo;
 
       const { error } = await supabase
         .from("union_app_content")

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { RefreshDataButton } from "@/components/common/RefreshDataButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -390,11 +391,17 @@ export default function UnionIncomePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Receitas</h1>
-        <p className="text-muted-foreground">
-          Gerencie as receitas do módulo sindical
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Receitas</h1>
+          <p className="text-muted-foreground">
+            Gerencie as receitas do módulo sindical
+          </p>
+        </div>
+        <RefreshDataButton
+          queryKeys={[["union-financial-transactions"], ["union-financial-categories"], ["union-cash-registers"]]}
+          className="self-start sm:self-auto"
+        />
       </div>
 
       {/* Summary Cards */}

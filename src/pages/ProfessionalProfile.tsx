@@ -67,9 +67,9 @@ interface Professional {
   name: string;
   specialty: string | null;
   registration_number: string | null;
-  phone: string | null;
-  whatsapp: string | null;
-  email: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
   avatar_url: string | null;
   bio: string | null;
   education: string | null;
@@ -163,9 +163,11 @@ export default function ProfessionalProfile() {
       setClinic(clinicData);
 
       // Fetch professional by slug or id
+      const professionalPublicColumns = 'id, clinic_id, name, specialty, registration_number, avatar_url, schedule, appointment_duration, is_active, address, city, state, zip_code, latitude, longitude, bio, education, experience, slug';
+
       let professionalQuery = supabase
         .from('professionals')
-        .select('*')
+        .select(professionalPublicColumns)
         .eq('clinic_id', clinicData.id)
         .eq('is_active', true);
 
@@ -179,7 +181,7 @@ export default function ProfessionalProfile() {
         // Try fetching by ID if slug doesn't exist
         const { data: profById } = await supabase
           .from('professionals')
-          .select('*')
+          .select(professionalPublicColumns)
           .eq('clinic_id', clinicData.id)
           .eq('id', professionalSlug)
           .eq('is_active', true)

@@ -20,6 +20,8 @@ export interface CreateHomologacaoAppointmentInput {
   notes?: string | null;
   confirmation_token?: string;
   protocol_number?: string | null;
+  employee_whatsapp_consent?: boolean;
+  company_whatsapp_consent?: boolean;
 }
 
 export interface HomologacaoAppointmentResponse {
@@ -42,6 +44,8 @@ export interface HomologacaoAppointmentResponse {
   status: string;
   confirmation_token: string;
   protocol_number: string | null;
+  employee_whatsapp_consent: boolean;
+  company_whatsapp_consent: boolean;
 }
 
 async function extractEdgeErrorMessage(error: unknown): Promise<string> {
@@ -76,6 +80,46 @@ export async function createHomologacaoAppointment(input: CreateHomologacaoAppoi
 
   if (!data?.success || !data?.appointment) {
     throw new Error(data?.details || data?.error || "Não foi possível criar o agendamento.");
+  }
+
+  // Record consent evidence if granted
+  if (input.employee_whatsapp_consent || input.company_whatsapp_consent) {
+    const appointmentId = data.appointment.id;
+    const clinicId = input.clinic_id;
+    
+    const consents = [];
+    
+    if (input.employee_whatsapp_consent && input.employee_phone) {
+      consents.push({
+        tenant_id: clinicId,
+        phone: input.employee_phone.replace(/\D/g, ""),
+        consent_status: "granted",
+        purpose: "SERVICE_OPERATIONAL",
+        source: "HOMOLOGACAO_BOOKING",
+        term_version: "whatsapp_homologacao_v1_2026",
+        consent_text: "Autorizo o envio de confirmação e atualizações da homologação por WhatsApp.",
+        person_id: appointmentId,
+        user_agent: navigator.userAgent
+      });
+    }
+    
+    if (input.company_whatsapp_consent && input.company_phone) {
+      consents.push({
+        tenant_id: clinicId,
+        phone: input.company_phone.replace(/\D/g, ""),
+        consent_status: "granted",
+        purpose: "SERVICE_OPERATIONAL",
+        source: "HOMOLOGACAO_BOOKING",
+        term_version: "whatsapp_homologacao_v1_2026",
+        consent_text: "Autorizo o envio de confirmação e atualizações da homologação por WhatsApp.",
+        person_id: appointmentId,
+        user_agent: navigator.userAgent
+      });
+    }
+    
+    if (consents.length > 0) {
+      await supabase.from("whatsapp_consents").insert(consents);
+    }
   }
 
   return data.appointment as HomologacaoAppointmentResponse;

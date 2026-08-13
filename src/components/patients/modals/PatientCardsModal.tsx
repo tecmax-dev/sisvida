@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { usePatientCards, PatientCard } from '@/hooks/usePatientCards';
 import { PatientCardView } from '@/components/patients/PatientCardView';
 import { PatientCardDialog } from '@/components/patients/PatientCardDialog';
@@ -34,6 +35,7 @@ export function PatientCardsModal({
 }: PatientCardsModalProps) {
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
+  const { isAdmin } = usePermissions();
   const { cards, isLoading, createCard, renewCard, isCreating, isRenewing, refetch } = usePatientCards(
     currentClinic?.id,
     patientId
@@ -181,6 +183,7 @@ export function PatientCardsModal({
         onSubmit={handleCreateCard}
         isLoading={isCreating}
         mode="create"
+        restrictTo30Days={!isAdmin}
       />
 
       {/* Renew Card with Payslip Verification */}

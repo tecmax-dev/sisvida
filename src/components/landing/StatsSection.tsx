@@ -15,11 +15,11 @@ function StatItem({ value, suffix, label, index }: StatItemProps) {
   });
 
   return (
-    <div ref={ref} className="text-center relative group">
-      <div className="text-5xl md:text-6xl font-extrabold text-primary mb-3 tabular-nums tracking-tighter transition-transform group-hover:scale-110 duration-500">
+    <div ref={ref} className="text-center">
+      <div className="font-display text-4xl font-bold tabular-nums tracking-tight text-prosinge-cream md:text-5xl">
         {formattedValue}
       </div>
-      <div className="text-xs text-muted-foreground font-bold uppercase tracking-[0.2em]">{label}</div>
+      <div className="mt-2 text-sm font-medium text-prosinge-cream/70">{label}</div>
     </div>
   );
 }
@@ -33,10 +33,9 @@ const stats = [
 
 export function StatsSection() {
   return (
-    <section className="py-24 lg:py-32 border-y border-border/40 bg-muted/20 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(var(--primary-rgb),0.03),transparent_70%)]" />
-      <div className="container relative z-10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-16 max-w-4xl mx-auto">
+    <section className="bg-prosinge-emerald-mid py-10 font-body">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {stats.map((stat, index) => (
             <StatItem
               key={index}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -48,6 +48,10 @@ export function usePatientAttachments(patientId: string, clinicIdOverride?: stri
   const [attachments, setAttachments] = useState<PatientAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const effectiveClinicId = clinicIdOverride || currentClinic?.id;
+  const foldersRef = useRef<PatientFolder[]>([]);
+  useEffect(() => {
+    foldersRef.current = folders;
+  }, [folders]);
 
   const fetchFolders = useCallback(async () => {
     if (!effectiveClinicId || !patientId) return;
@@ -88,7 +92,7 @@ export function usePatientAttachments(patientId: string, clinicIdOverride?: stri
 
         while (changed) {
           changed = false;
-          folders.forEach((folder) => {
+          foldersRef.current.forEach((folder) => {
             if (folder.parent_folder_id && folderIds.has(folder.parent_folder_id) && !folderIds.has(folder.id)) {
               folderIds.add(folder.id);
               changed = true;
@@ -129,7 +133,7 @@ export function usePatientAttachments(patientId: string, clinicIdOverride?: stri
     } finally {
       setLoading(false);
     }
-  }, [effectiveClinicId, patientId, folders]);
+  }, [effectiveClinicId, patientId]);
 
   const createFolder = async (name: string, parentFolderId?: string | null) => {
     if (!effectiveClinicId || !patientId || !user?.id) return null;

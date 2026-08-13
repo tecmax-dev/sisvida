@@ -82,7 +82,7 @@ export default function MobilePasswordResetPage() {
     }
   }, [searchParams]);
 
-  const sendResetCode = async (channel: "whatsapp" | "sms") => {
+  const sendResetCode = async (channel: "whatsapp" | "sms" | "email") => {
     const isCpfMode = mode === "cpf";
     const cpfDigits = cpf.replace(/\D/g, "");
 
@@ -150,13 +150,15 @@ export default function MobilePasswordResetPage() {
       if (result.error) throw new Error(result.error);
 
       setStep("verify_code");
+      const defaultMsg =
+        channel === "email"
+          ? "Se o email estiver cadastrado, você receberá um código de recuperação por e-mail."
+          : isCpfMode || channel === "sms"
+            ? "Se o email estiver cadastrado, você receberá um código por SMS."
+            : "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp.";
       toast({
         title: "Instruções enviadas",
-        description:
-          result.message ||
-          (isCpfMode || channel === "sms"
-            ? "Se o email estiver cadastrado, você receberá um código por SMS."
-            : "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp."),
+        description: result.message || defaultMsg,
       });
     } catch (err: any) {
       console.error("Error sending reset link:", err);
@@ -179,6 +181,7 @@ export default function MobilePasswordResetPage() {
   };
 
   const handleSendSms = () => sendResetCode("sms");
+  const handleSendEmail = () => sendResetCode("email");
 
   const handleCpfSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -436,6 +439,26 @@ export default function MobilePasswordResetPage() {
                   )}
                 </Button>
                 )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 font-semibold border-2"
+                  disabled={loading || smsLoading || !email}
+                  onClick={handleSendEmail}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando e-mail...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Enviar código por E-mail
+                    </>
+                  )}
+                </Button>
               </>
             )}
 

@@ -444,7 +444,7 @@ export default function EmployersPage() {
 
       const payload = {
         clinic_id: currentClinic.id,
-        registration_number: registrationNumber,
+        registration_number: registrationNumber || null,
         cnpj: cleanedCnpj,
         name: formData.name.trim(),
         trade_name: formData.trade_name.trim() || null,
@@ -510,9 +510,17 @@ export default function EmployersPage() {
       toast.success(selectedEmployer ? "Empresa atualizada com sucesso" : "Empresa cadastrada com sucesso");
       setDialogOpen(false);
       fetchEmployers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving employer:", error);
-      toast.error("Erro ao salvar empresa");
+      const raw = error?.message || error?.error_description || error?.hint || "";
+      const code = error?.code ? ` [${error.code}]` : "";
+      if (raw.toLowerCase().includes("duplicate") || raw.toLowerCase().includes("unique")) {
+        toast.error("Este CNPJ já está cadastrado nesta clínica");
+      } else if (raw.toLowerCase().includes("row-level security") || raw.toLowerCase().includes("permission")) {
+        toast.error("Sem permissão para cadastrar empresas. Solicite acesso de administrador.");
+      } else {
+        toast.error(`Erro ao salvar empresa${code}: ${raw || "erro desconhecido"}`);
+      }
     } finally {
       setSaving(false);
     }

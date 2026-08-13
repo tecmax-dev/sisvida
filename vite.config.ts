@@ -21,10 +21,10 @@ export default defineConfig(({ mode }) => ({
         "pwa-512x512.png",
         "favicon.ico",
         "favicon.png",
-        "favicon-prosindweb.png",
-        "prosindweb-apple-touch-icon.png",
-        "prosindweb-pwa-192x192.png",
-        "prosindweb-pwa-512x512.png",
+        "favicon-prosinge.png",
+        "prosinge-apple-touch-icon.png",
+        "prosinge-pwa-192x192.png",
+        "prosinge-pwa-512x512.png",
       ],
       // Manifest is served only from public/manifest.json.
       // This prevents PWABuilder from reading VitePWA's generated /manifest.webmanifest
@@ -47,13 +47,13 @@ export default defineConfig(({ mode }) => ({
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
           { url: '/cache-bust-v20260528-final-filiacao-no-play-store', revision: null },
-          { url: '/favicon.ico', revision: 'prosindweb-final-20260517c' },
-          { url: '/favicon.png', revision: 'prosindweb-final-20260517c' },
-          { url: '/favicon-prosindweb.png', revision: 'prosindweb-final-20260517c' },
-          { url: '/prosindweb-apple-touch-icon.png', revision: 'prosindweb-final-20260517c' },
-          { url: '/manifest-prosindweb.webmanifest', revision: 'prosindweb-final-20260517c' },
+          { url: '/favicon.ico', revision: 'prosinge-final-20260517c' },
+          { url: '/favicon.png', revision: 'prosinge-final-20260517c' },
+          { url: '/favicon-prosinge.png', revision: 'prosinge-final-20260517c' },
+          { url: '/prosinge-apple-touch-icon.png', revision: 'prosinge-final-20260517c' },
+          { url: '/manifest-prosinge.webmanifest', revision: 'prosinge-final-20260517c' },
           { url: '/manifest.json', revision: 'sindicato-20260528-no-play' },
-          { url: '/site.webmanifest', revision: 'prosindweb-final-20260517c' },
+          { url: '/site.webmanifest', revision: 'prosinge-final-20260517c' },
           { url: '/manifest-sindicato.webmanifest', revision: 'sindicato-20260528-no-play' },
         ],
         runtimeCaching: [

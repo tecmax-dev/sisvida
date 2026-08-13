@@ -5,7 +5,6 @@ import { MobileLayout } from "@/components/mobile/MobileLayout";
 import { MobileCarousel } from "@/components/mobile/MobileCarousel";
 import { MobileServiceGrid } from "@/components/mobile/MobileServiceGrid";
 import { MobileFeaturedServices } from "@/components/mobile/MobileFeaturedServices";
-import { MobileWaitingListOffer } from "@/components/mobile/MobileWaitingListOffer";
 import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicationSection";
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
@@ -154,9 +153,6 @@ export default function MobileHomePage() {
           </div>
         </div>
       </div>
-
-      {/* Waiting List Offer Notification */}
-      <MobileWaitingListOffer />
 
       {/* Featured Services - Quick access */}
       <MobileFeaturedServices 

@@ -213,7 +213,9 @@ export default function NewNegotiationDialog({
         `
         )
         .eq("employer_id", employerId)
-        .in("status", ["pending", "overdue"]) // Contribuições PENDENTES e VENCIDAS podem entrar na negociação
+        // Qualquer status (a vencer, pendente, vencido/atrasado, aguardando valor) pode entrar na negociação.
+        // Excluímos apenas pagas e canceladas, que não fazem sentido renegociar.
+        .not("status", "in", "(paid,cancelled)")
         .is("negotiation_id", null)
         .order("due_date", { ascending: true });
 

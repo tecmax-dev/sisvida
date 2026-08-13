@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { RefreshDataButton } from "@/components/common/RefreshDataButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,6 +52,10 @@ import {
   AlertTriangle,
   Filter,
   X,
+  ArrowUpDown,
+  TrendingUp,
+  Wallet,
+  CalendarRange,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -74,7 +79,19 @@ interface PaymentHistoryItem {
   check_number: string | null;
   imported_at: string | null;
   created_at: string | null;
+  source?: "imported" | "transaction";
 }
+
+const safeFormatDate = (value?: string | null, pattern = "dd/MM/yy"): string => {
+  if (!value) return "-";
+  try {
+    const d = parseDateOnlyToLocalNoon(value);
+    if (!isValid(d)) return typeof value === "string" ? value : "-";
+    return format(d, pattern, { locale: ptBR });
+  } catch {
+    return "-";
+  }
+};
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -113,10 +130,12 @@ const parseCurrency = (value: string): number => {
 };
 
 export default function UnionPaymentHistoryPage() {
-  const { currentClinic, userRoles} = useAuth();
+  const { currentClinic, userRoles } = useAuth();
 
   const resolvedClinic = useMemo(
-    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    () =>
+      (userRoles || []).find((role) => role?.clinic_id === SINDICATO_CLINIC_ID)?.clinic ||
+      currentClinic,
     [currentClinic, userRoles]
   );
   const { entity, loading: entityLoading } = useUnionEntity();
@@ -129,6 +148,9 @@ export default function UnionPaymentHistoryPage() {
   const [checkFilter, setCheckFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [dueStartDate, setDueStartDate] = useState("");
+  const [dueEndDate, setDueEndDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "unpaid">("paid");
   const [minValue, setMinValue] = useState("");
   const [maxValue, setMaxValue] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -136,23 +158,161 @@ export default function UnionPaymentHistoryPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [paidSort, setPaidSort] = useState<"desc" | "asc">("desc");
+  const [sortKey, setSortKey] = useState<"paid_at" | "due_date" | "supplier_name" | "gross_value">("paid_at");
 
   const entityId = entity?.id;
+  const clinicId = resolvedClinic?.id;
 
   // Fetch payment history
-  const { data: payments = [], isLoading } = useQuery({
-    queryKey: ["union-payment-history", entityId],
+  const { data: payments = [], isLoading, error: queryError } = useQuery({
+    queryKey: ["union-payment-history", entityId, clinicId],
     queryFn: async () => {
       if (!entityId) return [];
 
-      const { data, error } = await supabase
-        .from("union_payment_history")
-        .select("*")
-        .eq("entity_id", entityId)
-        .order("paid_at", { ascending: false });
+      // As duas fontes podem ultrapassar o limite de 1.000 linhas da API.
+      // Paginar com ordenação estável evita históricos parciais e resultados variáveis.
+      const pageSize = 1000;
+      const fetchImported = async () => {
+        const rows: any[] = [];
+        for (let from = 0; ; from += pageSize) {
+          const result = await supabase
+            .from("union_payment_history")
+            .select("*")
+            .eq("entity_id", entityId)
+            .order("paid_at", { ascending: false, nullsFirst: false })
+            .order("id", { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (result.error) return { data: rows, error: result.error };
+          const page = result.data || [];
+          rows.push(...page);
+          if (page.length < pageSize) return { data: rows, error: null };
+        }
+      };
 
-      if (error) throw error;
-      return data as PaymentHistoryItem[];
+      const fetchTransactions = async () => {
+        if (!clinicId) return { data: [] as any[], error: null };
+        const rows: any[] = [];
+        for (let from = 0; ; from += pageSize) {
+          const result = await supabase
+            .from("union_financial_transactions")
+            .select(
+              "id, supplier_id, description, due_date, paid_date, gross_value, net_value, amount, status, check_number, notes, category_id, cash_register_id, payment_method"
+            )
+            .eq("clinic_id", clinicId)
+            .eq("type", "expense")
+            .in("status", ["paid", "pending", "overdue", "partial"])
+            .not("supplier_id", "is", null)
+            .order("paid_date", { ascending: false, nullsFirst: false })
+            .order("id", { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (result.error) return { data: rows, error: result.error };
+          const page = result.data || [];
+          rows.push(...page);
+          if (page.length < pageSize) return { data: rows, error: null };
+        }
+      };
+
+      const [importedRes, txRes] = await Promise.all([fetchImported(), fetchTransactions()]);
+
+      if (importedRes.error) throw importedRes.error;
+
+      // eslint-disable-next-line no-console
+      console.log("[UnionPaymentHistory] fetch", {
+        entityId,
+        clinicId,
+        importedCount: importedRes.data?.length ?? 0,
+        txCount: Array.isArray(txRes.data) ? txRes.data.length : 0,
+        txError: txRes.error?.message || null,
+      });
+
+      const imported: PaymentHistoryItem[] = (importedRes.data || []).map((p: any) => ({
+        ...p,
+        source: "imported" as const,
+      }));
+
+      let transactions: PaymentHistoryItem[] = [];
+      if (!txRes.error && Array.isArray(txRes.data)) {
+        // Buscar nomes de fornecedores, categorias e caixas em lote
+        const supplierIds = Array.from(
+          new Set((txRes.data as any[]).map((t) => t.supplier_id).filter(Boolean))
+        );
+        const categoryIds = Array.from(
+          new Set((txRes.data as any[]).map((t) => t.category_id).filter(Boolean))
+        );
+        const cashIds = Array.from(
+          new Set((txRes.data as any[]).map((t) => t.cash_register_id).filter(Boolean))
+        );
+        const supplierNames = new Map<string, string>();
+        const categoryNames = new Map<string, string>();
+        const cashNames = new Map<string, string>();
+        if (supplierIds.length > 0) {
+          const { data: sups } = await supabase
+            .from("union_suppliers")
+            .select("id, name")
+            .in("id", supplierIds);
+          (sups || []).forEach((s: any) => supplierNames.set(s.id, s.name));
+        }
+        if (categoryIds.length > 0) {
+          const { data: cats } = await supabase
+            .from("union_financial_categories")
+            .select("id, name")
+            .in("id", categoryIds);
+          (cats || []).forEach((c: any) => categoryNames.set(c.id, c.name));
+        }
+        if (cashIds.length > 0) {
+          const { data: cxs } = await supabase
+            .from("union_cash_registers")
+            .select("id, name")
+            .in("id", cashIds);
+          (cxs || []).forEach((c: any) => cashNames.set(c.id, c.name));
+        }
+
+        transactions = (txRes.data as any[]).map((t) => {
+          const amount = Number(t.amount ?? 0);
+          const grossRaw = Number(t.gross_value ?? 0);
+          const netRaw = Number(t.net_value ?? 0);
+          const gross = grossRaw > 0 ? grossRaw : amount;
+          const net = netRaw > 0 ? netRaw : gross;
+          return {
+            id: `tx:${t.id}`,
+            entity_id: entityId,
+            supplier_id: t.supplier_id,
+            supplier_name: supplierNames.get(t.supplier_id) || "-",
+            description: t.description || t.notes || null,
+            chart_of_accounts: categoryNames.get(t.category_id) || null,
+            operational_unit: null,
+            bank_account:
+              cashNames.get(t.cash_register_id) ||
+              (typeof t.notes === "string"
+                ? t.notes.match(/(?:Portador|Banco|Conta)\s*[:\-]\s*([^|\n]+)/i)?.[1]?.trim() || null
+                : null) ||
+              (typeof t.payment_method === "string" && t.payment_method.trim()
+                ? t.payment_method.trim()
+                : null),
+            due_date: t.due_date || null,
+            status: t.status === "paid" ? "pago" : t.status === "overdue" ? "vencido" : "a pagar",
+            gross_value: gross,
+            net_value: net,
+            paid_at: t.status === "paid" ? t.paid_date || null : null,
+            check_number: t.check_number || null,
+            imported_at: null,
+            created_at: null,
+            source: "transaction" as const,
+          };
+        });
+      } else if (txRes.error) {
+        console.warn("[UnionPaymentHistory] Falha ao carregar transações:", txRes.error);
+      }
+
+      // Merge + ordenar por data de pagamento desc
+      const merged = [...imported, ...transactions].sort((a, b) => {
+        const da = a.paid_at ? new Date(a.paid_at).getTime() : 0;
+        const db = b.paid_at ? new Date(b.paid_at).getTime() : 0;
+        return db - da;
+      });
+
+      return merged;
     },
     enabled: !!entityId,
   });
@@ -164,8 +324,13 @@ export default function UnionPaymentHistoryPage() {
   }, [payments]);
 
   // Filter payments
-  const filteredPayments = useMemo(() => {
+  const filteredBase = useMemo(() => {
     return payments.filter(payment => {
+      // Situação (pago / a pagar)
+      const isPaid = !!payment.paid_at || (payment.status || "").toLowerCase().startsWith("pag");
+      if (statusFilter === "paid" && !isPaid) return false;
+      if (statusFilter === "unpaid" && isPaid) return false;
+
       // Text search
       if (search) {
         const searchLower = search.toLowerCase();
@@ -187,15 +352,30 @@ export default function UnionPaymentHistoryPage() {
         return false;
       }
 
-      // Date filter
+      // Período de pagamento (individual)
       if (startDate || endDate) {
         const paymentDate = payment.paid_at ? parseDateOnlyToLocalNoon(payment.paid_at) : null;
         if (!paymentDate || isNaN(paymentDate.getTime())) return false;
         
-        const start = startDate ? startOfDay(parseDateOnlyToLocalNoon(startDate)) : new Date(0);
-        const end = endDate ? endOfDay(parseDateOnlyToLocalNoon(endDate)) : new Date();
-        
+        const startParsed = startDate ? parseDateOnlyToLocalNoon(startDate) : null;
+        const endParsed = endDate ? parseDateOnlyToLocalNoon(endDate) : null;
+        const start = startParsed && isValid(startParsed) ? startOfDay(startParsed) : new Date(0);
+        const end = endParsed && isValid(endParsed) ? endOfDay(endParsed) : new Date();
+
         if (!isWithinInterval(paymentDate, { start, end })) return false;
+      }
+
+      // Período de vencimento (individual)
+      if (dueStartDate || dueEndDate) {
+        const dueDate = payment.due_date ? parseDateOnlyToLocalNoon(payment.due_date) : null;
+        if (!dueDate || isNaN(dueDate.getTime())) return false;
+
+        const s = dueStartDate ? parseDateOnlyToLocalNoon(dueStartDate) : null;
+        const e = dueEndDate ? parseDateOnlyToLocalNoon(dueEndDate) : null;
+        const start = s && isValid(s) ? startOfDay(s) : new Date(0);
+        const end = e && isValid(e) ? endOfDay(e) : endOfDay(new Date(2999, 11, 31));
+
+        if (!isWithinInterval(dueDate, { start, end })) return false;
       }
 
       // Value filter
@@ -205,7 +385,70 @@ export default function UnionPaymentHistoryPage() {
 
       return true;
     });
-  }, [payments, search, supplierFilter, checkFilter, startDate, endDate, minValue, maxValue]);
+  }, [payments, search, supplierFilter, checkFilter, startDate, endDate, dueStartDate, dueEndDate, minValue, maxValue, statusFilter]);
+
+  // Ordenação (aplica-se à tela, PDF e Excel)
+  const filteredPayments = useMemo(() => {
+    const withDate = (v: string | null | undefined) => {
+      if (!v) return null;
+      const d = parseDateOnlyToLocalNoon(v);
+      return d && isValid(d) ? d.getTime() : null;
+    };
+    const dir = paidSort === "asc" ? 1 : -1;
+    return [...filteredBase].sort((a, b) => {
+      if (sortKey === "supplier_name") {
+        return dir * (a.supplier_name || "").localeCompare(b.supplier_name || "", "pt-BR");
+      }
+      if (sortKey === "gross_value") {
+        return dir * ((a.gross_value || 0) - (b.gross_value || 0));
+      }
+      const ta = withDate(sortKey === "due_date" ? a.due_date : a.paid_at);
+      const tb = withDate(sortKey === "due_date" ? b.due_date : b.paid_at);
+      if (ta === null && tb === null) return 0;
+      if (ta === null) return 1;
+      if (tb === null) return -1;
+      return dir * (ta - tb);
+    });
+  }, [filteredBase, paidSort, sortKey]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) {
+      setPaidSort(paidSort === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setPaidSort(key === "supplier_name" ? "asc" : "desc");
+    }
+  };
+
+  // Atalhos de período
+  const applyPeriod = (period: "this_month" | "last_month" | "last_90" | "this_year" | "all") => {
+    const iso = (d: Date) => format(d, "yyyy-MM-dd");
+    const now = new Date();
+    if (period === "all") {
+      setStartDate("");
+      setEndDate("");
+      return;
+    }
+    if (period === "this_month") {
+      setStartDate(iso(new Date(now.getFullYear(), now.getMonth(), 1)));
+      setEndDate(iso(new Date(now.getFullYear(), now.getMonth() + 1, 0)));
+      return;
+    }
+    if (period === "last_month") {
+      setStartDate(iso(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
+      setEndDate(iso(new Date(now.getFullYear(), now.getMonth(), 0)));
+      return;
+    }
+    if (period === "last_90") {
+      const start = new Date(now);
+      start.setDate(start.getDate() - 90);
+      setStartDate(iso(start));
+      setEndDate(iso(now));
+      return;
+    }
+    setStartDate(iso(new Date(now.getFullYear(), 0, 1)));
+    setEndDate(iso(new Date(now.getFullYear(), 11, 31)));
+  };
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -219,13 +462,47 @@ export default function UnionPaymentHistoryPage() {
     );
   }, [filteredPayments]);
 
+  // Indicadores extras
+  const insights = useMemo(() => {
+    const count = filteredPayments.length;
+    const avg = count > 0 ? totals.gross / count : 0;
+    const biggest = filteredPayments.reduce<PaymentHistoryItem | null>(
+      (acc, p) => (!acc || (p.gross_value || 0) > (acc.gross_value || 0) ? p : acc),
+      null
+    );
+    const bySupplier = new Map<string, { total: number; count: number }>();
+    filteredPayments.forEach((p) => {
+      const key = p.supplier_name || "-";
+      const cur = bySupplier.get(key) || { total: 0, count: 0 };
+      cur.total += p.gross_value || 0;
+      cur.count += 1;
+      bySupplier.set(key, cur);
+    });
+    const topSuppliers = Array.from(bySupplier.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+    return { avg, biggest, topSuppliers };
+  }, [filteredPayments, totals.gross]);
+
+  const selectedTotal = useMemo(
+    () =>
+      filteredPayments
+        .filter((p) => selectedIds.includes(p.id))
+        .reduce((sum, p) => sum + (p.gross_value || 0), 0),
+    [filteredPayments, selectedIds]
+  );
+
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
+      // Só é permitido excluir registros importados (não os do financeiro real).
+      const deletableIds = ids.filter((id) => !id.startsWith("tx:"));
+      if (deletableIds.length === 0) return;
       const { error } = await supabase
         .from("union_payment_history")
         .delete()
-        .in("id", ids);
+        .in("id", deletableIds);
       
       if (error) throw error;
     },
@@ -441,6 +718,12 @@ export default function UnionPaymentHistoryPage() {
     doc.text("Histórico de Pagamentos a Fornecedores", 14, 18);
     doc.setFontSize(10);
     doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 220, 18);
+    doc.setFontSize(9);
+    doc.text(
+      `Ordenado por data de pagamento (${paidSort === "asc" ? "crescente" : "decrescente"})`,
+      14,
+      26
+    );
 
     // Summary cards
     doc.setFillColor(241, 245, 249);
@@ -479,8 +762,8 @@ export default function UnionPaymentHistoryPage() {
         p.description?.substring(0, 20) || "-",
         p.chart_of_accounts?.substring(0, 15) || "-",
         p.bank_account?.substring(0, 12) || "-",
-        p.due_date ? format(parseDateOnlyToLocalNoon(p.due_date), "dd/MM/yy") : "-",
-        p.paid_at ? format(parseDateOnlyToLocalNoon(p.paid_at), "dd/MM/yy") : "-",
+        safeFormatDate(p.due_date),
+        safeFormatDate(p.paid_at),
         p.check_number || "-",
         formatCurrency(p.gross_value),
         formatCurrency(p.net_value),
@@ -500,11 +783,11 @@ export default function UnionPaymentHistoryPage() {
       "Plano de Contas": p.chart_of_accounts,
       "Unidade Operacional": p.operational_unit,
       "Portador": p.bank_account,
-      "Vencimento": p.due_date ? format(parseDateOnlyToLocalNoon(p.due_date), "dd/MM/yyyy") : "",
+      "Vencimento": safeFormatDate(p.due_date, "dd/MM/yyyy"),
       "Situação": p.status,
       "Valor Bruto": p.gross_value,
       "Valor Líquido": p.net_value,
-      "Pago em": p.paid_at ? format(parseDateOnlyToLocalNoon(p.paid_at), "dd/MM/yyyy") : "",
+      "Pago em": safeFormatDate(p.paid_at, "dd/MM/yyyy"),
       "Cheque": p.check_number,
     }));
 
@@ -525,7 +808,8 @@ export default function UnionPaymentHistoryPage() {
     setMaxValue("");
   };
 
-  const hasActiveFilters = search || supplierFilter || checkFilter || startDate || endDate || minValue || maxValue;
+  const hasActiveFilters =
+    search || supplierFilter || checkFilter || startDate || endDate || dueStartDate || dueEndDate || minValue || maxValue || statusFilter !== "paid";
 
   if (entityLoading) {
     return (
@@ -562,6 +846,7 @@ export default function UnionPaymentHistoryPage() {
         </div>
 
         <div className="flex gap-2">
+          <RefreshDataButton queryKeys={[["union-payment-history"], ["union-suppliers"]]} variant="outline" size="default" />
           <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -687,6 +972,31 @@ export default function UnionPaymentHistoryPage() {
           </div>
         </CardHeader>
         <CardContent className="pb-4">
+          {/* Atalhos de período */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <CalendarRange className="h-3.5 w-3.5" /> Período:
+            </span>
+            {([
+              ["this_month", "Este mês"],
+              ["last_month", "Mês passado"],
+              ["last_90", "Últimos 90 dias"],
+              ["this_year", "Este ano"],
+              ["all", "Tudo"],
+            ] as const).map(([key, label]) => (
+              <Button
+                key={key}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => applyPeriod(key)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -708,6 +1018,28 @@ export default function UnionPaymentHistoryPage() {
                 {suppliers.map(s => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "paid" | "unpaid")}>
+              <SelectTrigger>
+                <SelectValue placeholder="Situação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="paid">Somente pagos</SelectItem>
+                <SelectItem value="unpaid">Somente a pagar</SelectItem>
+                <SelectItem value="all">Pagos e a pagar</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={paidSort} onValueChange={(v) => setPaidSort(v as "asc" | "desc")}>
+              <SelectTrigger>
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Ordenar por pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Pagamento: mais recente primeiro</SelectItem>
+                <SelectItem value="asc">Pagamento: mais antigo primeiro</SelectItem>
               </SelectContent>
             </Select>
 
@@ -744,6 +1076,29 @@ export default function UnionPaymentHistoryPage() {
               </div>
             </div>
 
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  title="Vencimento de"
+                  value={dueStartDate}
+                  onChange={e => setDueStartDate(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="relative flex-1">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  title="Vencimento até"
+                  value={dueEndDate}
+                  onChange={e => setDueEndDate(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -766,8 +1121,124 @@ export default function UnionPaymentHistoryPage() {
               />
             </div>
           </div>
+
+          {/* Filtros ativos */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {search && (
+                <Badge variant="secondary" className="gap-1">
+                  Busca: {search}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSearch("")} />
+                </Badge>
+              )}
+              {supplierFilter && supplierFilter !== "all" && (
+                <Badge variant="secondary" className="gap-1">
+                  Fornecedor: {supplierFilter}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSupplierFilter("all")} />
+                </Badge>
+              )}
+              {checkFilter && (
+                <Badge variant="secondary" className="gap-1">
+                  Cheque: {checkFilter}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setCheckFilter("")} />
+                </Badge>
+              )}
+              {(startDate || endDate) && (
+                <Badge variant="secondary" className="gap-1">
+                  {startDate ? safeFormatDate(startDate, "dd/MM/yyyy") : "início"} até{" "}
+                  {endDate ? safeFormatDate(endDate, "dd/MM/yyyy") : "hoje"}
+                  <X
+                    className="h-3 w-3 cursor-pointer"
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                  />
+                </Badge>
+              )}
+              {(minValue || maxValue) && (
+                <Badge variant="secondary" className="gap-1">
+                  Valor: {minValue || "0"} - {maxValue || "∞"}
+                  <X
+                    className="h-3 w-3 cursor-pointer"
+                    onClick={() => {
+                      setMinValue("");
+                      setMaxValue("");
+                    }}
+                  />
+                </Badge>
+              )}
+              {(dueStartDate || dueEndDate) && (
+                <Badge variant="secondary" className="gap-1">
+                  Vencimento: {dueStartDate ? safeFormatDate(dueStartDate, "dd/MM/yyyy") : "início"} até{" "}
+                  {dueEndDate ? safeFormatDate(dueEndDate, "dd/MM/yyyy") : "fim"}
+                  <X
+                    className="h-3 w-3 cursor-pointer"
+                    onClick={() => {
+                      setDueStartDate("");
+                      setDueEndDate("");
+                    }}
+                  />
+                </Badge>
+              )}
+              {statusFilter !== "paid" && (
+                <Badge variant="secondary" className="gap-1">
+                  Situação: {statusFilter === "unpaid" ? "A pagar" : "Pagos e a pagar"}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setStatusFilter("paid")} />
+                </Badge>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Insights */}
+      {filteredPayments.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <Card>
+            <CardContent className="p-4 space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Wallet className="h-4 w-4" /> Ticket médio
+              </div>
+              <p className="text-lg font-bold">{formatCurrency(insights.avg)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 space-y-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <TrendingUp className="h-4 w-4" /> Maior pagamento
+              </div>
+              <p className="text-lg font-bold">
+                {formatCurrency(insights.biggest?.gross_value || 0)}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {insights.biggest?.supplier_name || "-"} ·{" "}
+                {safeFormatDate(insights.biggest?.paid_at)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Building className="h-4 w-4" /> Top fornecedores
+              </div>
+              <div className="space-y-1">
+                {insights.topSuppliers.map((s) => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    onClick={() => setSupplierFilter(s.name)}
+                    className="w-full flex items-center justify-between text-xs hover:bg-muted rounded px-1 py-0.5"
+                  >
+                    <span className="truncate max-w-[60%] text-left">{s.name}</span>
+                    <span className="font-medium">{formatCurrency(s.total)}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Selected actions */}
       {selectedIds.length > 0 && (
@@ -775,6 +1246,7 @@ export default function UnionPaymentHistoryPage() {
           <span className="text-sm font-medium">
             {selectedIds.length} selecionado(s)
           </span>
+          <Badge variant="secondary">{formatCurrency(selectedTotal)}</Badge>
           <Button
             variant="destructive"
             size="sm"
@@ -799,6 +1271,24 @@ export default function UnionPaymentHistoryPage() {
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : queryError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+              <h3 className="font-medium">Não foi possível carregar o histórico</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                {(queryError as Error)?.message || "Erro desconhecido"}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() =>
+                  queryClient.invalidateQueries({ queryKey: ["union-payment-history"] })
+                }
+              >
+                Tentar novamente
+              </Button>
             </div>
           ) : filteredPayments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
@@ -828,19 +1318,52 @@ export default function UnionPaymentHistoryPage() {
                         }}
                       />
                     </TableHead>
-                    <TableHead>Fornecedor</TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 hover:text-foreground"
+                        onClick={() => toggleSort("supplier_name")}
+                      >
+                        Fornecedor <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                    </TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Portador</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Pago em</TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 hover:text-foreground"
+                        onClick={() => toggleSort("due_date")}
+                      >
+                        Vencimento <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 hover:text-foreground"
+                        onClick={() => toggleSort("paid_at")}
+                      >
+                        Pago em <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                    </TableHead>
                     <TableHead>Cheque</TableHead>
-                    <TableHead className="text-right">Valor Bruto</TableHead>
+                    <TableHead>Situação</TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 ml-auto hover:text-foreground"
+                        onClick={() => toggleSort("gross_value")}
+                      >
+                        Valor Bruto <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                    </TableHead>
                     <TableHead className="text-right">Valor Líquido</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPayments.map(payment => (
-                    <TableRow key={payment.id}>
+                    <TableRow key={payment.id} className="hover:bg-muted/50">
                       <TableCell>
                         <input
                           type="checkbox"
@@ -864,19 +1387,24 @@ export default function UnionPaymentHistoryPage() {
                         {payment.bank_account || "-"}
                       </TableCell>
                       <TableCell>
-                        {payment.due_date 
-                          ? format(parseDateOnlyToLocalNoon(payment.due_date), "dd/MM/yy")
-                          : "-"}
+                        {safeFormatDate(payment.due_date)}
                       </TableCell>
                       <TableCell>
-                        {payment.paid_at 
-                          ? format(parseDateOnlyToLocalNoon(payment.paid_at), "dd/MM/yy")
-                          : "-"}
+                        {safeFormatDate(payment.paid_at)}
                       </TableCell>
                       <TableCell>
                         {payment.check_number ? (
                           <Badge variant="outline">{payment.check_number}</Badge>
                         ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {payment.paid_at || (payment.status || "").toLowerCase().startsWith("pag") ? (
+                          <Badge variant="secondary">Pago</Badge>
+                        ) : (payment.status || "").toLowerCase() === "vencido" ? (
+                          <Badge variant="destructive">Vencido</Badge>
+                        ) : (
+                          <Badge variant="outline">A pagar</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(payment.gross_value)}
@@ -891,6 +1419,21 @@ export default function UnionPaymentHistoryPage() {
             </ScrollArea>
           )}
         </CardContent>
+        {filteredPayments.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-sm">
+            <span className="text-muted-foreground">
+              {filteredPayments.length} registro(s)
+            </span>
+            <div className="flex gap-4">
+              <span>
+                Bruto: <strong>{formatCurrency(totals.gross)}</strong>
+              </span>
+              <span className="text-muted-foreground">
+                Líquido: <strong>{formatCurrency(totals.net)}</strong>
+              </span>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Delete confirmation dialog */}

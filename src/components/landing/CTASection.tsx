@@ -1,68 +1,56 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MessageCircle, Shield, Headphones, RefreshCw } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const badges = [
-  { icon: Shield, text: "Dados Seguros" },
-  { icon: Headphones, text: "Suporte Dedicado" },
-  { icon: RefreshCw, text: "Migração Gratuita" },
-];
 
 export function CTASection() {
   return (
-    <section id="contact" className="relative py-24 lg:py-32 overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-slate-950" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(16,185,129,0.3),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_120%,rgba(59,130,246,0.2),transparent_50%)]" />
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-emerald-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
-
-      <div className="container relative z-10">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl lg:text-7xl font-extrabold text-white mb-8 tracking-tighter leading-tight">
-            Pronto para transformar a <span className="text-primary italic">sua gestão?</span>
-          </h2>
-          <p className="text-xl text-white/70 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
-            Junte-se a centenas de entidades que elevaram sua administração para o próximo nível com o Prosinge.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-12 h-16 text-lg font-bold shadow-2xl shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:-translate-y-1"
-              asChild
-            >
-              <Link to="/cadastro" className="flex items-center gap-2">
-                Solicitar Apresentação
-                <ArrowRight className="h-5 w-5" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 h-14 text-base font-semibold backdrop-blur-sm"
-              asChild
-            >
-              <a
-                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o Prosinge."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="h-5 w-5" />
-                Falar no WhatsApp
-              </a>
-            </Button>
+    <section id="contact" className="bg-prosinge-cream px-6 py-20 font-body">
+      <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl bg-prosinge-emerald shadow-2xl">
+        <div className="grid gap-8 p-10 md:p-14 lg:grid-cols-2 lg:items-center">
+          <div>
+            <h2 className="mb-4 font-display text-3xl font-bold text-prosinge-cream md:text-4xl">
+              Pronto para elevar o nível da sua gestão?
+            </h2>
+            <p className="text-prosinge-cream/70">
+              Fale com nossos especialistas e descubra como a Prosinge pode
+              otimizar o dia a dia do seu sindicato.
+            </p>
           </div>
-
-          <div className="flex flex-wrap justify-center gap-8">
-            {badges.map((badge, i) => (
-              <div key={i} className="flex items-center gap-2 text-white/80">
-                <badge.icon className="h-4 w-4" />
-                <span className="text-sm font-medium">{badge.text}</span>
-              </div>
-            ))}
+          <div className="flex flex-col items-stretch gap-6 lg:items-end">
+            <div className="text-center lg:text-right">
+              <p className="text-xs font-bold uppercase tracking-widest text-prosinge-gold">
+                Ligue agora
+              </p>
+              <p className="font-display text-2xl font-bold text-prosinge-cream">
+                (71) 98278-6864
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+              <Button
+                asChild
+                className="h-14 rounded-xl bg-prosinge-gold px-8 font-bold text-prosinge-emerald shadow-xl hover:bg-prosinge-gold/90"
+              >
+                <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  Solicitar Orçamento
+                  <ArrowRight className="h-5 w-5" />
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-14 rounded-xl border-prosinge-cream/20 bg-transparent px-8 font-bold text-prosinge-cream hover:bg-prosinge-cream/10 hover:text-prosinge-cream"
+              >
+                <a
+                  href="https://wa.me/5571982786864?text=Olá! Gostaria de saber mais sobre o Prosinge."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  WhatsApp
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

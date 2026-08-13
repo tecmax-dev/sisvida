@@ -181,7 +181,7 @@ export default function UnionPayslipApprovalsPage() {
             });
             toast({
               title: "Contracheque aprovado",
-              description: "O sócio foi notificado por WhatsApp.",
+              description: "O sócio foi notificado por WhatsApp e SMS.",
             });
           } catch (err) {
             console.error('Error sending approval notification:', err);

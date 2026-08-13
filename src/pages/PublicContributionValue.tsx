@@ -63,6 +63,7 @@ export default function PublicContributionValue() {
   const [contribution, setContribution] = useState<ContributionData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [value, setValue] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
   const [success, setSuccess] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
 
@@ -120,6 +121,15 @@ export default function PublicContributionValue() {
         setValue((contributionData.contribution_type.default_value / 100).toFixed(2).replace(".", ","));
       }
 
+      // Pré-preenche com a data de vencimento atual (se ainda for futura)
+      const currentDue = (contributionData.due_date || "").slice(0, 10);
+      if (currentDue) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (currentDue >= todayStr) {
+          setNewDueDate(currentDue);
+        }
+      }
+
       if (contributionData.status !== "awaiting_value" && contributionData.lytex_invoice_url) {
         setSuccess(true);
         setInvoiceUrl(contributionData.lytex_invoice_url);
@@ -152,6 +162,7 @@ export default function PublicContributionValue() {
         body: {
           contribution_id: contribution.id,
           value: valueInCents,
+          due_date: newDueDate || undefined,
           portal_type: "public_token",
           portal_id: rawToken,
         },
@@ -317,11 +328,26 @@ export default function PublicContributionValue() {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="due_date">Data de Vencimento *</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={newDueDate}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setNewDueDate(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Você pode manter o vencimento atual ou escolher uma nova data futura.
+                </p>
+              </div>
+
               <Button
                 type="submit"
                 className="w-full gap-2"
                 size="lg"
-                disabled={submitting || !value}
+                disabled={submitting || !value || !newDueDate}
               >
                 {submitting ? (
                   <>
