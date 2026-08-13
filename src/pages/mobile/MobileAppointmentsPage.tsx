@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { MobileWaitingListOffer } from "@/components/mobile/MobileWaitingListOffer";
 import { supabase } from "@/integrations/supabase/client";
 import { eachDayOfInterval, endOfMonth, getDay, isSameDay, isBefore as isBeforeDate } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -670,6 +671,7 @@ function MobileAppointmentsPageContent() {
         </TabsList>
 
         <TabsContent value="upcoming" className="mt-0">
+          <MobileWaitingListOffer />
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
