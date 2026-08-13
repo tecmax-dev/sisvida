@@ -217,9 +217,14 @@
   
   /* Prosinge-style solid button - Azul Royal */
   .btn-prosinge {
-    @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+    color: white;
     background: hsl(var(--primary));
-    @apply hover:shadow-lg hover:-translate-y-0.5;
   }
   
   .btn-prosinge:hover {
