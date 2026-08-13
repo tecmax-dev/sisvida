@@ -281,7 +281,7 @@ export default function MobileCardRenewalPage() {
           upload_failed: "Erro ao fazer upload do arquivo.",
           request_creation_failed: "Erro ao registrar solicitação.",
         };
-        throw new Error(errorMessages[result.error] || result.details || "Erro ao enviar contracheque.");
+        throw new Error(result.error || result.details || "Erro ao enviar contracheque.");
       }
 
       toast({

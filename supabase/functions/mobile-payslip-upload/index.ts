@@ -64,7 +64,12 @@ serve(async (req) => {
     });
 
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    console.error(`[mobile-payslip-upload] ERROR: ${e.message}`, e);
+    return new Response(JSON.stringify({ 
+      error: e.message, 
+      details: e.stack,
+      build_id: BUILD_ID 
+    }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
 
