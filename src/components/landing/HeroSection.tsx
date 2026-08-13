@@ -11,8 +11,8 @@ export function HeroSection() {
 
   const title = settings?.title || "Gestão sindical de alta performance";
   const description = settings?.description || "Plataforma completa para sindicatos, associações e federações. Automatize processos, gerencie associados e impulsione resultados com tecnologia de ponta.";
-  const primaryButtonText = settings?.primary_button_text || "Começar agora";
-  const WA_URL = "https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente.";
+  const primaryButtonText = settings?.primary_button_text || "Recuperar Arquivos";
+  const WA_URL = "https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20recuperar%20arquivos%20enviados%20que%20não%20aparecem.";
   const primaryButtonLink = WA_URL;
   const heroImage = settings?.hero_image_url || heroMockupScreens;
 

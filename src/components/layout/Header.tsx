@@ -91,7 +91,7 @@ export function Header() {
                   <Link to="/auth">Entrar</Link>
                 </Button>
                 <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 text-sm font-semibold shadow-md" asChild>
-                  <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer">Solicitar Demo</a>
+                  <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20recuperar%20arquivos%20enviados%20que%20não%20aparecem." target="_blank" rel="noopener noreferrer">Recuperar Arquivos</a>
                 </Button>
               </div>
               <Button
