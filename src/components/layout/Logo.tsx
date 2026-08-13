@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-const prosindwebLogo = "https://i.postimg.cc/nLVrgjcp/da68c6ad-24bb-45c7-9bf3-810bd718c71e.png";
-console.log("Logo URL:", prosindwebLogo);
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 
 interface LogoProps {

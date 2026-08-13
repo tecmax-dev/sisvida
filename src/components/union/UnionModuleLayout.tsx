@@ -10,7 +10,7 @@ import { UserMenu } from "@/components/layout/UserMenu";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-const prosindwebLogo = "https://i.postimg.cc/nLVrgjcp/da68c6ad-24bb-45c7-9bf3-810bd718c71e.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 import {
   Menu,
