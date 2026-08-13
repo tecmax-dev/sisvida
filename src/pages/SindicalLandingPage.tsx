@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
-import prosindwebLogo from "@/assets/prosindweb-logo.png";
+const prosindwebLogo = "https://i.postimg.cc/nLVrgjcp/da68c6ad-24bb-45c7-9bf3-810bd718c71e.png";
 import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
 import sindicalContribuicoes from "@/assets/sindical-contribuicoes.jpg";
 import sindicalRelatorios from "@/assets/sindical-relatorios.jpg";

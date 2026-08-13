@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Loader2, LogIn, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import prosindwebLogo from "@/assets/prosindweb-logo.png";
+const prosindwebLogo = "https://i.postimg.cc/nLVrgjcp/da68c6ad-24bb-45c7-9bf3-810bd718c71e.png";
 
 
 export default function UnionEntityLoginPage() {
