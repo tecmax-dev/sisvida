@@ -25,6 +25,7 @@ import {
   Upload,
   Trash2,
   Bell,
+  Building2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1000,105 +1001,122 @@ export default function UnionMembersListPage() {
             ) : members.length > 0 ? (
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="font-semibold">Sócio</TableHead>
-                    <TableHead className="hidden sm:table-cell font-semibold">CPF</TableHead>
-                    <TableHead className="font-semibold">Telefone</TableHead>
-                    <TableHead className="hidden lg:table-cell font-semibold">Convênio</TableHead>
-                    <TableHead className="hidden md:table-cell font-semibold">Carteirinha</TableHead>
+                  <TableRow className="bg-muted/30 border-b shadow-sm">
+                    <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-3">Sócio</TableHead>
+                    <TableHead className="hidden sm:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">CPF</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-2">Telefone</TableHead>
+                    <TableHead className="hidden lg:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Convênio</TableHead>
+                    <TableHead className="hidden md:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Carteirinha</TableHead>
                     {isAdmin && (
-                      <TableHead className="hidden xl:table-cell font-semibold">Limite/Mês</TableHead>
+                      <TableHead className="hidden xl:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Limite</TableHead>
                     )}
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[40px] h-9"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {members.map((member) => (
                     <TableRow
                       key={member.id}
-                      className={`h-12 hover:bg-muted/30 transition-colors ${
-                        member.is_active === false ? "opacity-60" : ""
+                      className={`group hover:bg-muted/30 transition-colors border-b ${
+                        member.is_active === false ? "opacity-60 bg-muted/10" : ""
                       }`}
                     >
-                      <TableCell className="py-2">
-                        <div className="flex items-center gap-2">
+                      <TableCell className="py-1.5 px-3">
+                        <div className="flex items-center gap-2.5">
                           <UserAvatar
                             avatarUrl={member.photo_url}
                             name={member.name}
                             size="sm"
-                            className={member.is_active === false ? "opacity-60" : ""}
+                            className={`h-8 w-8 flex-shrink-0 border-2 border-background shadow-sm ${member.is_active === false ? "opacity-60" : ""}`}
                           />
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex flex-col">
                             <button
                               onClick={() => handleOpenEdit(member)}
-                              className="font-medium text-sm text-primary hover:underline text-left truncate max-w-[180px] block"
+                              className="font-bold text-xs text-primary hover:underline text-left truncate max-w-[200px] leading-tight"
                             >
                               {member.name}
                             </button>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center gap-1.5 mt-0.5">
                               {member.birth_date && (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-1 rounded">
                                   {calculateAge(member.birth_date)} anos
                                 </span>
                               )}
-                              {member.is_active === false && (
+                              {member.is_active === false ? (
                                 <Badge
                                   variant="outline"
-                                  className="text-xs bg-rose-50 text-rose-700 border-rose-200"
+                                  className="text-[9px] h-3.5 px-1 py-0 bg-rose-50 text-rose-700 border-rose-200 font-bold uppercase"
                                 >
                                   Inativo
                                 </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] h-3.5 px-1 py-0 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold uppercase"
+                                >
+                                  Ativo
+                                </Badge>
+                              )}
+                              {member.employer_name && (
+                                <div className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1 rounded max-w-[130px] truncate border border-blue-100">
+                                  <Building2 className="h-2.5 w-2.5" />
+                                  <span className="truncate">{member.employer_name}</span>
+                                </div>
                               )}
                             </div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell py-2">
+                      <TableCell className="hidden sm:table-cell py-1.5 px-2">
                         {member.cpf ? (
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                          <code className="text-[10px] font-mono bg-muted/80 text-muted-foreground px-1 py-0.5 rounded border shadow-sm">
                             <CpfDisplay value={member.cpf} />
                           </code>
                         ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
+                          <span className="text-muted-foreground text-[10px]">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
+                      <TableCell className="py-1.5 px-2">
+                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 bg-muted/30 px-1.5 py-0.5 rounded-full w-fit border border-transparent group-hover:border-primary/20 group-hover:bg-primary/5 transition-all">
+                          <Phone className="h-2.5 w-2.5 text-primary/70" />
                           {formatPhone(member.phone) || "—"}
                         </span>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell py-2">
+                      <TableCell className="hidden lg:table-cell py-1.5 px-2">
                         {member.insurance_plan ? (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-bold shadow-sm border-primary/10">
                             {member.insurance_plan.name}
                           </Badge>
                         ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
+                          <span className="text-muted-foreground text-[10px]">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell py-2">
-                        <InlineCardExpiryEdit
-                          entityId={member.id}
-                          entityType="patient"
-                          currentExpiryDate={member.card_expires_at || null}
-                          cardNumber={member.card_number}
-                          insurancePlanName={member.insurance_plan?.name || null}
-                          onUpdate={fetchMembers}
-                        />
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="hidden xl:table-cell py-2">
-                          <InlineAppointmentLimitEdit
-                            patientId={member.id}
-                            patientName={member.name}
-                            currentLimit={member.max_appointments_per_month ?? null}
-                            clinicDefault={clinicDefaultLimit}
+                      <TableCell className="hidden md:table-cell py-1.5 px-2">
+                        <div className="scale-[0.85] origin-left">
+                          <InlineCardExpiryEdit
+                            entityId={member.id}
+                            entityType="patient"
+                            currentExpiryDate={member.card_expires_at || null}
+                            cardNumber={member.card_number}
+                            insurancePlanName={member.insurance_plan?.name || null}
                             onUpdate={fetchMembers}
                           />
+                        </div>
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="hidden xl:table-cell py-1.5 px-2">
+                          <div className="scale-[0.85] origin-left">
+                            <InlineAppointmentLimitEdit
+                              patientId={member.id}
+                              patientName={member.name}
+                              currentLimit={member.max_appointments_per_month ?? null}
+                              clinicDefault={clinicDefaultLimit}
+                              onUpdate={fetchMembers}
+                            />
+                          </div>
                         </TableCell>
                       )}
-                      <TableCell className="text-right py-2">
+                      <TableCell className="text-right py-1.5 pr-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7">
