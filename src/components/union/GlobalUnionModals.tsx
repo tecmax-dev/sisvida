@@ -20,11 +20,33 @@ export function GlobalUnionModals() {
   const isEmployerEditOpen = isModalOpen('employerEdit');
   const employerData = getModalData('employerEdit');
 
+  const handleMemberClose = (open: boolean) => {
+    if (!open) {
+      closeModal('unionMemberEdit');
+      if (memberData.onUpdate) memberData.onUpdate();
+    }
+  };
+
+  const handleEmployerClose = (open: boolean) => {
+    if (!open) {
+      closeModal('unionMemberEdit'); // ERROR: should be employerEdit
+      if (employerData.onUpdate) employerData.onUpdate();
+    }
+  };
+
+  // Fixed handleEmployerClose
+  const handleEmployerCloseFixed = (open: boolean) => {
+    if (!open) {
+      closeModal('employerEdit');
+      if (employerData.onUpdate) employerData.onUpdate();
+    }
+  };
+
   return (
     <>
-      <Dialog open={isMemberEditOpen} onOpenChange={(open) => !open && closeModal('unionMemberEdit')}>
+      <Dialog open={isMemberEditOpen} onOpenChange={handleMemberClose}>
         <DialogContent className="max-w-[95vw] w-[1200px] max-h-[95vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0">
+          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0 text-left">
             <DialogTitle className="text-lg font-semibold flex items-center gap-2">
               Editar Sócio
             </DialogTitle>
@@ -32,7 +54,7 @@ export function GlobalUnionModals() {
           <div className="flex-1 overflow-hidden">
             {isMemberEditOpen && memberData.memberId && (
               <ScrollArea className="h-full">
-                <div className="p-6">
+                <div className="p-0">
                   <UnionMemberDetailPage memberIdOverride={memberData.memberId} isModalMode />
                 </div>
               </ScrollArea>
@@ -41,9 +63,9 @@ export function GlobalUnionModals() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEmployerEditOpen} onOpenChange={(open) => !open && closeModal('employerEdit')}>
+      <Dialog open={isEmployerEditOpen} onOpenChange={handleEmployerCloseFixed}>
         <DialogContent className="max-w-[95vw] w-[1200px] max-h-[95vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0">
+          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0 text-left">
             <DialogTitle className="text-lg font-semibold flex items-center gap-2">
               Editar Empresa
             </DialogTitle>
@@ -51,7 +73,7 @@ export function GlobalUnionModals() {
           <div className="flex-1 overflow-hidden">
             {isEmployerEditOpen && employerData.employerId && (
               <ScrollArea className="h-full">
-                <div className="p-6">
+                <div className="p-0">
                   <EmployerDetailPage employerIdOverride={employerData.employerId} isModalMode />
                 </div>
               </ScrollArea>
