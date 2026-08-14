@@ -2039,6 +2039,7 @@ export default function EmployerDetailPage({
           fetchData();
         }}
       />
+        </div>
         </Tabs>
       </div>
     </div>
