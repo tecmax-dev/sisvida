@@ -1002,11 +1002,12 @@ export default function UnionMemberDetailPage({
              
              {/* Quick Search for Members */}
              <div className="w-full">
-               <MemberQuickSearch 
-                 clinicId={resolvedClinic?.id} 
-                 currentMemberId={id} 
-                 className="max-w-full"
-               />
+                <MemberQuickSearch 
+                  clinicId={resolvedClinic?.id} 
+                  currentMemberId={id} 
+                  className="max-w-full"
+                  isModalMode={isModalMode}
+                />
              </div>
           </div>
 
