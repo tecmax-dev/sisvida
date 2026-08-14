@@ -1012,13 +1012,11 @@ export default function EmployerDetailPage({
                   <TabsTrigger value="data" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
                     <FileText className="h-4 w-4" />
                     Dados Cadastrais
-                  </TabsTrigger>
                 </TabsList>
-              </Tabs>
+              </div>
             </div>
-          </div>
 
-        <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
+            <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
           {!isModalMode && (
             <TabsList className="mb-4">
               <TabsTrigger value="contributions" className="gap-2">
@@ -2021,6 +2019,7 @@ export default function EmployerDetailPage({
         }}
         initialEmployerId={employer?.id}
       />
+        </Tabs>
       </div>
     </div>
   );

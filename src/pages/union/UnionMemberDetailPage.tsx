@@ -1349,6 +1349,7 @@ export default function UnionMemberDetailPage({
       )}
       </div>
 
+
       {/* Modals */}
       <PatientCardsModal
         open={isModalOpen('patientCards')}
@@ -1383,7 +1384,6 @@ export default function UnionMemberDetailPage({
            }}
          />
         )}
-      </div>
     </div>
   );
 }
