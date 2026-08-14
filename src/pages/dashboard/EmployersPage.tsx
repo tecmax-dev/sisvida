@@ -967,22 +967,22 @@ export default function EmployersPage() {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-center">
+                          <TableCell className="py-1 text-center">
                             <Badge 
                               variant="secondary" 
-                              className={`text-xs ${
+                              className={`text-[10px] h-5 px-1.5 ${
                                 (employer.patients?.length || 0) > 0 
-                                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" 
+                                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100" 
                                   : "bg-muted text-muted-foreground"
                               }`}
                             >
-                              <Users className="h-3 w-3 mr-1" />
+                              <Users className="h-2.5 w-2.5 mr-1" />
                               {employer.patients?.length || 0}
                             </Badge>
                           </TableCell>
-                          <TableCell className="py-2 text-right">
+                          <TableCell className="py-1 text-right pr-4">
                             <TooltipProvider>
-                              <div className="flex items-center justify-end gap-1">
+                              <div className="flex items-center justify-end gap-0.5">
                                  {!isVirtual && (
                                    employer.access_code ? (
                                      <div className="flex items-center gap-1">
