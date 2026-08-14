@@ -59,6 +59,7 @@ const defaultModals: Record<ModalType, ModalState> = {
   anamneseTemplatePreview: { ...defaultModalState },
   anamneseTemplateDelete: { ...defaultModalState },
   anamneseTemplateSend: { ...defaultModalState },
+  unionMemberEdit: { ...defaultModalState },
 };
 
 const ModalContext = createContext<ModalContextValue | undefined>(undefined);
