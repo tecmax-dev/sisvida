@@ -915,10 +915,18 @@ export default function UnionMemberDetailPage({
                    Ficha de Filiação
                  </Button>
                )}
-               <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
-                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                 Salvar e Voltar
-               </Button>
+               {!isModalMode && (
+                 <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
+                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                   Salvar e Voltar
+                 </Button>
+               )}
+               {isModalMode && (
+                 <Button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="gap-2">
+                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                   Salvar Alterações
+                 </Button>
+               )}
              </div>
           </div>
         </div>
