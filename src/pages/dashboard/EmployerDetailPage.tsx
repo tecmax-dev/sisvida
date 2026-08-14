@@ -2038,28 +2038,13 @@ export default function EmployerDetailPage({
           setNegotiationDialogOpen(false);
           fetchData();
         }}
-      <NewNegotiationDialog
-        open={negotiationDialogOpen}
-        onOpenChange={setNegotiationDialogOpen}
-        employers={employer ? [{
-          id: employer.id,
-          name: employer.name,
-          cnpj: employer.cnpj,
-          trade_name: employer.trade_name,
-          registration_number: employer.registration_number,
-        }] : []}
-        clinicId={currentClinic?.id || ""}
-        userId={session?.user.id || ""}
-        onSuccess={() => {
-          setNegotiationDialogOpen(false);
-          fetchData();
-        }}
       />
     </Tabs>
       </div>
     </div>
   );
 }
+
 
 
 
