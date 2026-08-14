@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo} from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
  import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText } from "lucide-react";
 import { extractFunctionsError } from "@/lib/functionsError";
@@ -229,6 +229,7 @@ export default function UnionMemberDetailPage({
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [initialData, setInitialData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [insurancePlanName, setInsurancePlanName] = useState<string>('');
   const [showDependentsForm, setShowDependentsForm] = useState(false);
   const [clinicDefaultLimit, setClinicDefaultLimit] = useState<number | null>(null);
@@ -732,12 +733,13 @@ export default function UnionMemberDetailPage({
         }
       }
 
+      setAutoSaveStatus('saved');
       toast({
         title: "Sócio atualizado",
         description: "As informações foram salvas com sucesso.",
       });
 
-      if (shouldNavigateBack) {
+      if (shouldNavigateBack && !isModalMode) {
         navigate('/union/socios');
       }
     } catch (error: any) {
@@ -839,7 +841,7 @@ export default function UnionMemberDetailPage({
       });
 
       toast({ title: "Associado desvinculado com sucesso" });
-      navigate("/union/socios");
+      if (!isModalMode) navigate("/union/socios");
     } catch (error: any) {
       toast({
         title: "Erro ao desvincular",
@@ -918,14 +920,14 @@ export default function UnionMemberDetailPage({
           </Button>
         )}
         {!isModalMode && (
-          <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
+          <Button type="button" onClick={() => handleSubmit(true)} disabled={saving} className="gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Salvar e Voltar
           </Button>
         )}
         {isModalMode && (
-          <Button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          <Button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="gap-2 bg-teal-600 hover:bg-teal-700">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save size={16} />}
             Salvar Alterações
           </Button>
         )}
