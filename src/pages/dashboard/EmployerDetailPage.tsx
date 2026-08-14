@@ -1015,14 +1015,14 @@ export default function EmployerDetailPage({
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-            </div>
           </div>
+        </div>
 
-          <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
-            {!isModalMode && (
-              <TabsList className="mb-4">
-                <TabsTrigger value="contributions" className="gap-2">
-                  <Receipt className="h-4 w-4" />
+        <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
+          {!isModalMode && (
+            <TabsList className="mb-4">
+              <TabsTrigger value="contributions" className="gap-2">
+                <Receipt className="h-4 w-4" />
                   Contribuições
                 </TabsTrigger>
                 <TabsTrigger value="employees" className="gap-2">
