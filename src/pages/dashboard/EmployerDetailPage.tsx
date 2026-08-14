@@ -2032,16 +2032,6 @@ export default function EmployerDetailPage({
           trade_name: employer.trade_name,
           registration_number: employer.registration_number,
         }] : []}
-      <NewNegotiationDialog
-        open={negotiationDialogOpen}
-        onOpenChange={setNegotiationDialogOpen}
-        employers={employer ? [{
-          id: employer.id,
-          name: employer.name,
-          cnpj: employer.cnpj,
-          trade_name: employer.trade_name,
-          registration_number: employer.registration_number,
-        }] : []}
         clinicId={currentClinic?.id || ""}
         userId={session?.user.id || ""}
         onSuccess={() => {
@@ -2049,6 +2039,10 @@ export default function EmployerDetailPage({
           fetchData();
         }}
       />
+          </div>
+        </div>
+      </Tabs>
     </div>
+  </div>
   );
 }
