@@ -45,6 +45,7 @@ import { DependentAppointmentsList } from "@/components/union/members/DependentA
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
 import { MemberQuickSearch } from "@/components/union/members/MemberQuickSearch";
 
+
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface InsurancePlan {
   id: string;
