@@ -1040,9 +1040,8 @@ export default function EmployerDetailPage({
                     Dados Cadastrais
                   </TabsTrigger>
                 </TabsList>
-              </Tabs>
-            </div>
-          </div>
+              {/* Removed premature closing tags */}
+
 
 
 
@@ -2066,8 +2065,6 @@ export default function EmployerDetailPage({
   );
 }
 
-  );
-}
 
 
 
