@@ -1015,8 +1015,8 @@ export default function EmployerDetailPage({
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+            </div>
           </div>
-        </div>
 
         <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
           {!isModalMode && (
