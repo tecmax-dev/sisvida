@@ -307,12 +307,16 @@ export default function UnionMemberDetailPage({
 
     setLoading(true);
     try {
+      // Quick Search for Members - Desktop View (Left Column)
+      // This is added to allow rapid navigation between members within the modal
+      
       const { data, error } = await supabase
         .from('patients')
         .select('*, insurance_plans(name)')
         .eq('id', id)
         .eq('clinic_id', resolvedClinic.id)
         .single();
+
 
       if (error) {
         console.error("Error fetching member:", error);
