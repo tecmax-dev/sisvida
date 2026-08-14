@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,22 +6,8 @@ import EmployerDetailPage from "@/pages/dashboard/EmployerDetailPage";
 
 export function GlobalUnionModals() {
   const { isModalOpen, closeModal, getModalData } = useModal();
-  const employerRenderCount = useRef(0);
   const employerOpen = isModalOpen('employerEdit');
   const employerModalData = getModalData('employerEdit');
-  employerRenderCount.current += 1;
-
-  console.log('[EMPRESA MODAL] CONTROLLER RENDER', {
-    renderCount: employerRenderCount.current,
-    open: employerOpen,
-    modalData: employerModalData,
-  });
-
-  useEffect(() => {
-    if (!employerOpen) return;
-    console.log('[EMPRESA MODAL] MOUNT CONTENT', employerModalData);
-    return () => console.log('[EMPRESA MODAL] UNMOUNT CONTENT');
-  }, [employerOpen]);
 
   return (
     <>
