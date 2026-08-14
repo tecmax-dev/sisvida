@@ -877,6 +877,9 @@ export default function EmployerDetailPage({
     <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
       <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
         <Tabs defaultValue="contributions" className="w-full h-full">
+
+
+
           {/* Header */}
           {!isModalMode ? (
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
@@ -974,6 +977,19 @@ export default function EmployerDetailPage({
 
         <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
           <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
+
+
+
+
+
+
+
+
+
+
+
+
+
             <div className="space-y-6">
               {/* Quick Info Card */}
               <div className="bg-card rounded-xl border p-5 shadow-sm space-y-4">
@@ -2020,11 +2036,76 @@ export default function EmployerDetailPage({
           setNegotiationDialogOpen(false);
           fetchData();
         }}
-        initialEmployerId={employer?.id}
       />
-        </div>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
-  </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
