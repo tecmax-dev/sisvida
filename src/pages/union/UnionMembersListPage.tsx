@@ -157,6 +157,7 @@ export default function UnionMembersListPage() {
   const { isAdmin } = usePermissions();
   const { canManageMembers } = useUnionPermissions();
   const { toast } = useToast();
+  const { openModal } = useModal();
 
   const resolvedClinic = useMemo(
     () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
