@@ -1041,6 +1041,10 @@ export default function EmployerDetailPage({
                   </TabsTrigger>
                 </TabsList>
               {/* Removed premature closing tags */}
+            </div>
+          </div>
+        </div>
+
 
 
 
