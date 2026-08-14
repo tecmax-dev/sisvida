@@ -1106,6 +1106,20 @@ export default function UnionMemberDetailPage({
                 onNavigateToEmployer={handleNavigateToEmployer}
               />
             </form>
+            <div className="mt-8 pt-6 border-t flex justify-end">
+              <Button 
+                onClick={() => handleSubmit(false)} 
+                disabled={saving}
+                className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Salvar Cadastro
+              </Button>
+            </div>
           </div>
         </div>
       )}
