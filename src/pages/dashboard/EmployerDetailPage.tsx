@@ -886,6 +886,7 @@ export default function EmployerDetailPage({
 
 
 
+
           {/* Header */}
           {!isModalMode ? (
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
