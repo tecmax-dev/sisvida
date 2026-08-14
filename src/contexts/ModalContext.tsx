@@ -11,7 +11,8 @@ type ModalType =
   | 'anamneseTemplateEdit'
   | 'anamneseTemplatePreview'
   | 'anamneseTemplateDelete'
-  | 'anamneseTemplateSend';
+  | 'anamneseTemplateSend'
+  | 'unionMemberEdit';
 
 interface ModalData {
   patientId?: string;
