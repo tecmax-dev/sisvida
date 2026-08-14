@@ -2021,8 +2021,8 @@ export default function EmployerDetailPage({
         }}
         initialEmployerId={employer?.id}
       />
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
   </div>
   );
