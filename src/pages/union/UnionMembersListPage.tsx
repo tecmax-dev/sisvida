@@ -563,11 +563,11 @@ export default function UnionMembersListPage() {
   });
 
   const handleOpenEdit = (member: UnionMember) => {
-    navigate(`/union/socios/${member.id}`);
+    openModal('unionMemberEdit', { memberId: member.id, onUpdate: fetchMembers });
   };
 
   const handleViewMember = (memberId: string) => {
-    navigate(`/union/socios/${memberId}`);
+    openModal('unionMemberEdit', { memberId, onUpdate: fetchMembers });
   };
 
   // Enviar notificação rápida de carteirinha atualizada via WhatsApp

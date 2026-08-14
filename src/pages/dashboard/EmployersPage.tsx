@@ -897,7 +897,7 @@ export default function EmployersPage() {
                                   </p>
                                 ) : (
                                   <button
-                                    onClick={() => navigate(`/dashboard/empresas/${employer.id}`)}
+                                    onClick={() => handleOpenDialog(employer)}
                                     className="font-bold text-[11px] truncate max-w-[180px] text-primary hover:underline text-left leading-tight"
                                   >
                                     {employer.name}
