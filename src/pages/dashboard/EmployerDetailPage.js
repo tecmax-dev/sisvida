@@ -1,0 +1,1583 @@
+import { useState, useEffect, useMemo } from "react";
+import { getStaticYearRange } from "@/hooks/useAvailableYears";
+import { useParams, useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "@/components/ui/tooltip";
+import { Building2, ArrowLeft, Save, Loader2, Users, Receipt, FileText, Send, CheckCircle2, XCircle, Clock, AlertTriangle, RefreshCw, Copy, Download, CreditCard, Pencil, Trash2, ExternalLink, KeyRound, Globe, Handshake, } from "lucide-react";
+import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
+import NewNegotiationDialog from "@/components/negotiations/NewNegotiationDialog";
+import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
+import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmailDialog";
+import { SendOverdueNotificationDialog } from "@/components/contributions/SendOverdueNotificationDialog";
+import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
+import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
+import { EmployerCnpjSearch } from "@/components/employers/EmployerCnpjSearch";
+import CreateAwaitingValueDialog from "@/components/contributions/CreateAwaitingValueDialog";
+import UnionContributionReceiptDialog from "@/components/contributions/UnionContributionReceiptDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useCnpjLookup } from "@/hooks/useCnpjLookup";
+import { useUnionEntity } from "@/hooks/useUnionEntity";
+import { toast } from "sonner";
+import { format, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { formatCompetence } from "@/lib/competence-format";
+const STATUS_CONFIG = {
+    pending: { label: "Pendente", color: "bg-amber-100 text-amber-700", icon: Clock },
+    processing: { label: "Processando", color: "bg-blue-100 text-blue-700", icon: RefreshCw },
+    paid: { label: "Pago", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+    overdue: { label: "Vencido", color: "bg-rose-100 text-rose-700", icon: AlertTriangle },
+    cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-700", icon: XCircle },
+    awaiting_value: { label: "Aguardando Valor", color: "bg-purple-100 text-purple-700", icon: Clock },
+};
+export default function EmployerDetailPage({ employerIdOverride, isModalMode } = {}) {
+    const { id: paramId } = useParams();
+    const id = employerIdOverride || paramId;
+    const navigate = useNavigate();
+    const location = window.location.pathname;
+    const isUnionModule = location.startsWith("/union");
+    const backUrl = isUnionModule ? "/union/empresas" : "/dashboard/empresas";
+    const { currentClinic, session } = useAuth();
+    const { lookupCnpj, cnpjLoading } = useCnpjLookup();
+    const { entity: unionEntity } = useUnionEntity();
+    const [employer, setEmployer] = useState(null);
+    const [patients, setPatients] = useState([]);
+    const [contributions, setContributions] = useState([]);
+    const [contributionTypes, setContributionTypes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    // Form
+    const [formData, setFormData] = useState({
+        name: "",
+        trade_name: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        state: "",
+        notes: "",
+        is_active: true,
+    });
+    // Contribution dialogs
+    const [createContribDialogOpen, setCreateContribDialogOpen] = useState(false);
+    const [viewContribDialogOpen, setViewContribDialogOpen] = useState(false);
+    const [manualPaymentDialogOpen, setManualPaymentDialogOpen] = useState(false);
+    const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedContribution, setSelectedContribution] = useState(null);
+    const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+    const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+    const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
+    const [negotiationDialogOpen, setNegotiationDialogOpen] = useState(false);
+    const [filteredContributions, setFilteredContributions] = useState([]);
+    const [selectedContributionIds, setSelectedContributionIds] = useState(new Set());
+    const [contribTypeId, setContribTypeId] = useState("");
+    const [contribMonth, setContribMonth] = useState(new Date().getMonth() + 1);
+    const [contribYear, setContribYear] = useState(new Date().getFullYear());
+    const [contribValue, setContribValue] = useState("");
+    const [contribDueDate, setContribDueDate] = useState(format(addDays(new Date(), 10), "yyyy-MM-dd"));
+    // Manual payment form
+    const [manualPaymentValue, setManualPaymentValue] = useState("");
+    const [manualPaymentMethod, setManualPaymentMethod] = useState("dinheiro");
+    const [manualPaymentDate, setManualPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    // Edit manual payment form
+    const [editPaymentDialogOpen, setEditPaymentDialogOpen] = useState(false);
+    const [editPaymentValue, setEditPaymentValue] = useState("");
+    const [editPaymentMethod, setEditPaymentMethod] = useState("dinheiro");
+    const [editPaymentDate, setEditPaymentDate] = useState("");
+    const [updatingPayment, setUpdatingPayment] = useState(false);
+    // Edit contribution form
+    const [editValue, setEditValue] = useState("");
+    const [editDueDate, setEditDueDate] = useState("");
+    const [editTypeId, setEditTypeId] = useState("");
+    const [editMonth, setEditMonth] = useState(1);
+    const [editYear, setEditYear] = useState(new Date().getFullYear());
+    const [updating, setUpdating] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [generatingInvoice, setGeneratingInvoice] = useState(false);
+    const receiptContribution = selectedContribution && employer
+        ? {
+            ...selectedContribution,
+            employers: selectedContribution.employers ?? {
+                id: employer.id,
+                name: employer.name,
+                cnpj: employer.cnpj,
+                registration_number: employer.registration_number ?? null,
+            },
+        }
+        : selectedContribution;
+    // Accounting office link
+    const [linkedAccountingOfficeId, setLinkedAccountingOfficeId] = useState(null);
+    useEffect(() => {
+        if (currentClinic && id) {
+            fetchData();
+        }
+    }, [currentClinic, id]);
+    const copyFriendlyLink = () => {
+        if (!currentClinic?.slug || !employer?.access_code) {
+            toast.error("Dados incompletos para gerar o link");
+            return;
+        }
+        const baseUrl = window.location.origin;
+        const link = `${baseUrl}/portal-empresa/${currentClinic.slug}?cnpj=${employer.cnpj.replace(/\D/g, "")}&code=${employer.access_code}`;
+        navigator.clipboard.writeText(link);
+        toast.success("Link amigável copiado!");
+    };
+    const fetchData = async () => {
+        if (!currentClinic || !id)
+            return;
+        setLoading(true);
+        try {
+            // Fetch employer
+            const { data: empData, error: empError } = await supabase
+                .from("employers")
+                .select("*")
+                .eq("id", id)
+                .eq("clinic_id", currentClinic.id)
+                .single();
+            if (empError)
+                throw empError;
+            setEmployer(empData);
+            setFormData({
+                name: empData.name,
+                trade_name: empData.trade_name || "",
+                email: empData.email || "",
+                phone: empData.phone || "",
+                address: empData.address || "",
+                city: empData.city || "",
+                state: empData.state || "",
+                notes: empData.notes || "",
+                is_active: empData.is_active,
+            });
+            // Fetch patients linked to this employer
+            const { data: patientsData, error: patientsError } = await supabase
+                .from("patients")
+                .select("id, name, cpf, phone")
+                .eq("clinic_id", currentClinic.id)
+                .eq("employer_cnpj", empData.cnpj)
+                .order("name");
+            if (patientsError)
+                throw patientsError;
+            setPatients(patientsData || []);
+            // Fetch contributions for this employer
+            const { data: contribData, error: contribError } = await supabase
+                .from("employer_contributions")
+                .select(`*, contribution_types (id, name, default_value, is_active)`)
+                .eq("employer_id", id)
+                .order("competence_year", { ascending: false })
+                .order("competence_month", { ascending: false });
+            if (contribError)
+                throw contribError;
+            setContributions(contribData || []);
+            // Fetch contribution types
+            const { data: typesData, error: typesError } = await supabase
+                .from("contribution_types")
+                .select("*")
+                .eq("clinic_id", currentClinic.id)
+                .eq("is_active", true)
+                .order("name");
+            if (typesError)
+                throw typesError;
+            setContributionTypes(typesData || []);
+            // Initialize filtered contributions with all contributions
+            setFilteredContributions([]);
+            // Load linked accounting office
+            const { data: linkData } = await supabase
+                .from("accounting_office_employers")
+                .select("accounting_office_id")
+                .eq("employer_id", id)
+                .maybeSingle();
+            setLinkedAccountingOfficeId(linkData?.accounting_office_id || null);
+        }
+        catch (error) {
+            console.error("Error fetching data:", error);
+            toast.error("Erro ao carregar dados da empresa");
+            navigate(backUrl);
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    const formatCurrency = (cents) => {
+        return new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+        }).format(cents / 100);
+    };
+    const formatCNPJ = (cnpj) => {
+        return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    };
+    const formatPhone = (value) => {
+        const cleaned = value.replace(/\D/g, "").slice(0, 11);
+        if (cleaned.length <= 2)
+            return cleaned;
+        if (cleaned.length <= 7)
+            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    };
+    const handleSaveEmployer = async (shouldNavigateBack = true) => {
+        if (!employer || !currentClinic)
+            return;
+        setSaving(true);
+        try {
+            const { error } = await supabase
+                .from("employers")
+                .update({
+                name: formData.name.trim(),
+                trade_name: formData.trade_name.trim() || null,
+                email: formData.email.trim() || null,
+                phone: formData.phone.replace(/\D/g, "") || null,
+                address: formData.address.trim() || null,
+                city: formData.city.trim() || null,
+                state: formData.state.trim() || null,
+                notes: formData.notes.trim() || null,
+                is_active: formData.is_active,
+            })
+                .eq("id", employer.id);
+            if (error)
+                throw error;
+            // Manage accounting office link
+            // Remove existing link
+            await supabase
+                .from("accounting_office_employers")
+                .delete()
+                .eq("employer_id", employer.id);
+            // Create new link if selected
+            if (linkedAccountingOfficeId) {
+                await supabase
+                    .from("accounting_office_employers")
+                    .insert({
+                    accounting_office_id: linkedAccountingOfficeId,
+                    employer_id: employer.id,
+                    created_by: session?.user.id,
+                });
+            }
+            toast.success("Empresa atualizada com sucesso");
+            fetchData();
+        }
+        catch (error) {
+            console.error("Error saving employer:", error);
+            toast.error("Erro ao salvar empresa");
+        }
+        finally {
+            setSaving(false);
+        }
+    };
+    const handleTypeChange = (typeId) => {
+        setContribTypeId(typeId);
+        const type = contributionTypes.find(t => t.id === typeId);
+        if (type && type.default_value > 0) {
+            setContribValue((type.default_value / 100).toFixed(2).replace(".", ","));
+        }
+    };
+    const handleCreateContribution = async () => {
+        if (!employer || !currentClinic || !contribTypeId || !contribDueDate) {
+            toast.error("Preencha todos os campos obrigatórios");
+            return;
+        }
+        // VALIDAÇÃO CRÍTICA: Vencimento não pode ser anterior ao mês de competência
+        const dueDateObj = new Date(contribDueDate);
+        const competenceStart = new Date(contribYear, contribMonth - 1, 1);
+        const MONTHS_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        if (dueDateObj < competenceStart) {
+            toast.error(`Data de vencimento não pode ser anterior ao mês de competência (${MONTHS_PT[contribMonth - 1]}/${contribYear})`);
+            return;
+        }
+        // VALIDAÇÃO: Competência não pode estar muito no futuro em relação ao vencimento
+        const dueDateYear = dueDateObj.getFullYear();
+        if (contribYear > dueDateYear + 1) {
+            toast.error(`Competência ${MONTHS_PT[contribMonth - 1]}/${contribYear} é inconsistente com a data de vencimento`);
+            return;
+        }
+        setSaving(true);
+        try {
+            // Parse value - treat empty or invalid as 0
+            let valueInCents = 0;
+            if (contribValue && contribValue.trim() !== "") {
+                const parsed = parseFloat(contribValue.replace(",", "."));
+                if (!isNaN(parsed)) {
+                    valueInCents = Math.round(parsed * 100);
+                }
+            }
+            // Se valor = 0, status = awaiting_value, senão pending
+            const initialStatus = valueInCents === 0 ? "awaiting_value" : "pending";
+            const { data: newContrib, error } = await supabase
+                .from("employer_contributions")
+                .insert({
+                clinic_id: currentClinic.id,
+                employer_id: employer.id,
+                contribution_type_id: contribTypeId,
+                competence_month: contribMonth,
+                competence_year: contribYear,
+                value: valueInCents,
+                due_date: contribDueDate,
+                status: initialStatus,
+                created_by: session?.user.id,
+            })
+                .select()
+                .single();
+            if (error) {
+                if (error.message.includes("unique_contribution_per_employer") || error.message.includes("unique_active_contribution_per_employer")) {
+                    toast.error("Já existe uma contribuição deste tipo para esta competência");
+                    return;
+                }
+                throw error;
+            }
+            // Se valor > 0, gerar boleto automaticamente
+            if (valueInCents > 0 && newContrib) {
+                try {
+                    const contribType = contributionTypes.find(t => t.id === contribTypeId);
+                    const description = `${contribType?.name || "Contribuição"} - ${formatCompetence(contribMonth, contribYear)}`;
+                    await supabase.functions.invoke("lytex-api", {
+                        body: {
+                            action: "create_invoice",
+                            contributionId: newContrib.id,
+                            clinicId: currentClinic.id,
+                            employer: {
+                                cnpj: employer.cnpj,
+                                name: employer.name,
+                                email: employer.email,
+                                phone: employer.phone,
+                            },
+                            value: valueInCents,
+                            dueDate: contribDueDate,
+                            description,
+                            enableBoleto: true,
+                            enablePix: true,
+                        },
+                    });
+                    toast.success("Contribuição criada e boleto gerado com sucesso!");
+                }
+                catch (invoiceError) {
+                    console.error("Erro ao gerar boleto:", invoiceError);
+                    toast.success("Contribuição criada. Boleto será gerado manualmente.");
+                }
+            }
+            else {
+                toast.success("Contribuição criada. Aguardando definição de valor.");
+            }
+            setCreateContribDialogOpen(false);
+            resetContribForm();
+            fetchData();
+        }
+        catch (error) {
+            const message = error instanceof Error
+                ? error.message
+                : typeof error === "object" && error && "message" in error
+                    ? String(error.message)
+                    : "Erro desconhecido";
+            console.error("Error creating contribution:", error);
+            toast.error(`Erro ao criar contribuição: ${message}`);
+        }
+        finally {
+            setSaving(false);
+        }
+    };
+    const resetContribForm = () => {
+        setContribTypeId("");
+        setContribMonth(new Date().getMonth() + 1);
+        setContribYear(new Date().getFullYear());
+        setContribValue("");
+        setContribDueDate(format(addDays(new Date(), 10), "yyyy-MM-dd"));
+    };
+    const handleGenerateInvoice = async (contribution) => {
+        if (!employer)
+            return;
+        setGeneratingInvoice(true);
+        try {
+            const response = await supabase.functions.invoke("lytex-api", {
+                body: {
+                    action: "create_invoice",
+                    contributionId: contribution.id,
+                    clinicId: currentClinic?.id,
+                    employer: {
+                        cnpj: employer.cnpj,
+                        name: employer.name,
+                        email: employer.email,
+                        phone: employer.phone,
+                        address: employer.address ? {
+                            street: employer.address,
+                            city: employer.city,
+                            state: employer.state,
+                        } : undefined,
+                    },
+                    value: contribution.value,
+                    dueDate: contribution.due_date,
+                    description: `${contribution.contribution_types?.name || "Contribuição"} - ${formatCompetence(contribution.competence_month, contribution.competence_year)}`,
+                    enableBoleto: true,
+                    enablePix: true,
+                },
+            });
+            if (response.error) {
+                throw new Error(response.error.message);
+            }
+            toast.success("Boleto gerado com sucesso!");
+            setViewContribDialogOpen(false);
+            fetchData();
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+            console.error("Error generating invoice:", error);
+            toast.error(`Erro ao gerar boleto: ${errorMessage}`);
+        }
+        finally {
+            setGeneratingInvoice(false);
+        }
+    };
+    const handleManualPayment = async () => {
+        if (!selectedContribution || !manualPaymentValue) {
+            toast.error("Preencha o valor do pagamento");
+            return;
+        }
+        try {
+            const valueInCents = Math.round(parseFloat(manualPaymentValue.replace(",", ".")) * 100);
+            const { error } = await supabase
+                .from("employer_contributions")
+                .update({
+                status: "paid",
+                paid_at: new Date(manualPaymentDate + "T12:00:00").toISOString(),
+                paid_value: valueInCents,
+                payment_method: manualPaymentMethod,
+            })
+                .eq("id", selectedContribution.id);
+            if (error)
+                throw error;
+            toast.success("Baixa manual registrada com sucesso");
+            setManualPaymentDialogOpen(false);
+            setViewContribDialogOpen(false);
+            setManualPaymentValue("");
+            fetchData();
+        }
+        catch (error) {
+            console.error("Error registering payment:", error);
+            toast.error("Erro ao registrar pagamento");
+        }
+    };
+    const handleEditPayment = async () => {
+        if (!selectedContribution || !editPaymentValue) {
+            toast.error("Preencha o valor do pagamento");
+            return;
+        }
+        setUpdatingPayment(true);
+        try {
+            const valueInCents = Math.round(parseFloat(editPaymentValue.replace(",", ".")) * 100);
+            const { error } = await supabase
+                .from("employer_contributions")
+                .update({
+                paid_at: new Date(editPaymentDate + "T12:00:00").toISOString(),
+                paid_value: valueInCents,
+                payment_method: editPaymentMethod,
+            })
+                .eq("id", selectedContribution.id);
+            if (error)
+                throw error;
+            toast.success("Pagamento atualizado com sucesso");
+            setEditPaymentDialogOpen(false);
+            setViewContribDialogOpen(false);
+            fetchData();
+        }
+        catch (error) {
+            console.error("Error updating payment:", error);
+            toast.error("Erro ao atualizar pagamento");
+        }
+        finally {
+            setUpdatingPayment(false);
+        }
+    };
+    const handleCancelContribution = async () => {
+        if (!selectedContribution)
+            return;
+        try {
+            if (selectedContribution.lytex_invoice_id) {
+                const { data, error } = await supabase.functions.invoke("lytex-api", {
+                    body: {
+                        action: "cancel_invoice",
+                        invoiceId: selectedContribution.lytex_invoice_id,
+                        contributionId: selectedContribution.id,
+                    },
+                });
+                if (error) {
+                    console.error("Edge function error:", error);
+                    throw new Error(error.message || "Erro ao cancelar na Lytex");
+                }
+                if (data?.error) {
+                    console.error("Lytex API error:", data.error);
+                    throw new Error(data.error);
+                }
+            }
+            else {
+                await supabase
+                    .from("employer_contributions")
+                    .update({ status: "cancelled" })
+                    .eq("id", selectedContribution.id);
+            }
+            toast.success("Contribuição cancelada");
+            setCancelDialogOpen(false);
+            setViewContribDialogOpen(false);
+            fetchData();
+        }
+        catch (error) {
+            console.error("Error cancelling:", error);
+            toast.error(error.message || "Erro ao cancelar contribuição");
+        }
+    };
+    const handleCopyToClipboard = (text, label) => {
+        navigator.clipboard.writeText(text);
+        toast.success(`${label} copiado!`);
+    };
+    const handleOpenEditDialog = () => {
+        if (!selectedContribution)
+            return;
+        setEditValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
+        setEditDueDate(selectedContribution.due_date);
+        setEditTypeId(selectedContribution.contribution_type_id);
+        setEditMonth(selectedContribution.competence_month);
+        setEditYear(selectedContribution.competence_year);
+        setEditDialogOpen(true);
+    };
+    const handleUpdateContribution = async () => {
+        if (!selectedContribution)
+            return;
+        setUpdating(true);
+        try {
+            const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
+            // Gerar nova descrição com tipo e competência
+            const selectedType = contributionTypes.find(t => t.id === editTypeId);
+            const newDescription = `${selectedType?.name || 'Contribuição'} - ${formatCompetence(editMonth, editYear)}`;
+            // Check if due date changed and is in the future - auto change status to pending
+            const dueDateChanged = editDueDate !== selectedContribution.due_date;
+            const newDueDate = new Date(editDueDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isNewDueDateFuture = newDueDate >= today;
+            const shouldUpdateStatus = dueDateChanged && isNewDueDateFuture &&
+                (selectedContribution.status === "overdue" || selectedContribution.status === "pending");
+            if (selectedContribution.lytex_invoice_id) {
+                const { error } = await supabase.functions.invoke("lytex-api", {
+                    body: {
+                        action: "update_invoice",
+                        invoiceId: selectedContribution.lytex_invoice_id,
+                        contributionId: selectedContribution.id,
+                        value: newValueCents,
+                        dueDate: editDueDate,
+                        description: newDescription,
+                        contributionTypeId: editTypeId,
+                        competenceMonth: editMonth,
+                        competenceYear: editYear,
+                        ...(shouldUpdateStatus && { status: "pending" }),
+                    },
+                });
+                if (error)
+                    throw error;
+            }
+            else {
+                const updateData = {
+                    value: newValueCents,
+                    due_date: editDueDate,
+                    contribution_type_id: editTypeId,
+                    competence_month: editMonth,
+                    competence_year: editYear,
+                };
+                if (shouldUpdateStatus) {
+                    updateData.status = "pending";
+                }
+                const { error } = await supabase
+                    .from("employer_contributions")
+                    .update(updateData)
+                    .eq("id", selectedContribution.id);
+                if (error)
+                    throw error;
+            }
+            toast.success("Contribuição atualizada");
+            setEditDialogOpen(false);
+            setViewContribDialogOpen(false);
+            fetchData();
+        }
+        catch (error) {
+            console.error("Error updating:", error);
+            toast.error(error.message || "Erro ao atualizar");
+        }
+        finally {
+            setUpdating(false);
+        }
+    };
+    const handleDeleteContribution = async () => {
+        if (!selectedContribution)
+            return;
+        setDeleting(true);
+        try {
+            const { error } = await supabase.functions.invoke("lytex-api", {
+                body: {
+                    action: "delete_contribution",
+                    contributionId: selectedContribution.id,
+                },
+            });
+            if (error)
+                throw error;
+            toast.success("Contribuição excluída");
+            setDeleteDialogOpen(false);
+            setViewContribDialogOpen(false);
+            fetchData();
+        }
+        catch (error) {
+            console.error("Error deleting:", error);
+            toast.error(error.message || "Erro ao excluir");
+        }
+        finally {
+            setDeleting(false);
+        }
+    };
+    const handleSyncLytex = async () => {
+        if (!currentClinic)
+            return;
+        setSyncing(true);
+        try {
+            // Sync all pending contributions for this employer
+            const pendingContribs = contributions.filter((c) => c.lytex_invoice_id && ["pending", "overdue", "processing"].includes(c.status));
+            let syncedCount = 0;
+            for (const contrib of pendingContribs) {
+                const { error } = await supabase.functions.invoke("lytex-api", {
+                    body: {
+                        action: "sync_status",
+                        contributionId: contrib.id,
+                    },
+                });
+                if (!error)
+                    syncedCount++;
+            }
+            toast.success(`${syncedCount} contribuição(ões) sincronizada(s)`);
+            fetchData();
+        }
+        catch (error) {
+            console.error("Error syncing:", error);
+            toast.error("Erro ao sincronizar com Lytex");
+        }
+        finally {
+            setSyncing(false);
+        }
+    };
+    // Stats
+    const stats = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        const yearContribs = contributions.filter(c => c.competence_year === currentYear);
+        return {
+            total: contributions.length,
+            yearTotal: yearContribs.length,
+            paid: yearContribs.filter(c => c.status === "paid").length,
+            pending: yearContribs.filter(c => c.status === "pending").length,
+            overdue: yearContribs.filter(c => c.status === "overdue").length,
+            totalValue: yearContribs.reduce((acc, c) => acc + c.value, 0),
+            paidValue: yearContribs.filter(c => c.status === "paid").reduce((acc, c) => acc + (c.paid_value || c.value), 0),
+        };
+    }, [contributions]);
+    if (loading) {
+        return (<div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+      </div>);
+    }
+    if (!employer) {
+        return (<div className="p-6 text-center">
+        <p className="text-muted-foreground">Empresa não encontrada</p>
+      </div>);
+    }
+    return (<div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
+      <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
+        <Tabs defaultValue="contributions" className="w-full h-full">
+
+
+
+
+          {/* Header */}
+          {!isModalMode ? (<div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+              <div className="flex items-start gap-4">
+                <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)} className="hover:bg-background">
+                  <ArrowLeft className="h-5 w-5"/>
+                </Button>
+
+
+
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Building2 className="h-6 w-6 text-teal-600 shrink-0"/>
+                    <h1 className="text-2xl font-bold tracking-tight text-teal-800">{employer.name}</h1>
+                    {employer.registration_number && (<Badge variant="outline" className="font-mono bg-white">
+                        Mat. {employer.registration_number}
+                      </Badge>)}
+                    {employer.access_code && (<div className="flex items-center gap-1.5 p-1.5 rounded-md bg-teal-50 border border-teal-200">
+                        <span className="text-[10px] uppercase font-bold text-teal-600">Login:</span>
+                        <span className="font-mono font-bold text-teal-700">{employer.access_code}</span>
+                        <div className="flex items-center gap-0.5">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-teal-600 hover:bg-teal-100" onClick={() => {
+                    navigator.clipboard.writeText(employer.access_code || "");
+                    toast.success("Código de login copiado!");
+                }}>
+                                  <Copy className="h-3 w-3"/>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copiar código</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>)}
+                    <Badge variant={employer.is_active ? "default" : "secondary"} className={employer.is_active ? "bg-emerald-500" : ""}>
+                      {employer.is_active ? "Ativa" : "Inativa"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-sm text-muted-foreground">
+                      CNPJ: {formatCNPJ(employer.cnpj)}
+                    </p>
+                    {employer.cnae_code && (<p className="text-xs text-muted-foreground">
+                        CNAE: {employer.cnae_code}
+                        {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+                      </p>)}
+                  </div>
+                </div>
+              </div>
+              {currentClinic && (<EmployerCnpjSearch clinicId={currentClinic.id} isUnionModule={isUnionModule} currentEmployerId={employer.id} className="shrink-0"/>)}
+            </div>) : (<div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
+                  {employer.name}
+                </h2>
+                <Badge variant="outline" className="bg-teal-50 text-teal-600 border-teal-200">
+                  CNPJ: {formatCNPJ(employer.cnpj)}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                {currentClinic && (<EmployerCnpjSearch clinicId={currentClinic.id} isUnionModule={isUnionModule} currentEmployerId={employer.id} className="h-9"/>)}
+              </div>
+            </div>)}
+
+        <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
+          <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
+
+
+
+
+
+
+
+
+
+
+
+
+
+            <div className="space-y-6">
+              {/* Quick Info Card */}
+              <div className="bg-card rounded-xl border p-5 shadow-sm space-y-4">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Contato Principal</p>
+                  <p className="text-sm font-medium">{formData.email || 'E-mail não informado'}</p>
+                  <p className="text-sm text-muted-foreground">{formatPhone(formData.phone) || 'Telefone não informado'}</p>
+                </div>
+
+                <div className="pt-4 border-t space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Localização</p>
+                  <p className="text-sm">{formData.address || 'Endereço não informado'}</p>
+                  <p className="text-sm text-muted-foreground">{formData.city} - {formData.state}</p>
+                </div>
+              </div>
+
+              {/* Tabs for Sidebar in Modal Mode */}
+              <Tabs defaultValue="contributions" className="w-full">
+                <TabsList className={`flex flex-col h-auto bg-transparent border-none p-0 gap-1 ${isModalMode ? '' : 'hidden'}`}>
+                  <TabsTrigger value="contributions" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Receipt className="h-4 w-4"/>
+                    Contribuições
+                  </TabsTrigger>
+                  <TabsTrigger value="employees" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Users className="h-4 w-4"/>
+                    Colaboradores
+                  </TabsTrigger>
+                  <TabsTrigger value="negotiations" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Handshake className="h-4 w-4"/>
+                    Negociações
+                  </TabsTrigger>
+                  <TabsTrigger value="portal" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Globe className="h-4 w-4"/>
+                    Portal
+                  </TabsTrigger>
+                  <TabsTrigger value="data" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <FileText className="h-4 w-4"/>
+                    Dados Cadastrais
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+
+          <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
+          {!isModalMode && (<TabsList className="mb-4">
+              <TabsTrigger value="contributions" className="gap-2">
+                <Receipt className="h-4 w-4"/>
+                Contribuições
+              </TabsTrigger>
+                <TabsTrigger value="employees" className="gap-2">
+                  <Users className="h-4 w-4"/>
+                  Colaboradores ({patients.length})
+                </TabsTrigger>
+                <TabsTrigger value="negotiations" className="gap-2">
+                  <Handshake className="h-4 w-4"/>
+                  Negociações
+                </TabsTrigger>
+                <TabsTrigger value="portal" className="gap-2">
+                  <Globe className="h-4 w-4"/>
+                  Portal
+                </TabsTrigger>
+                <TabsTrigger value="data" className="gap-2">
+                  <FileText className="h-4 w-4"/>
+                  Dados Cadastrais
+                </TabsTrigger>
+              </TabsList>)}
+
+            {/* Contributions Tab Content */}
+            <TabsContent value="contributions" className="m-0">
+              <EmployerContributionsTab contributions={contributions} contributionTypes={contributionTypes} stats={stats} currentClinic={currentClinic} employer={employer} syncing={syncing} generatingInvoice={generatingInvoice} selectedContributionIds={selectedContributionIds} setSelectedContributionIds={setSelectedContributionIds} onSyncLytex={handleSyncLytex} onOpenWhatsappDialog={() => setWhatsappDialogOpen(true)} onOpenEmailDialog={() => setEmailDialogOpen(true)} onOpenCreateDialog={() => setCreateContribDialogOpen(true)} onOpenOverdueDialog={() => setOverdueDialogOpen(true)} onViewContribution={(contrib) => {
+            setSelectedContribution(contrib);
+            setViewContribDialogOpen(true);
+        }} onGenerateInvoice={(contrib) => handleGenerateInvoice(contrib)} onOpenNegotiationDialog={() => setNegotiationDialogOpen(true)}/>
+            </TabsContent>
+
+        {/* Negotiations Tab */}
+        <TabsContent value="negotiations">
+          <NegotiationInstallmentsTab clinicId={currentClinic?.id || ""} employerId={id}/>
+        </TabsContent>
+
+        {/* Employees Tab */}
+        <TabsContent value="employees">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Colaboradores Vinculados</CardTitle>
+              <CardDescription>
+                Pacientes cadastrados com o CNPJ desta empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {patients.length === 0 ? (<div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50"/>
+                  <p>Nenhum colaborador vinculado</p>
+                </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {patients.map((patient) => (<button key={patient.id} onClick={() => navigate(`/dashboard/patients/${patient.id}/edit`)} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 border transition-colors text-left">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary"/>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{patient.name}</p>
+                        {patient.cpf && (<p className="text-xs text-muted-foreground">
+                            CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                          </p>)}
+                      </div>
+                    </button>))}
+                </div>)}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Portal Tab */}
+        <TabsContent value="portal">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Globe className="h-6 w-6 text-primary"/>
+                </div>
+                <div>
+                  <CardTitle className="text-base">Portal da Empresa</CardTitle>
+                  <CardDescription>
+                    Acesso online para a empresa visualizar e gerenciar seus boletos
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Access Code Section */}
+              <div className="p-4 rounded-lg border bg-muted/30 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-5 w-5 text-primary"/>
+                    <span className="font-medium">Código de Acesso</span>
+                  </div>
+                  {employer.access_code ? (<Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">
+                      <CheckCircle2 className="h-3 w-3 mr-1"/>
+                      Configurado
+                    </Badge>) : (<Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+                      <Clock className="h-3 w-3 mr-1"/>
+                      Não configurado
+                    </Badge>)}
+                </div>
+
+                {employer.access_code ? (<div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 p-3 rounded-lg bg-card border-2 border-dashed border-primary/30 text-center">
+                        <span className="text-2xl font-mono font-bold tracking-[0.3em] text-primary">
+                          {employer.access_code}
+                        </span>
+                      </div>
+                      <Button variant="outline" size="icon" onClick={() => {
+                navigator.clipboard.writeText(employer.access_code || "");
+                toast.success("Código copiado!");
+            }}>
+                        <Copy className="h-4 w-4"/>
+                      </Button>
+                    </div>
+                    {employer.portal_last_access_at && (<p className="text-xs text-muted-foreground text-center">
+                        Último acesso: {format(new Date(employer.portal_last_access_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>)}
+                    <div className="flex gap-2 justify-center">
+                      <Button variant="outline" size="sm" onClick={async () => {
+                try {
+                    const { data, error } = await supabase.rpc("generate_employer_access_code");
+                    if (error)
+                        throw error;
+                    await supabase
+                        .from("employers")
+                        .update({ access_code: data, access_code_expires_at: null })
+                        .eq("id", employer.id);
+                    toast.success("Novo código gerado!");
+                    fetchData();
+                }
+                catch (err) {
+                    toast.error("Erro ao gerar código");
+                }
+            }}>
+                        <RefreshCw className="h-4 w-4 mr-1"/>
+                        Gerar Novo Código
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={async () => {
+                await supabase
+                    .from("employers")
+                    .update({ access_code: null, access_code_expires_at: null })
+                    .eq("id", employer.id);
+                toast.success("Código removido");
+                fetchData();
+            }}>
+                        <Trash2 className="h-4 w-4 mr-1"/>
+                        Remover
+                      </Button>
+                    </div>
+                  </div>) : (<div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Gere um código de acesso para permitir que a empresa visualize seus boletos online.
+                    </p>
+                    <Button onClick={async () => {
+                try {
+                    const { data, error } = await supabase.rpc("generate_employer_access_code");
+                    if (error)
+                        throw error;
+                    await supabase
+                        .from("employers")
+                        .update({ access_code: data })
+                        .eq("id", employer.id);
+                    toast.success("Código de acesso gerado!");
+                    fetchData();
+                }
+                catch (err) {
+                    toast.error("Erro ao gerar código");
+                }
+            }}>
+                      <KeyRound className="h-4 w-4 mr-2"/>
+                      Gerar Código de Acesso
+                    </Button>
+                  </div>)}
+              </div>
+
+              {/* Portal URL */}
+              <div className="p-4 rounded-lg border space-y-3">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5 text-muted-foreground"/>
+                  <span className="font-medium">Link do Portal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input readOnly value={`${window.location.origin}/portal-empresa`} className="font-mono text-sm"/>
+                  <Button variant="outline" size="icon" onClick={() => {
+            navigator.clipboard.writeText(`${window.location.origin}/portal-empresa`);
+            toast.success("Link copiado!");
+        }}>
+                    <Copy className="h-4 w-4"/>
+                  </Button>
+                  <Button variant="outline" size="icon" asChild>
+                    <a href="/portal-empresa" target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4"/>
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A empresa usa o CNPJ <span className="font-medium">{formatCNPJ(employer.cnpj)}</span> e o código de acesso para entrar.
+                </p>
+              </div>
+
+              {/* Instructions */}
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                <p className="font-medium text-sm">Como funciona:</p>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Gere um código de acesso único para esta empresa</li>
+                  <li>Envie o link do portal e o código para a empresa</li>
+                  <li>A empresa acessa usando CNPJ + código</li>
+                  <li>No portal, ela pode ver boletos, pagar e solicitar 2ª via</li>
+                </ol>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Data Tab */}
+        <TabsContent value="data">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Dados Cadastrais</CardTitle>
+              <CardDescription>
+                Informações da empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>CNPJ</Label>
+                  <div className="space-y-1">
+                    <div className="flex gap-2">
+                      <Input value={formatCNPJ(employer.cnpj)} disabled className="flex-1"/>
+                      <Button type="button" variant="outline" size="icon" disabled={cnpjLoading} title="Atualizar dados via Receita Federal" onClick={async () => {
+            if (!employer.cnpj)
+                return;
+            const data = await lookupCnpj(employer.cnpj);
+            if (data) {
+                setFormData(prev => ({
+                    ...prev,
+                    name: data.razao_social || prev.name,
+                    trade_name: data.nome_fantasia || prev.trade_name,
+                    email: data.email || prev.email,
+                    phone: data.telefone || prev.phone,
+                    address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ''}` : prev.address,
+                    city: data.municipio || prev.city,
+                    state: data.uf || prev.state,
+                }));
+                toast.success("Dados atualizados da Receita Federal (incluindo e-mail)");
+            }
+        }}>
+                        {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <RefreshCw className="h-4 w-4"/>}
+                      </Button>
+                    </div>
+                    {employer.cnae_code && (<p className="text-xs text-muted-foreground">
+                        CNAE: {employer.cnae_code}
+                        {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+                      </p>)}
+                  </div>
+                </div>
+                <div>
+                  <Label>Razão Social *</Label>
+                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}/>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Nome Fantasia</Label>
+                  <Input value={formData.trade_name} onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}/>
+                </div>
+                <div>
+                  <Label>Telefone</Label>
+                  <Input value={formatPhone(formData.phone)} onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, "") })} placeholder="(00) 00000-0000"/>
+                </div>
+              </div>
+
+              <div>
+                <Label>E-mail</Label>
+                <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}/>
+              </div>
+
+              <div>
+                <Label>Endereço</Label>
+                <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })}/>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Cidade</Label>
+                  <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })}/>
+                </div>
+                <div>
+                  <Label>Estado</Label>
+                  <Input value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase().slice(0, 2) })} maxLength={2}/>
+                </div>
+              </div>
+
+              <div>
+                <Label>Observações</Label>
+                <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3}/>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}/>
+                <Label>Empresa ativa</Label>
+              </div>
+
+              {/* Accounting Office Selector */}
+              <div className="border rounded-lg p-4 bg-muted/20">
+                <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+                  <Building2 className="h-4 w-4"/>
+                  Escritório de Contabilidade
+                </Label>
+                {currentClinic && (<AccountingOfficeSelector clinicId={currentClinic.id} employerId={employer.id} currentOfficeId={linkedAccountingOfficeId} onOfficeChange={(officeId) => setLinkedAccountingOfficeId(officeId)}/>)}
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={() => handleSaveEmployer(false)} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin"/>}
+                  <Save className="h-4 w-4 mr-2"/>
+                  Salvar Alterações
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
+
+
+      {/* Create Contribution Dialog - Awaiting Value with Public Link */}
+      <CreateAwaitingValueDialog open={createContribDialogOpen} onOpenChange={setCreateContribDialogOpen} employer={{
+            id: employer.id,
+            name: employer.name,
+            cnpj: employer.cnpj,
+            phone: employer.phone,
+            email: employer.email,
+        }} contributionTypes={contributionTypes} clinicId={currentClinic?.id || ""} userId={session?.user?.id || ""} onSuccess={() => fetchData()}/>
+
+      {/* View Contribution Dialog */}
+      <Dialog open={viewContribDialogOpen} onOpenChange={setViewContribDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Contribuição</DialogTitle>
+          </DialogHeader>
+
+          {selectedContribution && (<div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Tipo</p>
+                  <p className="font-medium">{selectedContribution.contribution_types?.name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Competência</p>
+                  <p className="font-medium">
+                    {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Valor</p>
+                  <p className="font-medium text-lg">{formatCurrency(selectedContribution.value)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Vencimento</p>
+                  <p className="font-medium">
+                    {format(new Date(selectedContribution.due_date + "T12:00:00"), "dd/MM/yyyy")}
+                  </p>
+                </div>
+              </div>
+
+              {selectedContribution.lytex_invoice_url && (<div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary"/>
+                    <span className="font-medium">Dados do Boleto</span>
+                  </div>
+
+                  {selectedContribution.lytex_boleto_digitable_line && (<div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Linha Digitável</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto">
+                          {selectedContribution.lytex_boleto_digitable_line}
+                        </code>
+                        <Button variant="outline" size="icon" className="shrink-0" onClick={() => handleCopyToClipboard(selectedContribution.lytex_boleto_digitable_line, "Linha digitável")}>
+                          <Copy className="h-4 w-4"/>
+                        </Button>
+                      </div>
+                    </div>)}
+
+                  {selectedContribution.lytex_pix_code && (<div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">PIX Copia e Cola</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto max-h-20">
+                          {selectedContribution.lytex_pix_code.slice(0, 50)}...
+                        </code>
+                        <Button variant="outline" size="icon" className="shrink-0" onClick={() => handleCopyToClipboard(selectedContribution.lytex_pix_code, "Código PIX")}>
+                          <Copy className="h-4 w-4"/>
+                        </Button>
+                      </div>
+                    </div>)}
+
+                  <Button className="w-full" onClick={() => window.open(selectedContribution.lytex_invoice_url, "_blank")}>
+                    <Download className="h-4 w-4 mr-2"/>
+                    Abrir Boleto / Fatura
+                  </Button>
+                </div>)}
+
+              {selectedContribution.status === "paid" && (<div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 className="h-5 w-5"/>
+                    <span className="font-medium">Pagamento Confirmado</span>
+                  </div>
+                  {selectedContribution.paid_at && (<p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">
+                      Pago em {format(new Date(selectedContribution.paid_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {selectedContribution.payment_method && ` via ${selectedContribution.payment_method}`}
+                      {selectedContribution.paid_value && ` - ${formatCurrency(selectedContribution.paid_value)}`}
+                    </p>)}
+                </div>)}
+
+              <DialogFooter className="flex-wrap gap-2">
+                {selectedContribution.status === "paid" && (<>
+                    <Button variant="outline" onClick={() => {
+                    setViewContribDialogOpen(false);
+                    setReceiptDialogOpen(true);
+                }}>
+                      <Receipt className="h-4 w-4 mr-2"/>
+                      Gerar Recibo
+                    </Button>
+                    <Button variant="outline" onClick={() => {
+                    setEditPaymentValue(selectedContribution.paid_value
+                        ? (selectedContribution.paid_value / 100).toFixed(2).replace(".", ",")
+                        : (selectedContribution.value / 100).toFixed(2).replace(".", ","));
+                    setEditPaymentMethod(selectedContribution.payment_method || "dinheiro");
+                    setEditPaymentDate(selectedContribution.paid_at
+                        ? format(new Date(selectedContribution.paid_at), "yyyy-MM-dd")
+                        : format(new Date(), "yyyy-MM-dd"));
+                    setEditPaymentDialogOpen(true);
+                }}>
+                      <Pencil className="h-4 w-4 mr-2"/>
+                      Editar Baixa
+                    </Button>
+                  </>)}
+                {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (<>
+                    <Button variant="outline" onClick={handleOpenEditDialog}>
+                      <Pencil className="h-4 w-4 mr-2"/>
+                      Editar
+                    </Button>
+                    <Button variant="outline" onClick={() => setDeleteDialogOpen(true)}>
+                      <Trash2 className="h-4 w-4 mr-2"/>
+                      Excluir
+                    </Button>
+                    <Button variant="outline" onClick={() => {
+                    setManualPaymentValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
+                    setManualPaymentDialogOpen(true);
+                }}>
+                      <CreditCard className="h-4 w-4 mr-2"/>
+                      Baixa Manual
+                    </Button>
+                    <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
+                      <XCircle className="h-4 w-4 mr-2"/>
+                      Cancelar
+                    </Button>
+                  </>)}
+                {!selectedContribution.lytex_invoice_id && selectedContribution.status !== "cancelled" && selectedContribution.status !== "paid" && (<Button onClick={() => handleGenerateInvoice(selectedContribution)} disabled={generatingInvoice}>
+                    {generatingInvoice ? (<Loader2 className="h-4 w-4 mr-2 animate-spin"/>) : (<Send className="h-4 w-4 mr-2"/>)}
+                    Gerar Boleto
+                  </Button>)}
+              </DialogFooter>
+            </div>)}
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Payment Dialog */}
+      <Dialog open={manualPaymentDialogOpen} onOpenChange={setManualPaymentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Baixa Manual</DialogTitle>
+            <DialogDescription>
+              Registrar pagamento recebido fora do sistema
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Valor Recebido (R$) *</Label>
+              <Input placeholder="0,00" value={manualPaymentValue} onChange={(e) => setManualPaymentValue(e.target.value)}/>
+            </div>
+            <div>
+              <Label>Forma de Pagamento</Label>
+              <Select value={manualPaymentMethod} onValueChange={setManualPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="cartao">Cartão</SelectItem>
+                  <SelectItem value="outros">Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data do Pagamento</Label>
+              <Input type="date" value={manualPaymentDate} onChange={(e) => setManualPaymentDate(e.target.value)}/>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManualPaymentDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleManualPayment}>
+              Confirmar Baixa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Manual Payment Dialog */}
+      <Dialog open={editPaymentDialogOpen} onOpenChange={setEditPaymentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Baixa Manual</DialogTitle>
+            <DialogDescription>
+              Alterar dados do pagamento registrado
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Valor Pago (R$) *</Label>
+              <Input placeholder="0,00" value={editPaymentValue} onChange={(e) => setEditPaymentValue(e.target.value)}/>
+            </div>
+            <div>
+              <Label>Forma de Pagamento</Label>
+              <Select value={editPaymentMethod} onValueChange={setEditPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="cartao">Cartão</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                  <SelectItem value="compensacao">Compensação</SelectItem>
+                  <SelectItem value="outros">Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data do Pagamento</Label>
+              <Input type="date" value={editPaymentDate} onChange={(e) => setEditPaymentDate(e.target.value)}/>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPaymentDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditPayment} disabled={updatingPayment}>
+              {updatingPayment ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <UnionContributionReceiptDialog open={receiptDialogOpen} onOpenChange={setReceiptDialogOpen} contribution={receiptContribution} unionEntity={unionEntity}/>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Contribuição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar esta contribuição? 
+              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelContribution} className="bg-destructive hover:bg-destructive/90">
+              Confirmar Cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Contribution Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Contribuição</DialogTitle>
+            <DialogDescription>
+              {selectedContribution?.lytex_invoice_id
+            ? "A alteração será sincronizada com o boleto na Lytex."
+            : "Altere os dados da contribuição."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Tipo de Contribuição */}
+            <div className="space-y-2">
+              <Label>Tipo de Contribuição</Label>
+              <Select value={editTypeId} onValueChange={setEditTypeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo"/>
+                </SelectTrigger>
+                <SelectContent>
+                  {contributionTypes.filter(t => t.is_active).map((type) => (<SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Mês e Ano de Competência */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Mês Competência</Label>
+                <Select value={String(editMonth)} onValueChange={(v) => setEditMonth(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => (<SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ano</Label>
+                <Select value={String(editYear)} onValueChange={(v) => setEditYear(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getStaticYearRange().map(year => (<SelectItem key={year} value={String(year)}>{year}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Valor e Vencimento */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input placeholder="0,00" value={editValue} onChange={(e) => setEditValue(e.target.value)}/>
+              </div>
+              <div className="space-y-2">
+                <Label>Vencimento</Label>
+                <Input type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)}/>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateContribution} disabled={updating}>
+              {updating && <Loader2 className="h-4 w-4 mr-2 animate-spin"/>}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta contribuição permanentemente?
+              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteContribution} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin"/>}
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* WhatsApp Boleto Dialog */}
+      <SendBoletoWhatsAppDialog open={whatsappDialogOpen} onOpenChange={(open) => {
+            setWhatsappDialogOpen(open);
+            if (!open) {
+                setSelectedContributionIds(new Set());
+            }
+        }} contributions={(() => {
+            const contribsToUse = selectedContributionIds.size > 0
+                ? contributions.filter((c) => selectedContributionIds.has(c.id))
+                : contributions;
+            return contribsToUse.map((c) => ({
+                ...c,
+                employers: {
+                    name: employer?.name || "",
+                    cnpj: employer?.cnpj || "",
+                    phone: employer?.phone,
+                },
+            }));
+        })()} clinicId={currentClinic?.id || ""} preSelectedIds={selectedContributionIds}/>
+
+      {/* Overdue Notification Dialog (WhatsApp + Email) */}
+      <SendOverdueNotificationDialog open={overdueDialogOpen} onOpenChange={setOverdueDialogOpen} contributions={contributions.map((c) => ({
+            ...c,
+            employers: {
+                name: employer?.name || "",
+                cnpj: employer?.cnpj || "",
+                phone: employer?.phone,
+                email: employer?.email,
+            },
+        }))} clinicId={currentClinic?.id || ""} preSelectedIds={selectedContributionIds}/>
+
+      {/* Email Dialog */}
+      <SendBoletoEmailDialog open={emailDialogOpen} onOpenChange={(open) => {
+            setEmailDialogOpen(open);
+            if (!open) {
+                setSelectedContributionIds(new Set());
+            }
+        }} contributions={(() => {
+            const contribsToUse = selectedContributionIds.size > 0
+                ? contributions.filter((c) => selectedContributionIds.has(c.id))
+                : contributions;
+            return contribsToUse.map((c) => ({
+                ...c,
+                employers: {
+                    name: employer?.name || "",
+                    cnpj: employer?.cnpj || "",
+                    email: employer?.email,
+                },
+            }));
+        })()} clinicId={currentClinic?.id || ""} preSelectedIds={selectedContributionIds} defaultEmail={employer?.email || ""} defaultName={employer?.name || ""}/>
+
+      {/* Negotiation Dialog */}
+      <NewNegotiationDialog open={negotiationDialogOpen} onOpenChange={setNegotiationDialogOpen} employers={employer ? [{
+                id: employer.id,
+                name: employer.name,
+                cnpj: employer.cnpj,
+                trade_name: employer.trade_name,
+                registration_number: employer.registration_number,
+            }] : []} clinicId={currentClinic?.id || ""} userId={session?.user.id || ""} onSuccess={() => {
+            setNegotiationDialogOpen(false);
+            fetchData();
+        }}/>
+        </div>
+        </div>
+        </Tabs>
+      </div>
+    </div>);
+}
