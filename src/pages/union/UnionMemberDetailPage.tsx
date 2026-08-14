@@ -615,8 +615,9 @@ export default function UnionMemberDetailPage({
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | boolean) => {
+    if (e && typeof e !== 'boolean') e.preventDefault();
+    const shouldNavigateBack = typeof e === 'boolean' ? e : true;
 
     const validation = patientSchema.safeParse({
       name: formData.name,
