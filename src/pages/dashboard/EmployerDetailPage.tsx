@@ -1012,9 +1012,11 @@ export default function EmployerDetailPage({
                   <TabsTrigger value="data" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
                     <FileText className="h-4 w-4" />
                     Dados Cadastrais
+                  </TabsTrigger>
                 </TabsList>
-              </div>
+              </Tabs>
             </div>
+          </div>
 
             <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
           {!isModalMode && (
