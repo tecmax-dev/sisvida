@@ -881,59 +881,94 @@ export default function UnionMemberDetailPage({
 
   const currentStatus = statusConfig[unionStatus] || statusConfig.pendente;
 
-  return (
-    <div className="space-y-4">
-      {/* Top bar */}
-      {!isModalMode && (
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/union/socios')} className="gap-2 flex-shrink-0 self-start">
-            <ArrowLeft className="h-4 w-4" />
-            Voltar
+  const renderActionButtons = (
+    <div className="flex flex-wrap items-center gap-3">
+      <AutoSaveIndicator status={autoSaveStatus} />
+      <Badge variant="outline" className={currentStatus.color}>
+        {currentStatus.label}
+      </Badge>
+      {canManageMembers() && (
+        <Button variant="destructive" size="sm" onClick={handleUnlinkMember} disabled={saving}>
+          <UserX className="h-4 w-4 mr-2" />
+          Desvincular
+        </Button>
+      )}
+      <div className="flex items-center gap-1.5">
+        {id && resolvedClinic && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 text-primary font-medium"
+            onClick={() => setIsFiliacaoDialogOpen(true)}
+          >
+            <FileText className="h-4 w-4" />
+            Ficha de Filiação
           </Button>
+        )}
+        {!isModalMode && (
+          <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Salvar e Voltar
+          </Button>
+        )}
+        {isModalMode && (
+          <Button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Salvar Alterações
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
-          <div className="flex-1 flex justify-center lg:px-4 w-full">
-            <MemberQuickSearch clinicId={resolvedClinic?.id} currentMemberId={id} />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <AutoSaveIndicator status={autoSaveStatus} />
-            <Badge variant="outline" className={currentStatus.color}>
-              {currentStatus.label}
-            </Badge>
-            {canManageMembers() && (
-              <Button variant="destructive" size="sm" onClick={handleUnlinkMember} disabled={saving}>
-                <UserX className="h-4 w-4 mr-2" />
-                Desvincular
+  return (
+    <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
+      <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
+        {!isModalMode && (
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/union/socios")}
+                className="hover:bg-background"
+              >
+                <ArrowLeft className="h-5 w-5" />
               </Button>
-            )}
-             <div className="flex items-center gap-1.5">
-               {id && resolvedClinic && (
-                 <Button
-                   variant="outline"
-                   size="sm"
-                   className="gap-2 text-primary font-medium"
-                   onClick={() => setIsFiliacaoDialogOpen(true)}
-                 >
-                   <FileText className="h-4 w-4" />
-                   Ficha de Filiação
-                 </Button>
-               )}
-               {!isModalMode && (
-                 <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
-                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                   Salvar e Voltar
-                 </Button>
-               )}
-               {isModalMode && (
-                 <Button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="gap-2">
-                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                   Salvar Alterações
-                 </Button>
-               )}
+              <div className="flex flex-col">
+                <h1 className="text-2xl font-bold tracking-tight text-teal-800">
+                  {loading ? 'Carregando...' : formData.name || 'Novo Sócio'}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Gerencie os dados e o histórico do sócio
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {renderActionButtons}
+            </div>
+          </div>
+        )}
+
+        {isModalMode && (
+          <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex items-center justify-between">
+             <div className="flex items-center gap-4">
+               <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
+                 {formData.name || 'Novo Sócio'}
+               </h2>
+               <Badge variant="outline" className={unionStatus === 'ativo' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}>
+                  {unionStatus.charAt(0).toUpperCase() + unionStatus.slice(1)}
+               </Badge>
+             </div>
+             <div className="flex items-center gap-2">
+               {renderActionButtons}
              </div>
           </div>
-        </div>
-      )}
+        )}
+
+        <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
+          <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
 
       {/* Inactive Alert */}
       {!isPatientActive && (
@@ -972,14 +1007,16 @@ export default function UnionMemberDetailPage({
         isAdmin={isAdmin}
       />
 
-      {/* Tabs Navigation */}
-      <UnionMemberTabs
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        memberId={id || ''}
-      />
+          {/* Tabs Navigation */}
+          <UnionMemberTabs
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            memberId={id || ''}
+          />
+        </div>
 
-      {/* Tab Content */}
+        {/* Tab Content */}
+        <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
       {activeTab === 'cadastro' && (
         <div className="space-y-6">
           <div className="bg-card rounded-lg border p-6">
@@ -1278,7 +1315,7 @@ export default function UnionMemberDetailPage({
           </div>
 
           {/* Ficha de Filiação Share Card */}
-          <div className="lg:col-span-1">
+          <div className={`${isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}`}>
             <MemberFiliacaoShareCard
               member={{
                 id: id!,
@@ -1310,6 +1347,7 @@ export default function UnionMemberDetailPage({
           />
         </div>
       )}
+      </div>
 
       {/* Modals */}
       <PatientCardsModal
@@ -1344,7 +1382,9 @@ export default function UnionMemberDetailPage({
              registration_number: formData.registrationNumber,
            }}
          />
-       )}
-     </div>
-   );
- }
+        )}
+        </div>
+      </div>
+    </div>
+  );
+}
