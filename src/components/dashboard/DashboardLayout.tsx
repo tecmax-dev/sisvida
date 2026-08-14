@@ -216,14 +216,17 @@ export function DashboardLayout() {
 
   useEffect(() => {
     // Redirecionamento automático para Sócios se for clínica Sindicato ao entrar no dashboard
+    // RESTRITO APENAS A USUÁRIOS DE GESTÃO (não aplicado a secretárias/médicos da clínica)
     if (location.pathname === "/dashboard" || location.pathname === "/dashboard/") {
       const isUnionClinic = currentClinic?.id === SINDICATO_CLINIC_ID;
-      if (isUnionClinic) {
-        console.info("[DashboardLayout] Sindicato clinic detected, redirecting to /union/socios");
+      const isManagementUser = !isProfessionalOnly && (userRoles.some(r => r.clinic_id === SINDICATO_CLINIC_ID && (r.role === 'owner' || r.role === 'admin' || r.role === 'administrative')));
+      
+      if (isUnionClinic && isManagementUser) {
+        console.info("[DashboardLayout] Sindicato management user detected, redirecting to /union/socios");
         navigate("/union/socios", { replace: true });
       }
     }
-  }, [currentClinic?.id, location.pathname, navigate]);
+  }, [currentClinic?.id, location.pathname, navigate, isProfessionalOnly, userRoles]);
 
   useEffect(() => {
     document.title = "Prosinge - Gestão Sindical e Clínica";
