@@ -767,19 +767,20 @@ export default function EmployersPage() {
       </div>
 
       {/* Enhanced Search Card */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row gap-4 mb-6 px-1">
         {/* Search Input with Icon */}
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative flex-1">
+        <div className="flex items-center gap-3 flex-1 w-full">
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por Razão Social, Nome Fantasia, CNPJ, matrícula..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm"
+              className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm w-full"
             />
           </div>
         </div>
+
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">

@@ -1383,7 +1383,6 @@ export default function UnionMemberDetailPage({
            }}
          />
         )}
-        </div>
       </div>
     </div>
   );
