@@ -32,6 +32,8 @@ export default function EmployerDetailPage({
   const [contributions, setContributions] = useState<any[]>([]);
   const [contributionTypes, setContributionTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     console.log('[EMPLOYER DIAGNOSTIC] Effect trigger check', { 
@@ -45,14 +47,6 @@ export default function EmployerDetailPage({
       fetchData();
     } else {
       console.log('[EMPLOYER DIAGNOSTIC] Effect SKIPPED - Missing ID or Clinic');
-    }
-  }, [id, currentClinic]);
-  const [syncing, setSyncing] = useState(false);
-  const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (id && currentClinic) {
-      fetchData();
     }
   }, [id, currentClinic]);
 
@@ -72,11 +66,6 @@ export default function EmployerDetailPage({
         contributionsCount: contribRes.data?.length,
         typesCount: typesRes.data?.length,
         empError: empRes.error
-      });
-        emp: !!empRes.data,
-        empError: empRes.error,
-        contrib: contribRes.data?.length,
-        types: typesRes.data?.length
       });
 
       if (empRes.error) throw empRes.error;
@@ -115,6 +104,7 @@ export default function EmployerDetailPage({
     console.log('[EMPLOYER DIAGNOSTIC] Rendering Spinner');
     return <div className="p-8 text-center"><RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-teal-600" /> Carregando...</div>;
   }
+  
   if (!employer) return <div className="p-8 text-center">Empresa não encontrada</div>;
 
   const content = (
