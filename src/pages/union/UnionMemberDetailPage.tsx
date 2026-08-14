@@ -195,8 +195,15 @@ const initialFormData: PatientFormData = {
   mobilePassword: '',
 };
 
-export default function UnionMemberDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function UnionMemberDetailPage({ 
+  memberIdOverride, 
+  isModalMode 
+}: { 
+  memberIdOverride?: string; 
+  isModalMode?: boolean; 
+} = {}) {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = memberIdOverride || paramId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentClinic, user, userRoles} = useAuth();

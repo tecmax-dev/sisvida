@@ -162,8 +162,15 @@ const STATUS_CONFIG = {
   awaiting_value: { label: "Aguardando Valor", color: "bg-purple-100 text-purple-700", icon: Clock },
 };
 
-export default function EmployerDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function EmployerDetailPage({ 
+  employerIdOverride, 
+  isModalMode 
+}: { 
+  employerIdOverride?: string; 
+  isModalMode?: boolean; 
+} = {}) {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = employerIdOverride || paramId;
   const navigate = useNavigate();
   const location = window.location.pathname;
   const isUnionModule = location.startsWith("/union");
