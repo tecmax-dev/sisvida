@@ -173,6 +173,7 @@ const ITEMS_PER_PAGE = 15;
 export default function EmployersPage() {
   const { currentClinic, session } = useAuth();
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
