@@ -924,6 +924,19 @@ export default function UnionMemberDetailPage({
   return (
     <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
       <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
+
+
+
+
+
+
+
+
+
+
+
+
+
         {!isModalMode && (
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -968,6 +981,11 @@ export default function UnionMemberDetailPage({
         )}
 
         <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
+
+
+
+
+
           <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
 
       {/* Inactive Alert */}
@@ -1347,9 +1365,6 @@ export default function UnionMemberDetailPage({
           />
         </div>
       )}
-    </div>
-  </div>
-
 
       {/* Modals */}
       <PatientCardsModal
@@ -1382,8 +1397,8 @@ export default function UnionMemberDetailPage({
              employer_name: formData.employerName,
              employer_cnpj: formData.employerCnpj,
              registration_number: formData.registrationNumber,
-           }}
-         />
+            }}
+          />
         )}
       </div>
     </div>
