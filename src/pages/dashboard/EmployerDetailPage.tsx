@@ -2019,8 +2019,6 @@ export default function EmployerDetailPage({
         }}
         initialEmployerId={employer?.id}
       />
-            </div>
-          </div>
         </Tabs>
       </div>
     </div>
