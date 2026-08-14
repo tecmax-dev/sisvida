@@ -26,6 +26,7 @@ import {
   Trash2,
   Bell,
   Building2,
+  Filter,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -890,69 +891,89 @@ export default function UnionMembersListPage() {
 
       {/* SEARCH - Primary Focus (for titulares and dependentes) */}
       {activeTab !== "contribuicoes" && (
-      <Card className="border-2 border-primary/30 bg-primary/5 shadow-lg">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-primary" />
-              <Input
-                placeholder={
-                  activeTab === "titulares"
-                    ? "Buscar por nome, CPF ou telefone..."
-                    : "Buscar dependente por nome ou CPF..."
-                }
-                value={activeTab === "titulares" ? searchTerm : dependentsSearch}
-                onChange={(e) =>
-                  activeTab === "titulares"
-                    ? setSearchTerm(e.target.value)
-                    : setDependentsSearch(e.target.value)
-                }
-                className="pl-12 h-12 text-base border-2 border-primary/20 focus:border-primary bg-background shadow-sm"
-                autoFocus
-              />
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              {activeTab === "titulares" && (
-                <Select 
-                  value={cardFilter} 
-                  onValueChange={(value: "all" | "valid" | "expired" | "no-card") => {
-                    setCardFilter(value);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px] h-10">
-                    <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <SelectValue placeholder="Filtrar carteirinha" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas carteirinhas</SelectItem>
-                    <SelectItem value="valid">Carteirinhas válidas</SelectItem>
-                    <SelectItem value="expired">Carteirinhas vencidas</SelectItem>
-                    <SelectItem value="no-card">Sem carteirinha</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
-                <Switch
-                  id="show-inactive"
-                  checked={showInactive}
-                  onCheckedChange={(checked) => {
-                    setShowInactive(checked);
-                    setPage(1);
-                  }}
-                />
-                <Label htmlFor="show-inactive" className="text-sm cursor-pointer whitespace-nowrap">
-                  Mostrar inativos
-                </Label>
-              </div>
-              <Badge variant="secondary" className="h-8 px-3 text-sm font-medium">
-                {activeTab === "titulares" ? totalMembers : totalDependents} resultado
-                {(activeTab === "titulares" ? totalMembers : totalDependents) !== 1 ? "s" : ""}
-              </Badge>
-            </div>
+      <div className="flex flex-col lg:flex-row gap-4 mb-6">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={
+                activeTab === "titulares"
+                  ? "Buscar por nome, CPF ou telefone..."
+                  : "Buscar dependente por nome ou CPF..."
+              }
+              value={activeTab === "titulares" ? searchTerm : dependentsSearch}
+              onChange={(e) =>
+                activeTab === "titulares"
+                  ? setSearchTerm(e.target.value)
+                  : setDependentsSearch(e.target.value)
+              }
+              className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm"
+              autoFocus
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {activeTab === "titulares" && (
+            <div className="flex items-center gap-2 bg-white px-3 h-11 rounded-xl border border-teal-500/20 shadow-sm">
+              <Filter className="h-4 w-4 text-teal-600" />
+              <Select 
+                value={cardFilter} 
+                onValueChange={(value: "all" | "valid" | "expired" | "no-card") => {
+                  setCardFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[150px] border-0 focus:ring-0 h-8 text-xs bg-transparent">
+                  <SelectValue placeholder="Status Carteirinha" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Carteirinhas</SelectItem>
+                  <SelectItem value="valid">Válidas</SelectItem>
+                  <SelectItem value="expired">Vencidas</SelectItem>
+                  <SelectItem value="no-card">Sem Carteirinha</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-teal-500/20 shadow-sm">
+            <Switch
+              id="show-inactive"
+              checked={showInactive}
+              onCheckedChange={(checked) => {
+                setShowInactive(checked);
+                setPage(1);
+              }}
+              className="data-[state=checked]:bg-teal-500"
+            />
+            <Label htmlFor="show-inactive" className="text-xs font-medium cursor-pointer whitespace-nowrap text-muted-foreground">
+              Inativos
+            </Label>
+          </div>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchMembers}
+            className="h-11 border-teal-500/20 hover:bg-teal-50 rounded-xl shadow-sm"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Sincronizar
+          </Button>
+
+          {canManageMembers && (
+            <Button 
+              size="sm" 
+              onClick={() => navigate('/union/socios/novo')}
+              className="h-11 bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm px-6"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Sócio
+            </Button>
+          )}
+        </div>
+      </div>
       )}
       {/* Stats Cards - Compact row (only for Titulares) */}
       {activeTab === "titulares" && (

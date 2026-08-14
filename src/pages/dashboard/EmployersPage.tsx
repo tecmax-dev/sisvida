@@ -10,6 +10,7 @@ import {
   Mail, 
   MapPin, 
   Loader2,
+  RefreshCw,
   ChevronDown,
   ChevronUp,
   Building,
@@ -766,57 +767,68 @@ export default function EmployersPage() {
       </div>
 
       {/* Enhanced Search Card */}
-      <Card className="border-2 border-primary/20 bg-primary/5 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search Input with Icon */}
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 shadow-inner">
-                <Building2 className="h-6 w-6 text-primary" />
-              </div>
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-amber-600/60 dark:text-amber-400/60" />
-                <Input
-                  placeholder="Buscar por Razão Social, Nome Fantasia, CNPJ, matrícula..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-11 text-base border-amber-200 focus:border-amber-400 focus:ring-amber-400/30 dark:border-amber-700 dark:focus:border-amber-500 bg-white/80 dark:bg-amber-950/20"
-                />
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-              {categories.length > 0 && (
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[180px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
-                    <Filter className="h-4 w-4 mr-2 text-amber-600" />
-                    <SelectValue placeholder="Filtrar categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as categorias</SelectItem>
-                    <SelectItem value="none">Sem categoria</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: cat.color }}
-                          />
-                          {cat.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Badge variant="secondary" className="h-8 px-3 text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
-                {filteredEmployers.length} resultado{filteredEmployers.length !== 1 ? "s" : ""}
-              </Badge>
-            </div>
+      <div className="flex flex-col lg:flex-row gap-4 mb-6">
+        {/* Search Input with Icon */}
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por Razão Social, Nome Fantasia, CNPJ, matrícula..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm"
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          {categories.length > 0 && (
+            <div className="flex items-center gap-2 bg-white px-3 h-11 rounded-xl border border-teal-500/20 shadow-sm">
+              <Filter className="h-4 w-4 text-teal-600" />
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[180px] border-0 focus:ring-0 h-8 text-xs bg-transparent">
+                  <SelectValue placeholder="Filtrar categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as categorias</SelectItem>
+                  <SelectItem value="none">Sem categoria</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        {cat.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchEmployers}
+            className="h-11 border-teal-500/20 hover:bg-teal-50 rounded-xl shadow-sm"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Sincronizar
+          </Button>
+
+          <Button 
+            size="sm" 
+            onClick={() => handleOpenDialog()}
+            className="h-11 bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm px-6"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Empresa
+          </Button>
+        </div>
+      </div>
 
       {/* Table */}
       {filteredEmployers.length === 0 ? (
@@ -829,18 +841,18 @@ export default function EmployersPage() {
             <p className="text-muted-foreground mb-4 text-sm">
               Cadastre uma nova empresa ou verifique os filtros
             </p>
-            <Button onClick={() => handleOpenDialog()} size="sm">
+            <Button onClick={() => handleOpenDialog()} size="sm" className="bg-teal-600 hover:bg-teal-700">
               <Plus className="h-4 w-4 mr-2" />
               Cadastrar Empresa
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="border-teal-500/10 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 border-b-2 border-primary/10">
+                <TableRow className="bg-teal-50/50 border-b border-teal-500/20">
                   <TableHead className="w-[30px] p-2"></TableHead>
                   <TableHead className="font-bold text-[10px] uppercase tracking-wider w-[70px] py-2 px-2">Matrícula</TableHead>
                   <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Empresa</TableHead>
