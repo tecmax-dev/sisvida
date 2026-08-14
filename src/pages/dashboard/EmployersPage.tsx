@@ -858,53 +858,53 @@ export default function EmployersPage() {
                   return (
                     <Collapsible key={employer.id} open={isExpanded} onOpenChange={() => setExpandedEmployer(isExpanded ? null : employer.id)} asChild>
                       <>
-                        <TableRow className={`h-12 ${!employer.is_active ? "opacity-60" : ""} hover:bg-muted/30 transition-colors`}>
-                          <TableCell className="p-2">
+                        <TableRow className={`h-10 ${!employer.is_active ? "opacity-60" : ""} hover:bg-muted/30 transition-colors border-b border-border/40`}>
+                          <TableCell className="p-1">
                             <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
                                 {isExpanded ? (
-                                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                  <ChevronUp className="h-3 w-3 text-muted-foreground" />
                                 ) : (
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 )}
                               </Button>
                             </CollapsibleTrigger>
                           </TableCell>
-                          <TableCell className="py-2">
+                          <TableCell className="py-1 px-2">
                             {employer.registration_number ? (
-                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-semibold">
+                              <code className="text-[10px] bg-primary/5 text-primary/80 px-1 py-0.5 rounded font-mono font-bold">
                                 {employer.registration_number}
                               </code>
                             ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
+                              <span className="text-[10px] text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="py-2">
-                            <div className="flex items-center gap-2">
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          <TableCell className="py-1">
+                            <div className="flex items-center gap-1.5">
+                              <div className={`h-7 w-7 rounded flex items-center justify-center shrink-0 ${
                                 isVirtual 
-                                  ? "bg-amber-100 text-amber-600" 
+                                  ? "bg-amber-100/50 text-amber-600" 
                                   : employer.is_active 
-                                    ? "bg-primary/10 text-primary" 
+                                    ? "bg-primary/5 text-primary" 
                                     : "bg-muted text-muted-foreground"
                               }`}>
-                                <Building2 className="h-4 w-4" />
+                                <Building2 className="h-3.5 w-3.5" />
                               </div>
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex flex-col -space-y-0.5">
                                 {isVirtual ? (
-                                  <p className="font-medium text-sm truncate max-w-[200px]">
+                                  <p className="font-bold text-[11px] truncate max-w-[180px] leading-tight text-foreground/90">
                                     {employer.name}
                                   </p>
                                 ) : (
                                   <button
                                     onClick={() => navigate(`/dashboard/empresas/${employer.id}`)}
-                                    className="font-medium text-sm truncate max-w-[200px] text-primary hover:underline text-left"
+                                    className="font-bold text-[11px] truncate max-w-[180px] text-primary hover:underline text-left leading-tight"
                                   >
                                     {employer.name}
                                   </button>
                                 )}
                                 {employer.trade_name && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                  <p className="text-[10px] text-muted-foreground truncate max-w-[180px] italic">
                                     {employer.trade_name}
                                   </p>
                                 )}
