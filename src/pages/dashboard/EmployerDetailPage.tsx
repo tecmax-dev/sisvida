@@ -2039,11 +2039,12 @@ export default function EmployerDetailPage({
           fetchData();
         }}
       />
-    </Tabs>
+        </Tabs>
       </div>
     </div>
   );
 }
+
 
 
 
