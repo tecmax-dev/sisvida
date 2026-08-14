@@ -1042,6 +1042,8 @@ export default function EmployerDetailPage({
               </Tabs>
             </div>
           </div>
+        </div>
+
 
 
           <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
