@@ -1043,7 +1043,7 @@ export default function EmployerDetailPage({
               </Tabs>
             </div>
           </div>
-        </div>
+
 
 
 
@@ -2063,6 +2063,9 @@ export default function EmployerDetailPage({
         </div>
       </div>
     </div>
+  );
+}
+
   );
 }
 
