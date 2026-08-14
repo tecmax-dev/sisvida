@@ -38,7 +38,7 @@ export default function EmployerDetailPage({
       setLoading(true);
 
       const [empRes, contribRes, typesRes] = await Promise.all([
-        supabase.from("employers").select("*").eq("id", id).maybeSingle(),
+        supabase.from("employers").select("*").eq("id", id).single(),
         supabase.from("employer_contributions").select("*, contribution_types(*)").eq("employer_id", id).order("due_date", { ascending: false }),
         supabase.from("contribution_types").select("*").eq("clinic_id", currentClinic?.id).eq("is_active", true)
       ]);
