@@ -195,8 +195,15 @@ const initialFormData: PatientFormData = {
   mobilePassword: '',
 };
 
-export default function UnionMemberDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function UnionMemberDetailPage({ 
+  memberIdOverride, 
+  isModalMode 
+}: { 
+  memberIdOverride?: string; 
+  isModalMode?: boolean; 
+} = {}) {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = memberIdOverride || paramId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentClinic, user, userRoles} = useAuth();
@@ -608,8 +615,9 @@ export default function UnionMemberDetailPage() {
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | boolean) => {
+    if (e && typeof e !== 'boolean') e.preventDefault();
+    const shouldNavigateBack = typeof e === 'boolean' ? e : true;
 
     const validation = patientSchema.safeParse({
       name: formData.name,
@@ -717,7 +725,9 @@ export default function UnionMemberDetailPage() {
         description: "As informações foram salvas com sucesso.",
       });
 
-      navigate('/union/socios');
+      if (shouldNavigateBack) {
+        navigate('/union/socios');
+      }
     } catch (error: any) {
       if (error.message?.includes('CPF_DUPLICADO') || error.message?.includes('idx_patients_cpf_clinic')) {
         setErrors({ cpf: "Este CPF já está cadastrado no sistema." });
@@ -874,46 +884,56 @@ export default function UnionMemberDetailPage() {
   return (
     <div className="space-y-4">
       {/* Top bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/union/socios')} className="gap-2 flex-shrink-0 self-start">
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </Button>
+      {!isModalMode && (
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/union/socios')} className="gap-2 flex-shrink-0 self-start">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
 
-        <div className="flex-1 flex justify-center lg:px-4 w-full">
-          <MemberQuickSearch clinicId={resolvedClinic?.id} currentMemberId={id} />
-        </div>
+          <div className="flex-1 flex justify-center lg:px-4 w-full">
+            <MemberQuickSearch clinicId={resolvedClinic?.id} currentMemberId={id} />
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <AutoSaveIndicator status={autoSaveStatus} />
-          <Badge variant="outline" className={currentStatus.color}>
-            {currentStatus.label}
-          </Badge>
-          {canManageMembers() && (
-            <Button variant="destructive" size="sm" onClick={handleUnlinkMember} disabled={saving}>
-              <UserX className="h-4 w-4 mr-2" />
-              Desvincular
-            </Button>
-          )}
-           <div className="flex items-center gap-1.5">
-             {id && resolvedClinic && (
-               <Button
-                 variant="outline"
-                 size="sm"
-                 className="gap-2 text-primary font-medium"
-                 onClick={() => setIsFiliacaoDialogOpen(true)}
-               >
-                 <FileText className="h-4 w-4" />
-                 Ficha de Filiação
-               </Button>
-             )}
-             <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
-               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-               Salvar e Voltar
-             </Button>
-           </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <AutoSaveIndicator status={autoSaveStatus} />
+            <Badge variant="outline" className={currentStatus.color}>
+              {currentStatus.label}
+            </Badge>
+            {canManageMembers() && (
+              <Button variant="destructive" size="sm" onClick={handleUnlinkMember} disabled={saving}>
+                <UserX className="h-4 w-4 mr-2" />
+                Desvincular
+              </Button>
+            )}
+             <div className="flex items-center gap-1.5">
+               {id && resolvedClinic && (
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   className="gap-2 text-primary font-medium"
+                   onClick={() => setIsFiliacaoDialogOpen(true)}
+                 >
+                   <FileText className="h-4 w-4" />
+                   Ficha de Filiação
+                 </Button>
+               )}
+               {!isModalMode && (
+                 <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
+                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                   Salvar e Voltar
+                 </Button>
+               )}
+               {isModalMode && (
+                 <Button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="gap-2">
+                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                   Salvar Alterações
+                 </Button>
+               )}
+             </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Inactive Alert */}
       {!isPatientActive && (

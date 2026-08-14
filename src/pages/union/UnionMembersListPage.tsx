@@ -97,6 +97,7 @@ import { Pen, KeyRound } from "lucide-react";
 import { SendPatientResetDialog } from "@/components/union/members/SendPatientResetDialog";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import { useModal } from "@/contexts/ModalContext";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -127,6 +128,7 @@ interface UnionMember {
   signature_accepted?: boolean | null;
   employer_name?: string | null;
   employer_cnpj?: string | null;
+  employer_id?: string | null;
 }
 
 // Formatação de CPF: 000.000.000-00
@@ -156,6 +158,7 @@ export default function UnionMembersListPage() {
   const { isAdmin } = usePermissions();
   const { canManageMembers } = useUnionPermissions();
   const { toast } = useToast();
+  const { openModal } = useModal();
 
   const resolvedClinic = useMemo(
     () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
@@ -327,6 +330,7 @@ export default function UnionMembersListPage() {
           signature_accepted,
           employer_name,
           employer_cnpj,
+          employer_id,
           insurance_plan:insurance_plans ( name ),
           patient_dependents ( id ),
           patient_cards ( card_number, expires_at, is_active )
@@ -563,11 +567,11 @@ export default function UnionMembersListPage() {
   });
 
   const handleOpenEdit = (member: UnionMember) => {
-    navigate(`/union/socios/${member.id}`);
+    openModal('unionMemberEdit', { memberId: member.id, onUpdate: fetchMembers });
   };
 
   const handleViewMember = (memberId: string) => {
-    navigate(`/union/socios/${memberId}`);
+    openModal('unionMemberEdit', { memberId, onUpdate: fetchMembers });
   };
 
   // Enviar notificação rápida de carteirinha atualizada via WhatsApp
@@ -1058,10 +1062,23 @@ export default function UnionMembersListPage() {
                                 </Badge>
                               )}
                               {member.employer_name && (
-                                <div className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1 rounded max-w-[130px] truncate border border-blue-100">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // We need to find the employer ID first if we don't have it in the member object
+                                    // For now, if we don't have it, we might need to fetch it or just disable the click
+                                    // Let's assume we might need to look it up if not available
+                                    if (member.employer_id) {
+                                      openModal('employerEdit', { employerId: member.employer_id, onUpdate: fetchMembers });
+                                    } else {
+                                      // Fallback or just show name
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1 rounded max-w-[130px] truncate border border-blue-100 hover:bg-blue-100 transition-colors text-left cursor-pointer"
+                                >
                                   <Building2 className="h-2.5 w-2.5" />
                                   <span className="truncate">{member.employer_name}</span>
-                                </div>
+                                </button>
                               )}
                             </div>
                           </div>

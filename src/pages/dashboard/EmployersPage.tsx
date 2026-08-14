@@ -90,6 +90,7 @@ import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 import { SendAccessCodeDialog } from "@/components/portals/SendAccessCodeDialog";
+import { useModal } from "@/contexts/ModalContext";
 
 interface Category {
   id: string;
@@ -173,6 +174,7 @@ const ITEMS_PER_PAGE = 15;
 export default function EmployersPage() {
   const { currentClinic, session } = useAuth();
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -897,7 +899,7 @@ export default function EmployersPage() {
                                   </p>
                                 ) : (
                                   <button
-                                    onClick={() => navigate(`/dashboard/empresas/${employer.id}`)}
+                                    onClick={() => openModal('employerEdit', { employerId: employer.id, onUpdate: fetchEmployers })}
                                     className="font-bold text-[11px] truncate max-w-[180px] text-primary hover:underline text-left leading-tight"
                                   >
                                     {employer.name}

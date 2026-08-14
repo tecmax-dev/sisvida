@@ -23,6 +23,7 @@ import { PWAUpdateListener } from "@/components/pwa/PWAUpdateListener";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import DocsLayout from "./pages/docs/DocsLayout";
+import { GlobalUnionModals } from "./components/union/GlobalUnionModals";
 
 // Landing page (carregamento imediato - primeira página)
 import Index from "./pages/Index";
@@ -401,6 +402,7 @@ function App() {
                 <AuthProvider>
                   <GlobalBackButton />
                   <DomainRedirect />
+                  <GlobalUnionModals />
                   <Suspense fallback={<LoadingFallback />}>
                     <Routes>
                 <Route path="/" element={<SindicalLandingPage />} />
