@@ -196,7 +196,7 @@ export function DashboardLayout() {
   const AUTO_CLOSE_DELAY = 5000; // 5 seconds
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, isProfessionalOnly } = usePermissions();
   const { hasAddon, hasFeature } = usePlanFeatures();
   const { hasUnionEntity } = useClinicHasUnionEntity();
   const unionCategories = useUnionNavCategories();
