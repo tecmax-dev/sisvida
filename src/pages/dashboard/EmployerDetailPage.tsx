@@ -880,13 +880,11 @@ export default function EmployerDetailPage({
           {/* Header */}
           {!isModalMode ? (
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-
               <div className="flex items-start gap-4">
                 <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)} className="hover:bg-background">
-
                   <ArrowLeft className="h-5 w-5" />
+                </Button>
 
-              </Button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Building2 className="h-6 w-6 text-teal-600 shrink-0" />
