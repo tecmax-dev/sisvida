@@ -50,10 +50,15 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
   }
 
   // Redirecionamento específico para Sindicato ao acessar /dashboard ou /union
+  // RESTRITO APENAS A USUÁRIOS DE GESTÃO (não aplicado a secretárias/médicos da clínica)
   if (location.pathname === "/dashboard" || location.pathname === "/dashboard/" || location.pathname === "/union" || location.pathname === "/union/") {
     if (currentClinic?.id === SINDICATO_CLINIC_ID) {
-      console.info("[ProtectedRoute] Sindicato clinic detected, redirecting to /union/socios");
-      return <Navigate to="/union/socios" replace />;
+      const isManagementUser = !isProfessionalOnly && (userRoles.some(r => r.clinic_id === SINDICATO_CLINIC_ID && (r.role === 'owner' || r.role === 'admin' || r.role === 'administrative')));
+      
+      if (isManagementUser) {
+        console.info("[ProtectedRoute] Sindicato management user detected, redirecting to /union/socios");
+        return <Navigate to="/union/socios" replace />;
+      }
     }
   }
 
