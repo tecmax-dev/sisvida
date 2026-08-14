@@ -136,33 +136,32 @@ export default function EmployerDetailPage({
             </div>
 
             <div className="mt-8">
-              <div className="flex flex-wrap gap-1.5">
-                <TabsList className="flex flex-wrap gap-1.5 bg-transparent h-auto p-0">
-                  <TabsTrigger 
-                    value="contributions" 
-                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                  >
-                    <Receipt size={14} /> Contribuições
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="employees" 
-                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                  >
-                    <Users size={14} /> Colaboradores
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="negotiations" 
-                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                  >
-                    <Handshake size={14} /> Negociações
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="data" 
-                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                  >
-                    <FileText size={14} /> Dados
-                  </TabsTrigger>
-                </TabsList>
+              <TabsList className="flex flex-wrap gap-1.5 bg-transparent h-auto p-0">
+                <TabsTrigger 
+                  value="contributions" 
+                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                >
+                  <Receipt size={14} /> Contribuições
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="employees" 
+                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                >
+                  <Users size={14} /> Colaboradores
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="negotiations" 
+                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                >
+                  <Handshake size={14} /> Negociações
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="data" 
+                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                >
+                  <FileText size={14} /> Dados
+                </TabsTrigger>
+              </TabsList>
             </div>
           </div>
         </div>
