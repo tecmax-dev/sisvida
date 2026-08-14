@@ -90,6 +90,7 @@ import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 import { SendAccessCodeDialog } from "@/components/portals/SendAccessCodeDialog";
+import { useModal } from "@/contexts/ModalContext";
 
 interface Category {
   id: string;
