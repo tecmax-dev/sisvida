@@ -1388,7 +1388,7 @@ export default function EmployerDetailPage({
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleSaveEmployer} disabled={saving}>
+                <Button onClick={() => handleSaveEmployer(false)} disabled={saving}>
                   {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   <Save className="h-4 w-4 mr-2" />
                   Salvar Alterações
