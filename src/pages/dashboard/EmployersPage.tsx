@@ -897,7 +897,7 @@ export default function EmployersPage() {
                                   </p>
                                 ) : (
                                   <button
-                                    onClick={() => handleOpenDialog(employer)}
+                                    onClick={() => openModal('employerEdit', { employerId: employer.id, onUpdate: fetchEmployers })}
                                     className="font-bold text-[11px] truncate max-w-[180px] text-primary hover:underline text-left leading-tight"
                                   >
                                     {employer.name}
