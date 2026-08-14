@@ -18,25 +18,35 @@ export default function EmployerDetailPage({
 } = {}) {
   const { id: paramId } = useParams<{ id: string }>();
   
-  console.log('[EMPLOYER MODAL PROPS]', { employerIdOverride, isModalMode });
-  console.log('[EMPLOYER MODAL PARAMS]', { paramId });
-  
-  const id = employerIdOverride || paramId;
-  
-  console.log('[EMPLOYER MODAL EFFECTIVE ID]', { id });
+  // LOGS TEMPORÁRIOS DE DIAGNÓSTICO
+  console.log('[EMPLOYER DIAGNOSTIC] Render check', {
+    employerIdOverride,
+    paramId,
+    isModalMode
+  });
 
+  const id = employerIdOverride || paramId;
   const navigate = useNavigate();
-  const { currentClinic, session } = useAuth();
+  const { currentClinic } = useAuth();
   const [employer, setEmployer] = useState<any>(null);
   const [contributions, setContributions] = useState<any[]>([]);
   const [contributionTypes, setContributionTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  console.log('[EMPLOYER LOADING STATE BEFORE EFFECT]', {
-    id,
-    currentClinic: !!currentClinic,
-    loading
-  });
+  useEffect(() => {
+    console.log('[EMPLOYER DIAGNOSTIC] Effect trigger check', { 
+      id, 
+      clinicId: currentClinic?.id,
+      hasId: !!id,
+      hasClinic: !!currentClinic
+    });
+    
+    if (id && currentClinic) {
+      fetchData();
+    } else {
+      console.log('[EMPLOYER DIAGNOSTIC] Effect SKIPPED - Missing ID or Clinic');
+    }
+  }, [id, currentClinic]);
   const [syncing, setSyncing] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
@@ -48,7 +58,7 @@ export default function EmployerDetailPage({
 
   async function fetchData() {
     try {
-      console.log('[EMPLOYER START FETCH]', { id });
+      console.log('[EMPLOYER DIAGNOSTIC] Starting fetchData for ID:', id);
       setLoading(true);
 
       const [empRes, contribRes, typesRes] = await Promise.all([
@@ -57,7 +67,12 @@ export default function EmployerDetailPage({
         supabase.from("contribution_types").select("*").eq("clinic_id", currentClinic?.id).eq("is_active", true)
       ]);
 
-      console.log('[EMPLOYER FETCH RESULTS]', {
+      console.log('[EMPLOYER DIAGNOSTIC] Fetch complete', {
+        employerData: !!empRes.data,
+        contributionsCount: contribRes.data?.length,
+        typesCount: typesRes.data?.length,
+        empError: empRes.error
+      });
         emp: !!empRes.data,
         empError: empRes.error,
         contrib: contribRes.data?.length,
@@ -96,7 +111,10 @@ export default function EmployerDetailPage({
     };
   }, [contributions]);
 
-  if (loading) return <div className="p-8 text-center"><RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-teal-600" /> Carregando...</div>;
+  if (loading) {
+    console.log('[EMPLOYER DIAGNOSTIC] Rendering Spinner');
+    return <div className="p-8 text-center"><RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-teal-600" /> Carregando...</div>;
+  }
   if (!employer) return <div className="p-8 text-center">Empresa não encontrada</div>;
 
   const content = (
