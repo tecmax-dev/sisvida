@@ -45,6 +45,7 @@ import { DependentAppointmentsList } from "@/components/union/members/DependentA
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
 import { MemberQuickSearch } from "@/components/union/members/MemberQuickSearch";
 
+
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface InsurancePlan {
   id: string;
@@ -306,12 +307,16 @@ export default function UnionMemberDetailPage({
 
     setLoading(true);
     try {
+      // Quick Search for Members - Desktop View (Left Column)
+      // This is added to allow rapid navigation between members within the modal
+      
       const { data, error } = await supabase
         .from('patients')
         .select('*, insurance_plans(name)')
         .eq('id', id)
         .eq('clinic_id', resolvedClinic.id)
         .single();
+
 
       if (error) {
         console.error("Error fetching member:", error);
@@ -980,19 +985,31 @@ export default function UnionMemberDetailPage({
         )}
 
         {isModalMode && (
-          <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex items-center justify-between">
-             <div className="flex items-center gap-4">
-               <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
-                 {formData.name || 'Novo Sócio'}
-               </h2>
-               <Badge variant="outline" className={unionStatus === 'ativo' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}>
-                  {unionStatus.charAt(0).toUpperCase() + unionStatus.slice(1)}
-               </Badge>
+          <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex flex-col gap-3">
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-4">
+                 <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
+                   {formData.name || 'Novo Sócio'}
+                 </h2>
+                 <Badge variant="outline" className={unionStatus === 'ativo' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}>
+                    {unionStatus.charAt(0).toUpperCase() + unionStatus.slice(1)}
+                 </Badge>
+               </div>
+               <div className="flex items-center gap-2">
+                 {renderActionButtons}
+               </div>
              </div>
-             <div className="flex items-center gap-2">
-               {renderActionButtons}
+             
+             {/* Quick Search for Members */}
+             <div className="w-full">
+               <MemberQuickSearch 
+                 clinicId={resolvedClinic?.id} 
+                 currentMemberId={id} 
+                 className="max-w-full"
+               />
              </div>
           </div>
+
         )}
 
         <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>

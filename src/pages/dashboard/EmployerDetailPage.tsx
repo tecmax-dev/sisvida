@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin, RefreshCw, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 
@@ -89,6 +91,24 @@ export default function EmployerDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-white rounded-xl border p-6 shadow-sm">
+            {/* Quick Search for Employers */}
+            <div className="mb-6 relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground transition-colors group-focus-within:text-teal-500" />
+              <Input
+                placeholder="Busca rápida (nome, cnpj)..."
+                className="pl-9 h-9 text-[11px] bg-slate-50/50 border-slate-200 focus:bg-white focus:border-teal-500 transition-all rounded-lg"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const term = (e.target as HTMLInputElement).value.trim();
+                    if (term) {
+                      sessionStorage.setItem("employers_search", term);
+                      navigate('/union/empresas');
+                    }
+                  }
+                }}
+              />
+            </div>
+
             <div className="flex items-center gap-3 mb-6">
               <div className="bg-teal-100 p-2 rounded-lg text-teal-600">
                 <Building2 size={24} />
