@@ -1397,10 +1397,12 @@ export default function UnionMemberDetailPage({
              registration_number: formData.registrationNumber,
            }}
          />
+        )}
       </div>
     </div>
   );
 }
+
 
 
 
