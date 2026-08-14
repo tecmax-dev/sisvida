@@ -891,27 +891,28 @@ export default function UnionMembersListPage() {
 
       {/* SEARCH - Primary Focus (for titulares and dependentes) */}
       {activeTab !== "contribuicoes" && (
-      <div className="flex flex-col lg:flex-row gap-4 mb-6">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={
-                activeTab === "titulares"
-                  ? "Buscar por nome, CPF ou telefone..."
-                  : "Buscar dependente por nome ou CPF..."
-              }
-              value={activeTab === "titulares" ? searchTerm : dependentsSearch}
-              onChange={(e) =>
-                activeTab === "titulares"
-                  ? setSearchTerm(e.target.value)
-                  : setDependentsSearch(e.target.value)
-              }
-              className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm"
-              autoFocus
-            />
+        <div className="flex flex-col lg:flex-row gap-4 mb-6 px-1">
+          <div className="flex items-center gap-3 flex-1 w-full">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={
+                  activeTab === "titulares"
+                    ? "Buscar por nome, CPF ou telefone..."
+                    : "Buscar dependente por nome ou CPF..."
+                }
+                value={activeTab === "titulares" ? searchTerm : dependentsSearch}
+                onChange={(e) =>
+                  activeTab === "titulares"
+                    ? setSearchTerm(e.target.value)
+                    : setDependentsSearch(e.target.value)
+                }
+                className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm w-full"
+                autoFocus
+              />
+            </div>
           </div>
-        </div>
+
 
         <div className="flex flex-wrap items-center gap-2">
           {activeTab === "titulares" && (

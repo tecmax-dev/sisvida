@@ -1347,7 +1347,9 @@ export default function UnionMemberDetailPage({
           />
         </div>
       )}
-      </div>
+    </div>
+  </div>
+
 
       {/* Modals */}
       <PatientCardsModal
@@ -1383,7 +1385,6 @@ export default function UnionMemberDetailPage({
            }}
          />
         )}
-        </div>
       </div>
     </div>
   );

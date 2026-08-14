@@ -1019,12 +1019,12 @@ export default function EmployerDetailPage({
           </div>
 
           <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
-            {!isModalMode && (
-              <TabsList className="mb-4">
-                <TabsTrigger value="contributions" className="gap-2">
-                  <Receipt className="h-4 w-4" />
-                  Contribuições
-                </TabsTrigger>
+          {!isModalMode && (
+            <TabsList className="mb-4">
+              <TabsTrigger value="contributions" className="gap-2">
+                <Receipt className="h-4 w-4" />
+                Contribuições
+              </TabsTrigger>
                 <TabsTrigger value="employees" className="gap-2">
                   <Users className="h-4 w-4" />
                   Colaboradores ({patients.length})
@@ -1460,6 +1460,7 @@ export default function EmployerDetailPage({
             </CardContent>
           </Card>
           </TabsContent>
+        </div>
 
 
       {/* Create Contribution Dialog - Awaiting Value with Public Link */}
@@ -2021,10 +2022,9 @@ export default function EmployerDetailPage({
         }}
         initialEmployerId={employer?.id}
       />
-            </div>
-          </div>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
+  </div>
   );
 }
