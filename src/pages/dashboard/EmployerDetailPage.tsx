@@ -882,10 +882,9 @@ export default function EmployerDetailPage({
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
               <div className="flex items-start gap-4">
                 <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)} className="hover:bg-background">
-
-
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
+
 
 
 
