@@ -50,7 +50,7 @@ export function GlobalUnionModals() {
           <ScrollArea className="flex-1 w-full">
             {employerOpen && (
               <EmployerDetailPage 
-                employerIdOverride={employerModalData?.id} 
+                employerIdOverride={employerModalData?.employerId} 
                 isModalMode={true} 
               />
             )}
