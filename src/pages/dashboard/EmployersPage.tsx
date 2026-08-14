@@ -838,16 +838,16 @@ export default function EmployersPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[40px]"></TableHead>
-                  <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
-                  <TableHead className="font-semibold">Empresa</TableHead>
-                  <TableHead className="font-semibold">CNPJ</TableHead>
-                  <TableHead className="font-semibold hidden md:table-cell">Contato</TableHead>
-                  <TableHead className="font-semibold hidden lg:table-cell">Localização</TableHead>
-                  <TableHead className="font-semibold text-center">Status</TableHead>
-                  <TableHead className="font-semibold text-center">Pacientes</TableHead>
-                  <TableHead className="font-semibold text-right w-[100px]">Ações</TableHead>
+                <TableRow className="bg-muted/50 border-b-2 border-primary/10">
+                  <TableHead className="w-[30px] p-2"></TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider w-[70px] py-2 px-2">Matrícula</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Empresa</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">CNPJ</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 hidden md:table-cell">Contato</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 hidden lg:table-cell">Localização</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 text-center">Status</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 text-center">Pacientes</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 text-right w-[90px] pr-4">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -858,132 +858,131 @@ export default function EmployersPage() {
                   return (
                     <Collapsible key={employer.id} open={isExpanded} onOpenChange={() => setExpandedEmployer(isExpanded ? null : employer.id)} asChild>
                       <>
-                        <TableRow className={`h-12 ${!employer.is_active ? "opacity-60" : ""} hover:bg-muted/30 transition-colors`}>
-                          <TableCell className="p-2">
+                        <TableRow className={`h-10 ${!employer.is_active ? "opacity-60" : ""} hover:bg-muted/30 transition-colors border-b border-border/40`}>
+                          <TableCell className="p-1">
                             <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
                                 {isExpanded ? (
-                                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                  <ChevronUp className="h-3 w-3 text-muted-foreground" />
                                 ) : (
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 )}
                               </Button>
                             </CollapsibleTrigger>
                           </TableCell>
-                          <TableCell className="py-2">
+                          <TableCell className="py-1 px-2">
                             {employer.registration_number ? (
-                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-semibold">
+                              <code className="text-[10px] bg-primary/5 text-primary/80 px-1 py-0.5 rounded font-mono font-bold">
                                 {employer.registration_number}
                               </code>
                             ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
+                              <span className="text-[10px] text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="py-2">
-                            <div className="flex items-center gap-2">
-                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          <TableCell className="py-1">
+                            <div className="flex items-center gap-1.5">
+                              <div className={`h-7 w-7 rounded flex items-center justify-center shrink-0 ${
                                 isVirtual 
-                                  ? "bg-amber-100 text-amber-600" 
+                                  ? "bg-amber-100/50 text-amber-600" 
                                   : employer.is_active 
-                                    ? "bg-primary/10 text-primary" 
+                                    ? "bg-primary/5 text-primary" 
                                     : "bg-muted text-muted-foreground"
                               }`}>
-                                <Building2 className="h-4 w-4" />
+                                <Building2 className="h-3.5 w-3.5" />
                               </div>
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex flex-col -space-y-0.5">
                                 {isVirtual ? (
-                                  <p className="font-medium text-sm truncate max-w-[200px]">
+                                  <p className="font-bold text-[11px] truncate max-w-[180px] leading-tight text-foreground/90">
                                     {employer.name}
                                   </p>
                                 ) : (
                                   <button
                                     onClick={() => navigate(`/dashboard/empresas/${employer.id}`)}
-                                    className="font-medium text-sm truncate max-w-[200px] text-primary hover:underline text-left"
+                                    className="font-bold text-[11px] truncate max-w-[180px] text-primary hover:underline text-left leading-tight"
                                   >
                                     {employer.name}
                                   </button>
                                 )}
                                 {employer.trade_name && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                  <p className="text-[10px] text-muted-foreground truncate max-w-[180px] italic">
                                     {employer.trade_name}
                                   </p>
                                 )}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="py-2">
-                            <div className="space-y-1">
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                          <TableCell className="py-1">
+                            <div className="flex flex-col -space-y-0.5">
+                              <code className="text-[10px] text-muted-foreground/80 font-mono">
                                 {formatCNPJ(employer.cnpj)}
                               </code>
                               {employer.cnae_code && (
-                                <div className="text-[11px] text-muted-foreground">
+                                <div className="text-[9px] text-muted-foreground/60 truncate max-w-[120px]">
                                   CNAE: {employer.cnae_code}
-                                  {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
                                 </div>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="py-2 hidden md:table-cell">
-                            <div className="flex flex-col gap-0.5">
+                          <TableCell className="py-1 hidden md:table-cell">
+                            <div className="flex flex-col -space-y-0.5">
                               {employer.phone && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Phone className="h-2.5 w-2.5 text-primary/40" />
                                   {formatPhone(employer.phone)}
                                 </span>
                               )}
                               {employer.email && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1 truncate max-w-[150px]">
-                                  <Mail className="h-3 w-3" />
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1 truncate max-w-[130px]">
+                                  <Mail className="h-2.5 w-2.5 text-primary/40" />
                                   {employer.email}
                                 </span>
                               )}
                               {!employer.phone && !employer.email && (
-                                <span className="text-xs text-muted-foreground">-</span>
+                                <span className="text-[10px] text-muted-foreground">-</span>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="py-2 hidden lg:table-cell">
+                          <TableCell className="py-1 hidden lg:table-cell">
                             {employer.city ? (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {employer.city}{employer.state ? ` - ${employer.state}` : ""}
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-2.5 w-2.5 text-primary/40" />
+                                {employer.city}{employer.state ? `/${employer.state}` : ""}
                               </span>
                             ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
+                              <span className="text-[10px] text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-center">
+                          <TableCell className="py-1 text-center">
                             {isVirtual ? (
-                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-amber-50 text-amber-700 border-amber-200 uppercase font-bold">
                                 Pendente
                               </Badge>
                             ) : employer.is_active ? (
-                              <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 uppercase font-bold">
                                 Ativa
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-xs bg-rose-50 text-rose-700 border-rose-200">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-rose-50 text-rose-700 border-rose-200 uppercase font-bold">
                                 Inativa
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-center">
+                          <TableCell className="py-1 text-center">
                             <Badge 
                               variant="secondary" 
-                              className={`text-xs ${
+                              className={`text-[10px] h-5 px-1.5 ${
                                 (employer.patients?.length || 0) > 0 
-                                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" 
+                                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100" 
                                   : "bg-muted text-muted-foreground"
                               }`}
                             >
-                              <Users className="h-3 w-3 mr-1" />
+                              <Users className="h-2.5 w-2.5 mr-1" />
                               {employer.patients?.length || 0}
                             </Badge>
                           </TableCell>
-                          <TableCell className="py-2 text-right">
+                          <TableCell className="py-1 text-right pr-4">
                             <TooltipProvider>
-                              <div className="flex items-center justify-end gap-1">
+                              <div className="flex items-center justify-end gap-0.5">
                                  {!isVirtual && (
                                    employer.access_code ? (
                                      <div className="flex items-center gap-1">
@@ -992,13 +991,13 @@ export default function EmployersPage() {
                                            <Button
                                              variant="ghost"
                                              size="icon"
-                                             className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
+                                             className="h-6 w-6 text-primary hover:text-primary/80 hover:bg-primary/10"
                                              onClick={() => {
                                                setSelectedEmployer(employer);
                                                setSendCodeDialogOpen(true);
                                              }}
                                            >
-                                             <Send className="h-3.5 w-3.5" />
+                                             <Send className="h-3 w-3" />
                                            </Button>
                                          </TooltipTrigger>
                                          <TooltipContent>Enviar acesso por e-mail</TooltipContent>
@@ -1008,10 +1007,10 @@ export default function EmployersPage() {
                                            <Button
                                              variant="ghost"
                                              size="icon"
-                                             className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+                                             className="h-6 w-6 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950"
                                              onClick={() => copyFriendlyLink(employer)}
                                            >
-                                             <Link2 className="h-3.5 w-3.5" />
+                                             <Link2 className="h-3 w-3" />
                                            </Button>
                                          </TooltipTrigger>
                                          <TooltipContent>Copiar link de acesso direto</TooltipContent>
@@ -1023,14 +1022,14 @@ export default function EmployersPage() {
                                          <Button
                                            variant="ghost"
                                            size="icon"
-                                           className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
+                                           className="h-6 w-6 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
                                            onClick={() => handleGenerateAccessCode(employer)}
                                            disabled={generatingCode === employer.id}
                                          >
                                            {generatingCode === employer.id ? (
-                                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                             <Loader2 className="h-3 w-3 animate-spin" />
                                            ) : (
-                                             <Key className="h-3.5 w-3.5" />
+                                             <Key className="h-3 w-3" />
                                            )}
                                          </Button>
                                        </TooltipTrigger>
@@ -1043,10 +1042,10 @@ export default function EmployersPage() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                      className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
                                       onClick={() => handleOpenDialog(employer)}
                                     >
-                                      <Pencil className="h-3.5 w-3.5" />
+                                      <Pencil className="h-3 w-3" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>Editar</TooltipContent>
@@ -1057,13 +1056,13 @@ export default function EmployersPage() {
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                        className="h-6 w-6 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                                         onClick={() => {
                                           setSelectedEmployer(employer);
                                           setDeleteDialogOpen(true);
                                         }}
                                       >
-                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <Trash2 className="h-3 w-3" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Excluir</TooltipContent>
@@ -1075,31 +1074,31 @@ export default function EmployersPage() {
                         </TableRow>
                         <CollapsibleContent asChild>
                           <TableRow className="bg-muted/20">
-                            <TableCell colSpan={8} className="p-0">
-                              <div className="p-3 border-t">
+                            <TableCell colSpan={9} className="p-0">
+                              <div className="p-3 border-t bg-muted/10">
                                 {employer.patients && employer.patients.length > 0 ? (
                                   <div className="space-y-2">
-                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                                      <Users className="h-3 w-3" />
+                                    <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 uppercase tracking-tight">
+                                      <Users className="h-2.5 w-2.5 text-primary/60" />
                                       Colaboradores vinculados:
                                     </p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
                                       {employer.patients.map((patient) => (
                                         <button
                                           key={patient.id}
                                           onClick={() => navigate(`/dashboard/patients/${patient.id}/edit`)}
-                                          className="flex items-center gap-2 p-2 rounded-lg bg-background hover:bg-primary/5 border border-border/50 transition-colors text-left"
+                                          className="flex items-center gap-1.5 p-1.5 rounded bg-background hover:bg-primary/5 border border-border/50 transition-colors text-left group"
                                         >
-                                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                                            <Users className="h-3 w-3 text-primary" />
+                                          <div className="h-5 w-5 rounded-full bg-primary/5 group-hover:bg-primary/10 flex items-center justify-center shrink-0">
+                                            <Users className="h-2.5 w-2.5 text-primary/40 group-hover:text-primary/70" />
                                           </div>
-                                          <span className="text-xs font-medium truncate">{patient.name}</span>
+                                          <span className="text-[10px] font-medium truncate text-foreground/80 group-hover:text-primary">{patient.name}</span>
                                         </button>
                                       ))}
                                     </div>
                                   </div>
                                 ) : (
-                                  <p className="text-xs text-muted-foreground text-center py-2">
+                                  <p className="text-[10px] text-muted-foreground text-center py-2 italic font-medium">
                                     Nenhum colaborador vinculado a esta empresa
                                   </p>
                                 )}
