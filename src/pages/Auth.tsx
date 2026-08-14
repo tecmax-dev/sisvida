@@ -399,8 +399,13 @@ export default function Auth() {
         // A página de destino fará a verificação de roles/permissões
         if (signInData.user) {
           hasNavigatedRef.current = true;
+          
+          // Se o usuário tiver papel de admin/receptionist em uma clínica Sindicato, redirecionar para sócios
+          // Como não temos os roles aqui (eles são carregados no hook useAuth), 
+          // o roteamento inteligente será feito no DashboardOverview ou UnionDashboard se necessário,
+          // mas o DashboardLayout já lida com o redirecionamento inicial.
+          // Para este caso específico, vamos manter o dashboard como alvo e deixar o App/Layout decidir.
           authTrace("Auth.navigate", { to: "/dashboard" });
-          // Redirecionar para dashboard - a página fará o roteamento correto
           navigate("/dashboard", { replace: true });
         }
         

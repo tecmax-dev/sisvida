@@ -145,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (roles.length > 0) {
           setUserRoles(roles);
           if (!currentClinic && roles[0]?.clinic) {
+            // For Sindicato clinics, we often want to land on the members page
             setCurrentClinic(roles[0].clinic);
           }
         } else if (isSA) {
