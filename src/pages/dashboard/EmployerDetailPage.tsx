@@ -2060,6 +2060,9 @@ export default function EmployerDetailPage({
   );
 }
 
+  );
+}
+
 
 
 
