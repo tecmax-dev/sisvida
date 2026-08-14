@@ -1023,8 +1023,8 @@ export default function EmployerDetailPage({
             <TabsList className="mb-4">
               <TabsTrigger value="contributions" className="gap-2">
                 <Receipt className="h-4 w-4" />
-                  Contribuições
-                </TabsTrigger>
+                Contribuições
+              </TabsTrigger>
                 <TabsTrigger value="employees" className="gap-2">
                   <Users className="h-4 w-4" />
                   Colaboradores ({patients.length})
