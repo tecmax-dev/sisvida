@@ -838,16 +838,16 @@ export default function EmployersPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[40px]"></TableHead>
-                  <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
-                  <TableHead className="font-semibold">Empresa</TableHead>
-                  <TableHead className="font-semibold">CNPJ</TableHead>
-                  <TableHead className="font-semibold hidden md:table-cell">Contato</TableHead>
-                  <TableHead className="font-semibold hidden lg:table-cell">Localização</TableHead>
-                  <TableHead className="font-semibold text-center">Status</TableHead>
-                  <TableHead className="font-semibold text-center">Pacientes</TableHead>
-                  <TableHead className="font-semibold text-right w-[100px]">Ações</TableHead>
+                <TableRow className="bg-muted/50 border-b-2 border-primary/10">
+                  <TableHead className="w-[30px] p-2"></TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider w-[70px] py-2 px-2">Matrícula</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Empresa</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">CNPJ</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 hidden md:table-cell">Contato</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 hidden lg:table-cell">Localização</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 text-center">Status</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 text-center">Pacientes</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2 text-right w-[90px] pr-4">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
