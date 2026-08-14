@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin, RefreshCw, Search, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useModal } from "@/contexts/ModalContext";
 import { toast } from "sonner";
 
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
@@ -23,6 +24,7 @@ export default function EmployerDetailPage({
   const id = employerIdOverride || paramId;
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
+  const { updateModalData } = useModal();
   
   const [employer, setEmployer] = useState<any>(null);
   const [contributions, setContributions] = useState<any[]>([]);
@@ -100,15 +102,24 @@ export default function EmployerDetailPage({
                 className="pl-9 h-9 text-[11px] bg-slate-50/50 border-slate-200 focus:bg-white focus:border-teal-500 transition-all rounded-lg"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    const term = (e.target as HTMLInputElement).value.trim();
+                    const term = (e.target as HTMLInputElement).value.trim().toLowerCase();
                     if (term) {
                       if (isModalMode) {
-                        // In modal mode, search should probably update the modal instead of navigating
-                        // But we don't have a specific EmployerQuickSearch component yet.
-                        // For now, let's at least try to trigger a refetch if it matches a CNPJ or similar.
-                        // Or we can implement a simple search handler here.
-                        sessionStorage.setItem("employers_search", term);
-                        navigate('/union/empresas');
+                        // In modal mode, search for the employer and update modal data
+                        supabase
+                          .from("employers")
+                          .select("id")
+                          .eq("clinic_id", currentClinic?.id)
+                          .or(`name.ilike.%${term}%,cnpj.ilike.%${term}%,trade_name.ilike.%${term}%`)
+                          .limit(1)
+                          .maybeSingle()
+                          .then(({ data }) => {
+                            if (data) {
+                              updateModalData('employerEdit', { employerId: data.id, id: data.id });
+                            } else {
+                              toast.error("Nenhuma empresa encontrada com este termo.");
+                            }
+                          });
                       } else {
                         sessionStorage.setItem("employers_search", term);
                         navigate('/union/empresas');
