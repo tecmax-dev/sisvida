@@ -1040,10 +1040,11 @@ export default function EmployerDetailPage({
                     Dados Cadastrais
                   </TabsTrigger>
                 </TabsList>
-              {/* Removed premature closing tags */}
+                </Tabs>
+              </div>
             </div>
           </div>
-        </div>
+
 
 
 
@@ -2068,6 +2069,7 @@ export default function EmployerDetailPage({
     </div>
   );
 }
+
 
 
 
