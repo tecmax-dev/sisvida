@@ -1397,12 +1397,13 @@ export default function UnionMemberDetailPage({
              employer_cnpj: formData.employerCnpj,
              registration_number: formData.registrationNumber,
            }}
-         />
+          />
         )}
       </div>
     </div>
   );
 }
+
 
 
 
