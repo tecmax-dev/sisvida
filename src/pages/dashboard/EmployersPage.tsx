@@ -840,18 +840,18 @@ export default function EmployersPage() {
             <p className="text-muted-foreground mb-4 text-sm">
               Cadastre uma nova empresa ou verifique os filtros
             </p>
-            <Button onClick={() => handleOpenDialog()} size="sm">
+            <Button onClick={() => handleOpenDialog()} size="sm" className="bg-teal-600 hover:bg-teal-700">
               <Plus className="h-4 w-4 mr-2" />
               Cadastrar Empresa
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="border-teal-500/10 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 border-b-2 border-primary/10">
+                <TableRow className="bg-teal-50/50 border-b border-teal-500/20">
                   <TableHead className="w-[30px] p-2"></TableHead>
                   <TableHead className="font-bold text-[10px] uppercase tracking-wider w-[70px] py-2 px-2">Matrícula</TableHead>
                   <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Empresa</TableHead>

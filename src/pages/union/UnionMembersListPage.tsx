@@ -973,11 +973,6 @@ export default function UnionMembersListPage() {
           )}
         </div>
       </div>
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
       )}
       {/* Stats Cards - Compact row (only for Titulares) */}
       {activeTab === "titulares" && (
