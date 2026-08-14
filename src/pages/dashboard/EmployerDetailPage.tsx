@@ -876,62 +876,63 @@ export default function EmployerDetailPage({
   return (
     <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Building2 className="h-6 w-6 text-primary shrink-0" />
-            <h1 className="text-2xl font-bold text-foreground">{employer.name}</h1>
-            {employer.registration_number && (
-              <Badge variant="outline" className="font-mono">
-                Mat. {employer.registration_number}
-              </Badge>
-            )}
-             {employer.access_code && (
-               <div className="flex items-center gap-1.5 ml-2 p-1.5 rounded-md bg-primary/5 border border-primary/20">
-                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Login:</span>
-                 <span className="font-mono font-bold text-primary">{employer.access_code}</span>
-                 <div className="flex items-center gap-0.5">
-                   <TooltipProvider>
-                     <Tooltip>
-                       <TooltipTrigger asChild>
-                         <Button
-                           variant="ghost"
-                           size="icon"
-                           className="h-6 w-6"
-                           onClick={() => {
-                             navigator.clipboard.writeText(employer.access_code || "");
-                             toast.success("Código de login copiado!");
-                           }}
-                         >
-                           <Copy className="h-3 w-3" />
-                         </Button>
-                       </TooltipTrigger>
-                       <TooltipContent>Copiar código</TooltipContent>
-                     </Tooltip>
-                     <Tooltip>
-                       <TooltipTrigger asChild>
-                         <Button
-                           variant="ghost"
-                           size="icon"
-                           className="h-6 w-6 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                           onClick={copyFriendlyLink}
-                         >
-                           <Link2 className="h-3 w-3" />
-                         </Button>
-                       </TooltipTrigger>
-                       <TooltipContent>Copiar link de acesso direto</TooltipContent>
-                     </Tooltip>
-                   </TooltipProvider>
+      {!isModalMode && (
+        <div className="flex items-start gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Building2 className="h-6 w-6 text-primary shrink-0" />
+              <h1 className="text-2xl font-bold text-foreground">{employer.name}</h1>
+              {employer.registration_number && (
+                <Badge variant="outline" className="font-mono">
+                  Mat. {employer.registration_number}
+                </Badge>
+              )}
+               {employer.access_code && (
+                 <div className="flex items-center gap-1.5 ml-2 p-1.5 rounded-md bg-primary/5 border border-primary/20">
+                   <span className="text-[10px] uppercase font-bold text-muted-foreground">Login:</span>
+                   <span className="font-mono font-bold text-primary">{employer.access_code}</span>
+                   <div className="flex items-center gap-0.5">
+                     <TooltipProvider>
+                       <Tooltip>
+                         <TooltipTrigger asChild>
+                           <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-6 w-6"
+                             onClick={() => {
+                               navigator.clipboard.writeText(employer.access_code || "");
+                               toast.success("Código de login copiado!");
+                             }}
+                           >
+                             <Copy className="h-3 w-3" />
+                           </Button>
+                         </TooltipTrigger>
+                         <TooltipContent>Copiar código</TooltipContent>
+                       </Tooltip>
+                       <Tooltip>
+                         <TooltipTrigger asChild>
+                           <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-6 w-6 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                             onClick={copyFriendlyLink}
+                           >
+                             <Link2 className="h-3 w-3" />
+                           </Button>
+                         </TooltipTrigger>
+                         <TooltipContent>Copiar link de acesso direto</TooltipContent>
+                       </Tooltip>
+                     </TooltipProvider>
+                   </div>
                  </div>
-               </div>
-             )}
-            <Badge variant={employer.is_active ? "default" : "secondary"}>
-              {employer.is_active ? "Ativa" : "Inativa"}
-            </Badge>
-          </div>
+               )}
+              <Badge variant={employer.is_active ? "default" : "secondary"}>
+                {employer.is_active ? "Ativa" : "Inativa"}
+              </Badge>
+            </div>
           <div className="space-y-0.5">
             <p className="text-sm text-muted-foreground">
               CNPJ: {formatCNPJ(employer.cnpj)}
@@ -952,7 +953,8 @@ export default function EmployerDetailPage({
             className="shrink-0 mt-1"
           />
         )}
-      </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="contributions" className="space-y-4">
