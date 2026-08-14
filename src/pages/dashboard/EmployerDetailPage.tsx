@@ -879,7 +879,8 @@ export default function EmployerDetailPage({
   return (
     <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
       <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
-        <Tabs defaultValue="contributions" className="w-full">
+        <div className="w-full">
+
 
 
 
