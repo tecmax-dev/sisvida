@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Pen, Building2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,8 +35,7 @@ export function GlobalUnionModals() {
     }
   };
 
-  // Fixed handleEmployerClose
-  const handleEmployerCloseFixed = (open: boolean) => {
+  const handleEmployerClose = (open: boolean) => {
     if (!open) {
       closeModal('employerEdit');
       if (employerData.onUpdate) employerData.onUpdate();
@@ -45,13 +45,14 @@ export function GlobalUnionModals() {
   return (
     <>
       <Dialog open={isMemberEditOpen} onOpenChange={handleMemberClose}>
-        <DialogContent className="max-w-[95vw] w-[1200px] max-h-[95vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0 text-left">
-            <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+        <DialogContent className="max-w-[95vw] w-[1400px] max-h-[90vh] p-0 overflow-hidden flex flex-col rounded-xl shadow-2xl border-teal-500/20">
+          <DialogHeader className="px-6 py-3 border-b bg-muted/30 shrink-0 text-left">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-teal-700">
+              <Pen className="w-5 h-5" />
               Editar Sócio
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden bg-background">
             {isMemberEditOpen && memberData.memberId && (
               <ScrollArea className="h-full">
                 <div className="p-0">
@@ -63,14 +64,15 @@ export function GlobalUnionModals() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isEmployerEditOpen} onOpenChange={handleEmployerCloseFixed}>
-        <DialogContent className="max-w-[95vw] w-[1200px] max-h-[95vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0 text-left">
-            <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+      <Dialog open={isEmployerEditOpen} onOpenChange={handleEmployerClose}>
+        <DialogContent className="max-w-[95vw] w-[1400px] max-h-[90vh] p-0 overflow-hidden flex flex-col rounded-xl shadow-2xl border-teal-500/20">
+          <DialogHeader className="px-6 py-3 border-b bg-muted/30 shrink-0 text-left">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-teal-700">
+              <Building2 className="w-5 h-5" />
               Editar Empresa
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden bg-background">
             {isEmployerEditOpen && employerData.employerId && (
               <ScrollArea className="h-full">
                 <div className="p-0">
