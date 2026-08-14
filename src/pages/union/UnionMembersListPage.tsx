@@ -1060,10 +1060,23 @@ export default function UnionMembersListPage() {
                                 </Badge>
                               )}
                               {member.employer_name && (
-                                <div className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1 rounded max-w-[130px] truncate border border-blue-100">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // We need to find the employer ID first if we don't have it in the member object
+                                    // For now, if we don't have it, we might need to fetch it or just disable the click
+                                    // Let's assume we might need to look it up if not available
+                                    if (member.employer_id) {
+                                      openModal('employerEdit', { employerId: member.employer_id, onUpdate: fetchMembers });
+                                    } else {
+                                      // Fallback or just show name
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1 rounded max-w-[130px] truncate border border-blue-100 hover:bg-blue-100 transition-colors text-left cursor-pointer"
+                                >
                                   <Building2 className="h-2.5 w-2.5" />
                                   <span className="truncate">{member.employer_name}</span>
-                                </div>
+                                </button>
                               )}
                             </div>
                           </div>
