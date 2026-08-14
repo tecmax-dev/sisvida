@@ -1014,8 +1014,9 @@ export default function EmployerDetailPage({
                     Dados Cadastrais
                   </TabsTrigger>
                 </TabsList>
-              </div>
+              </Tabs>
             </div>
+          </div>
 
             <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
           {!isModalMode && (
