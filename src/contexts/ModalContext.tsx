@@ -12,7 +12,8 @@ type ModalType =
   | 'anamneseTemplatePreview'
   | 'anamneseTemplateDelete'
   | 'anamneseTemplateSend'
-  | 'unionMemberEdit';
+  | 'unionMemberEdit'
+  | 'employerEdit';
 
 interface ModalData {
   patientId?: string;
@@ -25,6 +26,9 @@ interface ModalData {
   questions?: any[];
   previewQuestions?: any[];
   previewAnswers?: any[];
+  memberId?: string;
+  employerId?: string;
+  onUpdate?: () => void;
   [key: string]: any;
 }
 
@@ -60,6 +64,7 @@ const defaultModals: Record<ModalType, ModalState> = {
   anamneseTemplateDelete: { ...defaultModalState },
   anamneseTemplateSend: { ...defaultModalState },
   unionMemberEdit: { ...defaultModalState },
+  employerEdit: { ...defaultModalState },
 };
 
 const ModalContext = createContext<ModalContextValue | undefined>(undefined);
@@ -75,7 +80,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const closeModal = useCallback((type: ModalType) => {
-    // Only close if document has focus (prevents closing on tab switch)
     if (document.hasFocus()) {
       setModals(prev => ({
         ...prev,
@@ -122,42 +126,36 @@ export function usePatientModals() {
   const { openModal, closeModal, isModalOpen, getModalData } = useModal();
 
   return {
-    // Records
     openRecordsModal: (patientId: string, patientName: string) => 
       openModal('patientRecords', { patientId, patientName }),
     closeRecordsModal: () => closeModal('patientRecords'),
     isRecordsModalOpen: isModalOpen('patientRecords'),
     recordsModalData: getModalData('patientRecords'),
 
-    // Anamnesis
     openAnamnesisModal: (patientId: string, patientName: string) => 
       openModal('patientAnamnesis', { patientId, patientName }),
     closeAnamnesisModal: () => closeModal('patientAnamnesis'),
     isAnamnesisModalOpen: isModalOpen('patientAnamnesis'),
     anamnesisModalData: getModalData('patientAnamnesis'),
 
-    // Prescription
     openPrescriptionModal: (patientId: string, patientName: string) => 
       openModal('patientPrescription', { patientId, patientName }),
     closePrescriptionModal: () => closeModal('patientPrescription'),
     isPrescriptionModalOpen: isModalOpen('patientPrescription'),
     prescriptionModalData: getModalData('patientPrescription'),
 
-    // Appointments
     openAppointmentsModal: (patientId: string, patientName: string) => 
       openModal('patientAppointments', { patientId, patientName }),
     closeAppointmentsModal: () => closeModal('patientAppointments'),
     isAppointmentsModalOpen: isModalOpen('patientAppointments'),
     appointmentsModalData: getModalData('patientAppointments'),
 
-    // Cards
     openCardsModal: (patientId: string, patientName: string) => 
       openModal('patientCards', { patientId, patientName }),
     closeCardsModal: () => closeModal('patientCards'),
     isCardsModalOpen: isModalOpen('patientCards'),
     cardsModalData: getModalData('patientCards'),
 
-    // Odontogram
     openOdontogramModal: (patientId: string, clinicId: string) => 
       openModal('patientOdontogram', { patientId, clinicId }),
     closeOdontogramModal: () => closeModal('patientOdontogram'),
@@ -166,12 +164,10 @@ export function usePatientModals() {
   };
 }
 
-// Hook for anamnese template modals
 export function useAnamneseTemplateModals() {
   const { openModal, closeModal, isModalOpen, getModalData, updateModalData } = useModal();
 
   return {
-    // Create
     openCreateModal: (data?: ModalData) => 
       openModal('anamneseTemplateCreate', data),
     closeCreateModal: () => closeModal('anamneseTemplateCreate'),
@@ -179,7 +175,6 @@ export function useAnamneseTemplateModals() {
     createModalData: getModalData('anamneseTemplateCreate'),
     updateCreateModalData: (data: Partial<ModalData>) => updateModalData('anamneseTemplateCreate', data),
 
-    // Edit
     openEditModal: (templateId: string, title: string, description: string | null, isActive: boolean, questions: any[]) => 
       openModal('anamneseTemplateEdit', { templateId, templateTitle: title, templateDescription: description, templateIsActive: isActive, questions }),
     closeEditModal: () => closeModal('anamneseTemplateEdit'),
@@ -187,7 +182,6 @@ export function useAnamneseTemplateModals() {
     editModalData: getModalData('anamneseTemplateEdit'),
     updateEditModalData: (data: Partial<ModalData>) => updateModalData('anamneseTemplateEdit', data),
 
-    // Preview
     openPreviewModal: (templateId: string, title: string, previewQuestions: any[]) => 
       openModal('anamneseTemplatePreview', { templateId, templateTitle: title, previewQuestions, previewAnswers: [] }),
     closePreviewModal: () => closeModal('anamneseTemplatePreview'),
@@ -195,14 +189,12 @@ export function useAnamneseTemplateModals() {
     previewModalData: getModalData('anamneseTemplatePreview'),
     updatePreviewModalData: (data: Partial<ModalData>) => updateModalData('anamneseTemplatePreview', data),
 
-    // Delete
     openDeleteModal: (templateId: string, title: string) => 
       openModal('anamneseTemplateDelete', { templateId, templateTitle: title }),
     closeDeleteModal: () => closeModal('anamneseTemplateDelete'),
     isDeleteModalOpen: isModalOpen('anamneseTemplateDelete'),
     deleteModalData: getModalData('anamneseTemplateDelete'),
 
-    // Send WhatsApp
     openSendModal: (templateId: string, title: string) => 
       openModal('anamneseTemplateSend', { templateId, templateTitle: title }),
     closeSendModal: () => closeModal('anamneseTemplateSend'),
