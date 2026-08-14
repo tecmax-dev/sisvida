@@ -991,13 +991,13 @@ export default function EmployersPage() {
                                            <Button
                                              variant="ghost"
                                              size="icon"
-                                             className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
+                                             className="h-6 w-6 text-primary hover:text-primary/80 hover:bg-primary/10"
                                              onClick={() => {
                                                setSelectedEmployer(employer);
                                                setSendCodeDialogOpen(true);
                                              }}
                                            >
-                                             <Send className="h-3.5 w-3.5" />
+                                             <Send className="h-3 w-3" />
                                            </Button>
                                          </TooltipTrigger>
                                          <TooltipContent>Enviar acesso por e-mail</TooltipContent>
@@ -1007,10 +1007,10 @@ export default function EmployersPage() {
                                            <Button
                                              variant="ghost"
                                              size="icon"
-                                             className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+                                             className="h-6 w-6 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950"
                                              onClick={() => copyFriendlyLink(employer)}
                                            >
-                                             <Link2 className="h-3.5 w-3.5" />
+                                             <Link2 className="h-3 w-3" />
                                            </Button>
                                          </TooltipTrigger>
                                          <TooltipContent>Copiar link de acesso direto</TooltipContent>
@@ -1022,14 +1022,14 @@ export default function EmployersPage() {
                                          <Button
                                            variant="ghost"
                                            size="icon"
-                                           className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
+                                           className="h-6 w-6 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
                                            onClick={() => handleGenerateAccessCode(employer)}
                                            disabled={generatingCode === employer.id}
                                          >
                                            {generatingCode === employer.id ? (
-                                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                             <Loader2 className="h-3 w-3 animate-spin" />
                                            ) : (
-                                             <Key className="h-3.5 w-3.5" />
+                                             <Key className="h-3 w-3" />
                                            )}
                                          </Button>
                                        </TooltipTrigger>
@@ -1042,10 +1042,10 @@ export default function EmployersPage() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                      className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
                                       onClick={() => handleOpenDialog(employer)}
                                     >
-                                      <Pencil className="h-3.5 w-3.5" />
+                                      <Pencil className="h-3 w-3" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>Editar</TooltipContent>
@@ -1056,13 +1056,13 @@ export default function EmployersPage() {
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                        className="h-6 w-6 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                                         onClick={() => {
                                           setSelectedEmployer(employer);
                                           setDeleteDialogOpen(true);
                                         }}
                                       >
-                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <Trash2 className="h-3 w-3" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Excluir</TooltipContent>
