@@ -97,6 +97,7 @@ import { Pen, KeyRound } from "lucide-react";
 import { SendPatientResetDialog } from "@/components/union/members/SendPatientResetDialog";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import { useModal } from "@/contexts/ModalContext";
 
 const ITEMS_PER_PAGE = 15;
 
