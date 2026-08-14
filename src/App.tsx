@@ -402,6 +402,7 @@ function App() {
                 <AuthProvider>
                   <GlobalBackButton />
                   <DomainRedirect />
+                  <GlobalUnionModals />
                   <Suspense fallback={<LoadingFallback />}>
                     <Routes>
                 <Route path="/" element={<SindicalLandingPage />} />
