@@ -911,59 +911,58 @@ export default function EmployersPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="py-2">
-                            <div className="space-y-1">
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                          <TableCell className="py-1">
+                            <div className="flex flex-col -space-y-0.5">
+                              <code className="text-[10px] text-muted-foreground/80 font-mono">
                                 {formatCNPJ(employer.cnpj)}
                               </code>
                               {employer.cnae_code && (
-                                <div className="text-[11px] text-muted-foreground">
+                                <div className="text-[9px] text-muted-foreground/60 truncate max-w-[120px]">
                                   CNAE: {employer.cnae_code}
-                                  {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
                                 </div>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="py-2 hidden md:table-cell">
-                            <div className="flex flex-col gap-0.5">
+                          <TableCell className="py-1 hidden md:table-cell">
+                            <div className="flex flex-col -space-y-0.5">
                               {employer.phone && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Phone className="h-2.5 w-2.5 text-primary/40" />
                                   {formatPhone(employer.phone)}
                                 </span>
                               )}
                               {employer.email && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1 truncate max-w-[150px]">
-                                  <Mail className="h-3 w-3" />
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1 truncate max-w-[130px]">
+                                  <Mail className="h-2.5 w-2.5 text-primary/40" />
                                   {employer.email}
                                 </span>
                               )}
                               {!employer.phone && !employer.email && (
-                                <span className="text-xs text-muted-foreground">-</span>
+                                <span className="text-[10px] text-muted-foreground">-</span>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="py-2 hidden lg:table-cell">
+                          <TableCell className="py-1 hidden lg:table-cell">
                             {employer.city ? (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {employer.city}{employer.state ? ` - ${employer.state}` : ""}
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-2.5 w-2.5 text-primary/40" />
+                                {employer.city}{employer.state ? `/${employer.state}` : ""}
                               </span>
                             ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
+                              <span className="text-[10px] text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-center">
+                          <TableCell className="py-1 text-center">
                             {isVirtual ? (
-                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-amber-50 text-amber-700 border-amber-200 uppercase font-bold">
                                 Pendente
                               </Badge>
                             ) : employer.is_active ? (
-                              <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 uppercase font-bold">
                                 Ativa
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-xs bg-rose-50 text-rose-700 border-rose-200">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-rose-50 text-rose-700 border-rose-200 uppercase font-bold">
                                 Inativa
                               </Badge>
                             )}
