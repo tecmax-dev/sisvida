@@ -6,29 +6,23 @@ import EmployerDetailPage from "@/pages/dashboard/EmployerDetailPage";
 
 export function GlobalUnionModals() {
   const { isModalOpen, closeModal, getModalData } = useModal();
+  
   const employerOpen = isModalOpen('employerEdit');
   const employerModalData = getModalData('employerEdit');
   const memberOpen = isModalOpen('unionMemberEdit');
   const memberModalData = getModalData('unionMemberEdit');
 
-  if (employerOpen) {
-    console.log('[GLOBAL MODAL EMPLOYER DATA]', employerModalData);
-  }
-  if (memberOpen) {
-    console.log('[GLOBAL MODAL MEMBER DATA]', memberModalData);
-  }
-
   return (
     <>
       <Dialog 
-        open={isModalOpen('unionMemberEdit')} 
+        open={memberOpen} 
         onOpenChange={(open) => !open && closeModal('unionMemberEdit')}
       >
         <DialogContent className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 overflow-hidden flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20">
           <ScrollArea className="flex-1 w-full">
-            {isModalOpen('unionMemberEdit') && (
+            {memberOpen && (
               <UnionMemberDetailPage 
-                memberIdOverride={getModalData('unionMemberEdit')?.id} 
+                memberIdOverride={memberModalData?.memberId || memberModalData?.id} 
                 isModalMode={true} 
               />
             )}
@@ -44,7 +38,7 @@ export function GlobalUnionModals() {
           <ScrollArea className="flex-1 w-full">
             {employerOpen && (
               <EmployerDetailPage 
-                employerIdOverride={employerModalData?.employerId} 
+                employerIdOverride={employerModalData?.employerId || employerModalData?.id} 
                 isModalMode={true} 
               />
             )}
