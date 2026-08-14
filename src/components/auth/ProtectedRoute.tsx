@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Loader2 } from "lucide-react";
 import { BlockedClinicOverlay } from "@/components/BlockedClinicOverlay";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -46,6 +47,14 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
   // Check if clinic is blocked (only for non-super-admins)
   if (currentClinic?.is_blocked && !isSuperAdmin && !location.pathname.startsWith("/admin")) {
     return <BlockedClinicOverlay reason={currentClinic.blocked_reason || undefined} />;
+  }
+
+  // Redirecionamento específico para Sindicato ao acessar /dashboard ou /union
+  if (location.pathname === "/dashboard" || location.pathname === "/dashboard/" || location.pathname === "/union" || location.pathname === "/union/") {
+    if (currentClinic?.id === SINDICATO_CLINIC_ID) {
+      console.info("[ProtectedRoute] Sindicato clinic detected, redirecting to /union/socios");
+      return <Navigate to="/union/socios" replace />;
+    }
   }
 
   // Super admin without clinic trying to access non-admin routes should go to admin
