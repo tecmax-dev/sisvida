@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Building2, ArrowLeft, Users, Receipt, FileText, Globe, Handshake, Mail, Phone, MapPin } from "lucide-react";
+import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -102,13 +102,16 @@ export default function EmployerDetailPage({
         <div className="lg:col-span-9">
           <div className="bg-white rounded-xl border shadow-sm min-h-[600px]">
             <TabsContent value="contributions" className="m-0 p-6">
-              <EmployerContributionsTab employerId={employer.id} />
+              <EmployerContributionsTab employer={employer} />
             </TabsContent>
             <TabsContent value="employees" className="m-0 p-6">
               <div className="text-center py-12 text-muted-foreground">Lista de colaboradores vinculados à empresa.</div>
             </TabsContent>
             <TabsContent value="negotiations" className="m-0 p-6">
-              <NegotiationInstallmentsTab employerId={employer.id} />
+              <NegotiationInstallmentsTab 
+                employerId={employer.id} 
+                clinicId={currentClinic?.id || ""}
+              />
             </TabsContent>
             <TabsContent value="data" className="m-0 p-6">
               <div className="grid grid-cols-2 gap-6">
