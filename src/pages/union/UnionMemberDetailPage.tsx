@@ -936,6 +936,7 @@ export default function UnionMemberDetailPage({
 
 
 
+
         {!isModalMode && (
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
