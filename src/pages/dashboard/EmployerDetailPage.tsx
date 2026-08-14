@@ -874,138 +874,199 @@ export default function EmployerDetailPage({
   }
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
-      {/* Header */}
-      {!isModalMode && (
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Building2 className="h-6 w-6 text-primary shrink-0" />
-              <h1 className="text-2xl font-bold text-foreground">{employer.name}</h1>
-              {employer.registration_number && (
-                <Badge variant="outline" className="font-mono">
-                  Mat. {employer.registration_number}
-                </Badge>
-              )}
-               {employer.access_code && (
-                 <div className="flex items-center gap-1.5 ml-2 p-1.5 rounded-md bg-primary/5 border border-primary/20">
-                   <span className="text-[10px] uppercase font-bold text-muted-foreground">Login:</span>
-                   <span className="font-mono font-bold text-primary">{employer.access_code}</span>
-                   <div className="flex items-center gap-0.5">
-                     <TooltipProvider>
-                       <Tooltip>
-                         <TooltipTrigger asChild>
-                           <Button
-                             variant="ghost"
-                             size="icon"
-                             className="h-6 w-6"
-                             onClick={() => {
-                               navigator.clipboard.writeText(employer.access_code || "");
-                               toast.success("Código de login copiado!");
-                             }}
-                           >
-                             <Copy className="h-3 w-3" />
-                           </Button>
-                         </TooltipTrigger>
-                         <TooltipContent>Copiar código</TooltipContent>
-                       </Tooltip>
-                       <Tooltip>
-                         <TooltipTrigger asChild>
-                           <Button
-                             variant="ghost"
-                             size="icon"
-                             className="h-6 w-6 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                             onClick={copyFriendlyLink}
-                           >
-                             <Link2 className="h-3 w-3" />
-                           </Button>
-                         </TooltipTrigger>
-                         <TooltipContent>Copiar link de acesso direto</TooltipContent>
-                       </Tooltip>
-                     </TooltipProvider>
-                   </div>
-                 </div>
-               )}
-              <Badge variant={employer.is_active ? "default" : "secondary"}>
-                {employer.is_active ? "Ativa" : "Inativa"}
-              </Badge>
+    <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
+      <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
+        <Tabs defaultValue="contributions" className="w-full h-full">
+          {/* Header */}
+          {!isModalMode ? (
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+
+                <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)} className="hover:bg-background">
+                  <ArrowLeft className="h-5 w-5" />
+
+              </Button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Building2 className="h-6 w-6 text-teal-600 shrink-0" />
+                  <h1 className="text-2xl font-bold tracking-tight text-teal-800">{employer.name}</h1>
+                  {employer.registration_number && (
+                    <Badge variant="outline" className="font-mono bg-white">
+                      Mat. {employer.registration_number}
+                    </Badge>
+                  )}
+                  {employer.access_code && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-teal-50 border border-teal-200">
+                      <span className="text-[10px] uppercase font-bold text-teal-600">Login:</span>
+                      <span className="font-mono font-bold text-teal-700">{employer.access_code}</span>
+                      <div className="flex items-center gap-0.5">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-teal-600 hover:bg-teal-100"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(employer.access_code || "");
+                                  toast.success("Código de login copiado!");
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar código</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  )}
+                  <Badge variant={employer.is_active ? "default" : "secondary"} className={employer.is_active ? "bg-emerald-500" : ""}>
+                    {employer.is_active ? "Ativa" : "Inativa"}
+                  </Badge>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-sm text-muted-foreground">
+                    CNPJ: {formatCNPJ(employer.cnpj)}
+                  </p>
+                  {employer.cnae_code && (
+                    <p className="text-xs text-muted-foreground">
+                      CNAE: {employer.cnae_code}
+                      {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          <div className="space-y-0.5">
-            <p className="text-sm text-muted-foreground">
-              CNPJ: {formatCNPJ(employer.cnpj)}
-            </p>
-            {employer.cnae_code && (
-              <p className="text-xs text-muted-foreground">
-                CNAE: {employer.cnae_code}
-                {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
-              </p>
+            {currentClinic && (
+              <EmployerCnpjSearch
+                clinicId={currentClinic.id}
+                isUnionModule={isUnionModule}
+                currentEmployerId={employer.id}
+                className="shrink-0"
+              />
             )}
           </div>
-        </div>
-        {currentClinic && (
-          <EmployerCnpjSearch
-            clinicId={currentClinic.id}
-            isUnionModule={isUnionModule}
-            currentEmployerId={employer.id}
-            className="shrink-0 mt-1"
-          />
+        ) : (
+          <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex items-center justify-between">
+             <div className="flex items-center gap-4">
+               <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
+                 {employer.name}
+               </h2>
+               <Badge variant="outline" className="bg-teal-50 text-teal-600 border-teal-200">
+                  CNPJ: {formatCNPJ(employer.cnpj)}
+               </Badge>
+             </div>
+             <div className="flex items-center gap-2">
+                {currentClinic && (
+                  <EmployerCnpjSearch
+                    clinicId={currentClinic.id}
+                    isUnionModule={isUnionModule}
+                    currentEmployerId={employer.id}
+                    className="h-9"
+                  />
+                )}
+             </div>
+          </div>
         )}
-        </div>
-      )}
 
-      {/* Tabs */}
-      <Tabs defaultValue="contributions" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="contributions" className="gap-2">
-            <Receipt className="h-4 w-4" />
-            Contribuições
-          </TabsTrigger>
-          <TabsTrigger value="employees" className="gap-2">
-            <Users className="h-4 w-4" />
-            Colaboradores ({patients.length})
-          </TabsTrigger>
-          <TabsTrigger value="negotiations" className="gap-2">
-            <Handshake className="h-4 w-4" />
-            Negociações
-          </TabsTrigger>
-          <TabsTrigger value="portal" className="gap-2">
-            <Globe className="h-4 w-4" />
-            Portal
-          </TabsTrigger>
-          <TabsTrigger value="data" className="gap-2">
-            <FileText className="h-4 w-4" />
-            Dados Cadastrais
-          </TabsTrigger>
-        </TabsList>
+        <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
+          <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
+            <div className="space-y-6">
+              {/* Quick Info Card */}
+              <div className="bg-card rounded-xl border p-5 shadow-sm space-y-4">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Contato Principal</p>
+                  <p className="text-sm font-medium">{formData.email || 'E-mail não informado'}</p>
+                  <p className="text-sm text-muted-foreground">{formatPhone(formData.phone) || 'Telefone não informado'}</p>
+                </div>
 
-        {/* Contributions Tab */}
-        <TabsContent value="contributions">
-          <EmployerContributionsTab
-            contributions={contributions}
-            contributionTypes={contributionTypes}
-            stats={stats}
-            currentClinic={currentClinic}
-            employer={employer}
-            syncing={syncing}
-            generatingInvoice={generatingInvoice}
-            selectedContributionIds={selectedContributionIds}
-            setSelectedContributionIds={setSelectedContributionIds}
-            onSyncLytex={handleSyncLytex}
-            onOpenWhatsappDialog={() => setWhatsappDialogOpen(true)}
-            onOpenEmailDialog={() => setEmailDialogOpen(true)}
-            onOpenCreateDialog={() => setCreateContribDialogOpen(true)}
-            onOpenOverdueDialog={() => setOverdueDialogOpen(true)}
-            onViewContribution={(contrib: any) => {
-              setSelectedContribution(contrib as Contribution);
-              setViewContribDialogOpen(true);
-            }}
-            onGenerateInvoice={(contrib: any) => handleGenerateInvoice(contrib as Contribution)}
-            onOpenNegotiationDialog={() => setNegotiationDialogOpen(true)}
-          />
-        </TabsContent>
+                <div className="pt-4 border-t space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Localização</p>
+                  <p className="text-sm">{formData.address || 'Endereço não informado'}</p>
+                  <p className="text-sm text-muted-foreground">{formData.city} - {formData.state}</p>
+                </div>
+              </div>
+
+              {/* Tabs for Sidebar in Modal Mode */}
+              <Tabs defaultValue="contributions" className="w-full">
+                <TabsList className={`flex flex-col h-auto bg-transparent border-none p-0 gap-1 ${isModalMode ? '' : 'hidden'}`}>
+                  <TabsTrigger value="contributions" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Receipt className="h-4 w-4" />
+                    Contribuições
+                  </TabsTrigger>
+                  <TabsTrigger value="employees" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Users className="h-4 w-4" />
+                    Colaboradores
+                  </TabsTrigger>
+                  <TabsTrigger value="negotiations" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Handshake className="h-4 w-4" />
+                    Negociações
+                  </TabsTrigger>
+                  <TabsTrigger value="portal" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <Globe className="h-4 w-4" />
+                    Portal
+                  </TabsTrigger>
+                  <TabsTrigger value="data" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:shadow-none border border-transparent data-[state=active]:border-teal-200 transition-all">
+                    <FileText className="h-4 w-4" />
+                    Dados Cadastrais
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+
+          <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
+            {!isModalMode && (
+              <TabsList className="mb-4">
+                <TabsTrigger value="contributions" className="gap-2">
+                  <Receipt className="h-4 w-4" />
+                  Contribuições
+                </TabsTrigger>
+                <TabsTrigger value="employees" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Colaboradores ({patients.length})
+                </TabsTrigger>
+                <TabsTrigger value="negotiations" className="gap-2">
+                  <Handshake className="h-4 w-4" />
+                  Negociações
+                </TabsTrigger>
+                <TabsTrigger value="portal" className="gap-2">
+                  <Globe className="h-4 w-4" />
+                  Portal
+                </TabsTrigger>
+                <TabsTrigger value="data" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Dados Cadastrais
+                </TabsTrigger>
+              </TabsList>
+            )}
+
+            {/* Contributions Tab Content */}
+            <TabsContent value="contributions" className="m-0">
+              <EmployerContributionsTab
+                contributions={contributions}
+                contributionTypes={contributionTypes}
+                stats={stats}
+                currentClinic={currentClinic}
+                employer={employer}
+                syncing={syncing}
+                generatingInvoice={generatingInvoice}
+                selectedContributionIds={selectedContributionIds}
+                setSelectedContributionIds={setSelectedContributionIds}
+                onSyncLytex={handleSyncLytex}
+                onOpenWhatsappDialog={() => setWhatsappDialogOpen(true)}
+                onOpenEmailDialog={() => setEmailDialogOpen(true)}
+                onOpenCreateDialog={() => setCreateContribDialogOpen(true)}
+                onOpenOverdueDialog={() => setOverdueDialogOpen(true)}
+                onViewContribution={(contrib: any) => {
+                  setSelectedContribution(contrib as Contribution);
+                  setViewContribDialogOpen(true);
+                }}
+                onGenerateInvoice={(contrib: any) => handleGenerateInvoice(contrib as Contribution)}
+                onOpenNegotiationDialog={() => setNegotiationDialogOpen(true)}
+              />
+            </TabsContent>
 
         {/* Negotiations Tab */}
         <TabsContent value="negotiations">
@@ -1396,8 +1457,8 @@ export default function EmployerDetailPage({
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+
 
       {/* Create Contribution Dialog - Awaiting Value with Public Link */}
       <CreateAwaitingValueDialog
@@ -1958,6 +2019,10 @@ export default function EmployerDetailPage({
         }}
         initialEmployerId={employer?.id}
       />
+            </div>
+          </div>
+        </Tabs>
+      </div>
     </div>
   );
 }
