@@ -1460,6 +1460,7 @@ export default function EmployerDetailPage({
             </CardContent>
           </Card>
           </TabsContent>
+        </div>
 
 
       {/* Create Contribution Dialog - Awaiting Value with Public Link */}
