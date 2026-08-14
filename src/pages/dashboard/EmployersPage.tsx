@@ -912,10 +912,7 @@ export default function EmployersPage() {
                                   </p>
                                 ) : (
                                   <button
-                                    onClick={() => {
-                                      console.log('[EMPLOYER PARENT]', { employer, employerId: employer?.id });
-                                      openModal('employerEdit', { employerId: employer.id, onUpdate: fetchEmployers });
-                                    }}
+                                    onClick={() => openModal('employerEdit', { employerId: employer.id, onUpdate: fetchEmployers })}
                                     className="font-bold text-[11px] truncate max-w-[180px] text-primary hover:underline text-left leading-tight"
                                   >
                                     {employer.name}

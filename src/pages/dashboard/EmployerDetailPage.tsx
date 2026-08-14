@@ -17,17 +17,10 @@ export default function EmployerDetailPage({
   isModalMode?: boolean; 
 } = {}) {
   const { id: paramId } = useParams<{ id: string }>();
-  
-  // LOGS TEMPORÁRIOS DE DIAGNÓSTICO
-  console.log('[EMPLOYER DIAGNOSTIC] Render check', {
-    employerIdOverride,
-    paramId,
-    isModalMode
-  });
-
   const id = employerIdOverride || paramId;
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
+  
   const [employer, setEmployer] = useState<any>(null);
   const [contributions, setContributions] = useState<any[]>([]);
   const [contributionTypes, setContributionTypes] = useState<any[]>([]);
@@ -35,24 +28,10 @@ export default function EmployerDetailPage({
   const [syncing, setSyncing] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    console.log('[EMPLOYER DIAGNOSTIC] Effect trigger check', { 
-      id, 
-      clinicId: currentClinic?.id,
-      hasId: !!id,
-      hasClinic: !!currentClinic
-    });
-    
-    if (id && currentClinic) {
-      fetchData();
-    } else {
-      console.log('[EMPLOYER DIAGNOSTIC] Effect SKIPPED - Missing ID or Clinic');
-    }
-  }, [id, currentClinic]);
-
   async function fetchData() {
+    if (!id || !currentClinic) return;
+    
     try {
-      console.log('[EMPLOYER DIAGNOSTIC] Starting fetchData for ID:', id);
       setLoading(true);
 
       const [empRes, contribRes, typesRes] = await Promise.all([
@@ -60,13 +39,6 @@ export default function EmployerDetailPage({
         supabase.from("employer_contributions").select("*, contribution_types(*)").eq("employer_id", id).order("due_date", { ascending: false }),
         supabase.from("contribution_types").select("*").eq("clinic_id", currentClinic?.id).eq("is_active", true)
       ]);
-
-      console.log('[EMPLOYER DIAGNOSTIC] Fetch complete', {
-        employerData: !!empRes.data,
-        contributionsCount: contribRes.data?.length,
-        typesCount: typesRes.data?.length,
-        empError: empRes.error
-      });
 
       if (empRes.error) throw empRes.error;
       
@@ -80,6 +52,12 @@ export default function EmployerDetailPage({
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (id && currentClinic) {
+      fetchData();
+    }
+  }, [id, currentClinic]);
 
   const stats = useMemo(() => {
     const total = contributions.length;
@@ -101,7 +79,6 @@ export default function EmployerDetailPage({
   }, [contributions]);
 
   if (loading) {
-    console.log('[EMPLOYER DIAGNOSTIC] Rendering Spinner');
     return <div className="p-8 text-center"><RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-teal-600" /> Carregando...</div>;
   }
   
