@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Users, Plus, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, Loader2, Trash2, IdCard } from "lucide-react";
+import { Users, Plus, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, Loader2, Trash2, IdCard, MoveHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CpfInputCard } from "@/components/ui/cpf-input-card";
+import { TransferDependentDialog } from "./TransferDependentDialog";
 
 interface Dependent {
   id: string;
@@ -87,6 +88,8 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
   const [isDeleting, setIsDeleting] = useState(false);
   const [hasCheckedAutoOpen, setHasCheckedAutoOpen] = useState(false);
   const [hasHandledEditParam, setHasHandledEditParam] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [dependentToTransfer, setDependentToTransfer] = useState<Dependent | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -406,6 +409,22 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
 
   return (
     <div className="space-y-4">
+      {dependentToTransfer && (
+        <TransferDependentDialog
+          isOpen={transferDialogOpen}
+          onClose={() => {
+            setTransferDialogOpen(false);
+            setDependentToTransfer(null);
+          }}
+          dependent={{
+            id: dependentToTransfer.id,
+            name: dependentToTransfer.name,
+            patient_id: patientId,
+          }}
+          clinicId={clinicId}
+          onSuccess={fetchDependents}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
@@ -602,6 +621,20 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                     </div>
 
                     <div className="flex gap-1 ml-4">
+                      {canManageDependents && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setDependentToTransfer(dependent);
+                            setTransferDialogOpen(true);
+                          }}
+                          title="Transferir Vínculo"
+                          className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                        >
+                          <MoveHorizontal className="h-4 w-4" />
+                        </Button>
+                      )}
                       {!dependent.card_number && canManageDependents && (
                         <Button
                           variant="ghost"
