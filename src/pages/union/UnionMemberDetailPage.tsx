@@ -229,7 +229,6 @@ export default function UnionMemberDetailPage({
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [initialData, setInitialData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [insurancePlanName, setInsurancePlanName] = useState<string>('');
   const [showDependentsForm, setShowDependentsForm] = useState(false);
   const [clinicDefaultLimit, setClinicDefaultLimit] = useState<number | null>(null);
@@ -733,7 +732,6 @@ export default function UnionMemberDetailPage({
         }
       }
 
-      setAutoSaveStatus('saved');
       toast({
         title: "Sócio atualizado",
         description: "As informações foram salvas com sucesso.",
