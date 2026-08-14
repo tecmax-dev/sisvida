@@ -984,6 +984,7 @@ export default function EmployerDetailPage({
         <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
 
 
+
           <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
 
 
