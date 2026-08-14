@@ -278,7 +278,10 @@ export default function EmployerDetailPage({
   };
 
   const fetchData = async () => {
-    if (!currentClinic || !id) return;
+    if (!currentClinic || !id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -859,8 +862,8 @@ export default function EmployerDetailPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
       </div>
     );
   }
@@ -876,7 +879,8 @@ export default function EmployerDetailPage({
   return (
     <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
       <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
-        <Tabs defaultValue="contributions" className="w-full h-full">
+        <Tabs defaultValue="contributions" className="w-full">
+
 
 
 
@@ -977,6 +981,8 @@ export default function EmployerDetailPage({
           )}
 
         <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
+
+
           <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
 
 
@@ -1034,6 +1040,40 @@ export default function EmployerDetailPage({
               </Tabs>
             </div>
           </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
           <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
           {!isModalMode && (
@@ -2039,10 +2079,9 @@ export default function EmployerDetailPage({
           fetchData();
         }}
       />
-          </div>
+          </Tabs>
         </div>
-      </Tabs>
+      </div>
     </div>
-  </div>
   );
 }

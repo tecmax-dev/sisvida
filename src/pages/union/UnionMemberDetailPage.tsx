@@ -299,7 +299,10 @@ export default function UnionMemberDetailPage({
   };
 
   const fetchMember = async () => {
-    if (!resolvedClinic || !id) return;
+    if (!resolvedClinic || !id) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -310,7 +313,11 @@ export default function UnionMemberDetailPage({
         .eq('clinic_id', resolvedClinic.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching member:", error);
+        setLoading(false);
+        return;
+      }
 
       if (data) {
         if (isPlaceholderMemberRecord(data)) {
@@ -921,6 +928,14 @@ export default function UnionMemberDetailPage({
     </div>
   );
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+      </div>
+    );
+  }
+
   return (
     <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
       <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
@@ -1400,8 +1415,8 @@ export default function UnionMemberDetailPage({
             }}
           />
         )}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
