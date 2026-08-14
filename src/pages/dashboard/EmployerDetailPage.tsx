@@ -1041,6 +1041,7 @@ export default function EmployerDetailPage({
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+
             </div>
           </div>
 
