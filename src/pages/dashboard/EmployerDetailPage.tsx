@@ -102,8 +102,17 @@ export default function EmployerDetailPage({
                   if (e.key === 'Enter') {
                     const term = (e.target as HTMLInputElement).value.trim();
                     if (term) {
-                      sessionStorage.setItem("employers_search", term);
-                      navigate('/union/empresas');
+                      if (isModalMode) {
+                        // In modal mode, search should probably update the modal instead of navigating
+                        // But we don't have a specific EmployerQuickSearch component yet.
+                        // For now, let's at least try to trigger a refetch if it matches a CNPJ or similar.
+                        // Or we can implement a simple search handler here.
+                        sessionStorage.setItem("employers_search", term);
+                        navigate('/union/empresas');
+                      } else {
+                        sessionStorage.setItem("employers_search", term);
+                        navigate('/union/empresas');
+                      }
                     }
                   }
                 }}

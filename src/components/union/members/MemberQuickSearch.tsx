@@ -9,6 +9,7 @@ interface MemberQuickSearchProps {
   clinicId: string | undefined;
   currentMemberId?: string;
   className?: string;
+  isModalMode?: boolean;
 }
 
 interface MemberHit {
@@ -18,8 +19,8 @@ interface MemberHit {
   registration_number: string | null;
 }
 
-export function MemberQuickSearch({ clinicId, currentMemberId, className }: MemberQuickSearchProps) {
-  const navigate = useNavigate();
+export function MemberQuickSearch({ clinicId, currentMemberId, className, isModalMode }: MemberQuickSearchProps) {
+  const { updateModalData } = useModal();
   const [term, setTerm] = useState("");
   const [debounced, setDebounced] = useState("");
   const [results, setResults] = useState<MemberHit[]>([]);
@@ -85,7 +86,11 @@ export function MemberQuickSearch({ clinicId, currentMemberId, className }: Memb
   const goTo = (id: string) => {
     setOpen(false);
     setTerm("");
-    navigate(`/union/socios/${id}`);
+    if (isModalMode) {
+      updateModalData('unionMemberEdit', { memberId: id, id: id });
+    } else {
+      navigate(`/union/socios/${id}`);
+    }
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
