@@ -1,5 +1,5 @@
 import { useState, useEffect, Suspense, useRef, useCallback } from "react";
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { MaintenanceClinicOverlay } from "@/components/MaintenanceClinicOverlay";
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardHeaderNav } from "@/components/dashboard/DashboardHeaderNav";
 import { useUnionNavCategories } from "@/components/dashboard/useUnionNavCategories";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import {
   Tooltip,
   TooltipContent,
@@ -204,12 +205,25 @@ export function DashboardLayout() {
   const { registerSession, deactivateSession } = useSessionControl();
   const sessionRegisteredRef = useRef(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (user?.id && currentClinic?.id && !sessionRegisteredRef.current) {
       sessionRegisteredRef.current = true;
       registerSession(currentClinic.id);
     }
   }, [user?.id, currentClinic?.id, registerSession]);
+
+  useEffect(() => {
+    // Redirecionamento automático para Sócios se for clínica Sindicato ao entrar no dashboard
+    if (location.pathname === "/dashboard" || location.pathname === "/dashboard/") {
+      const isUnionClinic = currentClinic?.id === SINDICATO_CLINIC_ID;
+      if (isUnionClinic) {
+        console.info("[DashboardLayout] Sindicato clinic detected, redirecting to /union/socios");
+        navigate("/union/socios", { replace: true });
+      }
+    }
+  }, [currentClinic?.id, location.pathname, navigate]);
 
   useEffect(() => {
     document.title = "Prosinge - Gestão Sindical e Clínica";
