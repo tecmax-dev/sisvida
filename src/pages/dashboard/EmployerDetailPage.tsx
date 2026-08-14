@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -26,23 +26,6 @@ export default function EmployerDetailPage({
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-
-  console.log('[EMPRESA MODAL] RENDER', {
-    renderCount: renderCount.current,
-    empresaId: id,
-    employerIdOverride,
-    paramId,
-    clinicId: currentClinic?.id,
-    loading,
-    employer,
-  });
-
-  useEffect(() => {
-    console.log('[EMPRESA MODAL] DETAIL MOUNT');
-    return () => console.log('[EMPRESA MODAL] DETAIL UNMOUNT');
-  }, []);
 
   useEffect(() => {
     if (id && currentClinic) {
@@ -51,21 +34,14 @@ export default function EmployerDetailPage({
   }, [id, currentClinic]);
 
   async function fetchData() {
-    console.log('[EMPRESA MODAL] FETCH START', id);
     try {
       setLoading(true);
 
-      console.log('[EMPRESA MODAL] EMPRESA START', id);
-      const empRes = await supabase.from("employers").select("*").eq("id", id).maybeSingle();
-      console.log('[EMPRESA MODAL] EMPRESA END', empRes);
-
-      console.log('[EMPRESA MODAL] CONTRIBUICOES START', id);
-      const contribRes = await supabase.from("employer_contributions").select("*, contribution_types(*)").eq("employer_id", id).order("due_date", { ascending: false });
-      console.log('[EMPRESA MODAL] CONTRIBUICOES END', contribRes);
-
-      console.log('[EMPRESA MODAL] TIPOS START', currentClinic?.id);
-      const typesRes = await supabase.from("contribution_types").select("*").eq("clinic_id", currentClinic?.id).eq("is_active", true);
-      console.log('[EMPRESA MODAL] TIPOS END', typesRes);
+      const [empRes, contribRes, typesRes] = await Promise.all([
+        supabase.from("employers").select("*").eq("id", id).maybeSingle(),
+        supabase.from("employer_contributions").select("*, contribution_types(*)").eq("employer_id", id).order("due_date", { ascending: false }),
+        supabase.from("contribution_types").select("*").eq("clinic_id", currentClinic?.id).eq("is_active", true)
+      ]);
 
       if (empRes.error) throw empRes.error;
       
@@ -73,10 +49,9 @@ export default function EmployerDetailPage({
       setContributions(contribRes.data || []);
       setContributionTypes(typesRes.data || []);
     } catch (err) {
-      console.error('[EMPRESA MODAL] FETCH ERROR', err);
+      console.error(err);
       toast.error("Erro ao carregar dados");
     } finally {
-      console.log('[EMPRESA MODAL] FETCH FINISHED');
       setLoading(false);
     }
   }
