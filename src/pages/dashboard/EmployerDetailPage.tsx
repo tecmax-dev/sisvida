@@ -137,59 +137,32 @@ export default function EmployerDetailPage({
 
             <div className="mt-8">
               <div className="flex flex-wrap gap-1.5">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    const el = document.querySelector('[data-value="contributions"]') as HTMLElement;
-                    el?.click();
-                  }}
-                  className="h-8 gap-1.5 px-3 rounded-full bg-teal-50 text-teal-700 hover:bg-teal-100 text-[11px] font-medium border border-teal-100/50"
-                >
-                  <Receipt size={14} /> Contribuições
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    const el = document.querySelector('[data-value="employees"]') as HTMLElement;
-                    el?.click();
-                  }}
-                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 text-[11px] font-medium border border-slate-100/50"
-                >
-                  <Users size={14} /> Colaboradores
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    const el = document.querySelector('[data-value="negotiations"]') as HTMLElement;
-                    el?.click();
-                  }}
-                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 text-[11px] font-medium border border-slate-100/50"
-                >
-                  <Handshake size={14} /> Negociações
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    const el = document.querySelector('[data-value="data"]') as HTMLElement;
-                    el?.click();
-                  }}
-                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 text-[11px] font-medium border border-slate-100/50"
-                >
-                  <FileText size={14} /> Dados
-                </Button>
-              </div>
-
-              {/* Hidden TabsList for logic */}
-              <TabsList className="hidden">
-                <TabsTrigger value="contributions" data-value="contributions">C</TabsTrigger>
-                <TabsTrigger value="employees" data-value="employees">E</TabsTrigger>
-                <TabsTrigger value="negotiations" data-value="negotiations">N</TabsTrigger>
-                <TabsTrigger value="data" data-value="data">D</TabsTrigger>
-              </TabsList>
+                <TabsList className="flex flex-wrap gap-1.5 bg-transparent h-auto p-0">
+                  <TabsTrigger 
+                    value="contributions" 
+                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                  >
+                    <Receipt size={14} /> Contribuições
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="employees" 
+                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                  >
+                    <Users size={14} /> Colaboradores
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="negotiations" 
+                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                  >
+                    <Handshake size={14} /> Negociações
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="data" 
+                    className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
+                  >
+                    <FileText size={14} /> Dados
+                  </TabsTrigger>
+                </TabsList>
             </div>
           </div>
         </div>
