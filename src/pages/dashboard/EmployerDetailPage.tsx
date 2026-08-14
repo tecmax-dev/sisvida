@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin } from "lucide-react";
+import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -19,35 +19,63 @@ export default function EmployerDetailPage({
   const { id: paramId } = useParams<{ id: string }>();
   const id = employerIdOverride || paramId;
   const navigate = useNavigate();
-  const { currentClinic } = useAuth();
+  const { currentClinic, session } = useAuth();
   const [employer, setEmployer] = useState<any>(null);
+  const [contributions, setContributions] = useState<any[]>([]);
+  const [contributionTypes, setContributionTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (id && currentClinic) {
-      fetchEmployer();
+      fetchData();
     }
   }, [id, currentClinic]);
 
-  async function fetchEmployer() {
+  async function fetchData() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("employers")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      setEmployer(data);
+      
+      const [empRes, contribRes, typesRes] = await Promise.all([
+        supabase.from("employers").select("*").eq("id", id).single(),
+        supabase.from("employer_contributions").select("*, contribution_types(*)").eq("employer_id", id).order("due_date", { ascending: false }),
+        supabase.from("contribution_types").select("*").eq("clinic_id", currentClinic?.id).eq("is_active", true)
+      ]);
+
+      if (empRes.error) throw empRes.error;
+      
+      setEmployer(empRes.data);
+      setContributions(contribRes.data || []);
+      setContributionTypes(typesRes.data || []);
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao carregar empresa");
+      toast.error("Erro ao carregar dados");
     } finally {
       setLoading(false);
     }
   }
 
-  if (loading) return <div className="p-8 text-center">Carregando...</div>;
+  const stats = useMemo(() => {
+    const total = contributions.length;
+    const paid = contributions.filter(c => c.status === 'paid').length;
+    const pending = contributions.filter(c => c.status === 'pending').length;
+    const overdue = contributions.filter(c => c.status === 'overdue').length;
+    const totalValue = contributions.reduce((acc, c) => acc + (c.value || 0), 0);
+    const paidValue = contributions.filter(c => c.status === 'paid').reduce((acc, c) => acc + (c.paid_value || c.value || 0), 0);
+    
+    return {
+      total,
+      paid,
+      pending,
+      overdue,
+      yearTotal: total,
+      totalValue,
+      paidValue
+    };
+  }, [contributions]);
+
+  if (loading) return <div className="p-8 text-center"><RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-teal-600" /> Carregando...</div>;
   if (!employer) return <div className="p-8 text-center">Empresa não encontrada</div>;
 
   const content = (
@@ -59,8 +87,8 @@ export default function EmployerDetailPage({
               <div className="bg-teal-100 p-2 rounded-lg text-teal-600">
                 <Building2 size={24} />
               </div>
-              <div>
-                <h2 className="font-bold text-lg leading-tight">{employer.name}</h2>
+              <div className="min-w-0">
+                <h2 className="font-bold text-lg leading-tight truncate">{employer.name}</h2>
                 <p className="text-xs text-muted-foreground">{employer.cnpj}</p>
               </div>
             </div>
@@ -102,7 +130,25 @@ export default function EmployerDetailPage({
         <div className="lg:col-span-9">
           <div className="bg-white rounded-xl border shadow-sm min-h-[600px]">
             <TabsContent value="contributions" className="m-0 p-6">
-              <EmployerContributionsTab employer={employer} />
+              <EmployerContributionsTab 
+                employer={employer}
+                contributions={contributions}
+                contributionTypes={contributionTypes}
+                stats={stats}
+                currentClinic={currentClinic}
+                syncing={syncing}
+                generatingInvoice={false}
+                selectedContributionIds={selectedContributionIds}
+                setSelectedContributionIds={setSelectedContributionIds}
+                onSyncLytex={() => fetchData()}
+                onOpenWhatsappDialog={() => {}}
+                onOpenEmailDialog={() => {}}
+                onOpenCreateDialog={() => {}}
+                onOpenOverdueDialog={() => {}}
+                onViewContribution={() => {}}
+                onGenerateInvoice={() => {}}
+                onOpenNegotiationDialog={() => {}}
+              />
             </TabsContent>
             <TabsContent value="employees" className="m-0 p-6">
               <div className="text-center py-12 text-muted-foreground">Lista de colaboradores vinculados à empresa.</div>
