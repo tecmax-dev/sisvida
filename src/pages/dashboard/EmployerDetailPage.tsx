@@ -376,7 +376,7 @@ export default function EmployerDetailPage({
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
   };
 
-  const handleSaveEmployer = async () => {
+  const handleSaveEmployer = async (shouldNavigateBack: boolean = true) => {
     if (!employer || !currentClinic) return;
 
     setSaving(true);

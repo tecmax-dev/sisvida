@@ -724,7 +724,9 @@ export default function UnionMemberDetailPage({
         description: "As informações foram salvas com sucesso.",
       });
 
-      navigate('/union/socios');
+      if (shouldNavigateBack) {
+        navigate('/union/socios');
+      }
     } catch (error: any) {
       if (error.message?.includes('CPF_DUPLICADO') || error.message?.includes('idx_patients_cpf_clinic')) {
         setErrors({ cpf: "Este CPF já está cadastrado no sistema." });
