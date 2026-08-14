@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2, User } from "lucide-react";
+import { useModal } from "@/contexts/ModalContext";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ interface MemberHit {
 }
 
 export function MemberQuickSearch({ clinicId, currentMemberId, className, isModalMode }: MemberQuickSearchProps) {
+  const navigate = useNavigate();
   const { updateModalData } = useModal();
   const [term, setTerm] = useState("");
   const [debounced, setDebounced] = useState("");
