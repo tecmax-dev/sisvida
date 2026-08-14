@@ -879,87 +879,84 @@ export default function EmployerDetailPage({
         <Tabs defaultValue="contributions" className="w-full h-full">
           {/* Header */}
           {!isModalMode ? (
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
               <div className="flex items-start gap-4">
                 <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)} className="hover:bg-background">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
 
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Building2 className="h-6 w-6 text-teal-600 shrink-0" />
-                  <h1 className="text-2xl font-bold tracking-tight text-teal-800">{employer.name}</h1>
-                  {employer.registration_number && (
-                    <Badge variant="outline" className="font-mono bg-white">
-                      Mat. {employer.registration_number}
-                    </Badge>
-                  )}
-                  {employer.access_code && (
-                    <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-teal-50 border border-teal-200">
-                      <span className="text-[10px] uppercase font-bold text-teal-600">Login:</span>
-                      <span className="font-mono font-bold text-teal-700">{employer.access_code}</span>
-                      <div className="flex items-center gap-0.5">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-teal-600 hover:bg-teal-100"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(employer.access_code || "");
-                                  toast.success("Código de login copiado!");
-                                }}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Copiar código</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Building2 className="h-6 w-6 text-teal-600 shrink-0" />
+                    <h1 className="text-2xl font-bold tracking-tight text-teal-800">{employer.name}</h1>
+                    {employer.registration_number && (
+                      <Badge variant="outline" className="font-mono bg-white">
+                        Mat. {employer.registration_number}
+                      </Badge>
+                    )}
+                    {employer.access_code && (
+                      <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-teal-50 border border-teal-200">
+                        <span className="text-[10px] uppercase font-bold text-teal-600">Login:</span>
+                        <span className="font-mono font-bold text-teal-700">{employer.access_code}</span>
+                        <div className="flex items-center gap-0.5">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-teal-600 hover:bg-teal-100"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(employer.access_code || "");
+                                    toast.success("Código de login copiado!");
+                                  }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copiar código</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  <Badge variant={employer.is_active ? "default" : "secondary"} className={employer.is_active ? "bg-emerald-500" : ""}>
-                    {employer.is_active ? "Ativa" : "Inativa"}
-                  </Badge>
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-sm text-muted-foreground">
-                    CNPJ: {formatCNPJ(employer.cnpj)}
-                  </p>
-                  {employer.cnae_code && (
-                    <p className="text-xs text-muted-foreground">
-                      CNAE: {employer.cnae_code}
-                      {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+                    )}
+                    <Badge variant={employer.is_active ? "default" : "secondary"} className={employer.is_active ? "bg-emerald-500" : ""}>
+                      {employer.is_active ? "Ativa" : "Inativa"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-sm text-muted-foreground">
+                      CNPJ: {formatCNPJ(employer.cnpj)}
                     </p>
-                  )}
+                    {employer.cnae_code && (
+                      <p className="text-xs text-muted-foreground">
+                        CNAE: {employer.cnae_code}
+                        {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
+              {currentClinic && (
+                <EmployerCnpjSearch
+                  clinicId={currentClinic.id}
+                  isUnionModule={isUnionModule}
+                  currentEmployerId={employer.id}
+                  className="shrink-0"
+                />
+              )}
             </div>
-            {currentClinic && (
-              <EmployerCnpjSearch
-                clinicId={currentClinic.id}
-                isUnionModule={isUnionModule}
-                currentEmployerId={employer.id}
-                className="shrink-0"
-              />
-            )}
-          </div>
-        ) : (
-          <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex items-center justify-between">
-             <div className="flex items-center gap-4">
-               <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
-                 {employer.name}
-               </h2>
-               <Badge variant="outline" className="bg-teal-50 text-teal-600 border-teal-200">
+          ) : (
+            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
+                  {employer.name}
+                </h2>
+                <Badge variant="outline" className="bg-teal-50 text-teal-600 border-teal-200">
                   CNPJ: {formatCNPJ(employer.cnpj)}
-               </Badge>
-             </div>
-             <div className="flex items-center gap-2">
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
                 {currentClinic && (
                   <EmployerCnpjSearch
                     clinicId={currentClinic.id}
@@ -968,9 +965,9 @@ export default function EmployerDetailPage({
                     className="h-9"
                   />
                 )}
-             </div>
-          </div>
-        )}
+              </div>
+            </div>
+          )}
 
         <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
           <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
