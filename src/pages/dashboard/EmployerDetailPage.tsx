@@ -17,13 +17,26 @@ export default function EmployerDetailPage({
   isModalMode?: boolean; 
 } = {}) {
   const { id: paramId } = useParams<{ id: string }>();
+  
+  console.log('[EMPLOYER MODAL PROPS]', { employerIdOverride, isModalMode });
+  console.log('[EMPLOYER MODAL PARAMS]', { paramId });
+  
   const id = employerIdOverride || paramId;
+  
+  console.log('[EMPLOYER MODAL EFFECTIVE ID]', { id });
+
   const navigate = useNavigate();
   const { currentClinic, session } = useAuth();
   const [employer, setEmployer] = useState<any>(null);
   const [contributions, setContributions] = useState<any[]>([]);
   const [contributionTypes, setContributionTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  console.log('[EMPLOYER LOADING STATE BEFORE EFFECT]', {
+    id,
+    currentClinic: !!currentClinic,
+    loading
+  });
   const [syncing, setSyncing] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
@@ -35,13 +48,21 @@ export default function EmployerDetailPage({
 
   async function fetchData() {
     try {
+      console.log('[EMPLOYER START FETCH]', { id });
       setLoading(true);
 
       const [empRes, contribRes, typesRes] = await Promise.all([
-        supabase.from("employers").select("*").eq("id", id).single(),
+        supabase.from("employers").select("*").eq("id", id).maybeSingle(),
         supabase.from("employer_contributions").select("*, contribution_types(*)").eq("employer_id", id).order("due_date", { ascending: false }),
         supabase.from("contribution_types").select("*").eq("clinic_id", currentClinic?.id).eq("is_active", true)
       ]);
+
+      console.log('[EMPLOYER FETCH RESULTS]', {
+        emp: !!empRes.data,
+        empError: empRes.error,
+        contrib: contribRes.data?.length,
+        types: typesRes.data?.length
+      });
 
       if (empRes.error) throw empRes.error;
       

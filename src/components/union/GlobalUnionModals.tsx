@@ -8,6 +8,15 @@ export function GlobalUnionModals() {
   const { isModalOpen, closeModal, getModalData } = useModal();
   const employerOpen = isModalOpen('employerEdit');
   const employerModalData = getModalData('employerEdit');
+  const memberOpen = isModalOpen('unionMemberEdit');
+  const memberModalData = getModalData('unionMemberEdit');
+
+  if (employerOpen) {
+    console.log('[GLOBAL MODAL EMPLOYER DATA]', employerModalData);
+  }
+  if (memberOpen) {
+    console.log('[GLOBAL MODAL MEMBER DATA]', memberModalData);
+  }
 
   return (
     <>
