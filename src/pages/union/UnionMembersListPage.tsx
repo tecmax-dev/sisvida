@@ -330,6 +330,7 @@ export default function UnionMembersListPage() {
           signature_accepted,
           employer_name,
           employer_cnpj,
+          employer_id,
           insurance_plan:insurance_plans ( name ),
           patient_dependents ( id ),
           patient_cards ( card_number, expires_at, is_active )
