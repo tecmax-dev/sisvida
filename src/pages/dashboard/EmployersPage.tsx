@@ -1074,31 +1074,31 @@ export default function EmployersPage() {
                         </TableRow>
                         <CollapsibleContent asChild>
                           <TableRow className="bg-muted/20">
-                            <TableCell colSpan={8} className="p-0">
-                              <div className="p-3 border-t">
+                            <TableCell colSpan={9} className="p-0">
+                              <div className="p-3 border-t bg-muted/10">
                                 {employer.patients && employer.patients.length > 0 ? (
                                   <div className="space-y-2">
-                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                                      <Users className="h-3 w-3" />
+                                    <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 uppercase tracking-tight">
+                                      <Users className="h-2.5 w-2.5 text-primary/60" />
                                       Colaboradores vinculados:
                                     </p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
                                       {employer.patients.map((patient) => (
                                         <button
                                           key={patient.id}
                                           onClick={() => navigate(`/dashboard/patients/${patient.id}/edit`)}
-                                          className="flex items-center gap-2 p-2 rounded-lg bg-background hover:bg-primary/5 border border-border/50 transition-colors text-left"
+                                          className="flex items-center gap-1.5 p-1.5 rounded bg-background hover:bg-primary/5 border border-border/50 transition-colors text-left group"
                                         >
-                                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                                            <Users className="h-3 w-3 text-primary" />
+                                          <div className="h-5 w-5 rounded-full bg-primary/5 group-hover:bg-primary/10 flex items-center justify-center shrink-0">
+                                            <Users className="h-2.5 w-2.5 text-primary/40 group-hover:text-primary/70" />
                                           </div>
-                                          <span className="text-xs font-medium truncate">{patient.name}</span>
+                                          <span className="text-[10px] font-medium truncate text-foreground/80 group-hover:text-primary">{patient.name}</span>
                                         </button>
                                       ))}
                                     </div>
                                   </div>
                                 ) : (
-                                  <p className="text-xs text-muted-foreground text-center py-2">
+                                  <p className="text-[10px] text-muted-foreground text-center py-2 italic font-medium">
                                     Nenhum colaborador vinculado a esta empresa
                                   </p>
                                 )}
