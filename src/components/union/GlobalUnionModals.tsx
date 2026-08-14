@@ -30,13 +30,6 @@ export function GlobalUnionModals() {
 
   const handleEmployerClose = (open: boolean) => {
     if (!open) {
-      closeModal('unionMemberEdit'); // ERROR: should be employerEdit
-      if (employerData.onUpdate) employerData.onUpdate();
-    }
-  };
-
-  const handleEmployerClose = (open: boolean) => {
-    if (!open) {
       closeModal('employerEdit');
       if (employerData.onUpdate) employerData.onUpdate();
     }
