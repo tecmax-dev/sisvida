@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin, RefreshCw, Search } from "lucide-react";
+import { Building2, ArrowLeft, Users, Receipt, FileText, Handshake, Mail, Phone, MapPin, RefreshCw, Search, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -226,14 +227,129 @@ export default function EmployerDetailPage({
               />
             </TabsContent>
             <TabsContent value="data" className="m-0 p-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-xs font-bold uppercase text-muted-foreground">Razão Social</label>
-                  <p className="text-sm">{employer.name}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase text-teal-600 mb-4 flex items-center gap-2">
+                      <Building2 className="h-4 w-4" /> Informações Básicas
+                    </h3>
+                    <div className="grid gap-4">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground font-bold">Razão Social</Label>
+                        <Input 
+                          value={employer.name} 
+                          onChange={(e) => setEmployer({...employer, name: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground font-bold">CNPJ</Label>
+                        <Input 
+                          value={employer.cnpj} 
+                          disabled
+                          className="h-9 text-sm bg-slate-50 font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground font-bold">Nome Fantasia</Label>
+                        <Input 
+                          value={employer.trade_name || ""} 
+                          onChange={(e) => setEmployer({...employer, trade_name: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-bold uppercase text-teal-600 mb-4 flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Contato
+                    </h3>
+                    <div className="grid gap-4">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground font-bold">Email</Label>
+                        <Input 
+                          value={employer.email || ""} 
+                          onChange={(e) => setEmployer({...employer, email: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground font-bold">Telefone</Label>
+                        <Input 
+                          value={employer.phone || ""} 
+                          onChange={(e) => setEmployer({...employer, phone: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-bold uppercase text-muted-foreground">CNPJ</label>
-                  <p className="text-sm">{employer.cnpj}</p>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase text-teal-600 mb-4 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" /> Endereço
+                    </h3>
+                    <div className="grid gap-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-1 space-y-1">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-bold">CEP</Label>
+                          <Input 
+                            value={employer.cep || ""} 
+                            onChange={(e) => setEmployer({...employer, cep: e.target.value})}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <Label className="text-[10px] uppercase text-muted-foreground font-bold">Cidade</Label>
+                          <Input 
+                            value={employer.city || ""} 
+                            onChange={(e) => setEmployer({...employer, city: e.target.value})}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground font-bold">Logradouro</Label>
+                        <Input 
+                          value={employer.address || ""} 
+                          onChange={(e) => setEmployer({...employer, address: e.target.value})}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <Button 
+                      onClick={async () => {
+                        try {
+                          const { error } = await supabase
+                            .from("employers")
+                            .update({
+                              name: employer.name,
+                              trade_name: employer.trade_name,
+                              email: employer.email,
+                              phone: employer.phone,
+                              cep: employer.cep,
+                              city: employer.city,
+                              address: employer.address
+                            })
+                            .eq("id", employer.id);
+                          
+                          if (error) throw error;
+                          toast.success("Dados da empresa atualizados");
+                        } catch (err) {
+                          console.error(err);
+                          toast.error("Erro ao salvar alterações");
+                        }
+                      }}
+                      className="w-full bg-teal-600 hover:bg-teal-700"
+                    >
+                      <Save className="h-4 w-4 mr-2" /> Salvar Alterações
+                    </Button>
+                  </div>
                 </div>
               </div>
             </TabsContent>
