@@ -2055,7 +2055,5 @@ export default function EmployerDetailPage({
   );
 }
 
-  );
-}
 
 
