@@ -128,6 +128,7 @@ interface UnionMember {
   signature_accepted?: boolean | null;
   employer_name?: string | null;
   employer_cnpj?: string | null;
+  employer_id?: string | null;
 }
 
 // Formatação de CPF: 000.000.000-00
