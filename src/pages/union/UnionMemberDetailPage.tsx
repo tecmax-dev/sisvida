@@ -1040,12 +1040,13 @@ export default function UnionMemberDetailPage({
         isAdmin={isAdmin}
       />
 
-          {/* Tabs Navigation */}
-          <UnionMemberTabs
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            memberId={id || ''}
-          />
+          <div className="mt-4">
+            <UnionMemberTabs
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              memberId={id || ''}
+            />
+          </div>
         </div>
 
         {/* Tab Content */}

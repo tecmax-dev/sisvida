@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { User, Users, ShieldCheck, CreditCard, FileText, Calendar } from "lucide-react";
 
 export type UnionMemberTab = 
   | 'cadastro' 
@@ -15,39 +16,43 @@ interface UnionMemberTabsProps {
   hiddenTabs?: UnionMemberTab[];
 }
 
-const tabs: { id: UnionMemberTab; label: string }[] = [
-  { id: 'cadastro', label: 'Cadastro' },
-  { id: 'dependentes', label: 'Dependentes' },
-  { id: 'sindical', label: 'Dados Sindicais' },
-  { id: 'carteirinha', label: 'Carteirinha' },
-  { id: 'anexos', label: 'Anexos' },
-  { id: 'agendamentos', label: 'Agendamentos' },
+const tabs: { id: UnionMemberTab; label: string; icon: any }[] = [
+  { id: 'cadastro', label: 'Cadastro', icon: User },
+  { id: 'dependentes', label: 'Dependentes', icon: Users },
+  { id: 'sindical', label: 'Dados Sindicais', icon: ShieldCheck },
+  { id: 'carteirinha', label: 'Carteirinha', icon: CreditCard },
+  { id: 'anexos', label: 'Anexos', icon: FileText },
+  { id: 'agendamentos', label: 'Agendamentos', icon: Calendar },
 ];
 
 export function UnionMemberTabs({ activeTab, onTabChange, memberId, hiddenTabs = [] }: UnionMemberTabsProps) {
   const visibleTabs = tabs.filter(tab => !hiddenTabs.includes(tab.id));
 
   return (
-    <div className="border-b bg-card">
-      <nav className="flex gap-1 px-4 overflow-x-auto" aria-label="Tabs">
-        {visibleTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={cn(
-              "px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative",
-              activeTab === tab.id
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
-            )}
-          </button>
-        ))}
-      </nav>
+    <div className="bg-white rounded-xl border p-4 shadow-sm">
+      <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">Navegação</h3>
+      <div className="flex flex-wrap gap-1.5">
+        {visibleTabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                "h-8 flex items-center gap-1.5 px-3 rounded-full text-[11px] font-medium transition-all border",
+                isActive
+                  ? "bg-teal-50 text-teal-700 border-teal-100/50 shadow-sm"
+                  : "bg-slate-50 text-slate-600 border-slate-100/50 hover:bg-slate-100 hover:text-slate-900"
+              )}
+            >
+              <Icon size={14} className={cn(isActive ? "text-teal-600" : "text-slate-400")} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -115,19 +115,59 @@ export default function EmployerDetailPage({
             </div>
 
             <div className="mt-8">
-              <TabsList className="flex flex-col h-auto bg-transparent border-none p-0 gap-1 w-full">
-                <TabsTrigger value="contributions" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700">
-                  <Receipt size={16} /> Contribuições
-                </TabsTrigger>
-                <TabsTrigger value="employees" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700">
-                  <Users size={16} /> Colaboradores
-                </TabsTrigger>
-                <TabsTrigger value="negotiations" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700">
-                  <Handshake size={16} /> Negociações
-                </TabsTrigger>
-                <TabsTrigger value="data" className="w-full justify-start gap-2 px-4 py-3 rounded-lg data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700">
-                  <FileText size={16} /> Dados Cadastrais
-                </TabsTrigger>
+              <div className="flex flex-wrap gap-1.5">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    const el = document.querySelector('[data-value="contributions"]') as HTMLElement;
+                    el?.click();
+                  }}
+                  className="h-8 gap-1.5 px-3 rounded-full bg-teal-50 text-teal-700 hover:bg-teal-100 text-[11px] font-medium border border-teal-100/50"
+                >
+                  <Receipt size={14} /> Contribuições
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    const el = document.querySelector('[data-value="employees"]') as HTMLElement;
+                    el?.click();
+                  }}
+                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 text-[11px] font-medium border border-slate-100/50"
+                >
+                  <Users size={14} /> Colaboradores
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    const el = document.querySelector('[data-value="negotiations"]') as HTMLElement;
+                    el?.click();
+                  }}
+                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 text-[11px] font-medium border border-slate-100/50"
+                >
+                  <Handshake size={14} /> Negociações
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    const el = document.querySelector('[data-value="data"]') as HTMLElement;
+                    el?.click();
+                  }}
+                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 text-[11px] font-medium border border-slate-100/50"
+                >
+                  <FileText size={14} /> Dados
+                </Button>
+              </div>
+
+              {/* Hidden TabsList for logic */}
+              <TabsList className="hidden">
+                <TabsTrigger value="contributions" data-value="contributions">C</TabsTrigger>
+                <TabsTrigger value="employees" data-value="employees">E</TabsTrigger>
+                <TabsTrigger value="negotiations" data-value="negotiations">N</TabsTrigger>
+                <TabsTrigger value="data" data-value="data">D</TabsTrigger>
               </TabsList>
             </div>
           </div>
