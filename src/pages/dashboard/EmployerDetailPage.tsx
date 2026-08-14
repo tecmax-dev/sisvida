@@ -2040,6 +2040,7 @@ export default function EmployerDetailPage({
         }}
       />
         </div>
+        </div>
         </Tabs>
       </div>
     </div>
