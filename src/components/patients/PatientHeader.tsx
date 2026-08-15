@@ -1,4 +1,5 @@
 import { User, MessageCircle, AlertTriangle, ShieldX, Unlock, UserX, UserCheck, Loader2, CheckCircle, Calendar } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
