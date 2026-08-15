@@ -1001,7 +1001,7 @@ export default function UnionMemberDetailPage({
              </div>
              
              {/* Quick Search for Members */}
-             <div className="w-full">
+             <div className="w-full bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-slate-100 shadow-sm mb-6">
                 <MemberQuickSearch 
                   clinicId={resolvedClinic?.id} 
                   currentMemberId={id} 
@@ -1009,6 +1009,7 @@ export default function UnionMemberDetailPage({
                   isModalMode={isModalMode}
                 />
              </div>
+
           </div>
 
         )}

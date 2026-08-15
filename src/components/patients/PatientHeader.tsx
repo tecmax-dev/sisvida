@@ -1,4 +1,4 @@
-import { User, MessageCircle, AlertTriangle, ShieldX, Unlock, UserX, UserCheck, Loader2 } from "lucide-react";
+import { User, MessageCircle, AlertTriangle, ShieldX, Unlock, UserX, UserCheck, Loader2, CheckCircle, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,85 +130,101 @@ export function PatientHeader({
         </Alert>
       )}
 
-      <div className="flex items-center justify-between p-4 bg-card rounded-lg border shadow-sm">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-14 w-14 border-2 border-primary/20">
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-foreground">{name}</h2>
-              {recordCode && (
-                <span className="text-sm text-muted-foreground">
-                  (Cód. {recordCode})
-                </span>
-              )}
-              {getPriorityBadge()}
-              {isBlocked && (
-                <Badge variant="destructive" className="ml-2 gap-1">
-                  <ShieldX className="h-3 w-3" />
-                  Bloqueado
-                </Badge>
-              )}
-              {!isActive && (
-                <Badge variant="secondary" className="ml-2 gap-1 bg-muted text-muted-foreground">
-                  <UserX className="h-3 w-3" />
-                  Inativo
-                </Badge>
+      <div className="relative overflow-hidden group">
+        {/* Decorative background element */}
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-teal-500/5 rounded-full blur-3xl group-hover:bg-teal-500/10 transition-colors duration-500" />
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white rounded-2xl border border-slate-200 shadow-sm relative z-10">
+          <div className="flex items-center gap-5">
+            <div className="relative">
+              <Avatar className="h-16 w-16 border-2 border-white shadow-md ring-2 ring-teal-500/10">
+                <AvatarFallback className="bg-gradient-to-br from-teal-50 to-emerald-50 text-teal-700 font-bold text-xl uppercase">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              {isActive && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-sm" title="Ativo">
+                  <CheckCircle className="h-3 w-3 text-white" />
+                </div>
               )}
             </div>
             
-            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-              {age && (
-                <span>
-                  {age.years}a {age.months}m
-                </span>
-              )}
-              {formattedDate && (
-                <span>({formattedDate})</span>
-              )}
-              {insurancePlan && (
-                <>
-                  <span className="text-border">|</span>
-                  <span>{insurancePlan}</span>
-                </>
-              )}
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-800 tracking-tight">{name}</h2>
+                {recordCode && (
+                  <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 font-mono text-[10px] px-1.5 py-0 h-5">
+                    #{recordCode}
+                  </Badge>
+                )}
+                {getPriorityBadge()}
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-[13px] text-slate-500 font-medium">
+                {age && (
+                  <span className="flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5 text-teal-500/70" />
+                    {age.years}a {age.months}m
+                  </span>
+                )}
+                {formattedDate && (
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-teal-500/70" />
+                    {formattedDate}
+                  </span>
+                )}
+                {insurancePlan && (
+                  <span className="flex items-center gap-1.5 bg-teal-50/50 px-2 py-0.5 rounded-lg border border-teal-100/50 text-teal-700 text-[11px] font-semibold">
+                    <AlertTriangle className="h-3 w-3" />
+                    {insurancePlan}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {/* Toggle Active Button - only for admins and when patient is active */}
-          {isAdmin && onToggleActive && isActive && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onToggleActive}
-              disabled={togglingActive}
-              className="text-muted-foreground hover:text-destructive gap-2"
-              title="Inativar paciente"
-            >
-              {togglingActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4" />}
-              <span className="hidden sm:inline">Inativar</span>
-            </Button>
-          )}
-          {phone && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => openWhatsApp(phone)}
-              className="text-success hover:text-success hover:bg-success/10"
-            >
-              <MessageCircle className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-3 mt-4 sm:mt-0">
+            {phone && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openWhatsApp(phone)}
+                className="flex-1 sm:flex-none h-10 gap-2 border-emerald-100 bg-emerald-50/30 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-800 transition-all rounded-xl shadow-sm"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="text-xs font-bold">WhatsApp</span>
+              </Button>
+            )}
+            
+            {isAdmin && onToggleActive && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onToggleActive}
+                disabled={togglingActive}
+                className={cn(
+                  "h-10 w-10 rounded-xl transition-all",
+                  isActive 
+                    ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50" 
+                    : "text-emerald-600 hover:bg-emerald-50"
+                )}
+                title={isActive ? "Inativar sócio" : "Reativar sócio"}
+              >
+                {togglingActive ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : isActive ? (
+                  <UserX className="h-5 w-5" />
+                ) : (
+                  <UserCheck className="h-5 w-5" />
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+
     </div>
   );
 }

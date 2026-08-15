@@ -120,9 +120,9 @@ export function MemberQuickSearch({ clinicId, currentMemberId, className, isModa
   };
 
   return (
-    <div ref={containerRef} className={cn("relative w-full max-w-xl", className)}>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+    <div ref={containerRef} className={cn("relative w-full max-w-xl group", className)}>
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-500/20 focus-within:border-teal-500/50 transition-all duration-300">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
         <Input
           value={term}
           onChange={(e) => {
@@ -131,14 +131,22 @@ export function MemberQuickSearch({ clinicId, currentMemberId, className, isModa
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
-          placeholder="Buscar outro sócio por nome, CPF ou matrícula…"
-          className="pl-9 pr-9 h-10 bg-background"
+          placeholder="Busca rápida: Nome, CPF ou Matrícula..."
+          className="pl-11 pr-11 h-12 bg-transparent border-none shadow-none focus-visible:ring-0 text-sm font-medium placeholder:text-slate-400"
           aria-label="Buscar outro cadastro"
         />
-        {loading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        {loading ? (
+          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-teal-500" />
+        ) : term.length > 0 && (
+          <button 
+            onClick={() => { setTerm(""); setOpen(false); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+          >
+            <Loader2 className="h-4 w-4 rotate-45" /> 
+          </button>
         )}
       </div>
+
 
       {open && debounced.length >= 2 && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg overflow-hidden">

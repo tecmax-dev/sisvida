@@ -29,9 +29,12 @@ export function UnionMemberTabs({ activeTab, onTabChange, memberId, hiddenTabs =
   const visibleTabs = tabs.filter(tab => !hiddenTabs.includes(tab.id));
 
   return (
-    <div className="bg-white rounded-xl border p-4 shadow-sm">
-      <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3 px-1">Navegação</h3>
-      <div className="flex flex-wrap gap-1.5">
+    <div className="bg-slate-50/50 rounded-xl border border-slate-200/60 p-4 shadow-sm backdrop-blur-sm">
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Navegação</h3>
+        <div className="h-1 w-8 bg-teal-500/20 rounded-full" />
+      </div>
+      <div className="flex flex-wrap gap-2">
         {visibleTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -41,18 +44,19 @@ export function UnionMemberTabs({ activeTab, onTabChange, memberId, hiddenTabs =
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "h-8 flex items-center gap-1.5 px-3 rounded-full text-[11px] font-medium transition-all border",
+                "h-9 flex items-center gap-2 px-4 rounded-xl text-[11px] font-semibold transition-all duration-200 border",
                 isActive
-                  ? "bg-teal-50 text-teal-700 border-teal-100/50 shadow-sm"
-                  : "bg-slate-50 text-slate-600 border-slate-100/50 hover:bg-slate-100 hover:text-slate-900"
+                  ? "bg-teal-600 text-white border-teal-600 shadow-md shadow-teal-600/20 scale-[1.02]"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-teal-500/50 hover:bg-teal-50/30 hover:text-teal-700"
               )}
             >
-              <Icon size={14} className={cn(isActive ? "text-teal-600" : "text-slate-400")} />
+              <Icon size={15} className={cn(isActive ? "text-white" : "text-slate-400")} />
               {tab.label}
             </button>
           );
         })}
       </div>
     </div>
+
   );
 }
