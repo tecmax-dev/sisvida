@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -93,19 +94,18 @@ export default function EmployerDetailPage({
     <Tabs defaultValue="contributions" className="w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white rounded-xl border p-6 shadow-sm">
+          <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-6 shadow-sm backdrop-blur-sm">
             {/* Quick Search for Employers */}
             <div className="mb-6 relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground transition-colors group-focus-within:text-teal-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-teal-500" />
               <Input
                 placeholder="Busca rápida (nome, cnpj)..."
-                className="pl-9 h-9 text-[11px] bg-slate-50/50 border-slate-200 focus:bg-white focus:border-teal-500 transition-all rounded-lg"
+                className="pl-10 h-11 text-xs bg-white border-slate-200 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all rounded-xl shadow-sm"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const term = (e.target as HTMLInputElement).value.trim().toLowerCase();
                     if (term) {
                       if (isModalMode) {
-                        // In modal mode, search for the employer and update modal data
                         supabase
                           .from("employers")
                           .select("id")
@@ -117,7 +117,7 @@ export default function EmployerDetailPage({
                             if (data) {
                               updateModalData('employerEdit', { employerId: data.id, id: data.id });
                             } else {
-                              toast.error("Nenhuma empresa encontrada com este termo.");
+                              toast.error("Nenhuma empresa encontrada.");
                             }
                           });
                       } else {
@@ -130,60 +130,63 @@ export default function EmployerDetailPage({
               />
             </div>
 
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-teal-100 p-2 rounded-lg text-teal-600">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="bg-gradient-to-br from-teal-500 to-emerald-600 p-3 rounded-2xl text-white shadow-lg shadow-teal-500/20">
                 <Building2 size={24} />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-lg leading-tight truncate">{employer.name}</h2>
-                <p className="text-xs text-muted-foreground">{employer.cnpj}</p>
+                <h2 className="font-bold text-xl text-slate-800 leading-tight truncate">{employer.name}</h2>
+                <Badge variant="outline" className="mt-1 bg-white text-slate-500 border-slate-200 font-mono text-[10px] px-1.5 py-0 h-5">
+                  {employer.cnpj}
+                </Badge>
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div className="text-sm">{employer.phone || "N/A"}</div>
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-colors">
+                <div className="h-8 w-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600">
+                  <Phone className="h-4 w-4" />
+                </div>
+                <div className="text-[13px] font-medium text-slate-600">{employer.phone || "N/A"}</div>
               </div>
-              <div className="flex items-start gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div className="text-sm truncate">{employer.email || "N/A"}</div>
+              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-colors">
+                <div className="h-8 w-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <div className="text-[13px] font-medium text-slate-600 truncate">{employer.email || "N/A"}</div>
               </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div className="text-sm">{employer.address ? `${employer.address}, ${employer.city}` : "N/A"}</div>
+              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-colors">
+                <div className="h-8 w-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div className="text-[13px] font-medium text-slate-600">{employer.address ? `${employer.address}, ${employer.city}` : "N/A"}</div>
               </div>
             </div>
 
-            <div className="mt-8">
-              <TabsList className="flex flex-wrap gap-1.5 bg-transparent h-auto p-0">
-                <TabsTrigger 
-                  value="contributions" 
-                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                >
-                  <Receipt size={14} /> Contribuições
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="employees" 
-                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                >
-                  <Users size={14} /> Colaboradores
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="negotiations" 
-                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                >
-                  <Handshake size={14} /> Negociações
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="data" 
-                  className="h-8 gap-1.5 px-3 rounded-full bg-slate-50 text-slate-600 data-[state=active]:bg-teal-50 data-[state=active]:text-teal-700 data-[state=active]:border-teal-100/50 border border-slate-100/50 text-[11px] font-medium transition-all"
-                >
-                  <FileText size={14} /> Dados
-                </TabsTrigger>
+            <div className="pt-6 border-t border-slate-200">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4 px-1">Menu</h3>
+              <TabsList className="flex flex-wrap gap-2 bg-transparent h-auto p-0">
+                {[
+                  { value: 'contributions', label: 'Contribuições', icon: Receipt },
+                  { value: 'employees', label: 'Colaboradores', icon: Users },
+                  { value: 'negotiations', label: 'Negociações', icon: Handshake },
+                  { value: 'data', label: 'Dados', icon: FileText },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <TabsTrigger 
+                      key={tab.value}
+                      value={tab.value} 
+                      className="h-9 flex items-center gap-2 px-4 rounded-xl text-[11px] font-semibold transition-all duration-200 border bg-white text-slate-600 border-slate-200 hover:border-teal-500/50 hover:bg-teal-50/30 hover:text-teal-700 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:border-teal-600 data-[state=active]:shadow-md data-[state=active]:shadow-teal-600/20 data-[state=active]:scale-[1.02]"
+                    >
+                      <Icon size={14} /> {tab.label}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
             </div>
           </div>
+
         </div>
 
         <div className="lg:col-span-9">
