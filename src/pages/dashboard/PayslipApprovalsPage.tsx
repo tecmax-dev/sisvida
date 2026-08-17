@@ -5,7 +5,7 @@ import {
   FileImage, Eye, CheckCircle, XCircle, Clock, FileCheck,
   Loader2, Calendar, Search, User, CreditCard, Filter,
   RefreshCw, MoreVertical, History, ChevronLeft, ChevronRight,
-  ChevronDown, Send
+  ChevronDown, Send, ZoomIn
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
