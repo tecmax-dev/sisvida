@@ -71,13 +71,20 @@ export default function PayslipApprovalsPage() {
     setLoadingImage(false);
   };
 
-  const openReviewDialog = (request: PayslipRequest) => {
+  const openReviewDialog = async (request: PayslipRequest) => {
     setSelectedRequest(request);
     setReviewNotes('');
     const defaultExpiry = new Date();
     defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
     setNewExpiresAt(defaultExpiry.toISOString().split('T')[0]);
     setReviewDialogOpen(true);
+
+    if (request.attachment_path) {
+      setLoadingImage(true);
+      const url = await getAttachmentUrl(request.attachment_path);
+      setViewingImageUrl(url);
+      setLoadingImage(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -605,6 +612,35 @@ export default function PayslipApprovalsPage() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {selectedRequest?.attachment_path && (
+              <div className="space-y-2">
+                <Label>Documento Enviado</Label>
+                <div className="relative rounded-lg border bg-muted/20 overflow-hidden flex items-center justify-center min-h-[150px]">
+                  {loadingImage ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : viewingImageUrl ? (
+                    <img 
+                      src={viewingImageUrl} 
+                      alt="Contracheque" 
+                      className="max-h-64 w-full object-contain cursor-pointer"
+                      onClick={() => setViewerOpen(true)}
+                    />
+                  ) : (
+                    <p className="py-4 text-xs text-muted-foreground">Não foi possível carregar a imagem</p>
+                  )}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full gap-2"
+                  onClick={() => handleViewImage(selectedRequest)}
+                >
+                  <Eye className="h-4 w-4" />
+                  Visualizar em Tela Cheia
+                </Button>
+              </div>
+            )}
+
             <div className="p-3 bg-muted/50 rounded-lg text-sm">
               <p><strong>Associado:</strong> {selectedRequest?.patients?.name}</p>
               <p><strong>Carteirinha:</strong> {selectedRequest?.patient_cards?.card_number}</p>

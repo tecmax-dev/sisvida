@@ -133,7 +133,21 @@ export default function PendingPayslipReviews() {
         if (!error && data?.signedUrl) {
           setPreviewUrl(data.signedUrl);
         } else {
-          console.error('[PendingPayslipReviews] Error getting signed URL:', error || 'No signedUrl returned');
+          console.error('[PendingPayslipReviews] Error getting signed URL:', error);
+          const ctx = (error as any)?.context;
+          const body = ctx?.body;
+          let msg = 'Erro ao carregar imagem';
+          if (body) {
+            try {
+              const parsed = typeof body === 'string' ? JSON.parse(body) : body;
+              msg = parsed?.error || msg;
+            } catch { /* ignore */ }
+          }
+          toast({
+            variant: "destructive",
+            title: "Arquivo não disponível",
+            description: msg,
+          });
         }
       } catch (err) {
         console.error('[PendingPayslipReviews] Error invoking get-payslip-signed-url:', err);
