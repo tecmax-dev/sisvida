@@ -5,7 +5,7 @@ import {
   FileImage, Eye, CheckCircle, XCircle, Clock, FileCheck,
   Loader2, Calendar, Search, User, CreditCard, Filter,
   RefreshCw, MoreVertical, History, ChevronLeft, ChevronRight,
-  ChevronDown, Send
+  ChevronDown, Send, ZoomIn
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -610,21 +610,28 @@ export default function PayslipApprovalsPage() {
           <DialogHeader>
             <DialogTitle>Revisar Contracheque</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4">
             {selectedRequest?.attachment_path && (
               <div className="space-y-2">
                 <Label>Documento Enviado</Label>
                 <div className="relative rounded-lg border bg-muted/20 overflow-hidden flex items-center justify-center min-h-[150px]">
                   {loadingImage ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="text-xs">Carregando imagem...</span>
+                    </div>
                   ) : viewingImageUrl ? (
-                    <img 
-                      src={viewingImageUrl} 
-                      alt="Contracheque" 
-                      className="max-h-64 w-full object-contain cursor-pointer"
-                      onClick={() => setViewerOpen(true)}
-                    />
+                    <div className="relative group w-full">
+                      <img 
+                        src={viewingImageUrl} 
+                        alt="Contracheque" 
+                        className="max-h-64 w-full object-contain cursor-pointer transition-opacity group-hover:opacity-90"
+                        onClick={() => setViewerOpen(true)}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 pointer-events-none">
+                        <ZoomIn className="h-8 w-8 text-white drop-shadow-md" />
+                      </div>
+                    </div>
                   ) : (
                     <p className="py-4 text-xs text-muted-foreground">Não foi possível carregar a imagem</p>
                   )}
@@ -633,13 +640,15 @@ export default function PayslipApprovalsPage() {
                   variant="outline" 
                   size="sm" 
                   className="w-full gap-2"
-                  onClick={() => handleViewImage(selectedRequest)}
+                  onClick={() => setViewerOpen(true)}
+                  disabled={!viewingImageUrl}
                 >
                   <Eye className="h-4 w-4" />
                   Visualizar em Tela Cheia
                 </Button>
               </div>
             )}
+
 
             <div className="p-3 bg-muted/50 rounded-lg text-sm">
               <p><strong>Associado:</strong> {selectedRequest?.patients?.name}</p>
