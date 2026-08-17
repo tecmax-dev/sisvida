@@ -75,6 +75,7 @@ export default function UnionOverdueReportPage() {
   const [endDate, setEndDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [hideZero, setHideZero] = useState<boolean>(true);
   const [search, setSearch] = useState<string>("");
+  const [hideDuplicates, setHideDuplicates] = useState<boolean>(false);
   const FILTERS_KEY = "overdue-report-saved-filters";
   const [savedTerms, setSavedTerms] = useState<string[]>(() => {
     try {
@@ -205,9 +206,30 @@ export default function UnionOverdueReportPage() {
   });
 
   const rows = useMemo(() => {
-    const list = data || [];
-    return hideZero ? list.filter((r) => (r.value || 0) > 0) : list;
-  }, [data, hideZero]);
+    let list = data || [];
+    if (hideZero) {
+      list = list.filter((r) => (r.value || 0) > 0);
+    }
+
+    if (hideDuplicates) {
+      // Filtrar duplicatas: mesmo employer_id e mesmo valor.
+      // Mantemos o registro mais recente (maior ID ou maior data, aqui usaremos o que vier por último no agrupamento/ordem)
+      const seen = new Set<string>();
+      // Percorremos de trás para frente para manter os mais recentes (considerando a ordenação da query)
+      const result: Row[] = [];
+      for (let i = list.length - 1; i >= 0; i--) {
+        const r = list[i];
+        const key = `${r.employers?.id}-${r.value}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.unshift(r);
+        }
+      }
+      list = result;
+    }
+
+    return list;
+  }, [data, hideZero, hideDuplicates]);
 
   const grouped = useMemo(() => {
     const map = new Map<
@@ -522,6 +544,15 @@ export default function UnionOverdueReportPage() {
             </label>
           </div>
           <div className="flex items-end">
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <Checkbox
+                checked={hideDuplicates}
+                onCheckedChange={(v) => setHideDuplicates(!!v)}
+              />
+              Ocultar boletos em duplicidade (mesmo valor)
+            </label>
+          </div>
+          <div className="flex items-end">
             <Button
               variant="ghost"
               size="sm"
@@ -529,6 +560,7 @@ export default function UnionOverdueReportPage() {
                 setStartDate("");
                 setEndDate(format(new Date(), "yyyy-MM-dd"));
                 setHideZero(true);
+                setHideDuplicates(false);
                 setSearch("");
               }}
             >
