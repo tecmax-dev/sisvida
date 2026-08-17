@@ -13,10 +13,12 @@ async def main():
         context = await browser.new_context(viewport={"width": 1280, "height": 1800})
         page = await context.new_page()
 
-        # Auth injection (if available)
-        storage_key = os.environ.get("LOVABLE_BROWSER_SUPABASE_STORAGE_KEY")
-        session_json = os.environ.get("LOVABLE_BROWSER_SUPABASE_SESSION_JSON")
-        cookies_json = os.environ.get("LOVABLE_BROWSER_SUPABASE_COOKIES_JSON")
+        # Restore session from file
+        with open(os.path.expanduser("~/.cache/lovable-auth/session.json")) as f:
+            minted = json.load(f)
+        storage_key = minted["storage_key"]
+        session_json = json.dumps(minted["session"])
+        cookies_json = json.dumps(minted["cookies"])
 
         if cookies_json:
             cookies = json.loads(cookies_json)
@@ -32,31 +34,54 @@ async def main():
 
         # Go to payslip approvals page
         await page.goto("http://localhost:8080/dashboard/contracheques", wait_until="networkidle")
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(3000)
         await page.screenshot(path=str(SCREENSHOTS / "1_list.png"))
         
-        # Check if there are "Avaliar" buttons
-        evaluate_buttons = page.get_by_role("button", name="Avaliar")
+        # Check for evaluate buttons
+        # In the image provided by user, the button text is "Avaliar"
+        evaluate_buttons = page.locator("button:has-text('Avaliar')")
         count = await evaluate_buttons.count()
         print(f"Found {count} evaluate buttons")
         
         if count > 0:
             await evaluate_buttons.first.click()
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(3000)
             await page.screenshot(path=str(SCREENSHOTS / "2_modal.png"))
             
             # Check for error message or missing image
             error_msg = page.get_by_text("Arquivo não disponível")
-            if await error_msg.is_visible():
-                print("Error message still visible")
+            if await error_msg.count() > 0 and await error_msg.first.is_visible():
+                print("Error message visible")
             else:
                 print("Error message not visible")
                 
             img = page.locator("img[alt='Contracheque']")
-            if await img.is_visible():
+            if await img.count() > 0 and await img.first.is_visible():
                 print("Image is visible")
             else:
                 print("Image not visible")
+        else:
+            # Maybe it's in the union page
+            await page.goto("http://localhost:8080/union/contracheques", wait_until="networkidle")
+            await page.wait_for_timeout(3000)
+            await page.screenshot(path=str(SCREENSHOTS / "3_union_list.png"))
+            
+            # Check for "Revisar" button (seen in src/pages/union/UnionPayslipApprovalsPage.tsx)
+            revisar_buttons = page.locator("button:has-text('Revisar')")
+            count = await revisar_buttons.count()
+            print(f"Found {count} revisar buttons on union page")
+            
+            if count > 0:
+                await revisar_buttons.first.click()
+                await page.wait_for_timeout(3000)
+                await page.screenshot(path=str(SCREENSHOTS / "4_union_modal.png"))
+                
+                # Check for image
+                img = page.locator("img[alt='Contracheque']")
+                if await img.count() > 0 and await img.first.is_visible():
+                    print("Image is visible in union modal")
+                else:
+                    print("Image not visible in union modal")
 
         await browser.close()
 
