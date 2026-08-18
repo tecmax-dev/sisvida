@@ -271,7 +271,7 @@ export default function MemberContributionsTab({ memberIdOverride }: MemberContr
 
     try {
       // Fetch PF contributions (with member_id)
-      const { data: contribData, error: contribError } = await supabase
+      let query = supabase
         .from("employer_contributions")
         .select(`
           *,
@@ -279,8 +279,15 @@ export default function MemberContributionsTab({ memberIdOverride }: MemberContr
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
-        .eq("competence_year", yearFilter)
-        .eq("member_id", memberIdOverride)
+        .eq("competence_year", yearFilter);
+
+      if (memberIdOverride) {
+        query = query.eq("member_id", memberIdOverride);
+      } else {
+        query = query.not("member_id", "is", null);
+      }
+
+      const { data: contribData, error: contribError } = await query
         .order("competence_month", { ascending: false })
         .order("created_at", { ascending: false });
 
