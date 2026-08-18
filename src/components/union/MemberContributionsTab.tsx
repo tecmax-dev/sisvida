@@ -280,7 +280,7 @@ export default function MemberContributionsTab({ memberIdOverride }: MemberContr
         `)
         .eq("clinic_id", currentClinic.id)
         .eq("competence_year", yearFilter)
-        .eq("member_id", memberIdOverride || "is", null) // Adjusted to handle override correctly
+        .eq("member_id", memberIdOverride)
         .order("competence_month", { ascending: false })
         .order("created_at", { ascending: false });
 

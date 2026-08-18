@@ -26,7 +26,7 @@ export default function EmployerDetailPage({
   const { id: paramId } = useParams<{ id: string }>();
   const id = employerIdOverride || paramId;
   const navigate = useNavigate();
-  const { currentClinic } = useAuth();
+  const { currentClinic, user } = useAuth();
   const { updateModalData } = useModal();
   
   const [employer, setEmployer] = useState<any>(null);
