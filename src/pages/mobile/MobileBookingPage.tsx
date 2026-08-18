@@ -131,17 +131,6 @@ const isMaleRelationship = (relationship?: string | null) => {
 
 const FEMALE_ONLY_MESSAGE = "Esta profissional atende exclusivamente pacientes do sexo feminino.";
 
-const legacyCalculateAge = (birthDate: string): number => {
-  const birth = new Date(birthDate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
-  return age;
-};
-
 interface TimeSlot {
   time: string;
   available: boolean;
