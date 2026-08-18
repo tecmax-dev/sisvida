@@ -127,6 +127,10 @@ interface Contribution {
   contribution_types?: ContributionType;
 }
 
+interface MemberContributionsTabProps {
+  memberIdOverride?: string;
+}
+
 const ITEMS_PER_PAGE = 15;
 
 const STATUS_CONFIG = {
@@ -202,7 +206,7 @@ const getInitialSortOrder = (): boolean => {
   }
 };
 
-export default function MemberContributionsTab() {
+export default function MemberContributionsTab({ memberIdOverride }: MemberContributionsTabProps = {}) {
   const { currentClinic, session, user } = useAuth();
   const { validateSession } = useSessionValidator();
   
@@ -267,7 +271,7 @@ export default function MemberContributionsTab() {
 
     try {
       // Fetch PF contributions (with member_id)
-      const { data: contribData, error: contribError } = await supabase
+      let query = supabase
         .from("employer_contributions")
         .select(`
           *,
@@ -275,8 +279,15 @@ export default function MemberContributionsTab() {
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
-        .eq("competence_year", yearFilter)
-        .not("member_id", "is", null)
+        .eq("competence_year", yearFilter);
+
+      if (memberIdOverride) {
+        query = query.eq("member_id", memberIdOverride);
+      } else {
+        query = query.not("member_id", "is", null);
+      }
+
+      const { data: contribData, error: contribError } = await query
         .order("competence_month", { ascending: false })
         .order("created_at", { ascending: false });
 

@@ -1,0 +1,936 @@
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
+import { Search, Receipt, CheckCircle2, XCircle, Clock, AlertTriangle, Loader2, Eye, Plus, ExternalLink, RefreshCw, ChevronLeft, ChevronRight, Copy, Download, ChevronDown, FileStack, Zap, CloudDownload, FileBarChart, DollarSign, LayoutDashboard, List, MessageCircle, Mail, CheckSquare, FileText, ArrowUp, ArrowDown, } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useSessionValidator } from "@/hooks/useSessionValidator";
+import { toast } from "sonner";
+import { extractFunctionsError } from "@/lib/functionsError";
+import { formatCompetence } from "@/lib/competence-format";
+import { getStaticYearRange } from "@/hooks/useAvailableYears";
+import PFContributionDialog from "@/components/contributions/PFContributionDialog";
+import PFBatchContributionDialog from "@/components/contributions/PFBatchContributionDialog";
+import PFContributionDetailDialog from "@/components/contributions/PFContributionDetailDialog";
+import { BatchGenerateLytexDialog } from "@/components/contributions/BatchGenerateLytexDialog";
+import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
+import { LytexConciliationHistoryDialog } from "@/components/contributions/LytexConciliationHistoryDialog";
+import PFContributionsReportsTab from "@/components/contributions/PFContributionsReportsTab";
+import { SendPFContributionWhatsAppDialog } from "@/components/contributions/SendPFContributionWhatsAppDialog";
+import { SendPFContributionEmailDialog } from "@/components/contributions/SendPFContributionEmailDialog";
+import { BatchWhatsAppDialog } from "@/components/contributions/BatchWhatsAppDialog";
+import { BatchPFEmailDialog } from "@/components/contributions/BatchPFEmailDialog";
+import { generatePFBoletosReport } from "@/lib/pf-boleto-report";
+const ITEMS_PER_PAGE = 15;
+const STATUS_CONFIG = {
+    pending: {
+        label: "Pendente",
+        badgeClass: "bg-amber-500/15 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-600",
+        rowClass: "border-l-4 border-l-amber-400",
+        icon: Clock,
+    },
+    processing: {
+        label: "Processando",
+        badgeClass: "bg-blue-500/15 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-600",
+        rowClass: "border-l-4 border-l-blue-400",
+        icon: RefreshCw,
+    },
+    paid: {
+        label: "Pago",
+        badgeClass: "bg-emerald-500/15 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-600",
+        rowClass: "border-l-4 border-l-emerald-500",
+        icon: CheckCircle2,
+    },
+    overdue: {
+        label: "Vencido",
+        badgeClass: "bg-rose-500/15 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-600",
+        rowClass: "border-l-4 border-l-rose-500",
+        icon: AlertTriangle,
+    },
+    cancelled: {
+        label: "Cancelado",
+        badgeClass: "bg-gray-500/10 text-gray-500 border-gray-300 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-600 line-through",
+        rowClass: "border-l-4 border-l-gray-300 opacity-60",
+        icon: XCircle,
+    },
+};
+// Storage keys for search persistence
+const SEARCH_CONTRIBUTIONS_KEY = "union-members:search-contributions";
+const STATUS_FILTER_KEY = "union-members:status-filter";
+const YEAR_FILTER_KEY = "union-members:year-filter";
+const SORT_ORDER_KEY = "union-members:sort-ascending";
+const getInitialSearch = () => {
+    try {
+        return sessionStorage.getItem(SEARCH_CONTRIBUTIONS_KEY) || "";
+    }
+    catch {
+        return "";
+    }
+};
+const getInitialStatusFilter = () => {
+    try {
+        return sessionStorage.getItem(STATUS_FILTER_KEY) || "hide_cancelled";
+    }
+    catch {
+        return "hide_cancelled";
+    }
+};
+const getInitialYearFilter = () => {
+    try {
+        const saved = sessionStorage.getItem(YEAR_FILTER_KEY);
+        return saved ? parseInt(saved, 10) : new Date().getFullYear();
+    }
+    catch {
+        return new Date().getFullYear();
+    }
+};
+const getInitialSortOrder = () => {
+    try {
+        const saved = sessionStorage.getItem(SORT_ORDER_KEY);
+        return saved === "true";
+    }
+    catch {
+        return false; // Default: decrescente (mês mais recente primeiro)
+    }
+};
+export default function MemberContributionsTab({ memberIdOverride } = {}) {
+    const { currentClinic, session, user } = useAuth();
+    const { validateSession } = useSessionValidator();
+    const [contributions, setContributions] = useState([]);
+    const [contributionTypes, setContributionTypes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [generatingInvoice, setGeneratingInvoice] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [fetchingPaid, setFetchingPaid] = useState(false);
+    const [importingExternal, setImportingExternal] = useState(false);
+    // Filters with persistence
+    const [searchTerm, setSearchTerm] = useState(getInitialSearch);
+    const [statusFilter, setStatusFilter] = useState(getInitialStatusFilter);
+    const [yearFilter, setYearFilter] = useState(getInitialYearFilter);
+    const [sortAscending, setSortAscending] = useState(getInitialSortOrder);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [activeTab, setActiveTab] = useState("list");
+    // Persist filters to sessionStorage
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(SEARCH_CONTRIBUTIONS_KEY, searchTerm);
+        }
+        catch { }
+    }, [searchTerm]);
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(STATUS_FILTER_KEY, statusFilter);
+        }
+        catch { }
+    }, [statusFilter]);
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(YEAR_FILTER_KEY, yearFilter.toString());
+        }
+        catch { }
+    }, [yearFilter]);
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(SORT_ORDER_KEY, sortAscending.toString());
+        }
+        catch { }
+    }, [sortAscending]);
+    // Dialog states
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [batchGenerateLytexOpen, setBatchGenerateLytexOpen] = useState(false);
+    const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+    const [selectedContribution, setSelectedContribution] = useState(null);
+    const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+    const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+    const [sendingContribution, setSendingContribution] = useState(null);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [batchWhatsappOpen, setBatchWhatsappOpen] = useState(false);
+    const [batchEmailOpen, setBatchEmailOpen] = useState(false);
+    const fetchData = useCallback(async () => {
+        if (!currentClinic)
+            return;
+        setLoading(true);
+        try {
+            // Fetch PF contributions (with member_id)
+            let query = supabase
+                .from("employer_contributions")
+                .select(`
+          *,
+          patients:member_id (id, name, cpf, email, phone),
+          contribution_types (id, name, description, default_value, is_active)
+        `)
+                .eq("clinic_id", currentClinic.id)
+                .eq("competence_year", yearFilter);
+            if (memberIdOverride) {
+                query = query.eq("member_id", memberIdOverride);
+            }
+            else {
+                query = query.not("member_id", "is", null);
+            }
+            const { data: contribData, error: contribError } = await query
+                .order("competence_month", { ascending: false })
+                .order("created_at", { ascending: false });
+            if (contribError)
+                throw contribError;
+            setContributions(contribData || []);
+            // Fetch contribution types
+            const { data: typesData, error: typesError } = await supabase
+                .from("contribution_types")
+                .select("*")
+                .eq("clinic_id", currentClinic.id)
+                .order("name");
+            if (typesError)
+                throw typesError;
+            setContributionTypes(typesData || []);
+        }
+        catch (error) {
+            console.error("Error fetching data:", error);
+            toast.error("Erro ao carregar contribuições");
+        }
+        finally {
+            setLoading(false);
+        }
+    }, [currentClinic, yearFilter]);
+    useEffect(() => {
+        if (currentClinic) {
+            fetchData();
+        }
+    }, [currentClinic, yearFilter, fetchData]);
+    const handleViewContribution = (contribution) => {
+        setSelectedContribution(contribution);
+        setViewDialogOpen(true);
+    };
+    // Selection handlers
+    const toggleSelection = (id) => {
+        setSelectedIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            }
+            else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+    const toggleSelectAll = () => {
+        const selectableIds = paginatedContributions
+            .filter((c) => c.lytex_invoice_url && c.status !== "cancelled")
+            .map((c) => c.id);
+        const allSelected = selectableIds.every((id) => selectedIds.has(id));
+        if (allSelected) {
+            setSelectedIds((prev) => {
+                const newSet = new Set(prev);
+                selectableIds.forEach((id) => newSet.delete(id));
+                return newSet;
+            });
+        }
+        else {
+            setSelectedIds((prev) => {
+                const newSet = new Set(prev);
+                selectableIds.forEach((id) => newSet.add(id));
+                return newSet;
+            });
+        }
+    };
+    const selectedContributions = useMemo(() => {
+        return contributions.filter((c) => selectedIds.has(c.id));
+    }, [contributions, selectedIds]);
+    const clearSelection = () => setSelectedIds(new Set());
+    const handleGenerateInvoice = async (contribution) => {
+        if (!contribution.patients) {
+            toast.error("Dados do contribuinte não encontrados");
+            return;
+        }
+        if (!contribution.patients.cpf) {
+            toast.error("CPF do contribuinte não informado");
+            return;
+        }
+        const isSessionValid = await validateSession();
+        if (!isSessionValid)
+            return;
+        setGeneratingInvoice(true);
+        try {
+            const body = {
+                action: "create_invoice",
+                contributionId: contribution.id,
+                clinicId: currentClinic?.id,
+                value: contribution.value,
+                dueDate: contribution.due_date,
+                description: `${contribution.contribution_types?.name || "Contribuição"} - ${formatCompetence(contribution.competence_month, contribution.competence_year)}`,
+                enableBoleto: true,
+                enablePix: true,
+                member: {
+                    cpf: contribution.patients.cpf,
+                    name: contribution.patients.name,
+                    email: contribution.patients.email,
+                    phone: contribution.patients.phone,
+                },
+            };
+            const response = await supabase.functions.invoke("lytex-api", { body });
+            if (response.error) {
+                throw new Error(response.error.message);
+            }
+            toast.success("Boleto gerado com sucesso!");
+            setViewDialogOpen(false);
+            fetchData();
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+            console.error("Error generating invoice:", error);
+            toast.error(`Erro ao gerar boleto: ${errorMessage}`);
+        }
+        finally {
+            setGeneratingInvoice(false);
+        }
+    };
+    const handleSyncAll = async () => {
+        if (!currentClinic)
+            return;
+        const isSessionValid = await validateSession();
+        if (!isSessionValid)
+            return;
+        setSyncing(true);
+        try {
+            const { data, error } = await supabase.functions.invoke("lytex-api", {
+                body: {
+                    action: "sync_all_pending",
+                    clinicId: currentClinic.id,
+                    onlyPF: true,
+                },
+            });
+            if (error) {
+                const { message } = extractFunctionsError(error);
+                throw new Error(message);
+            }
+            if (data?.updated > 0) {
+                toast.success(`${data.updated} contribuição(ões) atualizada(s)`);
+                fetchData();
+            }
+            else {
+                toast.info("Nenhuma atualização encontrada");
+            }
+        }
+        catch (error) {
+            const { message } = extractFunctionsError(error);
+            console.error("Error syncing:", error);
+            toast.error(`Erro ao sincronizar: ${message}`);
+        }
+        finally {
+            setSyncing(false);
+        }
+    };
+    const handleFetchPaidInvoices = async () => {
+        if (!currentClinic)
+            return;
+        const isSessionValid = await validateSession();
+        if (!isSessionValid)
+            return;
+        setFetchingPaid(true);
+        try {
+            const { data, error } = await supabase.functions.invoke("lytex-api", {
+                body: {
+                    action: "fetch_paid_invoices",
+                    clinicId: currentClinic.id,
+                    mode: "manual",
+                    daysBack: null,
+                    onlyPending: true,
+                    onlyPF: true,
+                },
+            });
+            if (error)
+                throw error;
+            if (data?.conciliated > 0) {
+                toast.success(`${data.conciliated} boleto(s) conciliado(s) automaticamente!`);
+                fetchData();
+            }
+            else if (data?.alreadyConciliated > 0 && data?.pendingInLytex > 0) {
+                toast.info(`${data.alreadyConciliated} já conciliados, ${data.pendingInLytex} ainda pendentes na Lytex`);
+            }
+            else if (data?.alreadyConciliated > 0) {
+                toast.info(`Todos os ${data.alreadyConciliated} boletos pagos já estavam conciliados`);
+            }
+            else if (data?.pendingInLytex > 0) {
+                toast.info(`${data.pendingInLytex} boleto(s) ainda pendente(s) na Lytex (não pagos)`);
+            }
+            else {
+                toast.info("Nenhum boleto pago encontrado para conciliar");
+            }
+            console.log("Busca de pagamentos PF:", data);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+            console.error("Error fetching paid invoices:", error);
+            toast.error(`Erro ao buscar pagamentos: ${errorMessage}`);
+        }
+        finally {
+            setFetchingPaid(false);
+        }
+    };
+    const handleImportExternalPaidInvoices = async () => {
+        if (!currentClinic)
+            return;
+        const isSessionValid = await validateSession();
+        if (!isSessionValid)
+            return;
+        setImportingExternal(true);
+        try {
+            toast.info("Buscando faturas pagas de todas as integrações Lytex...");
+            const { data, error } = await supabase.functions.invoke("lytex-api", {
+                body: {
+                    action: "import_external_paid_invoices",
+                    clinicId: currentClinic.id,
+                    onlyPF: true,
+                },
+            });
+            if (error)
+                throw error;
+            if (data?.imported > 0) {
+                toast.success(`${data.imported} boleto(s) externo(s) importado(s) automaticamente!`);
+                fetchData();
+            }
+            else if (data?.alreadyExists > 0) {
+                toast.info(`Todas as ${data.alreadyExists} faturas já existiam no banco`);
+            }
+            else {
+                toast.info("Nenhuma fatura externa encontrada para importar");
+            }
+            console.log("Importação externa PF:", data);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+            console.error("Error importing external invoices:", error);
+            toast.error(`Erro ao importar faturas externas: ${errorMessage}`);
+        }
+        finally {
+            setImportingExternal(false);
+        }
+    };
+    const formatCurrency = (cents) => {
+        return new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+        }).format(cents / 100);
+    };
+    const formatCPF = (cpf) => {
+        if (!cpf)
+            return "-";
+        const clean = cpf.replace(/\D/g, "");
+        return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    };
+    const copyToClipboard = (text, label) => {
+        navigator.clipboard.writeText(text);
+        toast.success(`${label} copiado!`);
+    };
+    const filteredContributions = useMemo(() => {
+        const filtered = contributions.filter((c) => {
+            let matchesSearch = true;
+            if (searchTerm.trim()) {
+                const searchLower = searchTerm.toLowerCase().trim();
+                const searchClean = searchTerm.replace(/\D/g, "");
+                const memberNameMatch = c.patients?.name?.toLowerCase().includes(searchLower);
+                const cpfClean = c.patients?.cpf?.replace(/\D/g, "") || "";
+                const cpfMatch = searchClean.length >= 3 && cpfClean.includes(searchClean);
+                const typeMatch = c.contribution_types?.name?.toLowerCase().includes(searchLower);
+                matchesSearch = !!(memberNameMatch || cpfMatch || typeMatch);
+            }
+            const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
+            return matchesSearch && matchesStatus;
+        });
+        // Ordenação por mês de competência
+        return [...filtered].sort((a, b) => {
+            const monthDiff = a.competence_month - b.competence_month;
+            if (monthDiff !== 0) {
+                return sortAscending ? monthDiff : -monthDiff;
+            }
+            // Se o mês for igual, ordena por data de criação
+            return sortAscending
+                ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+    }, [contributions, searchTerm, statusFilter, sortAscending]);
+    // Stats
+    const stats = useMemo(() => {
+        const total = contributions.length;
+        const paid = contributions.filter(c => c.status === "paid").length;
+        const pending = contributions.filter(c => c.status === "pending").length;
+        const overdue = contributions.filter(c => c.status === "overdue").length;
+        const totalValue = contributions.reduce((acc, c) => acc + (c.value || 0), 0);
+        const paidValue = contributions.filter(c => c.status === "paid").reduce((acc, c) => acc + (c.paid_value || c.value || 0), 0);
+        return { total, paid, pending, overdue, totalValue, paidValue };
+    }, [contributions]);
+    const totalPages = Math.ceil(filteredContributions.length / ITEMS_PER_PAGE);
+    const paginatedContributions = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredContributions.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredContributions, currentPage]);
+    if (loading) {
+        return (<div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+      </div>);
+    }
+    return (<div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary"/>
+            Contribuições PF
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Gerencie boletos e contribuições dos sócios pessoa física
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4"/>
+            Nova Contribuição
+          </Button>
+          <Button variant="outline" onClick={() => setBatchDialogOpen(true)} className="gap-2">
+            <FileStack className="h-4 w-4"/>
+            Gerar em Lote
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={syncing || fetchingPaid || importingExternal}>
+                {syncing || fetchingPaid || importingExternal ? (<Loader2 className="h-4 w-4 mr-2 animate-spin"/>) : (<Download className="h-4 w-4 mr-2"/>)}
+                Lytex
+                <ChevronDown className="h-4 w-4 ml-2"/>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleSyncAll} disabled={syncing}>
+                <RefreshCw className="h-4 w-4 mr-2"/>
+                Sincronizar Status
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setBatchGenerateLytexOpen(true)} className="text-amber-600">
+                <Zap className="h-4 w-4 mr-2"/>
+                Gerar Boletos Pendentes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleFetchPaidInvoices} disabled={fetchingPaid} className="text-green-600">
+                <Receipt className="h-4 w-4 mr-2"/>
+                Buscar Pagamentos (Conciliação)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportExternalPaidInvoices} disabled={importingExternal} className="text-blue-600">
+                <CloudDownload className="h-4 w-4 mr-2"/>
+                Importar Boletos Externos Pagos
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
+                <FileBarChart className="h-4 w-4 mr-2"/>
+                Histórico de Sincronização
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Lytex Sync Status */}
+      {currentClinic && (<LytexSyncStatusIndicator clinicId={currentClinic.id} onSyncClick={handleSyncAll} syncing={syncing}/>)}
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview" className="gap-2">
+            <LayoutDashboard className="h-4 w-4"/>
+            <span className="hidden sm:inline">Visão Geral</span>
+          </TabsTrigger>
+          <TabsTrigger value="list" className="gap-2">
+            <List className="h-4 w-4"/>
+            <span className="hidden sm:inline">Lista</span>
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2">
+            <FileBarChart className="h-4 w-4"/>
+            <span className="hidden sm:inline">Relatórios</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-8 w-8 text-primary"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold">{stats.total}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-8 w-8 text-emerald-600"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pagos</p>
+                    <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{stats.paid}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-8 w-8 text-amber-600"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pendentes</p>
+                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.pending}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-rose-200 bg-rose-50/50 dark:border-rose-800 dark:bg-rose-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-8 w-8 text-rose-600"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Vencidos</p>
+                    <p className="text-2xl font-bold text-rose-700 dark:text-rose-400">{stats.overdue}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-8 w-8 text-blue-600"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Previsto</p>
+                    <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{formatCurrency(stats.totalValue)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-8 w-8 text-green-600"/>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Recebido</p>
+                    <p className="text-lg font-bold text-green-700 dark:text-green-400">{formatCurrency(stats.paidValue)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* List Tab */}
+        <TabsContent value="list">
+          {/* Filters */}
+          <Card className="border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex flex-col lg:flex-row gap-4">
+                {/* Search */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                  <Input placeholder="Buscar por nome, CPF ou tipo..." value={searchTerm} onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+        }} className="pl-10"/>
+                </div>
+
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Status"/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="hide_cancelled">Ocultar cancelados</SelectItem>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="paid">Pagos</SelectItem>
+                    <SelectItem value="overdue">Vencidos</SelectItem>
+                    <SelectItem value="cancelled">Cancelados</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Year Filter */}
+                <Select value={yearFilter.toString()} onValueChange={(v) => setYearFilter(parseInt(v))}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Ano"/>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getStaticYearRange().map((year) => (<SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>))}
+                  </SelectContent>
+                </Select>
+
+                {/* Sort Order Toggle */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" onClick={() => setSortAscending(!sortAscending)} className="shrink-0">
+                        {sortAscending ? (<ArrowUp className="h-4 w-4"/>) : (<ArrowDown className="h-4 w-4"/>)}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {sortAscending
+            ? "Ordenar por mês: Crescente (Jan → Dez)"
+            : "Ordenar por mês: Decrescente (Dez → Jan)"}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bulk Actions Bar */}
+          {selectedIds.size > 0 && (<Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20">
+              <CardContent className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5 text-emerald-600"/>
+                  <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                    {selectedIds.size} contribuição(ões) selecionada(s)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={clearSelection}>
+                    Limpar seleção
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => generatePFBoletosReport(selectedContributions)} className="gap-2">
+                    <FileText className="h-4 w-4"/>
+                    Exportar PDF
+                  </Button>
+                  <Button size="sm" onClick={() => setBatchWhatsappOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                    <MessageCircle className="h-4 w-4"/>
+                    Enviar por WhatsApp
+                  </Button>
+                  <Button size="sm" onClick={() => setBatchEmailOpen(true)} className="gap-2">
+                    <Mail className="h-4 w-4"/>
+                    Enviar por Email
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>)}
+
+          {/* Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox checked={paginatedContributions.filter(c => c.lytex_invoice_url && c.status !== "cancelled").length > 0 &&
+            paginatedContributions
+                .filter(c => c.lytex_invoice_url && c.status !== "cancelled")
+                .every(c => selectedIds.has(c.id))} onCheckedChange={toggleSelectAll} aria-label="Selecionar todos"/>
+                    </TableHead>
+                    <TableHead>Sócio</TableHead>
+                    <TableHead>CPF</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Competência</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedContributions.length === 0 ? (<TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        <Receipt className="h-12 w-12 mx-auto mb-2 opacity-30"/>
+                        <p>Nenhuma contribuição encontrada</p>
+                      </TableCell>
+                    </TableRow>) : (paginatedContributions.map((contribution) => {
+            const status = STATUS_CONFIG[contribution.status] || STATUS_CONFIG.pending;
+            const StatusIcon = status.icon;
+            const isSelectable = contribution.lytex_invoice_url && contribution.status !== "cancelled";
+            return (<TableRow key={contribution.id} className={status.rowClass}>
+                          <TableCell>
+                            {isSelectable ? (<Checkbox checked={selectedIds.has(contribution.id)} onCheckedChange={() => toggleSelection(contribution.id)} aria-label={`Selecionar ${contribution.patients?.name}`}/>) : (<Checkbox disabled className="opacity-30"/>)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {contribution.patients?.name || "-"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {formatCPF(contribution.patients?.cpf || null)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-normal">
+                              {contribution.contribution_types?.name || "-"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {formatCompetence(contribution.competence_month, contribution.competence_year)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {formatCurrency(contribution.value)}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(contribution.due_date + "T12:00:00"), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={status.badgeClass}>
+                              <StatusIcon className="h-3 w-3 mr-1"/>
+                              {status.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => handleViewContribution(contribution)}>
+                                      <Eye className="h-4 w-4"/>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Ver detalhes</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+
+                              {contribution.lytex_invoice_url && (<TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" onClick={() => window.open(contribution.lytex_invoice_url, "_blank")}>
+                                        <ExternalLink className="h-4 w-4"/>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Abrir boleto</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>)}
+
+                              {contribution.lytex_boleto_digitable_line && (<TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(contribution.lytex_boleto_digitable_line, "Linha digitável")}>
+                                        <Copy className="h-4 w-4"/>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Copiar linha digitável</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>)}
+
+                              {!contribution.lytex_invoice_id && contribution.status !== "paid" && contribution.status !== "cancelled" && (<TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" onClick={() => handleGenerateInvoice(contribution)} disabled={generatingInvoice}>
+                                        {generatingInvoice ? (<Loader2 className="h-4 w-4 animate-spin"/>) : (<Receipt className="h-4 w-4"/>)}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Gerar boleto</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>)}
+
+                              {/* WhatsApp Button */}
+                              {contribution.lytex_invoice_url && contribution.status !== "cancelled" && (<TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" onClick={() => {
+                        setSendingContribution(contribution);
+                        setWhatsappDialogOpen(true);
+                    }} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                                        <MessageCircle className="h-4 w-4"/>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Enviar por WhatsApp</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>)}
+
+                              {/* Email Button */}
+                              {contribution.lytex_invoice_url && contribution.status !== "cancelled" && (<TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" onClick={() => {
+                        setSendingContribution(contribution);
+                        setEmailDialogOpen(true);
+                    }} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                        <Mail className="h-4 w-4"/>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Enviar por Email</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>)}
+                            </div>
+                          </TableCell>
+                        </TableRow>);
+        }))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Pagination */}
+          {totalPages > 1 && (<div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredContributions.length)} de {filteredContributions.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                  <ChevronLeft className="h-4 w-4"/>
+                </Button>
+                <span className="text-sm">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                  <ChevronRight className="h-4 w-4"/>
+                </Button>
+              </div>
+            </div>)}
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports">
+          <PFContributionsReportsTab contributions={contributions} contributionTypes={contributionTypes} clinicName={currentClinic?.name} clinicLogo={currentClinic?.logo_url || undefined} yearFilter={yearFilter} onYearFilterChange={setYearFilter}/>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialogs */}
+      {currentClinic && user && (<>
+          <PFContributionDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} contributionTypes={contributionTypes} clinicId={currentClinic.id} userId={user.id} onRefresh={fetchData} onGenerateInvoice={handleGenerateInvoice} onOpenBatch={() => {
+                setCreateDialogOpen(false);
+                setBatchDialogOpen(true);
+            }}/>
+
+          <PFBatchContributionDialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen} contributionTypes={contributionTypes} clinicId={currentClinic.id} userId={user.id} onRefresh={fetchData}/>
+
+          <BatchGenerateLytexDialog open={batchGenerateLytexOpen} onOpenChange={setBatchGenerateLytexOpen} yearFilter={yearFilter} onSuccess={fetchData}/>
+
+          <LytexConciliationHistoryDialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen} clinicId={currentClinic.id}/>
+
+          {selectedContribution && (<PFContributionDetailDialog open={viewDialogOpen} onOpenChange={setViewDialogOpen} contribution={selectedContribution} contributionTypes={contributionTypes} onGenerateInvoice={handleGenerateInvoice} generatingInvoice={generatingInvoice} onRefresh={fetchData}/>)}
+
+          {/* WhatsApp Dialog */}
+          <SendPFContributionWhatsAppDialog open={whatsappDialogOpen} onOpenChange={setWhatsappDialogOpen} contribution={sendingContribution} clinicId={currentClinic.id} clinicName={currentClinic.name}/>
+
+          {/* Email Dialog */}
+          <SendPFContributionEmailDialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen} contribution={sendingContribution} clinicId={currentClinic.id} clinicName={currentClinic.name}/>
+
+          {/* Batch WhatsApp Dialog */}
+          <BatchWhatsAppDialog open={batchWhatsappOpen} onOpenChange={(open) => {
+                setBatchWhatsappOpen(open);
+                if (!open)
+                    clearSelection();
+            }} contributions={selectedContributions} clinicId={currentClinic.id} clinicName={currentClinic.name} onComplete={() => {
+                fetchData();
+            }}/>
+
+          {/* Batch Email Dialog */}
+          <BatchPFEmailDialog open={batchEmailOpen} onOpenChange={(open) => {
+                setBatchEmailOpen(open);
+                if (!open)
+                    clearSelection();
+            }} contributions={selectedContributions} clinicId={currentClinic.id} clinicName={currentClinic.name} onComplete={() => {
+                fetchData();
+            }}/>
+        </>)}
+    </div>);
+}

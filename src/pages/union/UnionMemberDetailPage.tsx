@@ -44,6 +44,7 @@ import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMember
 import { DependentAppointmentsList } from "@/components/union/members/DependentAppointmentsList";
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
 import { MemberQuickSearch } from "@/components/union/members/MemberQuickSearch";
+import MemberContributionsTab from "@/components/union/MemberContributionsTab";
 
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
@@ -1412,6 +1413,13 @@ export default function UnionMemberDetailPage({
             patientId={id}
             patientName={formData.name}
           />
+        </div>
+      )}
+
+      {/* Aba Contribuições */}
+      {activeTab === 'contribuicoes' && id && (
+        <div className="bg-card rounded-lg border p-6">
+          <MemberContributionsTab memberIdOverride={id} />
         </div>
       )}
 
