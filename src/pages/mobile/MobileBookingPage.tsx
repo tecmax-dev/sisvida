@@ -113,6 +113,35 @@ const calculateAge = (birthDate: string): number => {
   return age;
 };
 
+// ---- Regra: profissional exclusiva para pacientes do sexo feminino (Karen Feire) ----
+const isFemaleOnlyProfessional = (name?: string | null) =>
+  !!name && /karen\s+f(r)?eire/i.test(name);
+
+const isMaleGenderValue = (gender?: string | null) => {
+  const g = (gender || "").toLowerCase().trim();
+  return g === "m" || g === "masculino" || g === "male" || g === "homem";
+};
+
+// Heurística por parentesco (dependentes não possuem campo de sexo)
+const isMaleRelationship = (relationship?: string | null) => {
+  const r = (relationship || "").toLowerCase().trim();
+  return /^(filho|marido|esposo|pai|irm[ãa]o|av[ôo]|neto|enteado|sobrinho|tio|primo|companheiro|genro|padrasto)\b/.test(r)
+    && !/^(filha|irm[ãa]|av[óo]|neta|enteada|sobrinha|tia|prima|companheira|nora|madrasta)\b/.test(r);
+};
+
+const FEMALE_ONLY_MESSAGE = "Esta profissional atende exclusivamente pacientes do sexo feminino.";
+
+const legacyCalculateAge = (birthDate: string): number => {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 interface TimeSlot {
   time: string;
   available: boolean;
