@@ -909,24 +909,43 @@ export default function MobileBookingPage() {
                       noShowReason = `Bloqueado para este profissional até ${until.toLocaleDateString("pt-BR")} por falta anterior`;
                     }
                     const isBlocked = isAgeBlocked || isNoShowBlocked;
-                    const blockReason = isAgeBlocked ? ageBlockReason : noShowReason;
+                    // Restrição de sexo: profissional exclusiva para mulheres
+                    let isGenderBlocked = false;
+                    if (isFemaleOnlyProfessional(prof.name)) {
+                      if (patientType === "titular") {
+                        isGenderBlocked = isMaleGenderValue(titularGender);
+                      } else if (selectedDependentId) {
+                        const dep = dependents.find(d => d.id === selectedDependentId);
+                        isGenderBlocked = isMaleRelationship(dep?.relationship);
+                      }
+                    }
+                    const isBlockedFinal = isBlocked || isGenderBlocked;
+                    const blockReason = isGenderBlocked
+                      ? FEMALE_ONLY_MESSAGE
+                      : isAgeBlocked
+                        ? ageBlockReason
+                        : noShowReason;
 
                     return (
                       <Card 
                         key={prof.id}
                         className={cn(
                           "transition-colors",
-                          isBlocked 
+                          isBlockedFinal
                             ? "opacity-50 cursor-not-allowed" 
                             : "cursor-pointer active:scale-[0.98]",
-                          selectedProfessionalId === prof.id && !isBlocked
+                          selectedProfessionalId === prof.id && !isBlockedFinal
                             ? "border-emerald-600 bg-emerald-50" 
                             : ""
                         )}
                         onClick={() => {
-                          if (isBlocked) {
+                          if (isBlockedFinal) {
                             toast({
-                              title: isNoShowBlocked ? "Agendamento bloqueado" : "Restrição de idade",
+                              title: isGenderBlocked
+                                ? "Atendimento exclusivo feminino"
+                                : isNoShowBlocked
+                                  ? "Agendamento bloqueado"
+                                  : "Restrição de idade",
                               description: blockReason,
                               variant: "destructive",
                             });
@@ -965,13 +984,23 @@ export default function MobileBookingPage() {
                                 ⚠️ {noShowReason}
                               </p>
                             )}
+                            {isGenderBlocked && (
+                              <p className="text-xs text-red-500 font-medium mt-0.5">
+                                ⚠️ {FEMALE_ONLY_MESSAGE}
+                              </p>
+                            )}
+                            {isFemaleOnlyProfessional(prof.name) && !isGenderBlocked && (
+                              <p className="text-xs text-pink-600 mt-0.5">
+                                Atendimento exclusivo para mulheres
+                              </p>
+                            )}
                             {prof.max_patient_age != null && !isAgeBlocked && (
                               <p className="text-xs text-amber-600 mt-0.5">
                                 Até {prof.max_patient_age} anos
                               </p>
                             )}
                           </div>
-                          {selectedProfessionalId === prof.id && !isBlocked && (
+                          {selectedProfessionalId === prof.id && !isBlockedFinal && (
                             <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                           )}
                         </CardContent>
@@ -987,6 +1016,20 @@ export default function MobileBookingPage() {
                 onClick={() => {
                   // Double-check age restriction before proceeding
                   const prof = professionals.find(p => p.id === selectedProfessionalId);
+                  if (isFemaleOnlyProfessional(prof?.name)) {
+                    const dep = dependents.find(d => d.id === selectedDependentId);
+                    const blockedByGender = patientType === "titular"
+                      ? isMaleGenderValue(titularGender)
+                      : isMaleRelationship(dep?.relationship);
+                    if (blockedByGender) {
+                      toast({
+                        title: "Atendimento exclusivo feminino",
+                        description: `${prof?.name} ${FEMALE_ONLY_MESSAGE.toLowerCase()}`,
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                  }
                   if (prof?.max_patient_age != null) {
                     let patientBirthDate: string | null = null;
                     if (patientType === "dependent" && selectedDependentId) {
