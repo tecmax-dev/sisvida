@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { User, Users, ShieldCheck, CreditCard, FileText, Calendar } from "lucide-react";
+import { User, Users, ShieldCheck, CreditCard, FileText, Calendar, Receipt } from "lucide-react";
 
 export type UnionMemberTab = 
   | 'cadastro' 
@@ -7,7 +7,8 @@ export type UnionMemberTab =
   | 'carteirinha'
   | 'anexos'
   | 'sindical'
-  | 'agendamentos';
+  | 'agendamentos'
+  | 'contribuicoes';
 
 interface UnionMemberTabsProps {
   activeTab: UnionMemberTab;
@@ -23,6 +24,7 @@ const tabs: { id: UnionMemberTab; label: string; icon: any }[] = [
   { id: 'carteirinha', label: 'Carteirinha', icon: CreditCard },
   { id: 'anexos', label: 'Anexos', icon: FileText },
   { id: 'agendamentos', label: 'Agendamentos', icon: Calendar },
+  { id: 'contribuicoes', label: 'Contribuições', icon: Receipt },
 ];
 
 export function UnionMemberTabs({ activeTab, onTabChange, memberId, hiddenTabs = [] }: UnionMemberTabsProps) {

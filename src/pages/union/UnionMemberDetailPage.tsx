@@ -1415,6 +1415,13 @@ export default function UnionMemberDetailPage({
         </div>
       )}
 
+      {/* Aba Contribuições */}
+      {activeTab === 'contribuicoes' && id && (
+        <div className="bg-card rounded-lg border p-6">
+          <MemberContributionsTab memberIdOverride={id} />
+        </div>
+      )}
+
       {/* Modals */}
       <PatientCardsModal
         open={isModalOpen('patientCards')}

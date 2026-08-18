@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
+import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 
 export default function EmployerDetailPage({ 
   employerIdOverride, 
@@ -33,6 +34,7 @@ export default function EmployerDetailPage({
   const [contributionTypes, setContributionTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
   async function fetchData() {
@@ -206,7 +208,7 @@ export default function EmployerDetailPage({
                 onSyncLytex={() => fetchData()}
                 onOpenWhatsappDialog={() => {}}
                 onOpenEmailDialog={() => {}}
-                onOpenCreateDialog={() => {}}
+                onOpenCreateDialog={() => setIsCreateDialogOpen(true)}
                 onOpenOverdueDialog={() => {}}
                 onViewContribution={() => {}}
                 onGenerateInvoice={() => {}}
@@ -352,6 +354,40 @@ export default function EmployerDetailPage({
           </div>
         </div>
       </div>
+
+      <ContributionDialogs
+        createDialogOpen={isCreateDialogOpen}
+        onCreateDialogChange={setIsCreateDialogOpen}
+        employers={[employer]}
+        contributionTypes={contributionTypes}
+        clinicId={currentClinic?.id || ""}
+        userId={user?.id || ""}
+        onRefresh={fetchData}
+        viewDialogOpen={false}
+        onViewDialogChange={() => {}}
+        selectedContribution={null}
+        onGenerateInvoice={async (contribution) => {
+          try {
+            const body = {
+              action: "create_invoice",
+              contributionId: contribution.id,
+              clinicId: currentClinic?.id,
+              value: contribution.value,
+              dueDate: contribution.due_date,
+              description: `${contribution.contribution_types?.name || "Contribuição"} - ${String(contribution.competence_month).padStart(2, "0")}/${contribution.competence_year}`,
+              enableBoleto: true,
+              enablePix: true,
+              member: contribution.employer_id ? undefined : null // Adicionado para manter compatibilidade
+            };
+            await supabase.functions.invoke("lytex-api", { body });
+            fetchData();
+          } catch (err) {
+            console.error("Erro ao gerar boleto:", err);
+            toast.error("Erro ao gerar boleto");
+          }
+        }}
+        generatingInvoice={false}
+      />
     </Tabs>
   );
 

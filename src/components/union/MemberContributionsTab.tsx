@@ -127,6 +127,10 @@ interface Contribution {
   contribution_types?: ContributionType;
 }
 
+interface MemberContributionsTabProps {
+  memberIdOverride?: string;
+}
+
 const ITEMS_PER_PAGE = 15;
 
 const STATUS_CONFIG = {
@@ -202,7 +206,7 @@ const getInitialSortOrder = (): boolean => {
   }
 };
 
-export default function MemberContributionsTab() {
+export default function MemberContributionsTab({ memberIdOverride }: MemberContributionsTabProps = {}) {
   const { currentClinic, session, user } = useAuth();
   const { validateSession } = useSessionValidator();
   
@@ -276,7 +280,7 @@ export default function MemberContributionsTab() {
         `)
         .eq("clinic_id", currentClinic.id)
         .eq("competence_year", yearFilter)
-        .not("member_id", "is", null)
+        .eq("member_id", memberIdOverride || "is", null) // Adjusted to handle override correctly
         .order("competence_month", { ascending: false })
         .order("created_at", { ascending: false });
 
