@@ -501,6 +501,30 @@ export default function MobileBookingPage() {
     // pedimos confirmação quando o paciente é do sexo masculino (titular) ou quando
     // não temos certeza do sexo (dependente). Nunca bloqueamos de forma categórica.
     const profSelected = professionals.find(p => p.id === selectedProfessionalId);
+
+    // Regra Karen Feire: atendimento exclusivo para pacientes do sexo feminino.
+    if (isFemaleOnlyProfessional(profSelected?.name)) {
+      if (patientType === "titular" && isMaleGenderValue(titularGender)) {
+        toast({
+          title: "Atendimento exclusivo feminino",
+          description: `${profSelected?.name} atende exclusivamente pacientes do sexo feminino.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      if (patientType === "dependent") {
+        const dep = dependents.find(d => d.id === selectedDependentId);
+        if (isMaleRelationship(dep?.relationship)) {
+          toast({
+            title: "Atendimento exclusivo feminino",
+            description: `${dep?.name || "O dependente"} não pode ser agendado com ${profSelected?.name}, que atende exclusivamente pacientes do sexo feminino.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
     const isDanielaSales = !!profSelected && /daniela\s+sales/i.test(profSelected.name);
     if (isDanielaSales) {
       if (patientType === "titular") {
