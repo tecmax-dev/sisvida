@@ -17,7 +17,7 @@ export function GlobalUnionModals() {
       <Dialog 
         open={memberOpen} 
         onOpenChange={(open) => !open && closeModal('unionMemberEdit')}
-        modal={false}
+        modal={true}
       >
         <DialogContent 
           onPointerDownOutside={(e) => e.preventDefault()}
@@ -38,7 +38,7 @@ export function GlobalUnionModals() {
       <Dialog 
         open={employerOpen} 
         onOpenChange={(open) => !open && closeModal('employerEdit')}
-        modal={false}
+        modal={true}
       >
         <DialogContent 
           onPointerDownOutside={(e) => e.preventDefault()}

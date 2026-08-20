@@ -6,39 +6,21 @@ import { cn } from "@/lib/utils";
 import { becameVisibleRecently } from "@/lib/visibility-grace";
 
 const Dialog = ({
-  open: openProp,
+  open,
   defaultOpen,
   onOpenChange,
   ...props
-}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
-  const isControlled = openProp !== undefined;
-  const [uncontrolledOpen, setUncontrolledOpen] = React.useState<boolean>(defaultOpen ?? false);
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => (
+  <DialogPrimitive.Root
+    open={open}
+    defaultOpen={defaultOpen}
+    onOpenChange={onOpenChange}
+    {...props}
+  />
+);
 
-  const open = isControlled ? openProp : uncontrolledOpen;
-
-  const handleOpenChange = React.useCallback(
-    (nextOpen: boolean) => {
-      // Prevent unintended close events when switching browser tabs / losing focus.
-      // Note: Radix can fire a dismiss on focus restoration; we guard a short grace window.
-      if (
-        !nextOpen &&
-        (document.hidden || document.visibilityState === "hidden" || !document.hasFocus() || becameVisibleRecently(600))
-      ) {
-        return;
-      }
-
-      if (!isControlled) setUncontrolledOpen(nextOpen);
-      onOpenChange?.(nextOpen);
-    },
-    [isControlled, onOpenChange],
-  );
-
-  return <DialogPrimitive.Root {...props} open={open} onOpenChange={handleOpenChange} />;
-};
 const DialogTrigger = DialogPrimitive.Trigger;
-
 const DialogPortal = DialogPrimitive.Portal;
-
 const DialogClose = DialogPrimitive.Close;
 
 const DialogOverlay = React.forwardRef<
@@ -49,7 +31,7 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     className={cn(
       "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className,
+      className
     )}
     {...props}
   />
@@ -65,14 +47,9 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       {...props}
-      onOpenAutoFocus={(e) => {
-        // Only prevent auto-focus if it's causing interaction issues, 
-        // but here we want to ensure pointer events are NOT disabled.
-        // We'll let it focus but ensure we don't trap pointer events if possible.
-      }}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1rem)] max-w-lg max-h-[calc(100dvh-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-4 sm:p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg sm:rounded-lg pointer-events-auto",
-        className,
+        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1rem)] max-w-lg max-h-[calc(100dvh-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-4 sm:p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg sm:rounded-lg",
+        className
       )}
     >
       {children}

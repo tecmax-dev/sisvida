@@ -563,6 +563,17 @@ export default function MobileBookingPage() {
       const isDependentBooking = patientType === "dependent" && !!selectedDependentId;
       const appointmentDate = format(selectedDate, "yyyy-MM-dd");
 
+      // Validar gênero antes de enviar (redundância frontend)
+      if (isFemaleOnlyProfessional(professional?.name)) {
+        const isTitularMale = patientType === "titular" && isMaleGenderValue(titularGender);
+        const selectedDep = dependents.find(d => d.id === selectedDependentId);
+        const isDepMale = patientType === "dependent" && isMaleRelationship(selectedDep?.relationship);
+        
+        if (isTitularMale || isDepMale) {
+           throw new Error("Atendimento exclusivo para mulheres.");
+        }
+      }
+
       // Get the duration from the applicable block for this date
       const applicableBlocks = getBlocksForDate(selectedDate, professional?.schedule || null);
       const blockDuration = applicableBlocks[0]?.duration || professional?.appointment_duration || 30;
