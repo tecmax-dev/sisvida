@@ -18,15 +18,15 @@ export function GlobalUnionModals() {
         open={memberOpen} 
         onOpenChange={(open) => !open && closeModal('unionMemberEdit')}
       >
-        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 overflow-hidden flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100]">
-          <ScrollArea className="flex-1 w-full">
+        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100]">
+          <div className="flex-1 w-full overflow-y-auto custom-scrollbar-teal">
             {memberOpen && (
               <UnionMemberDetailPage 
                 memberIdOverride={memberModalData?.memberId || memberModalData?.id} 
                 isModalMode={true} 
               />
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -34,15 +34,15 @@ export function GlobalUnionModals() {
         open={employerOpen} 
         onOpenChange={(open) => !open && closeModal('employerEdit')}
       >
-        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 overflow-hidden flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100]">
-          <ScrollArea className="flex-1 w-full">
+        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100]">
+          <div className="flex-1 w-full overflow-y-auto custom-scrollbar-teal">
             {employerOpen && (
               <EmployerDetailPage 
                 employerIdOverride={employerModalData?.employerId || employerModalData?.id} 
                 isModalMode={true} 
               />
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </>
