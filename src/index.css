@@ -176,9 +176,9 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Safety net: prevent accidental horizontal scroll on the whole app.
-       Individual scroll containers (tables, kanbans) keep their own overflow-x-auto. */
     overflow-x: hidden;
+    /* Force pointer events on body to prevent Radix UI locks */
+    pointer-events: auto !important;
   }
 
   /* Media never break their container on small screens.
