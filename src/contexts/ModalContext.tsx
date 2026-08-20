@@ -80,12 +80,10 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const closeModal = useCallback((type: ModalType) => {
-    if (document.hasFocus()) {
-      setModals(prev => ({
-        ...prev,
-        [type]: { ...prev[type], isOpen: false },
-      }));
-    }
+    setModals(prev => ({
+      ...prev,
+      [type]: { ...prev[type], isOpen: false },
+    }));
   }, []);
 
   const isModalOpen = useCallback((type: ModalType) => {
