@@ -63,6 +63,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Pencil,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -987,6 +988,7 @@ export default function MemberContributionsTab({ memberIdOverride }: MemberContr
                                     <Button
                                       variant="ghost"
                                       size="icon"
+                                      className="h-8 w-8"
                                       onClick={() => handleViewContribution(contribution)}
                                     >
                                       <Eye className="h-4 w-4" />
@@ -995,6 +997,24 @@ export default function MemberContributionsTab({ memberIdOverride }: MemberContr
                                   <TooltipContent>Ver detalhes</TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
+
+                              {contribution.status !== "paid" && contribution.status !== "cancelled" && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                                        onClick={() => handleViewContribution(contribution)}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Editar</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
 
                               {contribution.lytex_invoice_url && (
                                 <TooltipProvider>

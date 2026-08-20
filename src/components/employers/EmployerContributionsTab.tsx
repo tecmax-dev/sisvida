@@ -43,6 +43,7 @@ import {
   TrendingUp,
   Wallet,
   CircleDollarSign,
+  Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
@@ -787,9 +788,22 @@ export default function EmployerContributionsTab({
                           {contrib.paid_value ? formatCurrency(contrib.paid_value) : "-"}
                         </TableCell>
                         <TableCell className="py-1.5 px-1.5 text-center">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onViewContribution(contrib)}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onViewContribution(contrib)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            {contrib.status !== "paid" && contrib.status !== "cancelled" && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-teal-600 hover:text-teal-700 hover:bg-teal-50" 
+                                onClick={() => onViewContribution(contrib)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

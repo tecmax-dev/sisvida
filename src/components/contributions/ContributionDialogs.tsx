@@ -942,7 +942,7 @@ export default function ContributionDialogs({
                     Gerar Recibo
                   </Button>
                 )}
-                {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
+                {(selectedContribution.status === "pending" || selectedContribution.status === "overdue" || selectedContribution.status === "awaiting_value" || selectedContribution.status === "processing") && (
                   <>
                     <Button
                       variant="outline"
