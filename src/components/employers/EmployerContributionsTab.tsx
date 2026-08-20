@@ -43,6 +43,7 @@ import {
   TrendingUp,
   Wallet,
   CircleDollarSign,
+  Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
