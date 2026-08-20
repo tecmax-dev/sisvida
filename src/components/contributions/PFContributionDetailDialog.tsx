@@ -542,7 +542,7 @@ export default function PFContributionDetailDialog({
 
             {/* Action Buttons */}
             <DialogFooter className="flex-col sm:flex-row gap-2">
-              {contribution.status !== "paid" && contribution.status !== "cancelled" && (
+              {(contribution.status === "pending" || contribution.status === "overdue" || contribution.status === "processing") && (
                 <>
                   <Button
                     variant="outline"
