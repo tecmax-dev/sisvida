@@ -90,6 +90,7 @@ export function MemberQuickSearch({ clinicId, currentMemberId, className, isModa
     setTerm("");
     if (isModalMode) {
       updateModalData('unionMemberEdit', { memberId: id, id: id });
+      navigate(`/union/socios/${id}`, { replace: true });
     } else {
       navigate(`/union/socios/${id}`);
     }

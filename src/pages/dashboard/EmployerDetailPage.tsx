@@ -118,7 +118,10 @@ export default function EmployerDetailPage({
                           .maybeSingle()
                           .then(({ data }) => {
                             if (data) {
-                              updateModalData('employerEdit', { employerId: data.id, id: data.id });
+                              const newId = data.id;
+                              updateModalData('employerEdit', { employerId: newId, id: newId });
+                              // Use the navigate-based refresh mechanism since ID changed
+                              navigate(`/union/empresas/${newId}`, { replace: true });
                             } else {
                               toast.error("Nenhuma empresa encontrada.");
                             }
