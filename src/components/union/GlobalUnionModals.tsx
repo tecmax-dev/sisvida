@@ -17,9 +17,14 @@ export function GlobalUnionModals() {
       <Dialog 
         open={memberOpen} 
         onOpenChange={(open) => !open && closeModal('unionMemberEdit')}
+        modal={false}
       >
-        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100]">
-          <div className="flex-1 w-full overflow-y-auto custom-scrollbar-teal">
+        <DialogContent 
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100] pointer-events-auto"
+        >
+          <div className="flex-1 w-full overflow-y-auto custom-scrollbar-teal relative">
             {memberOpen && (
               <UnionMemberDetailPage 
                 memberIdOverride={memberModalData?.memberId || memberModalData?.id} 
@@ -33,9 +38,14 @@ export function GlobalUnionModals() {
       <Dialog 
         open={employerOpen} 
         onOpenChange={(open) => !open && closeModal('employerEdit')}
+        modal={false}
       >
-        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100]">
-          <div className="flex-1 w-full overflow-y-auto custom-scrollbar-teal">
+        <DialogContent 
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          className="max-w-[98vw] sm:max-w-[95vw] w-full sm:w-[1400px] h-[95vh] sm:h-[90vh] p-0 flex flex-col rounded-none sm:rounded-xl shadow-2xl border-teal-500/20 z-[100] pointer-events-auto"
+        >
+          <div className="flex-1 w-full overflow-y-auto custom-scrollbar-teal relative">
             {employerOpen && (
               <EmployerDetailPage 
                 employerIdOverride={employerModalData?.employerId || employerModalData?.id} 
