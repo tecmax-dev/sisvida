@@ -20681,6 +20681,7 @@ export type Database = {
         | "coletivo_sindical"
         | "outro"
       legal_risk_level: "baixo" | "medio" | "alto" | "critico"
+      patient_gender: "masculino" | "feminino" | "outro" | "prefiro_nao_dizer"
       plan_category: "clinica" | "sindicato"
       specialty_category:
         | "medical"
@@ -20870,6 +20871,7 @@ export const Constants = {
         "outro",
       ],
       legal_risk_level: ["baixo", "medio", "alto", "critico"],
+      patient_gender: ["masculino", "feminino", "outro", "prefiro_nao_dizer"],
       plan_category: ["clinica", "sindicato"],
       specialty_category: [
         "medical",
