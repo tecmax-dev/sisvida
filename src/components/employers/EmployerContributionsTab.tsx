@@ -792,17 +792,36 @@ export default function EmployerContributionsTab({
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onViewContribution(contrib)}>
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            {contrib.status !== "paid" && contrib.status !== "cancelled" && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6 text-teal-600 hover:text-teal-700 hover:bg-teal-50" 
-                                onClick={() => onViewContribution(contrib)}
-                                title="Editar"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
+                            {(() => {
+                              const isOverdue = new Date(contrib.due_date) < new Date();
+                              const canEditDate = isOverdue;
+                              
+                              if (contrib.status !== "paid" && contrib.status !== "cancelled") {
+                                return (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6 text-teal-600 hover:text-teal-700 hover:bg-teal-50" 
+                                          onClick={() => onViewContribution(contrib)}
+                                          title={canEditDate ? "Editar" : "Somente vencidos podem ter data alterada"}
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      {!canEditDate && (
+                                        <TooltipContent>
+                                          <p>Somente contribuições vencidas podem ter a data alterada.</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         </TableCell>
                       </TableRow>
