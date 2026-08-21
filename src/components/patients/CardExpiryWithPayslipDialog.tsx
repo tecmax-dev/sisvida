@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { pdfToImageBase64 } from "@/utils/pdfToImage";
 import { canSubmitCardExpiryChange, isCardExpirySubmitEnabled } from "@/lib/cardExpiryPermissions";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
 interface CardExpiryWithPayslipDialogProps {
   open: boolean;
@@ -173,9 +174,10 @@ export function CardExpiryWithPayslipDialog({
         setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.");
       }
     } catch (err: any) {
-      console.error("Verification error:", err);
+      const errorDetails = await extractFunctionsErrorAsync(err);
+      console.error("Verification error:", err, errorDetails);
       setVerificationStatus("invalid");
-      setVerificationMessage("Erro ao verificar o documento. Tente novamente.");
+      setVerificationMessage(errorDetails.message || "Erro ao verificar o documento. Tente novamente.");
     }
   };
 
