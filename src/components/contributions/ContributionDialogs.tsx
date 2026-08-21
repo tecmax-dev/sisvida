@@ -485,6 +485,12 @@ export default function ContributionDialogs({
   const handleUpdateInvoice = async () => {
     if (!selectedContribution) return;
     
+    const isOverdue = new Date(selectedContribution.due_date) < new Date();
+    if (!isOverdue && editDueDate !== selectedContribution.due_date) {
+      toast.error("Somente contribuições vencidas podem ter a data de vencimento alterada.");
+      return;
+    }
+    
     setUpdating(true);
     try {
       const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
