@@ -217,6 +217,13 @@ export default function PFContributionDetailDialog({
     try {
       const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
       
+      const isOverdue = new Date(contribution.due_date) < new Date();
+      if (!isOverdue && editDueDate !== contribution.due_date) {
+        toast.error("Somente contribuições vencidas podem ter a data de vencimento alterada.");
+        setUpdating(false);
+        return;
+      }
+      
       const selectedType = contributionTypes.find(t => t.id === editTypeId);
       const newDescription = `${selectedType?.name || 'Contribuição'} - ${formatCompetence(editMonth, editYear)}`;
       
