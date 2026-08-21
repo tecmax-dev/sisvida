@@ -173,9 +173,10 @@ export function CardExpiryWithPayslipDialog({
         setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.");
       }
     } catch (err: any) {
-      console.error("Verification error:", err);
+      const errorDetails = await extractFunctionsErrorAsync(err);
+      console.error("Verification error:", err, errorDetails);
       setVerificationStatus("invalid");
-      setVerificationMessage("Erro ao verificar o documento. Tente novamente.");
+      setVerificationMessage(errorDetails.message || "Erro ao verificar o documento. Tente novamente.");
     }
   };
 
