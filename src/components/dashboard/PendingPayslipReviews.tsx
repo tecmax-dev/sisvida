@@ -126,6 +126,7 @@ export default function PendingPayslipReviews() {
     
     if (request.attachment_path) {
       try {
+        console.log('[PendingPayslipReviews] Invoking signed URL for:', request.attachment_path);
         const { data, error } = await supabase.functions.invoke('get-payslip-signed-url', {
           body: { path: request.attachment_path },
         });
@@ -134,20 +135,34 @@ export default function PendingPayslipReviews() {
           setPreviewUrl(data.signedUrl);
         } else {
           console.error('[PendingPayslipReviews] Error getting signed URL:', error);
+          
+          // Fallback: Tenta gerar URL pública (apenas para debug/emergência se RLS permitir)
+          const { data: publicData } = supabase.storage
+            .from('contra-cheques')
+            .getPublicUrl(request.attachment_path);
+          
+          if (publicData?.publicUrl) {
+            console.log('[PendingPayslipReviews] Fallback to public URL:', publicData.publicUrl);
+            setPreviewUrl(publicData.publicUrl);
+          }
+
           const ctx = (error as any)?.context;
           const body = ctx?.body;
-          let msg = 'Erro ao carregar imagem';
+          let msg = 'Erro ao carregar imagem via Edge Function';
           if (body) {
             try {
               const parsed = typeof body === 'string' ? JSON.parse(body) : body;
               msg = parsed?.error || msg;
             } catch { /* ignore */ }
           }
-          toast({
-            variant: "destructive",
-            title: "Arquivo não disponível",
-            description: msg,
-          });
+          
+          if (!publicData?.publicUrl) {
+            toast({
+              variant: "destructive",
+              title: "Arquivo não disponível",
+              description: msg,
+            });
+          }
         }
       } catch (err) {
         console.error('[PendingPayslipReviews] Error invoking get-payslip-signed-url:', err);
