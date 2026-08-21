@@ -37,16 +37,16 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um especialista em análise de contracheques sindicais brasileiros. 
+            content: `Você é um especialista em análise de contracheques sindicais brasileiros (Holerites). 
             Seu objetivo é verificar se a imagem enviada é um contracheque válido e se contém os descontos sindicais obrigatórios.
             
             Critérios de validação:
-            1. Deve ser um contracheque (Holerite).
-            2. Deve conter pelo menos UM destes itens: Mensalidade Sindical, Taxa Assistencial ou Taxa Negocial.
-            3. Verifique se o nome do funcionário no documento é compatível com o nome fornecido: "${member_name}".
-            4. Verifique se a empresa no documento é compatível com: "${employer_name}" ou CNPJ: "${employer_cnpj}".
+            1. Identificar se o documento é um Holerite/Contracheque.
+            2. Procurar por rubricas/descrições como: "Mensalidade Sindical", "Contribuição Sindical", "Taxa Assistencial", "Taxa Negocial", "Contribuição Assistencial", ou variações destes nomes.
+            3. Verificar se o nome do funcionário no documento é compatível com: "${member_name}".
+            4. Verificar se a empresa ou CNPJ no documento é compatível com: "${employer_name}" ou "${employer_cnpj}".
             
-            Responda APENAS em JSON com o seguinte formato:
+            Responda ESTRITAMENTE em formato JSON:
             {
               "is_payslip": boolean,
               "found_items": {
@@ -55,8 +55,8 @@ serve(async (req) => {
                 "taxa_negocial": boolean
               },
               "name_match": boolean,
-              "name_found_in_document": "nome encontrado ou null",
-              "message": "Mensagem explicativa curta em português"
+              "name_found_in_document": "string ou null",
+              "message": "Resumo em português da análise"
             }`
           },
           {
@@ -64,7 +64,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Analise este documento."
+                text: "Analise este documento e verifique se é um contracheque válido com descontos sindicais."
               },
               {
                 type: "image_url",
@@ -81,9 +81,14 @@ serve(async (req) => {
     });
 
     const aiResult = await response.json();
+    
+    if (aiResult.error) {
+        throw new Error(`OpenAI Error: ${aiResult.error.message}`);
+    }
+
     const result = JSON.parse(aiResult.choices[0].message.content);
 
-    console.log(`[verify-payslip-document] AI Result:`, result);
+    console.log(`[verify-payslip-document] Result for ${member_name}:`, result);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -91,8 +96,12 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error(`[verify-payslip-document] Error: ${error.message}`);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      is_payslip: false,
+      message: "Falha na análise automática do documento."
+    }), {
+      status: 200, // Return 200 so frontend can handle the error message gracefully
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

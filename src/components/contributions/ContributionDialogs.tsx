@@ -485,6 +485,12 @@ export default function ContributionDialogs({
   const handleUpdateInvoice = async () => {
     if (!selectedContribution) return;
     
+    const isOverdue = new Date(selectedContribution.due_date) < new Date();
+    if (!isOverdue && editDueDate !== selectedContribution.due_date) {
+      toast.error("Somente contribuições vencidas podem ter a data de vencimento alterada.");
+      return;
+    }
+    
     setUpdating(true);
     try {
       const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
@@ -1081,11 +1087,25 @@ export default function ContributionDialogs({
               </div>
               <div className="space-y-2">
                 <Label>Vencimento</Label>
-                <Input
-                  type="date"
-                  value={editDueDate}
-                  onChange={(e) => setEditDueDate(e.target.value)}
-                />
+                {(() => {
+                  const isOverdue = selectedContribution ? new Date(selectedContribution.due_date) < new Date() : false;
+                  return (
+                    <div className="relative">
+                      <Input
+                        type="date"
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                        disabled={!isOverdue}
+                        className={!isOverdue ? "opacity-70 bg-muted cursor-not-allowed" : ""}
+                      />
+                      {!isOverdue && (
+                        <p className="text-[10px] text-amber-600 mt-1 font-medium">
+                          Edição de data bloqueada para contribuições a vencer.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
