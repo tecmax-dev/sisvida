@@ -7,9 +7,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
     const supabaseClient = createClient(
@@ -20,7 +18,7 @@ serve(async (req) => {
     const { associadoId, clinicId, createOnly } = await req.json()
 
     if (!associadoId || !clinicId) {
-      throw new Error("associadoId and clinicId are required")
+      throw new Error("ID do associado e da clínica são obrigatórios")
     }
 
     // Generate a random token
@@ -28,12 +26,8 @@ serve(async (req) => {
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + 24)
 
-    // Store token in public.patient_signature_tokens (or similar table if exists, otherwise mock)
-    // For this implementation, we'll return the token. 
-    // Usually, we'd upsert this into a database table.
-    
-    // Attempt to record the intent
-    await supabaseClient
+    // Store token in public.patient_signature_tokens
+    const { error: insertError } = await supabaseClient
       .from('patient_signature_tokens')
       .insert({
         token,
@@ -42,13 +36,28 @@ serve(async (req) => {
         expires_at: expiresAt.toISOString()
       })
 
-    return new Response(JSON.stringify({ token }), {
+    if (insertError) {
+      console.error("Error inserting token:", insertError)
+      throw new Error(`Erro ao gerar token: ${insertError.message}`)
+    }
+
+    if (createOnly) {
+      return new Response(JSON.stringify({ success: true, token }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+
+    // Logic for actually sending WhatsApp/Email could be added here
+    // but the frontend handles it via the returned token for now.
+
+    return new Response(JSON.stringify({ success: true, token }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })
