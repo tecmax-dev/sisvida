@@ -28,12 +28,8 @@ serve(async (req) => {
     const expiresAt = new Date()
     expiresAt.setHours(expiresAt.getHours() + 24)
 
-    // Store token in public.patient_signature_tokens (or similar table if exists, otherwise mock)
-    // For this implementation, we'll return the token. 
-    // Usually, we'd upsert this into a database table.
-    
-    // Attempt to record the intent
-    await supabaseClient
+    // Store token in public.patient_signature_tokens
+    const { error: insertError } = await supabaseClient
       .from('patient_signature_tokens')
       .insert({
         token,
@@ -41,6 +37,11 @@ serve(async (req) => {
         clinic_id: clinicId,
         expires_at: expiresAt.toISOString()
       })
+
+    if (insertError) {
+      console.error("Error inserting token:", insertError)
+      throw new Error(`Erro ao gerar token: ${insertError.message}`)
+    }
 
     return new Response(JSON.stringify({ token }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
