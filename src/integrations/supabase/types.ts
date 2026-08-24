@@ -8627,6 +8627,58 @@ export type Database = {
           },
         ]
       }
+      patient_signature_tokens: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          patient_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          patient_id: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          patient_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_signature_tokens_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_signature_tokens_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_signature_tokens_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
