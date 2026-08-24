@@ -7,9 +7,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
     const supabaseClient = createClient(
@@ -20,7 +18,7 @@ serve(async (req) => {
     const { associadoId, clinicId, createOnly } = await req.json()
 
     if (!associadoId || !clinicId) {
-      throw new Error("associadoId and clinicId are required")
+      throw new Error("ID do associado e da clínica são obrigatórios")
     }
 
     // Generate a random token
@@ -43,13 +41,23 @@ serve(async (req) => {
       throw new Error(`Erro ao gerar token: ${insertError.message}`)
     }
 
-    return new Response(JSON.stringify({ token }), {
+    if (createOnly) {
+      return new Response(JSON.stringify({ success: true, token }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+
+    // Logic for actually sending WhatsApp/Email could be added here
+    // but the frontend handles it via the returned token for now.
+
+    return new Response(JSON.stringify({ success: true, token }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })
