@@ -1003,6 +1003,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_dependentes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -5667,6 +5674,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "medical_records_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_dependentes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "medical_records_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -9203,6 +9217,13 @@ export type Database = {
             columns: ["dependent_id"]
             isOneToOne: false
             referencedRelation: "patient_dependents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_dependent_approvals_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_dependentes"
             referencedColumns: ["id"]
           },
           {
@@ -13119,6 +13140,13 @@ export type Database = {
             columns: ["dependent_id"]
             isOneToOne: false
             referencedRelation: "patient_dependents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_authorizations_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_dependentes"
             referencedColumns: ["id"]
           },
           {
@@ -19803,6 +19831,101 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "public_clinic_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sindical_dependentes: {
+        Row: {
+          birth_date: string | null
+          card_expires_at: string | null
+          card_number: string | null
+          clinic_id: string | null
+          cpf: string | null
+          cpf_photo_url: string | null
+          created_at: string | null
+          id: string | null
+          inactivated_at: string | null
+          inactivation_reason: string | null
+          insurance_plan_id: string | null
+          is_active: boolean | null
+          name: string | null
+          notes: string | null
+          patient_id: string | null
+          pending_approval: boolean | null
+          phone: string | null
+          relationship: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          card_expires_at?: string | null
+          card_number?: string | null
+          clinic_id?: string | null
+          cpf?: string | null
+          cpf_photo_url?: string | null
+          created_at?: string | null
+          id?: string | null
+          inactivated_at?: string | null
+          inactivation_reason?: string | null
+          insurance_plan_id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          pending_approval?: boolean | null
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          card_expires_at?: string | null
+          card_number?: string | null
+          clinic_id?: string | null
+          cpf?: string | null
+          cpf_photo_url?: string | null
+          created_at?: string | null
+          id?: string | null
+          inactivated_at?: string | null
+          inactivation_reason?: string | null
+          insurance_plan_id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          pending_approval?: boolean | null
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_dependents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_dependents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_dependents_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_dependents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
