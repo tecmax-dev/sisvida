@@ -75,7 +75,9 @@ Deno.serve(async (req) => {
           if (res.ok) break;
         }
         if (res.ok) {
-          return new Response(JSON.stringify({ success: true, invoiceId, attempts }), {
+          const check = await fetch(`${LYTEX_BASE}/v2/invoices/${invoiceId}`, { headers: H });
+          const checkJson = await check.json().catch(() => ({}));
+          return new Response(JSON.stringify({ success: true, invoiceId, status: (checkJson as any)?.status, attempts }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
