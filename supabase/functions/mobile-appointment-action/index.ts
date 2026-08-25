@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
+import { requireUser, authErrorResponse } from "../_shared/authGuard.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +11,15 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  let auth
+  try {
+    auth = await requireUser(req)
+  } catch (authErr) {
+    const denied = authErrorResponse(authErr, corsHeaders)
+    if (denied) return denied
+    throw authErr
   }
 
   try {
@@ -24,10 +34,8 @@ serve(async (req) => {
       throw new Error('Appointment ID is required')
     }
 
-    console.log(`Processing action ${action} for appointment ${appointmentId}`)
-
     let updateData: any = {}
-    
+
     if (action === 'confirm') {
       updateData = {
         status: 'confirmed',
@@ -57,6 +65,28 @@ serve(async (req) => {
       throw new Error('Appointment not found')
     }
 
+    // Ownership check: staff may act on any appointment of their clinics,
+    // patients only on their own appointments.
+    if (!auth.isStaff) {
+      if (!auth.patientId || auth.patientId !== appointment.patient_id) {
+        return new Response(JSON.stringify({ error: 'FORBIDDEN' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    } else if (!auth.isSuperAdmin) {
+      const { data: access } = await supabaseClient.rpc('has_clinic_access', {
+        _user_id: auth.userId,
+        _clinic_id: appointment.clinic_id,
+      })
+      if (access !== true) {
+        return new Response(JSON.stringify({ error: 'FORBIDDEN' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
     const { error: updateError } = await supabaseClient
       .from('appointments')
       .update(updateData)
@@ -66,18 +96,8 @@ serve(async (req) => {
       throw updateError
     }
 
-    // Try to trigger WhatsApp notification via n8n bridge if configured
-    let whatsappSent = false
-    try {
-      // Logic to trigger external notification can be added here
-      // For now, we return success as the DB update is the primary goal
-      whatsappSent = true 
-    } catch (e) {
-      console.error('WhatsApp notification error:', e)
-    }
-
     return new Response(
-      JSON.stringify({ success: true, whatsappSent }),
+      JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
