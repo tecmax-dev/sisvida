@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
+import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts"
 
 const BUILD_ID = "CARD-LINK-TOKEN-RESTORE-2026-08-11-01";
 
