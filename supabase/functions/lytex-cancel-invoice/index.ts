@@ -58,12 +58,24 @@ Deno.serve(async (req) => {
       }
       try {
         const token = await getToken(clientId, clientSecret);
-        const res = await fetch(`${LYTEX_BASE}/v2/invoices/${invoiceId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const text = await res.text();
-        attempts.push({ credentials: idKey, status: res.status, body: text.slice(0, 500) });
+        const H = { Authorization: `Bearer ${token}` };
+        const get = await fetch(`${LYTEX_BASE}/v2/invoices/${invoiceId}`, { headers: H });
+        const getBody = await get.text();
+        attempts.push({ credentials: idKey, step: "get", status: get.status, body: getBody.slice(0, 800) });
+
+        const routes: Array<[string, string]> = [
+          ["DELETE", `${LYTEX_BASE}/v2/invoices/${invoiceId}`],
+          ["POST", `${LYTEX_BASE}/v2/invoices/${invoiceId}/cancel`],
+          ["PUT", `${LYTEX_BASE}/v2/invoices/${invoiceId}/cancel`],
+          ["PATCH", `${LYTEX_BASE}/v2/invoices/${invoiceId}/cancel`],
+        ];
+        let res = new Response(null, { status: 500 });
+        for (const [method, url] of routes) {
+          res = await fetch(url, { method, headers: H });
+          const text = await res.text();
+          attempts.push({ credentials: idKey, step: `${method} ${url}`, status: res.status, body: text.slice(0, 400) });
+          if (res.ok) break;
+        }
         if (res.ok) {
           return new Response(JSON.stringify({ success: true, invoiceId, attempts }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
