@@ -1,7 +1,7 @@
 // Cancela (deleta) uma fatura no Lytex. Uso interno/administrativo.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-task-key",
 };
 
 import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts";
@@ -22,8 +22,12 @@ async function getToken(clientId: string, clientSecret: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const taskKey = Deno.env.get("ADMIN_TASK_KEY");
+  const providedKey = req.headers.get("x-admin-task-key");
+  const internalOk = !!taskKey && providedKey === taskKey;
+
   try {
-    await requireStaff(req);
+    if (!internalOk) await requireStaff(req);
   } catch (e) {
     const r = authErrorResponse(e, corsHeaders);
     if (r) return r;
