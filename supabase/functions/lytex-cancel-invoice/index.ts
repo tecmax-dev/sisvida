@@ -4,6 +4,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts";
+
 const LYTEX_BASE = "https://api-pay.lytex.com.br";
 
 async function getToken(clientId: string, clientSecret: string) {
@@ -20,14 +22,12 @@ async function getToken(clientId: string, clientSecret: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Somente chamadas internas com service_role
-  const auth = req.headers.get("Authorization") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!serviceKey || auth !== `Bearer ${serviceKey}`) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  try {
+    await requireStaff(req);
+  } catch (e) {
+    const r = authErrorResponse(e, corsHeaders);
+    if (r) return r;
+    throw e;
   }
 
   try {
