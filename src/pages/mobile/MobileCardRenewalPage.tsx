@@ -264,10 +264,14 @@ export default function MobileCardRenewalPage() {
       formData.append('clinicId', clinicId);
       formData.append('cardId', cardData.id);
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-payslip-upload`,
         {
           method: 'POST',
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
           body: formData,
         }
       );

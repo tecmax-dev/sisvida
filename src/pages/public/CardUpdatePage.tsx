@@ -114,6 +114,7 @@ export default function CardUpdatePage() {
       formData.append("patientId", data.card.patient_id || data.patient.id);
       formData.append("clinicId", data.patient.clinic_id);
       formData.append("cardId", data.card.id);
+      formData.append("token", token);
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-payslip-upload`,
