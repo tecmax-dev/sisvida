@@ -1,23 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
+import { requireUser, authErrorResponse } from "../_shared/authGuard.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
+  let auth
+  try {
+    auth = await requireUser(req)
+  } catch (authErr) {
+    const denied = authErrorResponse(authErr, corsHeaders)
+    if (denied) return denied
+    throw authErr
+  }
+
   try {
     const { path } = await req.json()
-    if (!path) {
-      return new Response(JSON.stringify({ error: 'O caminho do arquivo é obrigatório' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (!path || typeof path !== 'string') {
+      return jsonResponse({ error: 'O caminho do arquivo é obrigatório' }, 400)
+    }
+    if (path.includes('..')) {
+      return jsonResponse({ error: 'Caminho inválido' }, 400)
     }
 
     const supabaseAdmin = createClient(
@@ -25,55 +41,56 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    console.log(`[get-payslip-signed-url] Solicitando URL assinada para: ${path}`)
+    // ---- Authorization: staff of the owning clinic, or the patient who owns the file ----
+    const { data: request } = await supabaseAdmin
+      .from('payslip_requests')
+      .select('patient_id, clinic_id')
+      .eq('attachment_path', path)
+      .maybeSingle()
 
-    // 1. Tentar bucket 'contra-cheques'
-    let { data, error } = await supabaseAdmin.storage
-      .from('contra-cheques')
-      .createSignedUrl(path, 3600)
+    const { data: attachment } = await supabaseAdmin
+      .from('patient_attachments')
+      .select('patient_id, clinic_id')
+      .eq('file_path', path)
+      .maybeSingle()
 
-    // 2. Se não encontrar, tentar bucket 'payslips'
-    if (error || !data?.signedUrl) {
-      console.log(`[get-payslip-signed-url] Não encontrado em 'contra-cheques', tentando 'payslips'.`)
-      const { data: data2, error: error2 } = await supabaseAdmin.storage
-        .from('payslips')
-        .createSignedUrl(path, 3600)
-      
-      data = data2
-      error = error2
-    }
+    const owner = request ?? attachment
+    // Storage paths follow `${clinicId}/${patientId}/...`
+    const segments = path.split('/')
+    const pathClinicId = segments[0] ?? null
+    const pathPatientId = segments[1] ?? null
 
-    // 3. Se ainda não encontrar, tentar bucket 'patient-attachments' (backup histórico)
-    if (error || !data?.signedUrl) {
-      console.log(`[get-payslip-signed-url] Não encontrado em 'payslips', tentando 'patient-attachments'.`)
-      const { data: data3, error: error3 } = await supabaseAdmin.storage
-        .from('patient-attachments')
-        .createSignedUrl(path, 3600)
-      
-      data = data3
-      error = error3
-    }
+    const ownerPatientId = owner?.patient_id ?? pathPatientId
+    const ownerClinicId = owner?.clinic_id ?? pathClinicId
 
-    if (error || !data?.signedUrl) {
-      console.error('[get-payslip-signed-url] Erro final ao gerar URL assinada:', error)
-      return new Response(JSON.stringify({ 
-        error: error?.message || 'Arquivo não encontrado nos buckets do sistema',
-        details: 'Caminho verificado: ' + path
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    let allowed = false
+    if (auth.isSuperAdmin) {
+      allowed = true
+    } else if (auth.isStaff && ownerClinicId) {
+      const { data: access } = await supabaseAdmin.rpc('has_clinic_access', {
+        _user_id: auth.userId,
+        _clinic_id: ownerClinicId,
       })
+      allowed = access === true
+    } else if (auth.patientId && ownerPatientId) {
+      allowed = auth.patientId === ownerPatientId
     }
 
-    console.log(`[get-payslip-signed-url] URL gerada com sucesso para: ${path}`)
-    return new Response(JSON.stringify({ signedUrl: data.signedUrl }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    if (!allowed) {
+      return jsonResponse({ error: 'Acesso negado a este documento' }, 403)
+    }
+
+    const buckets = ['contra-cheques', 'payslips', 'patient-attachments']
+    for (const bucket of buckets) {
+      const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, 3600)
+      if (!error && data?.signedUrl) {
+        return jsonResponse({ signedUrl: data.signedUrl })
+      }
+    }
+
+    return jsonResponse({ error: 'Arquivo não encontrado' }, 404)
   } catch (error) {
     console.error('[get-payslip-signed-url] Erro inesperado:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return jsonResponse({ error: 'Não foi possível gerar o link do documento' }, 500)
   }
 })
