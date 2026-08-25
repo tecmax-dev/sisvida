@@ -64,10 +64,8 @@ Deno.serve(async (req) => {
         attempts.push({ credentials: idKey, step: "get", status: get.status, body: getBody.slice(0, 800) });
 
         const routes: Array<[string, string]> = [
-          ["DELETE", `${LYTEX_BASE}/v2/invoices/${invoiceId}`],
-          ["POST", `${LYTEX_BASE}/v2/invoices/${invoiceId}/cancel`],
-          ["PUT", `${LYTEX_BASE}/v2/invoices/${invoiceId}/cancel`],
-          ["PATCH", `${LYTEX_BASE}/v2/invoices/${invoiceId}/cancel`],
+          ["PUT", `${LYTEX_BASE}/v2/invoices/cancel/${invoiceId}`],
+          ["PUT", `${LYTEX_BASE}/v1/invoices/cancel/${invoiceId}`],
         ];
         let res = new Response(null, { status: 500 });
         for (const [method, url] of routes) {
