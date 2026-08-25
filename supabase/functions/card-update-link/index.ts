@@ -149,6 +149,14 @@ serve(async (req) => {
 
     // ---------- RUNTIME AUDIT (kept) ----------
     if (action === 'runtime-audit') {
+      try {
+        await requireStaff(req);
+      } catch (authErr) {
+        const denied = authErrorResponse(authErr, corsHeaders);
+        if (denied) return denied;
+        throw authErr;
+      }
+
       const { data: secret } = await admin.rpc('get_meta_vault_secret', { _secret_name: 'META_WHATSAPP_TOKEN_V2' });
       const token = secret ? String(secret) : Deno.env.get('META_WHATSAPP_TOKEN_V2');
       const phoneId = "1213495528515111";
