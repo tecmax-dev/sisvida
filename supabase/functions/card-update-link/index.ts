@@ -27,10 +27,19 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
 
-    // ---------- GENERATE ----------
+    // ---------- GENERATE (staff / internal callers only) ----------
     if (action === 'generate') {
+      try {
+        await requireStaff(req);
+      } catch (authErr) {
+        const denied = authErrorResponse(authErr, corsHeaders);
+        if (denied) return denied;
+        throw authErr;
+      }
+
       const { patientId, cpf, ttlMinutes } = body;
       let patient: any = null;
+
 
       if (patientId) {
         const { data } = await admin.from('patients').select('id, name, clinic_id').eq('id', patientId).maybeSingle();
