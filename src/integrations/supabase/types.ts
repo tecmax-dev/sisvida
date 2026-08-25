@@ -20500,6 +20500,7 @@ export type Database = {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: boolean
       }
+      homologacao_token_matches: { Args: { _token: string }; Returns: boolean }
       invalidate_previous_sessions: {
         Args: {
           p_clinic_id: string

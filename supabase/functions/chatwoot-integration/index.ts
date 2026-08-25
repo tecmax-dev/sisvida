@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +8,15 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  try {
+    await requireStaff(req);
+  } catch (authErr) {
+    const denied = authErrorResponse(authErr, corsHeaders);
+    if (denied) return denied;
+    throw authErr;
+  }
+
 
   try {
     const body = await req.json();

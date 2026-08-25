@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
+import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts"
 
 const BUILD_ID = "CARD-LINK-TOKEN-RESTORE-2026-08-11-01";
 
@@ -26,10 +27,19 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
 
-    // ---------- GENERATE ----------
+    // ---------- GENERATE (staff / internal callers only) ----------
     if (action === 'generate') {
+      try {
+        await requireStaff(req);
+      } catch (authErr) {
+        const denied = authErrorResponse(authErr, corsHeaders);
+        if (denied) return denied;
+        throw authErr;
+      }
+
       const { patientId, cpf, ttlMinutes } = body;
       let patient: any = null;
+
 
       if (patientId) {
         const { data } = await admin.from('patients').select('id, name, clinic_id').eq('id', patientId).maybeSingle();
@@ -139,6 +149,14 @@ serve(async (req) => {
 
     // ---------- RUNTIME AUDIT (kept) ----------
     if (action === 'runtime-audit') {
+      try {
+        await requireStaff(req);
+      } catch (authErr) {
+        const denied = authErrorResponse(authErr, corsHeaders);
+        if (denied) return denied;
+        throw authErr;
+      }
+
       const { data: secret } = await admin.rpc('get_meta_vault_secret', { _secret_name: 'META_WHATSAPP_TOKEN_V2' });
       const token = secret ? String(secret) : Deno.env.get('META_WHATSAPP_TOKEN_V2');
       const phoneId = "1213495528515111";
