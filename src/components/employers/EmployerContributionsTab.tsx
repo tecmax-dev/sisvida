@@ -44,10 +44,14 @@ import {
   Wallet,
   CircleDollarSign,
   Pencil,
+  Printer,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
 import {
   Table,
