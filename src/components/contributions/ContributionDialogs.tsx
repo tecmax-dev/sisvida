@@ -635,7 +635,7 @@ export default function ContributionDialogs({
         onCreateDialogChange(open);
         if (!open) resetCreateForm();
       }}>
-        <DialogContent className="max-w-md z-[120]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Nova Contribuição</DialogTitle>
             <DialogDescription>
@@ -819,7 +819,7 @@ export default function ContributionDialogs({
 
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={onViewDialogChange}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[120]">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes da Contribuição</DialogTitle>
           </DialogHeader>
@@ -1012,7 +1012,7 @@ export default function ContributionDialogs({
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md z-[120]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Contribuição</DialogTitle>
             <DialogDescription>
