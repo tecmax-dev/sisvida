@@ -504,7 +504,4 @@
   pointer-events: none !important;
 }
 
-[data-radix-popper-content-wrapper] {
-  z-index: 150 !important;
-}
 
