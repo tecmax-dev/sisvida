@@ -371,9 +371,9 @@ export default function EmployerDetailPage({
         clinicId={currentClinic?.id || ""}
         userId={user?.id || ""}
         onRefresh={fetchData}
-        viewDialogOpen={false}
-        onViewDialogChange={() => {}}
-        selectedContribution={null}
+        viewDialogOpen={isViewDialogOpen}
+        onViewDialogChange={setIsViewDialogOpen}
+        selectedContribution={selectedContribution}
         onGenerateInvoice={async (contribution) => {
           try {
             const body = {
