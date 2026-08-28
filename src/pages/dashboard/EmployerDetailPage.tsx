@@ -36,6 +36,8 @@ export default function EmployerDetailPage({
   const [syncing, setSyncing] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
+  const [selectedContribution, setSelectedContribution] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   async function fetchData() {
     if (!id || !currentClinic) return;
