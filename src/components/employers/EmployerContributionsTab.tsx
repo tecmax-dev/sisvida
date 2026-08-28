@@ -814,6 +814,20 @@ export default function EmployerContributionsTab({
           <span className="text-sm text-muted-foreground">Selecionar todos</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            disabled={printing || displayContributions.length === 0}
+            title="Imprimir contribuições filtradas (PDF)"
+          >
+            {printing ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4 mr-1" />
+            )}
+            Imprimir
+          </Button>
           <Button variant="outline" size="sm" onClick={onSyncLytex} disabled={syncing}>
             <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
             Sincronizar
