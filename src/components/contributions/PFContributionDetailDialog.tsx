@@ -416,7 +416,7 @@ export default function PFContributionDetailDialog({
     <>
       {/* Main View Dialog */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg z-[120]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5 text-primary" />
@@ -590,7 +590,7 @@ export default function PFContributionDetailDialog({
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[130]">
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar Contribuição</AlertDialogTitle>
             <AlertDialogDescription>
@@ -611,7 +611,7 @@ export default function PFContributionDetailDialog({
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md z-[120]">
           <DialogHeader>
             <DialogTitle>Editar Contribuição</DialogTitle>
             <DialogDescription>
@@ -740,7 +740,7 @@ export default function PFContributionDetailDialog({
         setDeleteDialogOpen(open);
         if (!open) setForceDeleteLocal(false);
       }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[130]">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
