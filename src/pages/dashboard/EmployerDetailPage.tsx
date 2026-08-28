@@ -38,6 +38,59 @@ export default function EmployerDetailPage({
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
   const [selectedContribution, setSelectedContribution] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
+
+  const handleGenerateInvoice = async (contribution: any) => {
+    if (!currentClinic?.id) {
+      toast.error("Clínica não identificada");
+      return;
+    }
+    if (!employer?.cnpj) {
+      toast.error("CNPJ da empresa não encontrado");
+      return;
+    }
+    if (!contribution?.value || Number(contribution.value) <= 0) {
+      toast.error("Informe o valor da contribuição antes de gerar o boleto");
+      return;
+    }
+
+    setGeneratingInvoice(true);
+    try {
+      const body: Record<string, unknown> = {
+        action: "create_invoice",
+        contributionId: contribution.id,
+        clinicId: currentClinic.id,
+        value: contribution.value,
+        dueDate: contribution.due_date,
+        description: `${contribution.contribution_types?.name || "Contribuição"} - ${String(contribution.competence_month).padStart(2, "0")}/${contribution.competence_year}`,
+        enableBoleto: true,
+        enablePix: true,
+        employer: {
+          cnpj: employer.cnpj,
+          name: employer.name,
+          email: employer.email,
+          phone: employer.phone,
+          address: employer.address
+            ? { street: employer.address, city: employer.city, state: employer.state }
+            : undefined,
+        },
+      };
+
+      const { data, error } = await supabase.functions.invoke("lytex-api", { body });
+      if (error) throw new Error(error.message);
+      if (data && (data as any).error) throw new Error((data as any).error);
+
+      toast.success("Boleto gerado com sucesso!");
+      setIsViewDialogOpen(false);
+      await fetchData();
+    } catch (err: any) {
+      console.error("Erro ao gerar boleto:", err);
+      toast.error(`Erro ao gerar boleto: ${err?.message || "Erro desconhecido"}`);
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  };
+
 
   async function fetchData() {
     if (!id || !currentClinic) return;
@@ -207,7 +260,7 @@ export default function EmployerDetailPage({
                 stats={stats}
                 currentClinic={currentClinic}
                 syncing={syncing}
-                generatingInvoice={false}
+                generatingInvoice={generatingInvoice}
                 selectedContributionIds={selectedContributionIds}
                 setSelectedContributionIds={setSelectedContributionIds}
                 onSyncLytex={() => fetchData()}
@@ -219,7 +272,7 @@ export default function EmployerDetailPage({
                   setSelectedContribution(contrib);
                   setIsViewDialogOpen(true);
                 }}
-                onGenerateInvoice={() => {}}
+                onGenerateInvoice={handleGenerateInvoice}
                 onOpenNegotiationDialog={() => {}}
               />
             </TabsContent>
@@ -374,27 +427,9 @@ export default function EmployerDetailPage({
         viewDialogOpen={isViewDialogOpen}
         onViewDialogChange={setIsViewDialogOpen}
         selectedContribution={selectedContribution}
-        onGenerateInvoice={async (contribution) => {
-          try {
-            const body = {
-              action: "create_invoice",
-              contributionId: contribution.id,
-              clinicId: currentClinic?.id,
-              value: contribution.value,
-              dueDate: contribution.due_date,
-              description: `${contribution.contribution_types?.name || "Contribuição"} - ${String(contribution.competence_month).padStart(2, "0")}/${contribution.competence_year}`,
-              enableBoleto: true,
-              enablePix: true,
-              member: contribution.employer_id ? undefined : null // Adicionado para manter compatibilidade
-            };
-            await supabase.functions.invoke("lytex-api", { body });
-            fetchData();
-          } catch (err) {
-            console.error("Erro ao gerar boleto:", err);
-            toast.error("Erro ao gerar boleto");
-          }
-        }}
-        generatingInvoice={false}
+        onGenerateInvoice={handleGenerateInvoice}
+        generatingInvoice={generatingInvoice}
+
       />
     </Tabs>
   );
