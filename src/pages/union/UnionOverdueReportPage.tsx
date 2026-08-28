@@ -212,14 +212,20 @@ export default function UnionOverdueReportPage() {
     }
 
     if (hideDuplicates) {
-      // Filtrar duplicatas: mesmo employer_id e mesmo valor.
-      // Mantemos o registro mais recente (maior ID ou maior data, aqui usaremos o que vier por último no agrupamento/ordem)
+      // Duplicidade = mesma empresa + mesmo tipo de contribuição + mesma
+      // competência (mês/ano) + mesmo valor. Mantém apenas o registro mais
+      // recente (último conforme a ordenação por vencimento).
       const seen = new Set<string>();
-      // Percorremos de trás para frente para manter os mais recentes (considerando a ordenação da query)
       const result: Row[] = [];
       for (let i = list.length - 1; i >= 0; i--) {
         const r = list[i];
-        const key = `${r.employers?.id}-${r.value}`;
+        const key = [
+          r.employers?.id ?? "",
+          r.contribution_types?.name ?? "",
+          r.competence_year,
+          r.competence_month,
+          r.value,
+        ].join("|");
         if (!seen.has(key)) {
           seen.add(key);
           result.unshift(r);
@@ -227,6 +233,7 @@ export default function UnionOverdueReportPage() {
       }
       list = result;
     }
+
 
     return list;
   }, [data, hideZero, hideDuplicates]);
@@ -549,7 +556,7 @@ export default function UnionOverdueReportPage() {
                 checked={hideDuplicates}
                 onCheckedChange={(v) => setHideDuplicates(!!v)}
               />
-              Ocultar boletos em duplicidade (mesmo valor)
+              Ocultar boletos em duplicidade (mesmo tipo, competência e valor)
             </label>
           </div>
           <div className="flex items-end">
