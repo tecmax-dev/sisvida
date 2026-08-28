@@ -265,29 +265,43 @@ export default function MobileCardRenewalPage() {
       formData.append('clinicId', clinicId);
       formData.append('cardId', cardData.id);
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
+      // Garantir sessão válida (JWT pode ter expirado em background no PWA)
+      let { data: sessionData } = await supabase.auth.getSession();
+      let accessToken = sessionData.session?.access_token;
+      const expiresAt = sessionData.session?.expires_at ?? 0;
+      const isExpiring = !accessToken || expiresAt * 1000 - Date.now() < 60_000;
+
+      if (isExpiring) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        accessToken = refreshed.session?.access_token ?? accessToken;
+      }
+
+      if (!accessToken) {
+        throw new Error("Sua sessão expirou. Saia e entre novamente no app para enviar o contracheque.");
+      }
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-payslip-upload`,
         {
           method: 'POST',
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          headers: { Authorization: `Bearer ${accessToken}` },
           body: formData,
         }
       );
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         const errorMessages: Record<string, string> = {
-          patient_not_found: "Paciente não encontrado.",
-          card_not_found: "Carteirinha não encontrada.",
-          upload_failed: "Erro ao fazer upload do arquivo.",
-          request_creation_failed: "Erro ao registrar solicitação.",
+          UNAUTHORIZED: "Sua sessão expirou. Saia e entre novamente no app para enviar o contracheque.",
+          CARD_MISMATCH: "Não foi possível validar sua carteirinha. Atualize o app e tente novamente.",
+          CARD_NOT_FOUND: "Carteirinha não encontrada.",
+          MISSING_FIELDS: "Dados incompletos. Recarregue a página e tente novamente.",
+          UPLOAD_FAILED: "Erro ao fazer upload do arquivo.",
         };
-        throw new Error(result.error || result.details || "Erro ao enviar contracheque.");
+        throw new Error(errorMessages[result.error] || result.details || "Erro ao enviar contracheque.");
       }
+
 
       toast({
         title: "Contracheque enviado!",
