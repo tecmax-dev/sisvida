@@ -212,6 +212,7 @@ export default function UnionContributionsPageRedesign() {
   useEffect(() => {
     if (currentClinic) {
       fetchCategories();
+      fetchAuxData();
     }
   }, [currentClinic?.id]);
 
@@ -224,6 +225,39 @@ export default function UnionContributionsPageRedesign() {
       .eq("is_active", true)
       .order("name");
     if (!error && data) setCategories(data);
+  };
+
+  // Empresas e tipos de contribuição são carregados de forma independente
+  // (e em paralelo) para que os seletores dos diálogos fiquem disponíveis
+  // imediatamente, sem esperar a lista completa de contribuições.
+  const fetchAuxData = async () => {
+    if (!currentClinic) return;
+    const clinicId = currentClinic.id;
+
+    const [employersResult, typesResult] = await Promise.all([
+      fetchAllEmployers<Employer>(clinicId, {
+        select: "id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number",
+      }),
+      supabase
+        .from("contribution_types")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .order("name"),
+    ]);
+
+    if (employersResult.error) {
+      console.error("Error fetching employers:", employersResult.error);
+      toast.error("Erro ao carregar empresas");
+    } else {
+      setEmployers(employersResult.data);
+    }
+
+    if (typesResult.error) {
+      console.error("Error fetching contribution types:", typesResult.error);
+      toast.error("Erro ao carregar tipos de contribuição");
+    } else {
+      setContributionTypes(typesResult.data || []);
+    }
   };
 
   const fetchData = async () => {
@@ -239,19 +273,6 @@ export default function UnionContributionsPageRedesign() {
       
       setContributions(contribResult.data);
 
-      const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
-        select: "id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number"
-      });
-      if (employersResult.error) throw employersResult.error;
-      setEmployers(employersResult.data);
-
-      const { data: typesData, error: typesError } = await supabase
-        .from("contribution_types")
-        .select("*")
-        .eq("clinic_id", currentClinic.id)
-        .order("name");
-      if (typesError) throw typesError;
-      setContributionTypes(typesData || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados");
