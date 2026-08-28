@@ -20388,6 +20388,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_trial_signup_enabled: { Args: never; Returns: boolean }
       get_union_activity_log: {
         Args: {
           p_clinic_id: string
