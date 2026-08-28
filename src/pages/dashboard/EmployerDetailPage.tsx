@@ -260,7 +260,7 @@ export default function EmployerDetailPage({
                 stats={stats}
                 currentClinic={currentClinic}
                 syncing={syncing}
-                generatingInvoice={false}
+                generatingInvoice={generatingInvoice}
                 selectedContributionIds={selectedContributionIds}
                 setSelectedContributionIds={setSelectedContributionIds}
                 onSyncLytex={() => fetchData()}
