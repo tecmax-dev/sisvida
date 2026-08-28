@@ -213,7 +213,10 @@ export default function EmployerDetailPage({
                 onOpenEmailDialog={() => {}}
                 onOpenCreateDialog={() => setIsCreateDialogOpen(true)}
                 onOpenOverdueDialog={() => {}}
-                onViewContribution={() => {}}
+                onViewContribution={(contrib: any) => {
+                  setSelectedContribution(contrib);
+                  setIsViewDialogOpen(true);
+                }}
                 onGenerateInvoice={() => {}}
                 onOpenNegotiationDialog={() => {}}
               />
