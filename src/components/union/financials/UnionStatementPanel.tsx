@@ -804,7 +804,7 @@ export function UnionStatementPanel() {
                     <SelectValue placeholder="Selecione o portador" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="bg-popover border-border z-50">
+                <SelectContent className="bg-popover border-border z-[9999]">
                   {cashRegisters?.map((register) => (
                     <SelectItem key={register.id} value={register.id}>
                       <div className="flex items-center gap-2">
@@ -849,7 +849,7 @@ export function UnionStatementPanel() {
                         <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start" sideOffset={4}>
+                    <PopoverContent className="w-auto p-0 bg-popover border-border z-[9999]" align="start" sideOffset={4}>
                       <Calendar
                         mode="single"
                         selected={startDate}
@@ -888,7 +888,7 @@ export function UnionStatementPanel() {
                         <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                       </div>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start" sideOffset={4}>
+                    <PopoverContent className="w-auto p-0 bg-popover border-border z-[9999]" align="start" sideOffset={4}>
                       <Calendar
                         mode="single"
                         selected={endDate}

@@ -117,7 +117,7 @@ export function LytexReportFilters({
                   {filters.startDate ? format(filters.startDate, "dd/MM/yyyy") : "Selecionar"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 z-50" align="start">
+              <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                 <Calendar
                   mode="single"
                   selected={filters.startDate}
@@ -144,7 +144,7 @@ export function LytexReportFilters({
                   {filters.endDate ? format(filters.endDate, "dd/MM/yyyy") : "Selecionar"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 z-50" align="start">
+              <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                 <Calendar
                   mode="single"
                   selected={filters.endDate}
