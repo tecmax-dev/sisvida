@@ -416,7 +416,7 @@ export default function PFContributionDetailDialog({
     <>
       {/* Main View Dialog */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg z-[120]">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5 text-primary" />
@@ -611,7 +611,7 @@ export default function PFContributionDetailDialog({
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md z-[120]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Contribuição</DialogTitle>
             <DialogDescription>
