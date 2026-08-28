@@ -1004,29 +1004,23 @@ export default function MemberContributionsTab({ memberIdOverride }: MemberContr
 
                                 if (contribution.status !== "paid" && contribution.status !== "cancelled") {
                                   return (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
-                                            onClick={() => handleViewContribution(contribution)}
-                                          >
-                                            <Pencil className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {canEditDate 
-                                            ? "Editar" 
-                                            : "Somente contribuições vencidas podem ter a data alterada"}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                                      onClick={() => handleViewContribution(contribution)}
+                                      title={canEditDate
+                                        ? "Editar"
+                                        : "Somente contribuições vencidas podem ter a data alterada"}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
                                   );
                                 }
                                 return null;
                               })()}
+
 
                               {contribution.lytex_invoice_url && (
                                 <TooltipProvider>
