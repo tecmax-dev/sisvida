@@ -1,4 +1,3 @@
-import ModalLab from "@/pages/ModalLab";
 import React, { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -408,7 +407,6 @@ function App() {
                     <Routes>
                 <Route path="/" element={<SindicalLandingPage />} />
                 <Route path="/dry-run-setup" element={<Suspense fallback={<LoadingFallback />}><DryRunCreationPage /></Suspense>} />
-                <Route path="/__modal-lab" element={<ModalLab />} />
                 <Route path="/hub" element={<HubLandingPage />} />
                 <Route path="/clinica" element={<ClinicaLandingPage />} />
                 <Route path="/c/:token" element={<AppointmentSmsConfirm />} />
