@@ -217,13 +217,6 @@ export default function PFContributionDetailDialog({
     try {
       const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
       
-      const isOverdue = new Date(contribution.due_date) < new Date();
-      if (!isOverdue && editDueDate !== contribution.due_date) {
-        toast.error("Somente contribuições vencidas podem ter a data de vencimento alterada.");
-        setUpdating(false);
-        return;
-      }
-      
       const selectedType = contributionTypes.find(t => t.id === editTypeId);
       const newDescription = `${selectedType?.name || 'Contribuição'} - ${formatCompetence(editMonth, editYear)}`;
       
@@ -687,25 +680,11 @@ export default function PFContributionDetailDialog({
               </div>
               <div className="space-y-2">
                 <Label>Vencimento</Label>
-                {(() => {
-                  const isOverdue = new Date(contribution.due_date) < new Date();
-                  return (
-                    <div className="relative">
-                      <Input
-                        type="date"
-                        value={editDueDate}
-                        onChange={(e) => setEditDueDate(e.target.value)}
-                        disabled={!isOverdue}
-                        className={!isOverdue ? "opacity-70 bg-muted cursor-not-allowed" : ""}
-                      />
-                      {!isOverdue && (
-                        <p className="text-[10px] text-amber-600 mt-1 font-medium">
-                          Edição de data bloqueada para contribuições a vencer.
-                        </p>
-                      )}
-                    </div>
-                  );
-                })()}
+                <Input
+                  type="date"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                />
               </div>
             </div>
 

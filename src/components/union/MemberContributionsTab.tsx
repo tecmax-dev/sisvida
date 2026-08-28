@@ -998,28 +998,18 @@ export default function MemberContributionsTab({ memberIdOverride }: MemberContr
                                 </Tooltip>
                               </TooltipProvider>
 
-                              {(() => {
-                                const isOverdue = new Date(contribution.due_date) < new Date();
-                                const canEditDate = isOverdue;
-
-                                if (contribution.status !== "paid" && contribution.status !== "cancelled") {
-                                  return (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
-                                      onClick={() => handleViewContribution(contribution)}
-                                      title={canEditDate
-                                        ? "Editar"
-                                        : "Somente contribuições vencidas podem ter a data alterada"}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                  );
-                                }
-                                return null;
-                              })()}
+                              {contribution.status !== "paid" && contribution.status !== "cancelled" && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                                  onClick={() => handleViewContribution(contribution)}
+                                  title="Editar"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              )}
 
 
                               {contribution.lytex_invoice_url && (

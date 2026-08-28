@@ -80,7 +80,7 @@ describe("Botão Editar de contribuições (regressão modal /sindicato)", () =>
     expect(screen.queryByTitle("Editar")).not.toBeInTheDocument();
   });
 
-  it("contribuição a vencer mostra aviso de restrição de data", () => {
+  it("painel permite editar contribuição a vencer (restrição vale apenas nos portais)", () => {
     const props = baseProps();
     props.contributions = [
       {
@@ -91,7 +91,8 @@ describe("Botão Editar de contribuições (regressão modal /sindicato)", () =>
     ];
     render(<EmployerContributionsTab {...(props as any)} />);
 
-    const btn = screen.getByTitle("Somente contribuições vencidas podem ter a data alterada");
+    const btn = screen.getByTitle("Editar");
+    expect(btn).not.toBeDisabled();
     fireEvent.click(btn);
     expect(props.onViewContribution).toHaveBeenCalledWith(expect.objectContaining({ id: "c-future" }));
   });

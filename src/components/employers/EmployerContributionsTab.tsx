@@ -792,26 +792,18 @@ export default function EmployerContributionsTab({
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onViewContribution(contrib)}>
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
-                            {(() => {
-                              const isOverdue = new Date(contrib.due_date) < new Date();
-                              const canEditDate = isOverdue;
-
-                              if (contrib.status !== "paid" && contrib.status !== "cancelled") {
-                                return (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
-                                    onClick={() => onViewContribution(contrib)}
-                                    title={canEditDate ? "Editar" : "Somente contribuições vencidas podem ter a data alterada"}
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                );
-                              }
-                              return null;
-                            })()}
+                            {contrib.status !== "paid" && contrib.status !== "cancelled" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                                onClick={() => onViewContribution(contrib)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
 
                           </div>
                         </TableCell>
