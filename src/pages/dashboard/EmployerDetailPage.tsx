@@ -36,6 +36,8 @@ export default function EmployerDetailPage({
   const [syncing, setSyncing] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
+  const [selectedContribution, setSelectedContribution] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   async function fetchData() {
     if (!id || !currentClinic) return;
@@ -213,7 +215,10 @@ export default function EmployerDetailPage({
                 onOpenEmailDialog={() => {}}
                 onOpenCreateDialog={() => setIsCreateDialogOpen(true)}
                 onOpenOverdueDialog={() => {}}
-                onViewContribution={() => {}}
+                onViewContribution={(contrib: any) => {
+                  setSelectedContribution(contrib);
+                  setIsViewDialogOpen(true);
+                }}
                 onGenerateInvoice={() => {}}
                 onOpenNegotiationDialog={() => {}}
               />
@@ -366,9 +371,9 @@ export default function EmployerDetailPage({
         clinicId={currentClinic?.id || ""}
         userId={user?.id || ""}
         onRefresh={fetchData}
-        viewDialogOpen={false}
-        onViewDialogChange={() => {}}
-        selectedContribution={null}
+        viewDialogOpen={isViewDialogOpen}
+        onViewDialogChange={setIsViewDialogOpen}
+        selectedContribution={selectedContribution}
         onGenerateInvoice={async (contribution) => {
           try {
             const body = {
