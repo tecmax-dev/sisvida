@@ -457,6 +457,133 @@ export default function EmployerContributionsTab({
       .reduce((acc, c) => acc + c.value, 0);
   }, [contributions]);
 
+  // Totals of the FILTERED contributions (respect status/type/date filters)
+  const filteredTotals = useMemo(() => {
+    let total = 0, paid = 0, pending = 0, overdue = 0;
+    displayContributions.forEach(c => {
+      total += c.value;
+      if (c.status === "paid") paid += (c.paid_value || c.value);
+      else if (c.status === "overdue") overdue += c.value;
+      else if (c.status === "pending" || c.status === "awaiting_value" || c.status === "processing") pending += c.value;
+    });
+    return { total, paid, pending, overdue };
+  }, [displayContributions]);
+
+  const [printing, setPrinting] = useState(false);
+
+  // Print filtered contributions as PDF (includes company + accountant data)
+  const handlePrint = async () => {
+    if (displayContributions.length === 0) return;
+    setPrinting(true);
+    try {
+      // Fetch linked accounting office (if any)
+      let office: { name?: string; contact_name?: string; email?: string; phone?: string } | null = null;
+      try {
+        const { data } = await supabase
+          .from("accounting_office_employers")
+          .select("accounting_offices(name, contact_name, email, phone)")
+          .eq("employer_id", employer?.id)
+          .maybeSingle();
+        office = (data as any)?.accounting_offices ?? null;
+      } catch {
+        office = null;
+      }
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Header
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, pageWidth, 30, "F");
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Relatório de Contribuições", pageWidth / 2, 12, { align: "center" });
+      doc.setFontSize(9);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, pageWidth / 2, 19, { align: "center" });
+      doc.text(`${displayContributions.length} contribuição(ões) no filtro atual`, pageWidth / 2, 25, { align: "center" });
+
+      // Company data
+      doc.setTextColor(0, 0, 0);
+      let y = 38;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("Dados da Empresa", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      y += 6;
+      const empName = employer?.name || "-";
+      const empCnpj = employer?.cnpj ? employer.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5") : "-";
+      doc.text(`Empresa: ${empName}`, 14, y);
+      y += 5;
+      doc.text(`CNPJ: ${empCnpj}   Matrícula: ${employer?.registration_number || "-"}`, 14, y);
+      y += 5;
+      const contactLine = [employer?.phone && `Tel: ${employer.phone}`, employer?.email && `Email: ${employer.email}`].filter(Boolean).join("   ");
+      if (contactLine) { doc.text(contactLine, 14, y); y += 5; }
+      const addrLine = [employer?.address, employer?.city, employer?.state].filter(Boolean).join(", ");
+      if (addrLine) { doc.text(`Endereço: ${addrLine}`, 14, y); y += 5; }
+
+      // Accountant data (if linked)
+      if (office) {
+        y += 3;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text("Contador / Escritório Contábil", 14, y);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        y += 6;
+        doc.text(`Escritório: ${office.name || "-"}`, 14, y);
+        y += 5;
+        const officeLine = [office.contact_name && `Responsável: ${office.contact_name}`, office.phone && `Tel: ${office.phone}`, office.email && `Email: ${office.email}`].filter(Boolean).join("   ");
+        if (officeLine) { doc.text(officeLine, 14, y); y += 5; }
+      }
+
+      // Totals of filtered list
+      y += 5;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(
+        `Total: ${formatCurrency(filteredTotals.total)}   |   Recebido: ${formatCurrency(filteredTotals.paid)}   |   Pendente: ${formatCurrency(filteredTotals.pending)}   |   Vencido: ${formatCurrency(filteredTotals.overdue)}`,
+        14, y
+      );
+      doc.setFont("helvetica", "normal");
+
+      // Table
+      const tableData = displayContributions.map((c, i) => [
+        String(i + 1),
+        c.contribution_types?.name || "-",
+        formatCompetence(c.competence_month, c.competence_year),
+        format(parseDateOnlyToLocalNoon(c.due_date), "dd/MM/yyyy"),
+        formatCurrency(c.value),
+        (STATUS_CONFIG[c.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending).label,
+        c.paid_at ? format(parseDateOnlyToLocalNoon(c.paid_at), "dd/MM/yyyy") : "-",
+        c.paid_value ? formatCurrency(c.paid_value) : "-",
+      ]);
+
+      autoTable(doc, {
+        startY: y + 6,
+        head: [["#", "Tipo", "Compet.", "Vencim.", "Valor", "Status", "Pago em", "V. Pago"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [15, 23, 42], fontSize: 8 },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 8, halign: "center" },
+          1: { cellWidth: 55 },
+          4: { halign: "right" },
+          5: { halign: "center" },
+          7: { halign: "right" },
+        },
+      });
+
+      doc.save(`contribuicoes-${(employer?.name || "empresa").replace(/[^\w]+/g, "-").toLowerCase()}-${format(new Date(), "yyyy-MM-dd-HHmm")}.pdf`);
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      toast.error("Erro ao gerar o relatório em PDF");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const toggleSelection = (id: string) => {
     const newSet = new Set(selectedContributionIds);
     if (newSet.has(id)) {
