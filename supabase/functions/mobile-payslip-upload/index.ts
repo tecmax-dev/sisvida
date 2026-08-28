@@ -35,12 +35,26 @@ serve(async (req) => {
     // ---- Authorization: patient session OR a valid single-use card-update token ----
     let authorized = false;
 
+    const norm = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+
     const auth = await getAuthContext(req);
     if (auth) {
       if (auth.isStaff) {
         authorized = true;
       } else if (auth.patientId && auth.patientId === patientId) {
         authorized = true;
+      } else if (auth.patientId) {
+        // O app pode carregar um registro duplicado com o mesmo CPF do titular logado
+        const { data: sessionPatient } = await supabase
+          .from('patients').select('cpf').eq('id', auth.patientId).maybeSingle();
+        const { data: targetPatient } = await supabase
+          .from('patients').select('cpf').eq('id', patientId).maybeSingle();
+        if (
+          norm(sessionPatient?.cpf).length === 11 &&
+          norm(sessionPatient?.cpf) === norm(targetPatient?.cpf)
+        ) {
+          authorized = true;
+        }
       }
     }
 
@@ -62,7 +76,6 @@ serve(async (req) => {
         const { data: targetPatient } = await supabase
           .from('patients').select('cpf, clinic_id').eq('id', patientId).maybeSingle();
 
-        const norm = (v: unknown) => String(v ?? '').replace(/\D/g, '');
         if (
           tokenRow.patient_id === patientId ||
           (norm(tokenPatient?.cpf).length === 11 && norm(tokenPatient?.cpf) === norm(targetPatient?.cpf))
