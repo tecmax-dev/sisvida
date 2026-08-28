@@ -3575,7 +3575,7 @@ const updateData: Record<string, any> = {
             <SelectTrigger className="bg-background">
               <SelectValue placeholder="Titular (próprio paciente)" />
             </SelectTrigger>
-            <SelectContent className="bg-popover border border-border shadow-lg z-50">
+            <SelectContent className="bg-popover border border-border shadow-lg z-[9999]">
               <SelectItem value="__titular__">Titular (próprio paciente)</SelectItem>
               {patientDependents.map((dep) => (
                 <SelectItem key={dep.id} value={dep.id}>
@@ -3603,7 +3603,7 @@ const updateData: Record<string, any> = {
           <SelectTrigger className="bg-background">
             <SelectValue placeholder="Selecione o profissional" />
           </SelectTrigger>
-          <SelectContent className="bg-popover border border-border shadow-lg z-50">
+          <SelectContent className="bg-popover border border-border shadow-lg z-[9999]">
             {availableProfessionals.length > 0 ? (
               availableProfessionals.map((prof) => (
                 <SelectItem key={prof.id} value={prof.id}>
@@ -3659,7 +3659,7 @@ const updateData: Record<string, any> = {
           <SelectTrigger className="bg-background">
             <SelectValue placeholder={`Padrão (${professionals.find(p => p.id === formProfessional)?.appointment_duration || 30} min)`} />
           </SelectTrigger>
-          <SelectContent className="bg-popover border border-border shadow-lg z-50">
+          <SelectContent className="bg-popover border border-border shadow-lg z-[9999]">
             <SelectItem value="__default__">Padrão do profissional</SelectItem>
             <SelectItem value="5">5 minutos</SelectItem>
             <SelectItem value="10">10 minutos</SelectItem>
@@ -3683,7 +3683,7 @@ const updateData: Record<string, any> = {
           <SelectTrigger className="bg-background">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-popover border border-border shadow-lg z-50">
+          <SelectContent className="bg-popover border border-border shadow-lg z-[9999]">
             {appointmentTypes.map((type) => (
               <SelectItem key={type.value} value={type.value}>
                 {type.label}
@@ -3913,7 +3913,7 @@ const updateData: Record<string, any> = {
                 </svg>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover min-w-[180px] z-50" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuContent align="end" className="bg-popover min-w-[180px] z-[9999]" onClick={(e) => e.stopPropagation()}>
               {/* Atender - apenas para quem tem permissão de prontuário médico */}
               {canAttend && canAttendPatient && (
                 <DropdownMenuItem onClick={() => openAppointmentPanel(appointment)}>
