@@ -12,7 +12,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import { EmployerContributionsTab } from "@/components/employers/EmployerContributionsTab";
+import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 
 const baseProps = () => ({
   contributions: [
