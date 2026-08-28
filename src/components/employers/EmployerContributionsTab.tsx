@@ -451,12 +451,6 @@ export default function EmployerContributionsTab({
     return { activeContributions: active, overdueContributions: overdue };
   }, [displayContributions]);
 
-  // Calculate pending value
-  const pendingValue = useMemo(() => {
-    return contributions
-      .filter(c => c.status === "pending" || c.status === "overdue" || c.status === "awaiting_value")
-      .reduce((acc, c) => acc + c.value, 0);
-  }, [contributions]);
 
   // Totals of the FILTERED contributions (respect status/type/date filters)
   const filteredTotals = useMemo(() => {
