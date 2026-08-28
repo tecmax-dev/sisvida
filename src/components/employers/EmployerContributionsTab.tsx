@@ -734,8 +734,8 @@ export default function EmployerContributionsTab({
         </Card>
       )}
 
-      {/* Summary Cards - 3 columns */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Summary Cards - 4 columns, reflect the FILTERED list */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="bg-info/10 border-info/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -745,7 +745,7 @@ export default function EmployerContributionsTab({
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Total</p>
                 <p className="text-lg font-bold text-info">
-                  {formatCurrency(stats.totalValue)}
+                  {formatCurrency(filteredTotals.total)}
                 </p>
               </div>
             </div>
@@ -761,7 +761,7 @@ export default function EmployerContributionsTab({
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Recebido</p>
                 <p className="text-lg font-bold text-success">
-                  {formatCurrency(stats.paidValue)}
+                  {formatCurrency(filteredTotals.paid)}
                 </p>
               </div>
             </div>
@@ -777,7 +777,23 @@ export default function EmployerContributionsTab({
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Pendente</p>
                 <p className="text-lg font-bold text-warning">
-                  {formatCurrency(pendingValue)}
+                  {formatCurrency(filteredTotals.pending)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-rose-500/10 border-rose-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-rose-500/10">
+                <AlertTriangle className="h-5 w-5 text-rose-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Vencidos</p>
+                <p className="text-lg font-bold text-rose-600">
+                  {formatCurrency(filteredTotals.overdue)}
                 </p>
               </div>
             </div>
