@@ -556,7 +556,7 @@ export default function UnionOverdueReportPage() {
                 checked={hideDuplicates}
                 onCheckedChange={(v) => setHideDuplicates(!!v)}
               />
-              Ocultar boletos em duplicidade (mesmo valor)
+              Ocultar boletos em duplicidade (mesmo tipo, competência e valor)
             </label>
           </div>
           <div className="flex items-end">
