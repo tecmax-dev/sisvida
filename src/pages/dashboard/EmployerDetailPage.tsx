@@ -272,7 +272,7 @@ export default function EmployerDetailPage({
                   setSelectedContribution(contrib);
                   setIsViewDialogOpen(true);
                 }}
-                onGenerateInvoice={() => {}}
+                onGenerateInvoice={handleGenerateInvoice}
                 onOpenNegotiationDialog={() => {}}
               />
             </TabsContent>
