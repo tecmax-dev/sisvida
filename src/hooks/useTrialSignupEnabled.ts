@@ -14,12 +14,9 @@ export function useTrialSignupEnabled() {
     let mounted = true;
     (async () => {
       try {
-        const { data } = await supabase
-          .from("global_config")
-          .select("trial_signup_enabled")
-          .maybeSingle();
-        if (mounted && data && typeof (data as any).trial_signup_enabled === "boolean") {
-          setEnabled((data as any).trial_signup_enabled);
+        const { data } = await supabase.rpc("get_trial_signup_enabled");
+        if (mounted && typeof data === "boolean") {
+          setEnabled(data);
         }
       } catch {
         // keep default true

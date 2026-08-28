@@ -153,7 +153,7 @@ export default function PublicBooking() {
     try {
       const { data: clinicData, error: clinicError } = await supabase
         .from('clinics')
-        .select('*')
+        .select('id, name, slug, phone, address, city, state_code, cnpj, logo_url, opening_time, closing_time, holidays_enabled, map_view_type, custom_map_embed_url, entity_nomenclature, booking_months_ahead, min_advance_booking_hours, enforce_schedule_validation, max_appointments_per_cpf_month, is_blocked, is_maintenance, app_unavailable, app_unavailable_message')
         .eq('slug', clinicSlug)
         .single();
 
