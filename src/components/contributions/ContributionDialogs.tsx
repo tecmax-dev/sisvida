@@ -635,7 +635,7 @@ export default function ContributionDialogs({
         onCreateDialogChange(open);
         if (!open) resetCreateForm();
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md z-[120]">
           <DialogHeader>
             <DialogTitle>Nova Contribuição</DialogTitle>
             <DialogDescription>
@@ -819,7 +819,7 @@ export default function ContributionDialogs({
 
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={onViewDialogChange}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[120]">
           <DialogHeader>
             <DialogTitle>Detalhes da Contribuição</DialogTitle>
           </DialogHeader>
@@ -991,7 +991,7 @@ export default function ContributionDialogs({
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[130]">
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar Contribuição</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1012,7 +1012,7 @@ export default function ContributionDialogs({
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md z-[120]">
           <DialogHeader>
             <DialogTitle>Editar Contribuição</DialogTitle>
             <DialogDescription>
@@ -1141,7 +1141,7 @@ export default function ContributionDialogs({
         setDeleteDialogOpen(open);
         if (!open) setForceDeleteLocal(false);
       }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[130]">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
