@@ -73,24 +73,20 @@ serve(async (req) => {
       try {
         const cpfDigits = String(cpf).replace(/\D/g, '')
         if (!cpfDigits) return null
-        const { data: patients } = await supabaseClient
-          .from('patients')
-          .select('signature_url, signature_accepted_at')
-          .not('signature_url', 'is', null)
-          .order('signature_accepted_at', { ascending: false, nullsFirst: false })
-          .limit(50)
-        const match = (patients || []).find(
-          (p: any) => String(p.signature_url || '').length > 0
-        )
-        // Filter by CPF requires cpf column — refetch with cpf filter
+        // CPF may be stored with or without punctuation — try both
+        const formatted = cpfDigits.length === 11
+          ? cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+          : cpfDigits
         const { data: byCpf } = await supabaseClient
           .from('patients')
-          .select('signature_url')
+          .select('cpf, signature_url')
           .not('signature_url', 'is', null)
+          .or(`cpf.eq.${cpfDigits},cpf.eq.${formatted}`)
           .order('signature_accepted_at', { ascending: false, nullsFirst: false })
-          .or(`cpf.eq.${cpfDigits}`)
-          .limit(1)
-        if (byCpf && byCpf.length > 0) return byCpf[0].signature_url
+          .limit(10)
+        const match = (byCpf || []).find(
+          (p: any) => String(p.cpf || '').replace(/\D/g, '') === cpfDigits
+        )
         return match?.signature_url || null
       } catch (e) {
         console.error('[resolve-filiacao-assets] patient signature lookup failed:', e)
