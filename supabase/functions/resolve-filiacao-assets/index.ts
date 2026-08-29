@@ -65,26 +65,75 @@ serve(async (req) => {
     }
 
     // 2. Resolve Signature
-    if (signature_url) {
-      let resolvedSigUrl = signature_url
-      
+    let signatureUrlToResolve = signature_url
+
+    // Fallback: if caller didn't provide a signature (or it failed),
+    // look up the patient's signature directly (service role bypasses RLS)
+    const lookupPatientSignature = async (): Promise<string | null> => {
+      try {
+        const cpfDigits = String(cpf).replace(/\D/g, '')
+        if (!cpfDigits) return null
+        // CPF may be stored with or without punctuation — try both
+        const formatted = cpfDigits.length === 11
+          ? cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+          : cpfDigits
+        const { data: byCpf } = await supabaseClient
+          .from('patients')
+          .select('cpf, signature_url')
+          .not('signature_url', 'is', null)
+          .or(`cpf.eq.${cpfDigits},cpf.eq.${formatted}`)
+          .order('signature_accepted_at', { ascending: false, nullsFirst: false })
+          .limit(10)
+        const match = (byCpf || []).find(
+          (p: any) => String(p.cpf || '').replace(/\D/g, '') === cpfDigits
+        )
+        return match?.signature_url || null
+      } catch (e) {
+        console.error('[resolve-filiacao-assets] patient signature lookup failed:', e)
+        return null
+      }
+    }
+
+    if (!signatureUrlToResolve) {
+      signatureUrlToResolve = await lookupPatientSignature()
+    }
+
+    if (signatureUrlToResolve) {
+      let resolvedSigUrl = signatureUrlToResolve
+
       // If it's a storage path, get signed URL
-      if (!signature_url.startsWith('http') && !signature_url.startsWith('data:')) {
+      if (!signatureUrlToResolve.startsWith('http') && !signatureUrlToResolve.startsWith('data:')) {
         const { data: signed } = await supabaseClient.storage
           .from('patient-signatures')
-          .createSignedUrl(signature_url, 60)
-        
+          .createSignedUrl(signatureUrlToResolve, 60)
+
         if (signed?.signedUrl) {
           resolvedSigUrl = signed.signedUrl
         }
       }
 
-      const dataUrl = await fetchImageAsBase64(resolvedSigUrl)
+      let dataUrl = await fetchImageAsBase64(resolvedSigUrl)
+
+      // If resolution failed and it wasn't from the fallback, try the patient lookup
+      if (!dataUrl && signature_url) {
+        const fallback = await lookupPatientSignature()
+        if (fallback && fallback !== signature_url) {
+          let fbUrl = fallback
+          if (!fallback.startsWith('http') && !fallback.startsWith('data:')) {
+            const { data: signed } = await supabaseClient.storage
+              .from('patient-signatures')
+              .createSignedUrl(fallback, 60)
+            if (signed?.signedUrl) fbUrl = signed.signedUrl
+          }
+          dataUrl = await fetchImageAsBase64(fbUrl)
+        }
+      }
+
       if (dataUrl) {
         // Basic validation
         const base64Content = dataUrl.split(',')[1] || ''
         const byteSize = Math.floor((base64Content.length * 3) / 4)
-        
+
         if (byteSize < 2000) {
           assets.signature.invalidReason = "Assinatura muito pequena ou em branco"
         } else {
