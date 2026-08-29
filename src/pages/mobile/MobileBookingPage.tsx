@@ -286,23 +286,58 @@ export default function MobileBookingPage() {
       // Guardar clinicId no ref para uso no submit
       clinicIdRef.current = data.clinicId;
 
-      // Processar feriados retornados pela Edge Function
-      if (data.holidays && data.holidays.length > 0) {
-        const dates = new Set<string>();
-        data.holidays.forEach((h: any) => {
-          if (h.is_recurring && h.recurring_month && h.recurring_day) {
-            const now = new Date();
-            for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
-              const m = String(h.recurring_month).padStart(2, '0');
-              const d = String(h.recurring_day).padStart(2, '0');
-              dates.add(`${y}-${m}-${d}`);
-            }
-          } else {
-            dates.add(h.holiday_date);
+      // Processar feriados retornados pela Edge Function (feriados da clínica)
+      const dates = new Set<string>();
+      const addHoliday = (h: any) => {
+        if (h.is_recurring && h.recurring_month && h.recurring_day) {
+          const now = new Date();
+          for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
+            const m = String(h.recurring_month).padStart(2, '0');
+            const d = String(h.recurring_day).padStart(2, '0');
+            dates.add(`${y}-${m}-${d}`);
           }
-        });
-        setHolidayDates(dates);
+        } else if (h.holiday_date) {
+          dates.add(h.holiday_date);
+        }
+      };
+      (data.holidays || []).forEach(addHoliday);
+
+      // Complementar com feriados nacionais, estaduais e municipais
+      try {
+        const [nat, clinicRow] = await Promise.all([
+          supabase.from("national_holidays").select("holiday_date, is_recurring, recurring_month, recurring_day"),
+          supabase.from("clinics").select("state_code, city, holidays_enabled").eq("id", data.clinicId).maybeSingle(),
+        ]);
+
+        if (clinicRow.data?.holidays_enabled !== false) {
+          (nat.data || []).forEach(addHoliday);
+
+          const stateCode = clinicRow.data?.state_code;
+          const city = clinicRow.data?.city;
+
+          if (stateCode) {
+            const { data: st } = await supabase
+              .from("state_holidays")
+              .select("holiday_date, is_recurring, recurring_month, recurring_day")
+              .eq("state_code", stateCode);
+            (st || []).forEach(addHoliday);
+          }
+
+          if (stateCode && city) {
+            const { data: mun } = await supabase
+              .from("municipal_holidays")
+              .select("holiday_date, is_recurring, recurring_month, recurring_day")
+              .eq("state_code", stateCode)
+              .eq("city", city);
+            (mun || []).forEach(addHoliday);
+          }
+        }
+      } catch (e) {
+        console.warn("[MobileBooking] Falha ao carregar feriados oficiais", e);
       }
+
+      setHolidayDates(dates);
+
 
       // Setar profissionais
       setProfessionals(data.professionals || []);
