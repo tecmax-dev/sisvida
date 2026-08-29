@@ -58,6 +58,33 @@ serve(async (req) => {
 
     if (patientError) throw patientError
 
+    // 3b. Propagate signature to the affiliation record (sindical_associados)
+    // so the printed ficha includes the signature collected via the link
+    try {
+      const { data: patient } = await supabaseClient
+        .from('patients')
+        .select('cpf')
+        .eq('id', tokenData.patient_id)
+        .single()
+
+      const cpfDigits = (patient?.cpf || '').replace(/\D/g, '')
+      if (cpfDigits) {
+        const formatted = cpfDigits.length === 11
+          ? cpfDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+          : cpfDigits
+        await supabaseClient
+          .from('sindical_associados')
+          .update({
+            assinatura_digital_url: fileName,
+            assinatura_aceite_desconto: true,
+            assinatura_aceite_at: new Date().toISOString()
+          })
+          .or(`cpf.eq.${cpfDigits},cpf.eq.${formatted}`)
+      }
+    } catch (e) {
+      console.error('[submit-signature-authorization] filiacao propagation failed:', e)
+    }
+
     // 4. Mark token as used
     await supabaseClient
       .from('patient_signature_tokens')
