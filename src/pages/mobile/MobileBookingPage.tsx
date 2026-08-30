@@ -88,6 +88,7 @@ interface Dependent {
   name: string;
   birth_date: string | null;
   relationship?: string | null;
+  gender?: string | null;
 }
 
 // Age limit for dependents (in years)
@@ -122,11 +123,23 @@ const isMaleGenderValue = (gender?: string | null) => {
   return g === "m" || g === "masculino" || g === "male" || g === "homem";
 };
 
-// Heurística por parentesco (dependentes não possuem campo de sexo)
+// Fallback: heurística por parentesco (quando o dependente ainda não tem sexo cadastrado)
 const isMaleRelationship = (relationship?: string | null) => {
   const r = (relationship || "").toLowerCase().trim();
   return /^(filho|marido|esposo|pai|irm[ãa]o|av[ôo]|neto|enteado|sobrinho|tio|primo|companheiro|genro|padrasto)\b/.test(r)
     && !/^(filha|irm[ãa]|av[óo]|neta|enteada|sobrinha|tia|prima|companheira|nora|madrasta)\b/.test(r);
+};
+
+const isFemaleGenderValue = (gender?: string | null) => {
+  const g = (gender || "").toLowerCase().trim();
+  return g === "f" || g === "feminino" || g === "female" || g === "mulher";
+};
+
+// Sexo do dependente: usa o campo cadastrado quando existir; senão, heurística por parentesco
+const isDependentMale = (dep?: { gender?: string | null; relationship?: string | null } | null) => {
+  if (isFemaleGenderValue(dep?.gender)) return false;
+  if (isMaleGenderValue(dep?.gender)) return true;
+  return isMaleRelationship(dep?.relationship);
 };
 
 const FEMALE_ONLY_MESSAGE = "Esta profissional atende exclusivamente pacientes do sexo feminino.";
@@ -549,7 +562,7 @@ export default function MobileBookingPage() {
       }
       if (patientType === "dependent") {
         const dep = dependents.find(d => d.id === selectedDependentId);
-        if (isMaleRelationship(dep?.relationship)) {
+        if (isDependentMale(dep)) {
           toast({
             title: "Atendimento exclusivo feminino",
             description: `${dep?.name || "O dependente"} não pode ser agendado com ${profSelected?.name}, que atende exclusivamente pacientes do sexo feminino.`,
@@ -602,7 +615,7 @@ export default function MobileBookingPage() {
       if (isFemaleOnlyProfessional(professional?.name)) {
         const isTitularMale = patientType === "titular" && isMaleGenderValue(titularGender);
         const selectedDep = dependents.find(d => d.id === selectedDependentId);
-        const isDepMale = patientType === "dependent" && isMaleRelationship(selectedDep?.relationship);
+        const isDepMale = patientType === "dependent" && isDependentMale(selectedDep);
         
         if (isTitularMale || isDepMale) {
            throw new Error("Atendimento exclusivo para mulheres.");
@@ -986,7 +999,7 @@ export default function MobileBookingPage() {
                         isGenderBlocked = isMaleGenderValue(titularGender);
                       } else if (selectedDependentId) {
                         const dep = dependents.find(d => d.id === selectedDependentId);
-                        isGenderBlocked = isMaleRelationship(dep?.relationship);
+                        isGenderBlocked = isDependentMale(dep);
                       }
                     }
                     const isBlockedFinal = isBlocked || isGenderBlocked;
@@ -1090,7 +1103,7 @@ export default function MobileBookingPage() {
                     const dep = dependents.find(d => d.id === selectedDependentId);
                     const blockedByGender = patientType === "titular"
                       ? isMaleGenderValue(titularGender)
-                      : isMaleRelationship(dep?.relationship);
+                      : isDependentMale(dep);
                     if (blockedByGender) {
                       toast({
                         title: "Atendimento exclusivo feminino",
