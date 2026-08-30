@@ -20596,6 +20596,7 @@ export type Database = {
           p_clinic_id: string
           p_cpf: string
           p_cpf_photo_url: string
+          p_gender?: string
           p_name: string
           p_patient_id: string
           p_phone: string
