@@ -88,6 +88,7 @@ interface Dependent {
   name: string;
   birth_date: string | null;
   relationship?: string | null;
+  gender?: string | null;
 }
 
 // Age limit for dependents (in years)
@@ -138,7 +139,7 @@ const isFemaleGenderValue = (gender?: string | null) => {
 const isDependentMale = (dep?: { gender?: string | null; relationship?: string | null } | null) => {
   if (isFemaleGenderValue(dep?.gender)) return false;
   if (isMaleGenderValue(dep?.gender)) return true;
-  return isDependentMale(dep);
+  return isMaleRelationship(dep?.relationship);
 };
 
 const FEMALE_ONLY_MESSAGE = "Esta profissional atende exclusivamente pacientes do sexo feminino.";
