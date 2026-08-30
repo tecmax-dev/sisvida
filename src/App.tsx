@@ -220,6 +220,7 @@ import UnionSuppliersPage from "./pages/union/UnionSuppliersPage";
 import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
 import UnionReportsPage from "./pages/union/UnionReportsPage";
 import UnionOverdueReportPage from "./pages/union/UnionOverdueReportPage";
+import UnionDependentsMissingGenderPage from "./pages/union/UnionDependentsMissingGenderPage";
 import UnionLytexReportsPage from "./pages/union/UnionLytexReportsPage";
 import UnionAppointmentReportsPage from "./pages/union/UnionAppointmentReportsPage";
 import UnionMembersReportPage from "./pages/union/UnionMembersReportPage";
@@ -686,6 +687,7 @@ function App() {
                   <Route path="relatorios/agendamentos" element={<UnionAppointmentReportsPage />} />
                   <Route path="relatorios/associados" element={<UnionMembersReportPage />} />
                   <Route path="relatorios/inadimplencia" element={<UnionOverdueReportPage />} />
+                  <Route path="relatorios/dependentes-sem-sexo" element={<UnionDependentsMissingGenderPage />} />
                   <Route path="associados" element={<UnionAssociadosPage />} />
                   <Route path="filiacoes" element={<UnionFiliacoesPage />} />
                   <Route path="aprovacao-dependentes" element={<UnionDependentApprovalsPage />} />

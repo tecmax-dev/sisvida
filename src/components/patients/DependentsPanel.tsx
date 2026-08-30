@@ -195,6 +195,15 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       return;
     }
 
+    if (!formData.gender) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, informe o sexo do dependente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const payload = {
         clinic_id: clinicId,
@@ -485,7 +494,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dep-gender">Sexo</Label>
+                <Label htmlFor="dep-gender">Sexo *</Label>
                 <Select
                   value={formData.gender}
                   onValueChange={(value) => setFormData({ ...formData, gender: value })}

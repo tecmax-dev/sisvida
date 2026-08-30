@@ -883,6 +883,24 @@ export default function MobileBookingPage() {
                     </SelectContent>
                   </Select>
                   
+                  {/* Show warning if selected dependent has no gender */}
+                  {selectedDependentId && (() => {
+                    const selectedDep = dependents.find(d => d.id === selectedDependentId);
+                    if (selectedDep && !(selectedDep.gender || "").trim()) {
+                      return (
+                        <Card className="border-amber-200 bg-amber-50">
+                          <CardContent className="p-3 flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                            <p className="text-sm text-amber-800">
+                              Informe o sexo deste dependente na tela de dependentes para liberar agendamentos.
+                            </p>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   {/* Show warning if selected dependent is over age limit */}
                   {selectedDependentId && (() => {
                     const selectedDep = dependents.find(d => d.id === selectedDependentId);
@@ -930,6 +948,16 @@ export default function MobileBookingPage() {
                         });
                         return;
                       }
+                    }
+
+                    // Bloqueio: dependente sem sexo cadastrado não pode agendar (nenhum profissional)
+                    if (!(selectedDep?.gender || "").trim()) {
+                      toast({
+                        title: "Sexo não informado",
+                        description: `Informe o sexo de ${selectedDep?.name || "o dependente"} no cadastro de dependentes para liberar agendamentos.`,
+                        variant: "destructive",
+                      });
+                      return;
                     }
                   }
                   
