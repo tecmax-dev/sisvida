@@ -99,7 +99,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
     birth_date: "",
     gender: "",
     relationship: "",
-    card_number: ""
+    card_number: "",
     card_expires_at: "",
     notes: "",
   });
