@@ -140,6 +140,7 @@ interface FormData {
   birthDate: string;
   phone: string;
   relationship: string;
+  gender: string;
 }
 
 interface FormErrors {
@@ -148,6 +149,7 @@ interface FormErrors {
   birthDate?: string;
   phone?: string;
   relationship?: string;
+  gender?: string;
   document?: string;
 }
 
@@ -164,6 +166,7 @@ export function DependentInclusionForm({
     birthDate: "",
     phone: "",
     relationship: "",
+    gender: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -332,6 +335,11 @@ export function DependentInclusionForm({
       newErrors.relationship = "Grau de parentesco é obrigatório";
     }
 
+    // Gender validation
+    if (!formData.gender) {
+      newErrors.gender = "Sexo é obrigatório";
+    }
+
     // Age validation for children
     if (formData.relationship === "child" && birthDate) {
       const age = differenceInYears(new Date(), birthDate);
@@ -416,6 +424,7 @@ export function DependentInclusionForm({
         p_birth_date: format(birthDate, "yyyy-MM-dd"),
         p_phone: cleanPhone,
         p_relationship: formData.relationship,
+        p_gender: formData.gender,
         p_cpf_photo_url: documentUrl,
       });
 
@@ -432,6 +441,7 @@ export function DependentInclusionForm({
       // Reset form
       setFormData({
         name: "",
+        gender: "",
         cpf: "",
         birthDate: "",
         phone: "",
@@ -460,6 +470,7 @@ export function DependentInclusionForm({
       birthDate: "",
       phone: "",
       relationship: "",
+      gender: "",
     });
     setErrors({});
     removeDocument();
@@ -612,6 +623,32 @@ export function DependentInclusionForm({
                 <p className="text-xs text-red-500 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.phone}
+                </p>
+              )}
+            </div>
+
+            {/* Gender */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Sexo <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.gender}
+                onValueChange={(value) => handleInputChange("gender", value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger className={errors.gender ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Selecione o sexo" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="feminino">Feminino</SelectItem>
+                  <SelectItem value="masculino">Masculino</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.gender && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.gender}
                 </p>
               )}
             </div>
