@@ -68,6 +68,7 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
 
+    setReviewDialogOpen(false);
     setLoadingImage(true);
     setViewingPatientName(request.patients?.name || 'Paciente');
     setViewerOpen(true);
@@ -78,6 +79,7 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
   };
 
   const openReviewDialog = (request: PayslipRequest) => {
+    setViewerOpen(false);
     setSelectedRequest(request);
     setReviewNotes('');
     // Default to 1 year from now

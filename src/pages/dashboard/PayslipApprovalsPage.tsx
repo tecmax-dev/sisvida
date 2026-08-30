@@ -63,6 +63,7 @@ export default function PayslipApprovalsPage() {
 
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
+    setReviewDialogOpen(false);
     setLoadingImage(true);
     setViewingPatientName(request.patients?.name || 'Associado');
     setViewerOpen(true);
@@ -72,6 +73,7 @@ export default function PayslipApprovalsPage() {
   };
 
   const openReviewDialog = async (request: PayslipRequest) => {
+    setViewerOpen(false);
     setSelectedRequest(request);
     setReviewNotes('');
     const defaultExpiry = new Date();
