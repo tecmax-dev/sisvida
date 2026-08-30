@@ -8101,6 +8101,7 @@ export type Database = {
           cpf: string | null
           cpf_photo_url: string | null
           created_at: string
+          gender: string | null
           id: string
           inactivated_at: string | null
           inactivation_reason: string | null
@@ -8122,6 +8123,7 @@ export type Database = {
           cpf?: string | null
           cpf_photo_url?: string | null
           created_at?: string
+          gender?: string | null
           id?: string
           inactivated_at?: string | null
           inactivation_reason?: string | null
@@ -8143,6 +8145,7 @@ export type Database = {
           cpf?: string | null
           cpf_photo_url?: string | null
           created_at?: string
+          gender?: string | null
           id?: string
           inactivated_at?: string | null
           inactivation_reason?: string | null
