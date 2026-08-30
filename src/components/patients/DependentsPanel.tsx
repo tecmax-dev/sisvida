@@ -34,6 +34,7 @@ interface Dependent {
   cpf: string | null;
   birth_date: string | null;
   relationship: string | null;
+  gender?: string | null;
   card_number: string | null;
   card_expires_at: string | null;
   notes: string | null;
@@ -96,8 +97,9 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
     name: "",
     cpf: "",
     birth_date: "",
+    gender: "",
     relationship: "",
-    card_number: "",
+    card_number: ""
     card_expires_at: "",
     notes: "",
   });
@@ -130,6 +132,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
             name: dep.name,
             cpf: dep.cpf ? formatCPF(dep.cpf) : "",
             birth_date: dep.birth_date || "",
+            gender: (dep as any).gender || "",
             relationship: dep.relationship || "",
             card_number: dep.card_number || "",
             card_expires_at: dep.card_expires_at ? dep.card_expires_at.split("T")[0] : "",
@@ -172,6 +175,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       name: "",
       cpf: "",
       birth_date: "",
+      gender: "",
       relationship: "",
       card_number: "",
       card_expires_at: "",
@@ -198,6 +202,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
         name: formData.name.trim(),
         cpf: formData.cpf.replace(/\D/g, '') || null,
         birth_date: formData.birth_date || null,
+        gender: formData.gender || null,
         relationship: formData.relationship || null,
         card_number: formData.card_number || null,
         card_expires_at: formData.card_expires_at ? new Date(formData.card_expires_at).toISOString() : null,
@@ -262,6 +267,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       name: dependent.name,
       cpf: dependent.cpf ? formatCPF(dependent.cpf) : "",
       birth_date: dependent.birth_date || "",
+      gender: (dependent as any).gender || "",
       relationship: dependent.relationship || "",
       card_number: dependent.card_number || "",
       card_expires_at: dependent.card_expires_at ? dependent.card_expires_at.split("T")[0] : "",
@@ -476,6 +482,22 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                   value={formData.birth_date}
                   onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dep-gender">Sexo</Label>
+                <Select
+                  value={formData.gender}
+                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                >
+                  <SelectTrigger id="dep-gender">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
