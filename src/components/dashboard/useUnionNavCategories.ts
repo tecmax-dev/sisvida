@@ -184,6 +184,7 @@ export const unionNavCategories: UnionNavCategory[] = [
       { href: "/union/relatorios/associados", icon: Users, label: "Associados", permission: "union_view_members" },
       { href: "/union/relatorios/agendamentos", icon: Calendar, label: "Agendamentos", permission: "union_module_access" },
       { href: "/union/relatorios/inadimplencia", icon: AlertTriangle, label: "Empresas Inadimplentes", permission: "union_view_contribution_reports" },
+      { href: "/union/relatorios/dependentes-sem-sexo", icon: AlertTriangle, label: "Dependentes sem Sexo", permission: "union_view_members" },
     ],
   },
   {
