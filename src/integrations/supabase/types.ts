@@ -20704,6 +20704,10 @@ export type Database = {
       }
       update_expired_authorizations: { Args: never; Returns: undefined }
       update_overdue_contributions: { Args: never; Returns: undefined }
+      update_own_dependent_gender: {
+        Args: { p_dependent_id: string; p_gender: string }
+        Returns: undefined
+      }
       update_telemedicine_by_patient_token: {
         Args: { p_status?: string; p_token: string }
         Returns: boolean
