@@ -105,6 +105,8 @@ export default function UnionPayslipApprovalsPage() {
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
 
+    // Evita sobreposição de modais: fecha o modal de revisão antes de abrir o visualizador
+    setReviewDialogOpen(false);
     setLoadingImage(true);
     setViewingPatientName(request.patients?.name || 'Sócio');
     setViewerOpen(true);
@@ -115,6 +117,8 @@ export default function UnionPayslipApprovalsPage() {
   };
 
   const openReviewDialog = async (request: PayslipRequest) => {
+    // Evita sobreposição de modais: fecha o visualizador antes de abrir a revisão
+    setViewerOpen(false);
     setSelectedRequest(request);
     setReviewNotes('');
     const defaultExpiry = new Date();
