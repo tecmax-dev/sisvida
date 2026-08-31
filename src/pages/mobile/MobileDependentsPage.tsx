@@ -532,6 +532,41 @@ export default function MobileDependentsPage() {
 
               <Separator />
 
+              {/* Sexo do dependente - editável pelo titular */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Sexo</h4>
+                {!selectedDependent.gender && (
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-xs text-amber-700">
+                      Informe o sexo para liberar os agendamentos deste dependente.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex items-center gap-2">
+                  <Select value={genderSelection} onValueChange={setGenderSelection}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione o sexo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="feminino">Feminino</SelectItem>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveGender}
+                    disabled={!genderSelection || savingGender || genderSelection === (selectedDependent.gender || "")}
+                  >
+                    {savingGender && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Status da Carteirinha</h4>
                 {selectedDependent.card_number ? (
