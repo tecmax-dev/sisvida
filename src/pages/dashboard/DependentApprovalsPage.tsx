@@ -77,6 +77,7 @@ interface PendingApproval {
     cpf: string | null;
     birth_date: string | null;
     relationship: string | null;
+    gender: string | null;
   };
   patient?: {
     id: string;
@@ -150,7 +151,7 @@ export default function DependentApprovalsPage() {
         .from('pending_dependent_approvals')
         .select(`
           *,
-          dependent:patient_dependents(id, name, cpf, birth_date, relationship),
+          dependent:patient_dependents(id, name, cpf, birth_date, relationship, gender),
           patient:patients(id, name, cpf)
         `)
         .eq('clinic_id', currentClinic.id)
@@ -701,6 +702,15 @@ export default function DependentApprovalsPage() {
                           <p className="text-xs text-muted-foreground">
                             {approval.dependent?.cpf || 'CPF não informado'}
                           </p>
+                          {approval.dependent?.gender ? (
+                            <Badge variant="outline" className="text-[10px] capitalize mt-1">
+                              {approval.dependent.gender}
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="text-[10px] mt-1">
+                              Sexo não informado
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>

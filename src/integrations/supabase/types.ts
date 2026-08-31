@@ -20317,6 +20317,7 @@ export type Database = {
           card_number: string
           cpf: string
           created_at: string
+          gender: string
           id: string
           is_active: boolean
           name: string

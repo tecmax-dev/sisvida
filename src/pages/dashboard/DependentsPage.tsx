@@ -56,8 +56,10 @@ interface DependentWithPatient {
   cpf: string | null;
   birth_date: string | null;
   relationship: string | null;
+  gender: string | null;
   card_number: string | null;
   card_expires_at: string | null;
+
   patient_id: string;
   patient: {
     id: string;
@@ -131,9 +133,11 @@ export default function DependentsPage() {
           cpf,
           birth_date,
           relationship,
+          gender,
           card_number,
           card_expires_at,
           patient_id,
+
           patient:patients!inner (
             id,
             name,
@@ -416,7 +420,17 @@ export default function DependentsPage() {
                                   {dependent.cpf}
                                 </code>
                               )}
+                              {dependent.gender ? (
+                                <Badge variant="outline" className="text-[10px] capitalize">
+                                  {dependent.gender}
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  Sexo não informado
+                                </Badge>
+                              )}
                             </div>
+
                           </div>
                         </div>
                       </TableCell>
