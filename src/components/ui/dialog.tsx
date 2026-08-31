@@ -6,19 +6,34 @@ import { cn } from "@/lib/utils";
 import { becameVisibleRecently } from "@/lib/visibility-grace";
 import { useDialogLayer } from "@/lib/dialogStack";
 
+const DialogLayerContext = React.createContext(BASE_DIALOG_Z_INDEX);
+const BASE_DIALOG_Z_INDEX = 1000;
+
 const Dialog = ({
-  open,
+  open: controlledOpen,
   defaultOpen,
   onOpenChange,
   ...props
-}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => (
-  <DialogPrimitive.Root
-    open={open}
-    defaultOpen={defaultOpen}
-    onOpenChange={onOpenChange}
-    {...props}
-  />
-);
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen ?? false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const zIndex = useDialogLayer(open);
+
+  const handleOpenChange = React.useCallback((nextOpen: boolean) => {
+    if (controlledOpen === undefined) setUncontrolledOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }, [controlledOpen, onOpenChange]);
+
+  return (
+    <DialogLayerContext.Provider value={zIndex}>
+      <DialogPrimitive.Root
+        open={open}
+        onOpenChange={handleOpenChange}
+        {...props}
+      />
+    </DialogLayerContext.Provider>
+  );
+};
 
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogPortal = DialogPrimitive.Portal;
@@ -43,7 +58,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, style, ...props }, ref) => {
-  const zIndex = useDialogLayer();
+  const zIndex = React.useContext(DialogLayerContext);
   return (
   <DialogPortal>
     <DialogOverlay style={{ zIndex }} />
