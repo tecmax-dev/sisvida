@@ -25,12 +25,13 @@ export default function DependentsWithoutGenderPage() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('dependents')
+        .from('patient_dependents')
         .select('id, name, gender')
         .is('gender', null);
 
       if (error) throw error;
-      setDependents(data || []);
+      setDependents((data as Dependent[]) || []);
+
     } catch (error) {
       console.error('Error fetching dependents:', error);
     } finally {
