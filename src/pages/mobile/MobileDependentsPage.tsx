@@ -134,7 +134,7 @@ export default function MobileDependentsPage() {
       if (dependentsError) {
         console.error("Error fetching dependents:", dependentsError);
       } else {
-        setDependents(dependentsData || []);
+        setDependents((dependentsData as unknown as Dependent[]) || []);
       }
 
       // Load real requests from pending_dependent_approvals via RPC
