@@ -16,6 +16,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   ArrowLeft,
   Users,
   UserPlus,
@@ -50,6 +58,7 @@ interface Dependent {
   card_number: string | null;
   card_expires_at: string | null;
   created_at: string;
+  gender: string | null;
 }
 
 interface DependentRequest {
