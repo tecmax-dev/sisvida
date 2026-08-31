@@ -133,9 +133,11 @@ export default function DependentsPage() {
           cpf,
           birth_date,
           relationship,
+          gender,
           card_number,
           card_expires_at,
           patient_id,
+
           patient:patients!inner (
             id,
             name,
