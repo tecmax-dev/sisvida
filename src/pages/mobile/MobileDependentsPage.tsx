@@ -82,8 +82,36 @@ export default function MobileDependentsPage() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [genderSelection, setGenderSelection] = useState("");
+  const [savingGender, setSavingGender] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleSaveGender = async () => {
+    if (!selectedDependent || !genderSelection) return;
+    setSavingGender(true);
+    try {
+      const { error } = await supabase.rpc("update_own_dependent_gender", {
+        p_dependent_id: selectedDependent.id,
+        p_gender: genderSelection,
+      });
+      if (error) throw error;
+
+      const updated = { ...selectedDependent, gender: genderSelection };
+      setSelectedDependent(updated);
+      setDependents((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+      toast({ title: "Sexo atualizado", description: "Informação registrada com sucesso." });
+    } catch (err) {
+      console.error("[MobileDependents] erro ao salvar sexo:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingGender(false);
+    }
+  };
 
   useEffect(() => {
     if (initialized && authPatientId) {
@@ -240,6 +268,7 @@ export default function MobileDependentsPage() {
 
   const handleViewDependent = (dependent: Dependent) => {
     setSelectedDependent(dependent);
+    setGenderSelection(dependent.gender || "");
     setShowDetailDialog(true);
   };
 
