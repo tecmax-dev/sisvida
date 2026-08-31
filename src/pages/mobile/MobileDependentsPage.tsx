@@ -398,7 +398,15 @@ export default function MobileDependentsPage() {
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">
-                        {getStatusBadge(dependent)}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {getStatusBadge(dependent)}
+                          {!dependent.gender && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Informar sexo
+                            </Badge>
+                          )}
+                        </div>
 
                         {dependent.card_number && !overAge && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
