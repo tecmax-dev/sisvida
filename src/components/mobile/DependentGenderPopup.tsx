@@ -44,11 +44,10 @@ export function DependentGenderPopup({ patientId }: DependentGenderPopupProps) {
     if (!patientId) return;
 
     const load = async () => {
-      const { data, error } = await supabase
-        .from("patient_dependents")
-        .select("id, name, gender")
-        .eq("patient_id", patientId)
-        .eq("is_active", true);
+      // Usa RPC (security definer) pois o app autentica via CPF, sem sessão Supabase Auth
+      const { data, error } = await supabase.rpc("get_patient_dependents", {
+        p_patient_id: patientId,
+      });
 
       if (error) {
         console.error("[DependentGenderPopup] erro ao carregar dependentes:", error);
