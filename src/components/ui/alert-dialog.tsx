@@ -3,10 +3,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { useDialogLayer } from "@/lib/dialogStack";
-
-const BASE_DIALOG_Z_INDEX = 1000;
-const AlertDialogLayerContext = React.createContext(BASE_DIALOG_Z_INDEX);
+import { DialogLayerProvider, useCurrentDialogLayer, useDialogLayer } from "@/lib/dialogStack";
 
 const AlertDialog = ({
   open: controlledOpen,
@@ -24,9 +21,9 @@ const AlertDialog = ({
   }, [controlledOpen, onOpenChange]);
 
   return (
-    <AlertDialogLayerContext.Provider value={zIndex}>
+    <DialogLayerProvider value={zIndex}>
       <AlertDialogPrimitive.Root open={open} onOpenChange={handleOpenChange} {...props} />
-    </AlertDialogLayerContext.Provider>
+    </DialogLayerProvider>
   );
 };
 
@@ -53,7 +50,7 @@ const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
 >(({ className, style, ...props }, ref) => {
-  const zIndex = React.useContext(AlertDialogLayerContext);
+  const zIndex = useCurrentDialogLayer(0);
   return (
   <AlertDialogPortal>
     <AlertDialogOverlay style={{ zIndex }} />

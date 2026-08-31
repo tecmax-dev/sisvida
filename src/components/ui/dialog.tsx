@@ -4,10 +4,7 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { becameVisibleRecently } from "@/lib/visibility-grace";
-import { useDialogLayer } from "@/lib/dialogStack";
-
-const BASE_DIALOG_Z_INDEX = 1000;
-const DialogLayerContext = React.createContext(BASE_DIALOG_Z_INDEX);
+import { DialogLayerProvider, useDialogLayer } from "@/lib/dialogStack";
 
 const Dialog = ({
   open: controlledOpen,
@@ -25,13 +22,13 @@ const Dialog = ({
   }, [controlledOpen, onOpenChange]);
 
   return (
-    <DialogLayerContext.Provider value={zIndex}>
+    <DialogLayerProvider value={zIndex}>
       <DialogPrimitive.Root
         open={open}
         onOpenChange={handleOpenChange}
         {...props}
       />
-    </DialogLayerContext.Provider>
+    </DialogLayerProvider>
   );
 };
 
@@ -58,7 +55,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, style, ...props }, ref) => {
-  const zIndex = React.useContext(DialogLayerContext);
+  const zIndex = useDialogLayer(false);
   return (
   <DialogPortal>
     <DialogOverlay style={{ zIndex }} />

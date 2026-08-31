@@ -11,6 +11,7 @@ const BASE_Z_INDEX = 1000;
 const STEP = 10;
 
 let nextLayer = 0;
+const DialogLayerContext = React.createContext(BASE_Z_INDEX);
 
 export function useDialogLayer(open: boolean): number {
   const [zIndex, setZIndex] = React.useState(BASE_Z_INDEX);
@@ -23,4 +24,10 @@ export function useDialogLayer(open: boolean): number {
   }, [open]);
 
   return zIndex;
+}
+
+export const DialogLayerProvider = DialogLayerContext.Provider;
+
+export function useCurrentDialogLayer(offset = 2): number {
+  return React.useContext(DialogLayerContext) + offset;
 }
