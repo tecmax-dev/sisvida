@@ -1173,7 +1173,13 @@ const [showTutorial, setShowTutorial] = useState(false);
                       ) : (
                         paginatedContributions.map((contrib) => {
                           const value = contrib.value || 0;
-                          const needsValue = contrib.status === "awaiting_value" && !contrib.lytex_invoice_url;
+                          const needsValue =
+                            !contrib.lytex_invoice_url &&
+                            (contrib.status === "awaiting_value" ||
+                              (value <= 0 &&
+                                contrib.status !== "paid" &&
+                                contrib.status !== "cancelled"));
+
                           const invoiceUrl = contrib.lytex_invoice_url;
                           const dueDate = new Date(contrib.due_date + "T12:00:00");
                           

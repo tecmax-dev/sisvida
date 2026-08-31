@@ -630,7 +630,11 @@ function ContributionCard({
           </TooltipProvider>
         )}
         
-        {contrib.status === "awaiting_value" && (
+        {(contrib.status === "awaiting_value" ||
+          (value <= 0 &&
+            contrib.status !== "paid" &&
+            contrib.status !== "cancelled" &&
+            !invoiceUrl)) && (
           <Button
             size="sm"
             className="h-8 px-3 text-xs bg-purple-600 hover:bg-purple-700"
@@ -640,6 +644,7 @@ function ContributionCard({
             Definir
           </Button>
         )}
+
       </div>
     </div>
   );
