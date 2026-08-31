@@ -16,6 +16,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   ArrowLeft,
   Users,
   UserPlus,
@@ -50,6 +58,7 @@ interface Dependent {
   card_number: string | null;
   card_expires_at: string | null;
   created_at: string;
+  gender: string | null;
 }
 
 interface DependentRequest {
@@ -73,8 +82,36 @@ export default function MobileDependentsPage() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [genderSelection, setGenderSelection] = useState("");
+  const [savingGender, setSavingGender] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleSaveGender = async () => {
+    if (!selectedDependent || !genderSelection) return;
+    setSavingGender(true);
+    try {
+      const { error } = await supabase.rpc("update_own_dependent_gender", {
+        p_dependent_id: selectedDependent.id,
+        p_gender: genderSelection,
+      });
+      if (error) throw error;
+
+      const updated = { ...selectedDependent, gender: genderSelection };
+      setSelectedDependent(updated);
+      setDependents((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+      toast({ title: "Sexo atualizado", description: "Informação registrada com sucesso." });
+    } catch (err) {
+      console.error("[MobileDependents] erro ao salvar sexo:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingGender(false);
+    }
+  };
 
   useEffect(() => {
     if (initialized && authPatientId) {
@@ -97,7 +134,7 @@ export default function MobileDependentsPage() {
       if (dependentsError) {
         console.error("Error fetching dependents:", dependentsError);
       } else {
-        setDependents(dependentsData || []);
+        setDependents((dependentsData as unknown as Dependent[]) || []);
       }
 
       // Load real requests from pending_dependent_approvals via RPC
@@ -231,6 +268,7 @@ export default function MobileDependentsPage() {
 
   const handleViewDependent = (dependent: Dependent) => {
     setSelectedDependent(dependent);
+    setGenderSelection(dependent.gender || "");
     setShowDetailDialog(true);
   };
 
@@ -360,7 +398,15 @@ export default function MobileDependentsPage() {
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">
-                        {getStatusBadge(dependent)}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {getStatusBadge(dependent)}
+                          {!dependent.gender && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Informar sexo
+                            </Badge>
+                          )}
+                        </div>
 
                         {dependent.card_number && !overAge && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -490,6 +536,41 @@ export default function MobileDependentsPage() {
                   </div>
                 )}
 
+              </div>
+
+              <Separator />
+
+              {/* Sexo do dependente - editável pelo titular */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Sexo</h4>
+                {!selectedDependent.gender && (
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-xs text-amber-700">
+                      Informe o sexo para liberar os agendamentos deste dependente.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex items-center gap-2">
+                  <Select value={genderSelection} onValueChange={setGenderSelection}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione o sexo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="feminino">Feminino</SelectItem>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveGender}
+                    disabled={!genderSelection || savingGender || genderSelection === (selectedDependent.gender || "")}
+                  >
+                    {savingGender && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    Salvar
+                  </Button>
+                </div>
               </div>
 
               <Separator />

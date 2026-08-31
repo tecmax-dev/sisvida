@@ -355,8 +355,26 @@ export default function MobileBookingPage() {
       // Setar profissionais
       setProfessionals(data.professionals || []);
 
-      // Setar dependentes
-      setDependents(data.dependents || []);
+      // Setar dependentes (a edge function não retorna gender; complementar via RPC)
+      const edgeDependents: Dependent[] = data.dependents || [];
+      try {
+        const { data: rpcDeps } = await supabase.rpc("get_patient_dependents", {
+          p_patient_id: patientId,
+        });
+        if (rpcDeps) {
+          const genderById = new Map(
+            (rpcDeps as any[]).map((d) => [d.id as string, d.gender as string | null])
+          );
+          edgeDependents.forEach((dep) => {
+            if (genderById.has(dep.id)) {
+              dep.gender = genderById.get(dep.id) ?? dep.gender;
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("[MobileBooking] Falha ao complementar sexo dos dependentes", e);
+      }
+      setDependents(edgeDependents);
 
       // Setar configuração de meses
       if (data.bookingMonthsAhead) {
