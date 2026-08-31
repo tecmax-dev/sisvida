@@ -416,7 +416,17 @@ export default function DependentsPage() {
                                   {dependent.cpf}
                                 </code>
                               )}
+                              {dependent.gender ? (
+                                <Badge variant="outline" className="text-[10px] capitalize">
+                                  {dependent.gender}
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  Sexo não informado
+                                </Badge>
+                              )}
                             </div>
+
                           </div>
                         </div>
                       </TableCell>
