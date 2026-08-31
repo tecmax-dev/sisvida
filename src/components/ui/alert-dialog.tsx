@@ -3,9 +3,29 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { useDialogLayer } from "@/lib/dialogStack";
+import { DialogLayerProvider, useCurrentDialogLayer, useDialogLayer } from "@/lib/dialogStack";
 
-const AlertDialog = AlertDialogPrimitive.Root;
+const AlertDialog = ({
+  open: controlledOpen,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Root>) => {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen ?? false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const zIndex = useDialogLayer(open);
+
+  const handleOpenChange = React.useCallback((nextOpen: boolean) => {
+    if (controlledOpen === undefined) setUncontrolledOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }, [controlledOpen, onOpenChange]);
+
+  return (
+    <DialogLayerProvider value={zIndex}>
+      <AlertDialogPrimitive.Root open={open} onOpenChange={handleOpenChange} {...props} />
+    </DialogLayerProvider>
+  );
+};
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 
@@ -30,7 +50,7 @@ const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
 >(({ className, style, ...props }, ref) => {
-  const zIndex = useDialogLayer();
+  const zIndex = useCurrentDialogLayer(0);
   return (
   <AlertDialogPortal>
     <AlertDialogOverlay style={{ zIndex }} />
