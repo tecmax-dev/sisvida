@@ -33,6 +33,7 @@ interface Dependent {
   cpf: string | null;
   birth_date: string | null;
   relationship: string | null;
+  gender: string | null;
   card_number: string | null;
   card_expires_at: string | null;
   is_active: boolean;
@@ -94,7 +95,7 @@ export function PatientDependentsDialog({
       setLoading(true);
       const { data, error } = await supabase
         .from("patient_dependents")
-        .select("id, name, cpf, birth_date, relationship, card_number, card_expires_at, is_active")
+        .select("id, name, cpf, birth_date, relationship, gender, card_number, card_expires_at, is_active")
         .eq("patient_id", patientId)
         .eq("is_active", true)
         .order("name");
@@ -260,6 +261,13 @@ export function PatientDependentsDialog({
                         )}
                         {expired && (
                           <Badge variant="destructive" className="text-xs">Vencida</Badge>
+                        )}
+                        {dependent.gender ? (
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {dependent.gender}
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">Sexo não informado</Badge>
                         )}
                       </div>
                       <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
