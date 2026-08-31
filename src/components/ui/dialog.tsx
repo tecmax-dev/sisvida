@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { becameVisibleRecently } from "@/lib/visibility-grace";
-import { DialogLayerProvider, useDialogLayer } from "@/lib/dialogStack";
+import { DialogLayerProvider, useCurrentDialogLayer, useDialogLayer } from "@/lib/dialogStack";
 
 const Dialog = ({
   open: controlledOpen,
@@ -55,7 +55,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, style, ...props }, ref) => {
-  const zIndex = useDialogLayer(false);
+  const zIndex = useCurrentDialogLayer(0);
   return (
   <DialogPortal>
     <DialogOverlay style={{ zIndex }} />
