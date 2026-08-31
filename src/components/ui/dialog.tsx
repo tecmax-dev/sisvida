@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { becameVisibleRecently } from "@/lib/visibility-grace";
 import { useDialogLayer } from "@/lib/dialogStack";
 
-const DialogLayerContext = React.createContext(BASE_DIALOG_Z_INDEX);
 const BASE_DIALOG_Z_INDEX = 1000;
+const DialogLayerContext = React.createContext(BASE_DIALOG_Z_INDEX);
 
 const Dialog = ({
   open: controlledOpen,
