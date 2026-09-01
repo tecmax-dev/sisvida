@@ -192,7 +192,7 @@ export function useUpdateUnionAppContent() {
 
       const { error } = await supabase
         .from("union_app_content")
-        .update(updateData)
+        .update(updateData as any)
         .eq("id", id);
 
       if (error) throw error;

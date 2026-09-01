@@ -82,7 +82,7 @@ export function useHomologacaoAppointments() {
         .update({
           ...updates,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", id)
         .eq("clinic_id", currentClinic.id);
       

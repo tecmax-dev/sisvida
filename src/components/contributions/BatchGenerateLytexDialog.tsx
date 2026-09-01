@@ -317,7 +317,7 @@ export function BatchGenerateLytexDialog({
 
         await supabase
           .from("employer_contributions")
-          .update(updateData)
+          .update(updateData as any)
           .eq("id", contribution.id);
 
         successCount++;

@@ -2219,7 +2219,7 @@ const updateData: Record<string, any> = {
 
       const { error } = await supabase
         .from('appointments')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', appointment.id);
 
       if (error) throw error;

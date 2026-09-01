@@ -164,7 +164,7 @@ export function CommissionsPanel({ clinicId }: CommissionsPanelProps) {
 
       const { error } = await supabase
         .from("professional_commissions")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id);
 
       if (error) throw error;

@@ -196,7 +196,7 @@ export default function DataImportPage() {
       
       await supabase
         .from('import_logs')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', logId);
     } catch (err) {
       console.error('Error updating import log:', err);
@@ -1805,7 +1805,7 @@ export default function DataImportPage() {
           try {
             const { error } = await supabase
               .from('patients')
-              .update(updateData)
+              .update(updateData as any)
               .eq('id', patientId);
             
             if (error) {

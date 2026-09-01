@@ -162,7 +162,7 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
           status: "scheduled",
           employee_whatsapp_consent: data.employee_whatsapp_consent,
           company_whatsapp_consent: data.company_whatsapp_consent,
-        });
+        } as any);
       if (error) throw error;
     },
     onSuccess: () => {

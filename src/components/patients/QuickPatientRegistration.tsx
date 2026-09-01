@@ -273,7 +273,7 @@ export function QuickPatientRegistration({
             expires_at: expiresAt.toISOString(),
             is_active: true,
             token: crypto.randomUUID(),
-          });
+          } as any);
 
         if (insertCardError) {
           console.error("Error creating card:", insertCardError);

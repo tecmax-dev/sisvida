@@ -243,7 +243,7 @@ export function UnionCashTransferDialog({
 
           await supabase
             .from("union_cash_transfers")
-            .update(transferUpdate)
+            .update(transferUpdate as any)
             .eq("id", transferRow.id);
         }
       } catch (err) {

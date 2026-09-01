@@ -52,7 +52,7 @@ export async function syncAssociadoToPatient(
     }
     await supabase
       .from("patients")
-      .update(updateData)
+      .update(updateData as any)
       .eq("id", existing.id);
 
     // Anexar documentos de filiação ao paciente existente

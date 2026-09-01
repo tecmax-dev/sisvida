@@ -83,7 +83,7 @@ export function useCreateUnionAppAlbum() {
         .insert({
           ...data,
           clinic_id: currentClinic.id,
-        })
+        } as any)
         .select()
         .single();
 
@@ -108,7 +108,7 @@ export function useUpdateUnionAppAlbum() {
     mutationFn: async ({ id, ...data }: Partial<UnionAppAlbum> & { id: string }) => {
       const { data: result, error } = await supabase
         .from("union_app_albums")
-        .update(data)
+        .update(data as any)
         .eq("id", id)
         .select()
         .single();

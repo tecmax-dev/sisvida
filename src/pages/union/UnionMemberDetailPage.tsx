@@ -577,7 +577,7 @@ export default function UnionMemberDetailPage({
 
     const { error } = await supabase
       .from('patients')
-      .update(updatePayload)
+      .update(updatePayload as any)
       .eq('id', id);
 
     if (error) throw error;
@@ -720,7 +720,7 @@ export default function UnionMemberDetailPage({
 
       const { error } = await supabase
         .from('patients')
-        .update(updatePayload)
+        .update(updatePayload as any)
         .eq('id', id);
 
       if (error) throw error;

@@ -42,8 +42,8 @@ export default function DependentsWithoutGenderPage() {
   const updateGender = async (id: string, gender: string) => {
     try {
       const { error } = await supabase
-        .from('dependents')
-        .update({ gender })
+        .from('patient_dependents')
+        .update({ gender } as any)
         .eq('id', id);
 
       if (error) throw error;
