@@ -590,7 +590,7 @@ export function useImportExecution(clinicId: string | undefined) {
             try {
               const { error } = await supabase
                 .from("patients")
-                .update(updateData)
+                .update(updateData as any)
                 .eq("id", firstRecord.patient_id);
               
               if (error) {

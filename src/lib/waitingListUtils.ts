@@ -172,7 +172,7 @@ _${clinicName}_`;
 
     await supabase
       .from('waiting_list')
-      .update(updateData)
+      .update(updateData as any)
       .eq('id', firstInLine.id);
 
     console.log(`[waitingList] Notified ${patient.name}: success=${sendResult.success}`);

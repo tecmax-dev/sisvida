@@ -92,7 +92,7 @@ export function AppAvailabilityToggle() {
 
       const { error } = await supabase
         .from("clinics")
-        .update(updateData)
+        .update(updateData as any)
         .eq("id", currentClinic.id);
 
       if (error) throw error;

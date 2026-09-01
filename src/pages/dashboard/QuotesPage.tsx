@@ -204,7 +204,7 @@ export default function QuotesPage() {
 
       const { error } = await supabase
         .from("quotes")
-        .update(updates)
+        .update(updates as any)
         .eq("id", quoteId);
       if (error) throw error;
     },

@@ -135,7 +135,7 @@ export function FiliacaoEditDialog({ filiacaoId, open, onOpenChange, onSaved }: 
 
       const { data: updated, error } = await supabase
         .from("sindical_associados")
-        .update(updateData)
+        .update(updateData as any)
         .eq("id", filiacaoId)
         .select("id")
         .maybeSingle();

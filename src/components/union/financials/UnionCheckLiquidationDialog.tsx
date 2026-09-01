@@ -147,13 +147,13 @@ export function UnionCheckLiquidationDialog({
           user_id: session?.user?.id,
           action: "check_liquidation",
           entity_type: "union_financial_transactions",
-          details: {
+          details: ({
             check_number: searchedCheckNumber,
             liquidation_date: liquidationDate,
             cash_register_id: cashRegisterId,
             transaction_ids: selectedExpenses,
             total_value: selectedTotal,
-          },
+          } as unknown as never),
         });
 
       if (auditError) console.error("Audit log error:", auditError);

@@ -430,14 +430,14 @@ export function UnionCreateMemberDialog({
         clinic_id: clinicId,
         patient_id: patientId,
         action: "manual_create_member",
-        changes: {
+        changes: ({
           source: "union_panel",
           status: values.status,
           category_id: values.category_id || null,
           contribution_value: contributionValue,
           employer: employerData?.razao_social || null,
           dependents_count: dependents.length,
-        },
+        } as unknown as never),
       });
 
       toast.success("Sócio criado/vinculado com sucesso");

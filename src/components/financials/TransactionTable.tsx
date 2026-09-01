@@ -138,7 +138,7 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
 
       const { error } = await supabase
         .from("financial_transactions")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id);
 
       if (error) throw error;

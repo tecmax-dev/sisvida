@@ -602,7 +602,7 @@ export default function ClinicsManagement() {
       if (clinic.subscription) {
         const { error } = await supabase
           .from('subscriptions')
-          .update(updateData)
+          .update(updateData as any)
           .eq('id', clinic.subscription.id);
         if (error) throw error;
       } else {

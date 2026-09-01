@@ -534,7 +534,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
           await supabase
             .from("union_cash_transfers")
-            .update(updatePayload)
+            .update(updatePayload as any)
             .eq("id", transferId);
 
           continue;
@@ -567,7 +567,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
           const { error: finError } = await supabase
             .from("union_financial_transactions")
-            .update(updatePayload)
+            .update(updatePayload as any)
             .eq("id", rec.matched_transaction_id);
 
           if (finError) {
@@ -683,7 +683,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
         await supabase
           .from("union_cash_transfers")
-          .update(updatePayload)
+          .update(updatePayload as any)
           .eq("id", transferId);
       }
 
@@ -797,7 +797,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
         const { error: finError } = await supabase
           .from("union_financial_transactions")
-          .update(updatePayload)
+          .update(updatePayload as any)
           .eq("id", finId);
 
         if (finError) throw finError;
@@ -1137,7 +1137,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           if (transferId) {
             await supabase
               .from("union_cash_transfers")
-              .update(revertPayload)
+              .update(revertPayload as any)
               .eq("id", transferId);
           }
         } else if (matchedId) {
@@ -1181,7 +1181,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
             await supabase
               .from("union_financial_transactions")
-              .update(revertPayload)
+              .update(revertPayload as any)
               .eq("id", linkedTx.id);
 
             // Reverse balance if the transaction was paid during reconciliation
