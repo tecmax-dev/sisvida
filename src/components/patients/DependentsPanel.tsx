@@ -219,16 +219,37 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       };
 
       if (editingId) {
+        // CPF é imutável após o cadastro (trigger no banco). Só envia o campo
+        // se os dígitos realmente mudarem, evitando falha por formatação.
+        const current = dependents.find((d) => d.id === editingId);
+        const currentDigits = (current?.cpf || "").replace(/\D/g, "");
+        const newDigits = formData.cpf.replace(/\D/g, "");
+        const updatePayload: Record<string, any> = { ...payload };
+        if (currentDigits && currentDigits === newDigits) {
+          delete updatePayload.cpf;
+        }
+
         const { error } = await supabase
           .from("patient_dependents")
-          .update(payload)
+          .update(updatePayload as any)
           .eq("id", editingId);
 
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("CPF não pode ser alterado")) {
+            toast({
+              title: "CPF não pode ser alterado",
+              description: "O CPF é imutável após o cadastro. Altere os demais dados.",
+              variant: "destructive",
+            });
+            return;
+          }
+          throw error;
+        }
         toast({
           title: "Sucesso!",
           description: "Dependente atualizado com sucesso.",
         });
+
       } else {
         const { error } = await supabase
           .from("patient_dependents")
