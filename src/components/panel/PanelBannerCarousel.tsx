@@ -77,7 +77,7 @@ export function PanelBannerCarousel({ banners, className }: PanelBannerCarouselP
         >
           {/* Background Image */}
           <div
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-top"
             style={{ 
               backgroundImage: `url(${banner.image_url})`,
               backgroundColor: banner.background_color || "#1e293b"

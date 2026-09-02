@@ -241,7 +241,7 @@ export default function CarouselBannersPage() {
                     <img
                       src={banner.image_url}
                       alt={banner.title || "Banner"}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-top"
                     />
                     <div 
                       className="absolute inset-0"
@@ -379,7 +379,7 @@ export default function CarouselBannersPage() {
                   <img
                     src={formData.image_url}
                     alt="Preview"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                   />
                   <div 
                     className="absolute inset-0"
