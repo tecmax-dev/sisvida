@@ -68,18 +68,25 @@ serve(async (req) => {
     if (signature_url) {
       let resolvedSigUrl = signature_url
 
-      // If it's a storage path, get signed URL
+      // If it's a storage path, try known buckets until one resolves
+      let dataUrl: string | null = null
       if (!signature_url.startsWith('http') && !signature_url.startsWith('data:')) {
-        const { data: signed } = await supabaseClient.storage
-          .from('patient-signatures')
-          .createSignedUrl(signature_url, 60)
-
-        if (signed?.signedUrl) {
-          resolvedSigUrl = signed.signedUrl
+        const buckets = ['patient-signatures', 'signatures', 'sindical-documentos', 'patient-documents']
+        let cleanPath = signature_url.replace(/^\/+/, '')
+        for (const bucket of buckets) {
+          const path = cleanPath.startsWith(`${bucket}/`) ? cleanPath.slice(bucket.length + 1) : cleanPath
+          const { data: signed } = await supabaseClient.storage.from(bucket).createSignedUrl(path, 60)
+          if (!signed?.signedUrl) continue
+          const attempt = await fetchImageAsBase64(signed.signedUrl)
+          if (attempt) {
+            resolvedSigUrl = signed.signedUrl
+            dataUrl = attempt
+            break
+          }
         }
       }
 
-      const dataUrl = await fetchImageAsBase64(resolvedSigUrl)
+      if (!dataUrl) dataUrl = await fetchImageAsBase64(resolvedSigUrl)
       if (dataUrl) {
         // Basic validation
         const base64Content = dataUrl.split(',')[1] || ''

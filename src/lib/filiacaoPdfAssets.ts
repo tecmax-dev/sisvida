@@ -185,38 +185,74 @@ export async function prepareMemberImagesForFiliacaoPdf(params: {
   const photoOriginalUrl = params.photoUrl ?? null;
   const signatureOriginalUrl = params.signatureUrl ?? null;
 
-  // Prioridade obrigatória: patients.* (fonte da verdade)
   const patientPhotoUrl = patientWithPhoto?.photo_url || null;
   const patientSignatureUrl = patientWithSignature?.signature_url || null;
 
-  const photoResolvedUrl = patientPhotoUrl || params.photoUrl || params.memberPhotoFallback || null;
+  // Foto: patients é a fonte da verdade, com fallbacks
+  const photoCandidates = Array.from(
+    new Set([patientPhotoUrl, params.photoUrl, params.memberPhotoFallback].filter(Boolean) as string[])
+  );
+  const photoResolvedUrl = photoCandidates[0] || null;
 
-  const signatureResolvedUrl = patientSignatureUrl || params.signatureUrl || null;
+  // Assinatura: a assinatura embutida na própria ficha (data URL) tem prioridade,
+  // pois fichas novas podem ter patients.signature_url ainda vazio/quebrado.
+  const signatureCandidates = Array.from(
+    new Set(
+      [
+        params.signatureUrl && isDataImageUrl(params.signatureUrl) ? params.signatureUrl : null,
+        patientSignatureUrl,
+        params.signatureUrl,
+      ].filter(Boolean) as string[]
+    )
+  );
+  const signatureResolvedUrl = signatureCandidates[0] || null;
 
-  // Resolve/converte dentro do backend (service role + auditoria + validação de assinatura)
-  // Foto é opcional — backend aceita photo_url null
-  const resolved = await resolveFiliacaoAssetsViaBackend({
-    cpf: cpfNormalized,
-    photoUrl: photoResolvedUrl,
-    signatureUrl: signatureResolvedUrl,
-  });
+  let photoDataUrl: string | null = null;
+  let photoBytes: number | null = null;
+  let signatureDataUrl: string | null = null;
+  let signatureBytes: number | null = null;
+  let signatureInvalidReason: string | null = null;
 
-  const photoDataUrl = resolved.photoDataUrl;
-  const photoBytes = resolved.photoBytes;
+  // Tenta cada candidato de assinatura até obter uma imagem válida
+  const maxAttempts = Math.max(signatureCandidates.length, 1);
+  for (let i = 0; i < maxAttempts; i++) {
+    const signatureCandidate = signatureCandidates[i] ?? null;
 
-  let signatureDataUrl: string | null = resolved.signatureDataUrl;
-  let signatureBytes: number | null = resolved.signatureBytes;
-  let signatureInvalidReason: string | null = resolved.signatureInvalidReason;
+    const resolved = await resolveFiliacaoAssetsViaBackend({
+      cpf: cpfNormalized,
+      photoUrl: i === 0 ? photoResolvedUrl : null,
+      signatureUrl: signatureCandidate,
+    });
 
-  // Fallback extra: validação client-side (defesa em profundidade)
-  if (signatureDataUrl) {
-    const validation = validateSignatureDataUrl(signatureDataUrl);
-    if (validation.ok === false) {
-      signatureInvalidReason = signatureInvalidReason || validation.reason;
-      signatureDataUrl = null;
-      signatureBytes = null;
+    if (i === 0) {
+      photoDataUrl = resolved.photoDataUrl;
+      photoBytes = resolved.photoBytes;
+    }
+
+    let candidateDataUrl = resolved.signatureDataUrl;
+    let candidateBytes = resolved.signatureBytes;
+    let candidateReason = resolved.signatureInvalidReason;
+
+    // Validação client-side (defesa em profundidade)
+    if (candidateDataUrl) {
+      const validation = validateSignatureDataUrl(candidateDataUrl);
+      if (validation.ok === false) {
+        candidateReason = candidateReason || validation.reason;
+        candidateDataUrl = null;
+        candidateBytes = null;
+      }
+    }
+
+    signatureInvalidReason = candidateReason || signatureInvalidReason;
+
+    if (candidateDataUrl) {
+      signatureDataUrl = candidateDataUrl;
+      signatureBytes = candidateBytes;
+      signatureInvalidReason = null;
+      break;
     }
   }
+
 
   return {
     cpf: cpfNormalized,
