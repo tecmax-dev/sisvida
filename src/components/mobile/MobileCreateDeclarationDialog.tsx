@@ -516,7 +516,7 @@ export function MobileCreateDeclarationDialog({
                 .
               </p>
 
-              <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
+              <div className="flex-1 min-h-0 -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-auto">
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
                     const isBiolifeDiscount = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
