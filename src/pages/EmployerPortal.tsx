@@ -1088,18 +1088,29 @@ const [showTutorial, setShowTutorial] = useState(false);
         {activeView === "contributions" && (
           <>
             {/* Header */}
-            <div className="mb-5">
-              <div className="flex items-center gap-3 mb-1.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#26a69a]/10">
-                  <Receipt className="h-4.5 w-4.5 text-[#26a69a]" />
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div className="flex items-center gap-3 mb-1.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#26a69a]/10">
+                    <Receipt className="h-4.5 w-4.5 text-[#26a69a]" />
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-semibold text-slate-800">Contribuições</h1>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-semibold text-slate-800">Contribuições</h1>
+                <p className="text-sm text-slate-500 ml-12">Consulte, emita e acompanhe seus boletos.</p>
               </div>
-              <p className="text-sm text-slate-500 ml-12">Consulte, emita e acompanhe seus boletos.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveView("home")}
+                className="h-8 shrink-0 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-100"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Voltar</span>
+              </Button>
             </div>
 
             {/* Tabs */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               <button
                 onClick={() => setActiveTab("pending")}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium text-xs sm:text-sm transition-colors ${
@@ -1154,12 +1165,12 @@ const [showTutorial, setShowTutorial] = useState(false);
 
             {/* Table Card */}
             <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
-              <CardContent className="p-4 sm:p-5">
+              <CardContent className="p-3 sm:p-4">
                 {/* Table Controls */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 mb-2.5">
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <Select value={String(itemsPerPage)} onValueChange={(v) => setItemsPerPage(Number(v))}>
-                      <SelectTrigger className="w-16 h-8 text-xs">
+                      <SelectTrigger className="w-16 h-7 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1171,12 +1182,12 @@ const [showTutorial, setShowTutorial] = useState(false);
                     </Select>
                     <span>por página</span>
                   </div>
-                  <div className="relative w-full sm:w-56">
+                  <div className="relative w-full sm:w-52">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="h-8 pl-8 text-sm"
+                      className="h-7 pl-8 text-xs"
                       placeholder="Buscar competência..."
                     />
                   </div>
@@ -1187,19 +1198,19 @@ const [showTutorial, setShowTutorial] = useState(false);
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50 hover:bg-slate-50">
-                        <TableHead className="h-9 w-24 text-xs font-medium uppercase tracking-wide text-slate-500">Competência</TableHead>
-                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Tipo</TableHead>
-                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Vencimento</TableHead>
-                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Status</TableHead>
-                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Valor</TableHead>
-                        <TableHead className="h-9 w-16 text-xs font-medium uppercase tracking-wide text-slate-500 text-center">Ações</TableHead>
+                        <TableHead className="h-8 w-24 text-[11px] font-medium uppercase tracking-wide text-slate-500">Competência</TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium uppercase tracking-wide text-slate-500">Tipo</TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium uppercase tracking-wide text-slate-500">Vencimento</TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium uppercase tracking-wide text-slate-500">Valor</TableHead>
+                        <TableHead className="h-8 w-16 text-[11px] font-medium uppercase tracking-wide text-slate-500 text-center">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedContributions.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-10 text-slate-500">
-                            <FileText className="h-10 w-10 mx-auto mb-2 text-slate-300" />
+                          <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                            <FileText className="h-8 w-8 mx-auto mb-2 text-slate-300" />
                             <p className="text-sm">Nenhuma contribuição encontrada</p>
                           </TableCell>
                         </TableRow>
@@ -1219,24 +1230,24 @@ const [showTutorial, setShowTutorial] = useState(false);
                           
                           return (
                             <TableRow key={contrib.id} className="hover:bg-slate-50/60">
-                              <TableCell className="py-2.5 font-mono text-xs text-slate-600 whitespace-nowrap">
+                              <TableCell className="py-1.5 font-mono text-xs text-slate-600 whitespace-nowrap">
                                 {formatCompetence(contrib.competence_month, contrib.competence_year)}
                               </TableCell>
-                              <TableCell className="py-2.5">
-                                <span className="text-sm text-slate-700">
+                              <TableCell className="py-1.5">
+                                <span className="text-xs sm:text-sm text-slate-700">
                                   {contrib.contribution_type?.name || "Contribuição"}
                                 </span>
                               </TableCell>
-                              <TableCell className="py-2.5 text-sm text-slate-600 whitespace-nowrap">
+                              <TableCell className="py-1.5 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
                                 {format(dueDate, "dd/MM/yyyy")}
                               </TableCell>
-                              <TableCell className="py-2.5">
-                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${statusCfg.bgColor} ${statusCfg.color}`}>
+                              <TableCell className="py-1.5">
+                                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${statusCfg.bgColor} ${statusCfg.color}`}>
                                   {statusCfg.icon}
                                   {statusCfg.label}
                                 </span>
                               </TableCell>
-                              <TableCell className="py-2.5">
+                              <TableCell className="py-1.5">
                                 {needsValue ? (
                                   <Button
                                     size="sm"
@@ -1248,31 +1259,31 @@ const [showTutorial, setShowTutorial] = useState(false);
                                       setSetValueDueDate(original && original >= today ? original : today);
                                       setShowSetValueDialog(true);
                                     }}
-                                    className="h-7 text-xs border-[#2c5282] text-[#2c5282] hover:bg-[#2c5282]/10"
+                                    className="h-6 text-[11px] px-2 border-[#2c5282] text-[#2c5282] hover:bg-[#2c5282]/10"
                                   >
                                     Informar valor
                                   </Button>
                                 ) : (
-                                  <span className="font-medium text-sm text-slate-700">{formatCurrency(value)}</span>
+                                  <span className="font-medium text-xs sm:text-sm text-slate-700">{formatCurrency(value)}</span>
                                 )}
                               </TableCell>
-                              <TableCell className="py-2.5 text-center">
-                                <div className="flex items-center justify-center gap-1">
+                              <TableCell className="py-1.5 text-center">
+                                <div className="flex items-center justify-center gap-0.5">
                                   {invoiceUrl && (
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8 text-[#2c5282] hover:text-[#2c5282] hover:bg-[#2c5282]/10"
+                                      className="h-7 w-7 text-[#2c5282] hover:text-[#2c5282] hover:bg-[#2c5282]/10"
                                       onClick={() => window.open(invoiceUrl, "_blank")}
                                       title="Ver Boleto"
                                     >
-                                      <ExternalLink className="h-4 w-4" />
+                                      <ExternalLink className="h-3.5 w-3.5" />
                                     </Button>
                                   )}
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <MoreHorizontal className="h-4 w-4" />
+                                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <MoreHorizontal className="h-3.5 w-3.5" />
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="bg-white border shadow-lg z-[9999]">
@@ -1370,15 +1381,15 @@ const [showTutorial, setShowTutorial] = useState(false);
                 </div>
 
                 {/* Pagination Footer */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-3">
-                  <p className="text-xs text-slate-500">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-2.5 mt-2.5">
+                  <p className="text-[11px] text-slate-500">
                     {Math.min((currentPage - 1) * itemsPerPage + 1, filteredContributions.length)}–{Math.min(currentPage * itemsPerPage, filteredContributions.length)} de {filteredContributions.length}
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 px-2.5 text-xs"
+                      className="h-7 px-2 text-xs"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                     >
@@ -1390,7 +1401,7 @@ const [showTutorial, setShowTutorial] = useState(false);
                         variant={currentPage === page ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCurrentPage(page)}
-                        className={`h-8 w-8 p-0 text-xs ${currentPage === page ? "bg-[#2c5282]" : ""}`}
+                        className={`h-7 w-7 p-0 text-xs ${currentPage === page ? "bg-[#2c5282]" : ""}`}
                       >
                         {page}
                       </Button>
@@ -1398,7 +1409,7 @@ const [showTutorial, setShowTutorial] = useState(false);
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 px-2.5 text-xs"
+                      className="h-7 px-2 text-xs"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages || totalPages === 0}
                     >
@@ -1410,19 +1421,10 @@ const [showTutorial, setShowTutorial] = useState(false);
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2.5 mt-5">
-              <Button size="sm" className="bg-[#26a69a] hover:bg-[#1e8e82] text-white">
+            <div className="flex flex-wrap gap-2.5 mt-4">
+              <Button size="sm" className="h-8 text-xs bg-[#26a69a] hover:bg-[#1e8e82] text-white">
                 <FileStack className="h-3.5 w-3.5 mr-1.5" />
                 Exibir várias contribuições
-              </Button>
-              <Button 
-                size="sm"
-                variant="outline" 
-                onClick={() => setActiveView("home")}
-                className="border-[#607d8b] text-[#607d8b] hover:bg-[#607d8b]/10"
-              >
-                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-                Voltar
               </Button>
             </div>
           </>
