@@ -135,7 +135,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   },
 };
 
-type ActiveView = "home" | "contributions" | "documents" | "history" | "homologacao";
+type ActiveView = "home" | "contributions" | "documents" | "history" | "homologacao" | "cobranca";
 type ContributionTab = "pending" | "overdue" | "paid" | "all";
 
 export default function EmployerPortal() {
@@ -677,6 +677,20 @@ const [showTutorial, setShowTutorial] = useState(false);
     paid: contributions.filter(c => c.status === "paid").length,
   }), [contributions]);
 
+  // Contribuições em atraso, com dias de atraso calculados (para tela de Cobrança)
+  const overdueContributions = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return contributions
+      .filter((c) => c.status === "overdue")
+      .map((c) => {
+        const dueDate = parseDateOnlyToLocalNoon(c.due_date);
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+        return { ...c, daysOverdue };
+      })
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+  }, [contributions]);
+
   // Login Screen
   if (!employer) {
     return (
@@ -1002,6 +1016,25 @@ const [showTutorial, setShowTutorial] = useState(false);
                 {stats.overdue > 0 && (
                   <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                     {stats.overdue}
+                  </span>
+                )}
+              </button>
+
+              {/* Cobrança Card */}
+              <button
+                onClick={() => setActiveView("cobranca")}
+                className="group relative h-48 rounded-xl bg-[#e35d6a] hover:bg-[#d1495a] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <AlertTriangle className="h-14 w-14 text-white/90" />
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold uppercase tracking-wide">Cobrança</h3>
+                    <p className="text-sm text-white/80 mt-1">Contribuições em atraso.</p>
+                  </div>
+                </div>
+                {overdueContributions.length > 0 && (
+                  <span className="absolute top-3 right-3 bg-white text-red-600 text-xs font-bold px-2 py-1 rounded-full">
+                    {overdueContributions.length}
                   </span>
                 )}
               </button>
@@ -1510,6 +1543,117 @@ const [showTutorial, setShowTutorial] = useState(false);
             onBack={() => setActiveView("home")}
             onSuccess={() => setActiveView("home")}
           />
+        )}
+
+        {activeView === "cobranca" && (
+          <>
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="h-6 w-6 text-red-500" />
+                <h1 className="text-2xl font-semibold text-slate-800">Cobrança de Contribuições</h1>
+              </div>
+              <p className="text-slate-500">Contribuições em atraso, ordenadas da mais antiga para a mais recente. Regularize antes que o débito aumente.</p>
+            </div>
+
+            {/* Resumo */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <Card className="bg-white border-0 shadow-sm rounded-xl">
+                <CardContent className="p-4">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Total em atraso</p>
+                  <p className="text-2xl font-semibold text-red-600 mt-1">{overdueContributions.length}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-0 shadow-sm rounded-xl">
+                <CardContent className="p-4">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Valor total em aberto</p>
+                  <p className="text-2xl font-semibold text-slate-900 mt-1">
+                    {formatCurrency(overdueContributions.reduce((sum, c) => sum + (c.value || 0), 0))}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-0 shadow-sm rounded-xl">
+                <CardContent className="p-4">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Mais antigo</p>
+                  <p className="text-2xl font-semibold text-slate-900 mt-1">
+                    {overdueContributions.length > 0 ? `${overdueContributions[0].daysOverdue} dias` : "-"}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-slate-800 mb-1">Ordenado do mais atrasado para o mais recente</h3>
+                <p className="text-sm text-slate-500 mb-4">Regularize os boletos vencidos para evitar o acúmulo de débitos.</p>
+
+                {overdueContributions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-emerald-300" />
+                    <p className="font-medium text-slate-700">Nenhuma contribuição em atraso</p>
+                    <p className="text-sm text-slate-500 mt-1">Sua empresa está em dia. Ótimo trabalho!</p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg divide-y divide-slate-100 overflow-hidden">
+                    {overdueContributions.map((c) => {
+                      const urgency =
+                        c.daysOverdue >= 30
+                          ? { badge: "bg-red-100 text-red-700 border-red-200", row: "border-l-4 border-l-red-500", dot: "bg-red-500" }
+                          : c.daysOverdue >= 8
+                          ? { badge: "bg-amber-100 text-amber-700 border-amber-200", row: "border-l-4 border-l-amber-500", dot: "bg-amber-500" }
+                          : { badge: "bg-yellow-100 text-yellow-700 border-yellow-200", row: "border-l-4 border-l-yellow-400", dot: "bg-yellow-400" };
+
+                      return (
+                        <div
+                          key={c.id}
+                          className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 hover:bg-slate-50 transition-colors ${urgency.row}`}
+                        >
+                          <div className="min-w-0">
+                            <h4 className="font-medium text-slate-900 text-sm truncate">
+                              {c.contribution_type?.name || "Contribuição"} • {formatCompetence(c.competence_month, c.competence_year)}
+                            </h4>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              Venceu em {parseDateOnlyToLocalNoon(c.due_date).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+                            <p className="font-semibold text-slate-900 text-sm">{formatCurrency(c.value)}</p>
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${urgency.badge}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${urgency.dot}`} />
+                              {c.daysOverdue} {c.daysOverdue === 1 ? "dia" : "dias"} em atraso
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-100"
+                              onClick={() => {
+                                setActiveTab("overdue");
+                                setActiveView("contributions");
+                              }}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              Ver boleto
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setActiveView("home")}
+                className="border-[#607d8b] text-[#607d8b] hover:bg-[#607d8b]/10"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+            </div>
+          </>
         )}
       </main>
 
