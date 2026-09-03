@@ -24,6 +24,10 @@ import {
   ExternalLink,
   Loader2,
   Plus,
+  Share2,
+  MessageCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
