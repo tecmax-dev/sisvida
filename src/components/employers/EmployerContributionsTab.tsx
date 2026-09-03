@@ -123,6 +123,7 @@ interface Contribution {
   lytex_invoice_url?: string | null;
   lytex_boleto_digitable_line?: string | null;
   lytex_pix_code?: string | null;
+  lytex_raw_data?: any;
   paid_at?: string | null;
   paid_value?: number | null;
   payment_method?: string | null;
@@ -133,6 +134,18 @@ interface Contribution {
     default_value?: number;
     is_active?: boolean;
   } | null;
+}
+
+// Extracts the Lytex boleto title number ("nosso número") from raw invoice data
+export function getLytexTitleNumber(contrib: { lytex_raw_data?: any }): string | null {
+  const txs = contrib.lytex_raw_data?.transactions;
+  if (Array.isArray(txs)) {
+    for (const tx of txs) {
+      const n = tx?.boleto?.ourNumber;
+      if (n) return String(n);
+    }
+  }
+  return null;
 }
 
 interface EmployerContributionsTabProps {
@@ -283,7 +296,11 @@ function ContributionCard({
         {/* Actions Row */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t">
           <div className="flex items-center gap-1 text-xs">
-            {contrib.lytex_invoice_id ? (
+            {getLytexTitleNumber(contrib) ? (
+              <span className="font-mono text-muted-foreground" title="Número do título gerado no boleto Lytex">
+                Título: {getLytexTitleNumber(contrib)}
+              </span>
+            ) : contrib.lytex_invoice_id ? (
               <span className="font-mono text-muted-foreground">
                 Doc: {contrib.lytex_invoice_id.slice(-8).toUpperCase()}
               </span>
