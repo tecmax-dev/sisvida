@@ -220,45 +220,45 @@ export function PortalLinkedEmployersList({
               return (
                 <Card
                   key={employer.id}
-                  className={`border transition-all duration-200 ${
+                  className={`border rounded-xl transition-all duration-200 ${
                     isExpanded
                       ? "border-teal-200 bg-teal-50/30 shadow-sm"
-                      : "border-slate-200 hover:border-slate-300"
+                      : "border-slate-200 hover:border-teal-200 hover:shadow-sm"
                   }`}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     {/* Main row */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <div
-                        className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           isExpanded ? "bg-teal-100" : "bg-slate-100"
                         }`}
                       >
                         <Building2
-                          className={`h-5 w-5 ${
+                          className={`h-4 w-4 ${
                             isExpanded ? "text-teal-600" : "text-slate-500"
                           }`}
                         />
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-slate-900 truncate">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="text-sm font-semibold text-slate-900 truncate">
                             {employer.trade_name || employer.name}
                           </h3>
                           {employer.registration_number && (
-                            <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-slate-300 text-slate-500 flex-shrink-0">
                               Mat. {employer.registration_number}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-slate-500 truncate">
+                        <p className="text-xs text-slate-500 truncate">
                           {formatCNPJ(employer.cnpj)}
                           {employer.trade_name && ` • ${employer.name}`}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         {onScheduleHomologacao && (
                           <Button
                             size="sm"
@@ -267,9 +267,10 @@ export function PortalLinkedEmployersList({
                               e.stopPropagation();
                               onScheduleHomologacao(employer);
                             }}
-                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            className="h-8 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            title="Agendar homologação"
                           >
-                            <Calendar className="h-4 w-4 sm:mr-1" />
+                            <Calendar className="h-3.5 w-3.5 sm:mr-1" />
                             <span className="hidden sm:inline">Homologação</span>
                           </Button>
                         )}
@@ -278,9 +279,10 @@ export function PortalLinkedEmployersList({
                             size="sm"
                             variant="ghost"
                             onClick={() => onViewContributions(employer.id)}
-                            className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                            className="h-8 px-2 text-xs text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                            title="Ver contribuições"
                           >
-                            <FileText className="h-4 w-4 sm:mr-1" />
+                            <FileText className="h-3.5 w-3.5 sm:mr-1" />
                             <span className="hidden sm:inline">Contribuições</span>
                           </Button>
                         )}
@@ -288,7 +290,8 @@ export function PortalLinkedEmployersList({
                           size="sm"
                           variant="ghost"
                           onClick={() => setExpandedId(isExpanded ? null : employer.id)}
-                          className="text-slate-500 hover:text-slate-700"
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600"
+                          title={isExpanded ? "Recolher" : "Ver detalhes"}
                         >
                           {isExpanded ? (
                             <ChevronUp className="h-4 w-4" />
@@ -301,22 +304,22 @@ export function PortalLinkedEmployersList({
 
                     {/* Expanded details */}
                     {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {employer.phone && (
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <Phone className="h-4 w-4 text-slate-400" />
+                          <div className="flex items-center gap-2 text-xs text-slate-600">
+                            <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                             <span>{employer.phone}</span>
                           </div>
                         )}
                         {employer.email && (
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <Mail className="h-4 w-4 text-slate-400" />
+                          <div className="flex items-center gap-2 text-xs text-slate-600">
+                            <Mail className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                             <span className="truncate">{employer.email}</span>
                           </div>
                         )}
                         {(employer.address || employer.city) && (
-                          <div className="flex items-start gap-2 text-sm text-slate-600 sm:col-span-2">
-                            <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
+                          <div className="flex items-start gap-2 text-xs text-slate-600 sm:col-span-2">
+                            <MapPin className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
                             <span>
                               {[employer.address, employer.city, employer.state]
                                 .filter(Boolean)
@@ -325,7 +328,7 @@ export function PortalLinkedEmployersList({
                           </div>
                         )}
                         {!employer.phone && !employer.email && !employer.address && !employer.city && (
-                          <p className="text-sm text-slate-400 italic">
+                          <p className="text-xs text-slate-400 italic">
                             Nenhuma informação adicional disponível
                           </p>
                         )}
