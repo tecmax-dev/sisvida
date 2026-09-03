@@ -556,6 +556,20 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
           </div>
         )}
 
+        {authorization.benefit?.partner_address && (
+          <div className="flex justify-between gap-2">
+            <span className="text-gray-500 shrink-0">Endereço:</span>
+            <span className="text-gray-700 text-right">{authorization.benefit.partner_address}</span>
+          </div>
+        )}
+
+        {authorization.benefit?.partner_phone && (
+          <div className="flex justify-between">
+            <span className="text-gray-500">Telefone:</span>
+            <span className="text-gray-700">{authorization.benefit.partner_phone}</span>
+          </div>
+        )}
+
         {isBiolife && (
           <div className="flex justify-between gap-2">
             <span className="text-gray-500 shrink-0">Procedimento:</span>
