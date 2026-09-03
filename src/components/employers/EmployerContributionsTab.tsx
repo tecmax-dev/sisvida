@@ -123,6 +123,7 @@ interface Contribution {
   lytex_invoice_url?: string | null;
   lytex_boleto_digitable_line?: string | null;
   lytex_pix_code?: string | null;
+  lytex_raw_data?: any;
   paid_at?: string | null;
   paid_value?: number | null;
   payment_method?: string | null;
@@ -133,6 +134,18 @@ interface Contribution {
     default_value?: number;
     is_active?: boolean;
   } | null;
+}
+
+// Extracts the Lytex boleto title number ("nosso número") from raw invoice data
+export function getLytexTitleNumber(contrib: { lytex_raw_data?: any }): string | null {
+  const txs = contrib.lytex_raw_data?.transactions;
+  if (Array.isArray(txs)) {
+    for (const tx of txs) {
+      const n = tx?.boleto?.ourNumber;
+      if (n) return String(n);
+    }
+  }
+  return null;
 }
 
 interface EmployerContributionsTabProps {
@@ -283,7 +296,11 @@ function ContributionCard({
         {/* Actions Row */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t">
           <div className="flex items-center gap-1 text-xs">
-            {contrib.lytex_invoice_id ? (
+            {getLytexTitleNumber(contrib) ? (
+              <span className="font-mono text-muted-foreground" title="Número do título gerado no boleto Lytex">
+                Título: {getLytexTitleNumber(contrib)}
+              </span>
+            ) : contrib.lytex_invoice_id ? (
               <span className="font-mono text-muted-foreground">
                 Doc: {contrib.lytex_invoice_id.slice(-8).toUpperCase()}
               </span>
@@ -898,6 +915,7 @@ export default function EmployerContributionsTab({
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Tipo</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[70px]">Compet.</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[86px]">Vencim.</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[150px]">Nº Título</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right w-[78px]">Valor</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[92px]">Status</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[86px]">Pago em</TableHead>
@@ -929,6 +947,9 @@ export default function EmployerContributionsTab({
                         <TableCell className="py-1.5 px-1.5 text-muted-foreground">{formatCompetence(contrib.competence_month, contrib.competence_year)}</TableCell>
                         <TableCell className={`py-1.5 px-1.5 ${contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}`}>
                           {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell className="py-1.5 px-1.5 font-mono text-[11px] text-muted-foreground truncate max-w-[150px]" title={getLytexTitleNumber(contrib) || undefined}>
+                          {getLytexTitleNumber(contrib) || "-"}
                         </TableCell>
                         <TableCell className="py-1.5 px-1.5 text-right font-semibold tabular-nums">{formatCurrency(contrib.value)}</TableCell>
                         <TableCell className="py-1.5 px-1.5">
