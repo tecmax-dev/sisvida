@@ -948,6 +948,9 @@ export default function EmployerContributionsTab({
                         <TableCell className={`py-1.5 px-1.5 ${contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}`}>
                           {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy")}
                         </TableCell>
+                        <TableCell className="py-1.5 px-1.5 font-mono text-[11px] text-muted-foreground truncate max-w-[150px]" title={getLytexTitleNumber(contrib) || undefined}>
+                          {getLytexTitleNumber(contrib) || "-"}
+                        </TableCell>
                         <TableCell className="py-1.5 px-1.5 text-right font-semibold tabular-nums">{formatCurrency(contrib.value)}</TableCell>
                         <TableCell className="py-1.5 px-1.5">
                           <Badge className={`${statusConfig.color} text-[10px] gap-1 h-5 px-1.5 font-medium`}>
