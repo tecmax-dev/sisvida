@@ -34,7 +34,8 @@ import {
   Sun,
   Search,
   Bell,
-  Calendar
+  Calendar,
+  Receipt
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -995,26 +996,22 @@ const [showTutorial, setShowTutorial] = useState(false);
             </div>
 
             {/* Main Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               {/* Contribuições Card */}
               <button
                 onClick={() => setActiveView("contributions")}
-                className="group relative h-48 rounded-xl bg-[#26a69a] hover:bg-[#1e8e82] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-[#26a69a]/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#26a69a]"
               >
-                <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <div className="flex gap-0.5">
-                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
-                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
-                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
-                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold uppercase tracking-wide">Contribuições</h3>
-                    <p className="text-sm text-white/80 mt-1">Gerenciamento de contribuições.</p>
-                  </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#26a69a]/10 transition-colors group-hover:bg-[#26a69a]/15">
+                  <Receipt className="h-5 w-5 text-[#26a69a]" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800">Contribuições</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Consulta e emissão</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#26a69a]" />
                 {stats.overdue > 0 && (
-                  <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[10px] font-bold text-white">
                     {stats.overdue}
                   </span>
                 )}
@@ -1023,17 +1020,18 @@ const [showTutorial, setShowTutorial] = useState(false);
               {/* Cobrança Card */}
               <button
                 onClick={() => setActiveView("cobranca")}
-                className="group relative h-48 rounded-xl bg-[#e35d6a] hover:bg-[#d1495a] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-[#e35d6a]/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e35d6a]"
               >
-                <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <AlertTriangle className="h-14 w-14 text-white/90" />
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold uppercase tracking-wide">Cobrança</h3>
-                    <p className="text-sm text-white/80 mt-1">Contribuições em atraso.</p>
-                  </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#e35d6a]/10 transition-colors group-hover:bg-[#e35d6a]/15">
+                  <AlertTriangle className="h-5 w-5 text-[#e35d6a]" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800">Cobrança</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Boletos em atraso</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#e35d6a]" />
                 {overdueContributions.length > 0 && (
-                  <span className="absolute top-3 right-3 bg-white text-red-600 text-xs font-bold px-2 py-1 rounded-full">
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[10px] font-bold text-white">
                     {overdueContributions.length}
                   </span>
                 )}
@@ -1042,43 +1040,46 @@ const [showTutorial, setShowTutorial] = useState(false);
               {/* Documentos Coletivos Card */}
               <button
                 onClick={() => setActiveView("documents")}
-                className="group h-48 rounded-xl bg-[#e89e4c] hover:bg-[#d68f3f] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-[#e89e4c]/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e89e4c]"
               >
-                <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <FileStack className="h-14 w-14 text-white/90" />
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold uppercase tracking-wide">Documentos Coletivos</h3>
-                    <p className="text-sm text-white/80 mt-1">Listagem de documentos coletivos.</p>
-                  </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#e89e4c]/10 transition-colors group-hover:bg-[#e89e4c]/15">
+                  <FileStack className="h-5 w-5 text-[#e89e4c]" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800">Documentos</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Coletivos e acordos</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#e89e4c]" />
               </button>
 
               {/* Histórico Financeiro Card */}
               <button
                 onClick={() => setActiveView("history")}
-                className="group h-48 rounded-xl bg-[#b07eb0] hover:bg-[#9c6a9c] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-[#b07eb0]/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b07eb0]"
               >
-                <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <History className="h-14 w-14 text-white/90" />
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold uppercase tracking-wide">Histórico Financeiro</h3>
-                    <p className="text-sm text-white/80 mt-1">Listagem de todo o seu histórico.</p>
-                  </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#b07eb0]/10 transition-colors group-hover:bg-[#b07eb0]/15">
+                  <History className="h-5 w-5 text-[#b07eb0]" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800">Histórico</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Todo o financeiro</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#b07eb0]" />
               </button>
 
               {/* Agendar Homologação Card */}
               <button
                 onClick={() => setActiveView("homologacao")}
-                className="group h-48 rounded-xl bg-[#2c7be5] hover:bg-[#2566bf] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-[#2c7be5]/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2c7be5]"
               >
-                <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <Calendar className="h-14 w-14 text-white/90" />
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold uppercase tracking-wide">Agendar Homologação</h3>
-                    <p className="text-sm text-white/80 mt-1">Agendamento de homologações.</p>
-                  </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#2c7be5]/10 transition-colors group-hover:bg-[#2c7be5]/15">
+                  <Calendar className="h-5 w-5 text-[#2c7be5]" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800">Homologação</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Agendar atendimento</p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#2c7be5]" />
               </button>
             </div>
           </>
