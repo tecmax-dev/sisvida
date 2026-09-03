@@ -915,6 +915,7 @@ export default function EmployerContributionsTab({
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Tipo</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[70px]">Compet.</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[86px]">Vencim.</TableHead>
+                    <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[150px]">Nº Título</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right w-[78px]">Valor</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[92px]">Status</TableHead>
                     <TableHead className="h-8 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground w-[86px]">Pago em</TableHead>
