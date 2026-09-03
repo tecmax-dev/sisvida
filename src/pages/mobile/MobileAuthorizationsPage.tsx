@@ -61,6 +61,8 @@ interface Authorization {
     description: string | null;
     category: string | null;
     partner_name: string | null;
+    partner_address: string | null;
+    partner_phone: string | null;
   } | null;
   dependent: {
     id: string;
@@ -178,7 +180,9 @@ export default function MobileAuthorizationsPage() {
             name,
             description,
             category,
-            partner_name
+            partner_name,
+            partner_address,
+            partner_phone
           ),
           dependent:patient_dependents(
             id,
@@ -549,6 +553,20 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
           <div className="flex justify-between">
             <span className="text-gray-500">Parceiro:</span>
             <span className="text-gray-700">{authorization.benefit.partner_name}</span>
+          </div>
+        )}
+
+        {authorization.benefit?.partner_address && (
+          <div className="flex justify-between gap-2">
+            <span className="text-gray-500 shrink-0">Endereço:</span>
+            <span className="text-gray-700 text-right">{authorization.benefit.partner_address}</span>
+          </div>
+        )}
+
+        {authorization.benefit?.partner_phone && (
+          <div className="flex justify-between">
+            <span className="text-gray-500">Telefone:</span>
+            <span className="text-gray-700">{authorization.benefit.partner_phone}</span>
           </div>
         )}
 
