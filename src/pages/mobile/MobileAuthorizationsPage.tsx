@@ -488,6 +488,49 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
     return hay.includes("biolife");
   })();
 
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
+
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
+  }, []);
+
+  const shareMessage = [
+    `*Declaração Sindexa*`,
+    `Benefício: ${authorization.benefit?.name || "Autorização"}`,
+    `Número: ${authorization.authorization_number}`,
+    `Válida até: ${format(parseISO(authorization.valid_until), "dd/MM/yyyy", { locale: ptBR })}`,
+    `Valide aqui: ${validationUrl}`,
+  ].join("\n");
+
+  const handleShareWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(validationUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o link.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleNativeShare = async () => {
+    try {
+      await navigator.share({ title: "Declaração Sindexa", text: shareMessage });
+    } catch {
+      // usuário cancelou ou não suportado
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Status Badge */}
