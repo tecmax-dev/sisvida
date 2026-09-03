@@ -426,13 +426,14 @@ export function MobileCreateDeclarationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md mx-4 max-h-[90vh] h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="max-w-md mx-4 max-h-[85dvh] h-auto flex flex-col overflow-hidden p-4 sm:p-6">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-emerald-600" />
               Nova Declaração
             </DialogTitle>
           </DialogHeader>
+
 
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
