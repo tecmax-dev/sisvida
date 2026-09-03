@@ -356,13 +356,15 @@ export default function MobileAuthorizationsPage() {
 
       {/* Authorization Detail Dialog */}
       <Dialog open={!!selectedAuth} onOpenChange={(open) => !open && setSelectedAuth(null)}>
-        <DialogContent className="max-w-md mx-4">
-          <DialogHeader>
+        <DialogContent className="max-w-md mx-4 max-h-[85dvh] flex flex-col overflow-hidden p-4 sm:p-6">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <FileCheck className="h-5 w-5 text-emerald-600" />
               Detalhes da Declaração
             </DialogTitle>
           </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto -mx-4 px-4 sm:-mx-6 sm:px-6">
+
           {selectedAuth && (
             <AuthorizationDetail
               authorization={selectedAuth}
