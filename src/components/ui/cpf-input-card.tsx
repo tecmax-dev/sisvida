@@ -150,6 +150,19 @@ export function CpfInputCard({
                   somente leitura
                 </span>
               )}
+              {!allowEdit && hasFullCpf && canSeeFull && !disabled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUnlocked((u) => !u);
+                    setRevealed(true);
+                  }}
+                  className="ml-1 text-[10px] font-medium text-purple-700 dark:text-purple-300 underline underline-offset-2"
+                >
+                  {unlocked ? "Bloquear edição" : "Editar CPF"}
+                </button>
+              )}
+
             </Label>
             <div className="relative mt-1.5">
               <Input
