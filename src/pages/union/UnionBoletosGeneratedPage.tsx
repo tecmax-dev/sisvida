@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Barcode, ExternalLink, FileDown, RefreshCw } from "lucide-react";
+import { Barcode, ExternalLink, FileDown, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import { getLytexTitleNumber } from "@/components/employers/EmployerContributionsTab";
@@ -85,8 +85,8 @@ export default function UnionBoletosGeneratedPage() {
           .order("id", { ascending: true })
           .range(page * pageSize, page * pageSize + pageSize - 1);
 
-        if (startDate) q = q.gte("created_at", `${startDate}T00:00:00`);
-        if (endDate) q = q.lte("created_at", `${endDate}T23:59:59`);
+        if (appliedRange.start) q = q.gte("created_at", `${appliedRange.start}T00:00:00`);
+        if (appliedRange.end) q = q.lte("created_at", `${appliedRange.end}T23:59:59`);
 
         const { data: chunk, error } = await q;
         if (error) throw error;
@@ -180,7 +180,7 @@ export default function UnionBoletosGeneratedPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || !hasSearched}>
             <RefreshCw className={`h-4 w-4 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
@@ -226,6 +226,19 @@ export default function UnionBoletosGeneratedPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+            <Button
+              size="sm"
+              onClick={() => {
+                setAppliedRange({ start: startDate, end: endDate });
+                setHasSearched(true);
+              }}
+              disabled={isFetching}
+            >
+              <Search className="h-4 w-4 mr-1.5" />
+              Buscar
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -260,7 +273,11 @@ export default function UnionBoletosGeneratedPage() {
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? (
+          {!hasSearched ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              Defina os filtros e clique em "Buscar" para listar os boletos gerados.
+            </p>
+          ) : isLoading || isFetching ? (
             <div className="p-4 space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-10 w-full" />
