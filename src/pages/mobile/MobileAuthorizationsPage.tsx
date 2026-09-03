@@ -24,6 +24,10 @@ import {
   ExternalLink,
   Loader2,
   Plus,
+  Share2,
+  MessageCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -484,6 +488,49 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
     return hay.includes("biolife");
   })();
 
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
+
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
+  }, []);
+
+  const shareMessage = [
+    `*Declaração Sindexa*`,
+    `Benefício: ${authorization.benefit?.name || "Autorização"}`,
+    `Número: ${authorization.authorization_number}`,
+    `Válida até: ${format(parseISO(authorization.valid_until), "dd/MM/yyyy", { locale: ptBR })}`,
+    `Valide aqui: ${validationUrl}`,
+  ].join("\n");
+
+  const handleShareWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(validationUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o link.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleNativeShare = async () => {
+    try {
+      await navigator.share({ title: "Declaração Sindexa", text: shareMessage });
+    } catch {
+      // usuário cancelou ou não suportado
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Status Badge */}
@@ -513,6 +560,42 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
           level="M"
           marginSize={4}
         />
+      </div>
+
+      {/* Share */}
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500 text-center">Compartilhar autorização</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShareWhatsApp}
+            className="w-full bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="w-full"
+          >
+            {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+            {copied ? "Copiado" : "Copiar link"}
+          </Button>
+        </div>
+        {canNativeShare && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNativeShare}
+            className="w-full"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Compartilhar
+          </Button>
+        )}
       </div>
 
       {/* Signature (same data as desktop/admin) */}
