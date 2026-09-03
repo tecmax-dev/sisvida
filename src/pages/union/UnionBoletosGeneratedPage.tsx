@@ -64,10 +64,12 @@ export default function UnionBoletosGeneratedPage() {
   const [endDate, setEndDate] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [appliedRange, setAppliedRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
 
   const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["union-lytex-boletos", clinicId, startDate, endDate],
-    enabled: !!clinicId,
+    queryKey: ["union-lytex-boletos", clinicId, appliedRange.start, appliedRange.end],
+    enabled: !!clinicId && hasSearched,
     queryFn: async () => {
       const rows: BoletoRow[] = [];
       const pageSize = 1000;
