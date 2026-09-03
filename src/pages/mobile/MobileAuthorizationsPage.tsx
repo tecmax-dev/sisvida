@@ -562,6 +562,42 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
         />
       </div>
 
+      {/* Share */}
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500 text-center">Compartilhar autorização</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShareWhatsApp}
+            className="w-full bg-green-600 text-white border-green-600 hover:bg-green-700 hover:text-white"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="w-full"
+          >
+            {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+            {copied ? "Copiado" : "Copiar link"}
+          </Button>
+        </div>
+        {canNativeShare && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNativeShare}
+            className="w-full"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Compartilhar
+          </Button>
+        )}
+      </div>
+
       {/* Signature (same data as desktop/admin) */}
       {(signatureData || presidentName) && (
         <div className="pt-2">
