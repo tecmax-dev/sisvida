@@ -71,6 +71,7 @@ interface Authorization {
   dependent: {
     id: string;
     name: string;
+    cpf: string | null;
   } | null;
   clinic: {
     id: string;
@@ -190,7 +191,8 @@ export default function MobileAuthorizationsPage() {
           ),
           dependent:patient_dependents(
             id,
-            name
+            name,
+            cpf
           ),
           clinic:clinics(
             id,
@@ -665,7 +667,12 @@ function AuthorizationDetail({ authorization, unionEntityBranding, presidentSign
         {authorization.is_for_dependent && authorization.dependent && (
           <div className="flex justify-between">
             <span className="text-gray-500">Beneficiário:</span>
-            <span className="text-gray-700">{authorization.dependent.name}</span>
+            <span className="text-gray-700 text-right">
+              {authorization.dependent.name}
+              {authorization.dependent.cpf && (
+                <span className="block text-xs text-gray-500">CPF: {authorization.dependent.cpf}</span>
+              )}
+            </span>
           </div>
         )}
         
