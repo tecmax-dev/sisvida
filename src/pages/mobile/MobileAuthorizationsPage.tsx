@@ -372,7 +372,9 @@ export default function MobileAuthorizationsPage() {
               presidentSignature={presidentSignature}
             />
           )}
+          </div>
         </DialogContent>
+
       </Dialog>
 
       {/* Create Declaration Dialog */}
