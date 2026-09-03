@@ -1,0 +1,1 @@
+ALTER FUNCTION public.validate_authorization_full(text) VOLATILE;
