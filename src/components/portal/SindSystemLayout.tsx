@@ -151,7 +151,8 @@ interface SindSystemServiceCardProps {
   title: string;
   description: string;
   onClick: () => void;
-  color: "green" | "blue" | "orange";
+  color: "green" | "blue" | "orange" | "red";
+  badge?: string | number;
 }
 
 export function SindSystemServiceCard({
@@ -160,18 +161,25 @@ export function SindSystemServiceCard({
   description,
   onClick,
   color,
+  badge,
 }: SindSystemServiceCardProps) {
   const colorStyles = {
     green: "bg-[#20c997]",
     blue: "bg-[#2c7be5]",
     orange: "bg-[#e8a838]",
+    red: "bg-[#e35d6a]",
   };
 
   return (
     <button
       onClick={onClick}
-      className={`${colorStyles[color]} rounded-lg p-8 text-white flex flex-col items-center justify-center text-center min-h-[180px] w-full transition-all hover:opacity-90 hover:shadow-lg`}
+      className={`${colorStyles[color]} relative rounded-lg p-8 text-white flex flex-col items-center justify-center text-center min-h-[180px] w-full transition-all hover:opacity-90 hover:shadow-lg`}
     >
+      {badge !== undefined && badge !== null && badge !== 0 && (
+        <span className="absolute top-3 right-3 min-w-[24px] h-6 px-1.5 rounded-full bg-white text-red-600 text-xs font-bold flex items-center justify-center shadow-sm">
+          {badge}
+        </span>
+      )}
       <div className="mb-4">{icon}</div>
       <h3 className="font-bold text-lg uppercase tracking-wide">{title}</h3>
       <p className="text-sm text-white/90 mt-1">{description}</p>

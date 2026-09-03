@@ -24,7 +24,10 @@ import {
   FolderOpen,
   Sun,
   Mail,
-  Calendar
+  Calendar,
+  AlertTriangle,
+  MessageCircle,
+  TrendingUp
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SindicatoWhatsappBanner } from "@/components/portals/SindicatoWhatsappBanner";
@@ -130,7 +133,7 @@ export default function AccountingOfficePortal() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   
   // Views
-  const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao">("home");
+  const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao" | "cobranca">("home");
   
   // Filters
   const [filterEmployer, setFilterEmployer] = useState<string>("all");
@@ -162,6 +165,20 @@ export default function AccountingOfficePortal() {
 
   // Employer selecionado para documentos (CCTs por categoria)
   const [selectedEmployerForDocuments, setSelectedEmployerForDocuments] = useState<Employer | null>(null);
+
+  // Contribuições em atraso, ordenadas por tempo de atraso (para tela de cobrança)
+  const overdueContributions = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return contributions
+      .filter((c) => c.status === "overdue" || (c.status === "pending" && parseDateOnlyToLocalNoon(c.due_date).getTime() < today.getTime()))
+      .map((c) => {
+        const dueDate = parseDateOnlyToLocalNoon(c.due_date);
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+        return { ...c, daysOverdue };
+      })
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+  }, [contributions]);
 
   // Restaurar sessão do localStorage (persistente entre abas e recarregamentos)
   useEffect(() => {
@@ -730,7 +747,7 @@ export default function AccountingOfficePortal() {
 
           <SindicatoWhatsappBanner />
 
-          {/* 4 Service Cards - SindSystem style */}
+          {/* 5 Service Cards - SindSystem style */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
             <SindSystemServiceCard
               icon={<Barcode className="h-12 w-12" />}
@@ -738,6 +755,14 @@ export default function AccountingOfficePortal() {
               description="Gerenciamento de boletos."
               onClick={() => setActiveView("boletos")}
               color="green"
+            />
+            <SindSystemServiceCard
+              icon={<AlertTriangle className="h-12 w-12" />}
+              title="COBRANÇA"
+              description="Contribuições em atraso."
+              onClick={() => setActiveView("cobranca")}
+              color="red"
+              badge={overdueContributions.length > 0 ? overdueContributions.length : undefined}
             />
             <SindSystemServiceCard
               icon={<Building2 className="h-12 w-12" />}
@@ -1000,6 +1025,153 @@ export default function AccountingOfficePortal() {
                     <Handshake className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
                   </button>
                 ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <SindSystemBackButton onClick={() => setActiveView("home")} />
+          </div>
+        </SindSystemMain>
+      </SindSystemContainer>
+    );
+  }
+
+  // Cobranca View - Contribuições em atraso, ordenadas por tempo de atraso
+  if (activeView === "cobranca") {
+    const formatCurrencyLocal = (valueInCents: number) => {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format((valueInCents || 0) / 100);
+    };
+
+    const getUrgencyStyle = (days: number) => {
+      if (days >= 30) {
+        return {
+          badge: "bg-red-100 text-red-700 border-red-200",
+          row: "border-l-4 border-l-red-500",
+          dot: "bg-red-500",
+        };
+      }
+      if (days >= 8) {
+        return {
+          badge: "bg-amber-100 text-amber-700 border-amber-200",
+          row: "border-l-4 border-l-amber-500",
+          dot: "bg-amber-500",
+        };
+      }
+      return {
+        badge: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        row: "border-l-4 border-l-yellow-400",
+        dot: "bg-yellow-400",
+      };
+    };
+
+    const totalOverdue = overdueContributions.reduce((sum, c) => sum + (c.value || 0), 0);
+
+    return (
+      <SindSystemContainer>
+        <SindSystemHeader
+          logoUrl={clinic?.logo_url}
+          entityName={accountingOffice?.name || "Escritório"}
+          entityEmail={accountingOffice?.email}
+          onLogout={handleLogout}
+        />
+
+        <SindSystemMain>
+          <SindSystemPageHeader
+            icon={<AlertTriangle className="h-6 w-6 text-red-500" />}
+            title="Cobrança de Contribuições"
+            subtitle="Empresas com contribuições em atraso, ordenadas por tempo de atraso."
+            onBack={() => setActiveView("home")}
+          />
+
+          {/* Resumo */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Total em atraso</p>
+              <p className="text-2xl font-semibold text-red-600 mt-1">{overdueContributions.length}</p>
+            </div>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Valor total em aberto</p>
+              <p className="text-2xl font-semibold text-slate-900 mt-1">{formatCurrencyLocal(totalOverdue)}</p>
+            </div>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Mais antigo</p>
+              <p className="text-2xl font-semibold text-slate-900 mt-1">
+                {overdueContributions.length > 0 ? `${overdueContributions[0].daysOverdue} dias` : "-"}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-medium text-slate-700 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-slate-500" />
+                Ordenado do mais atrasado para o mais recente
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Priorize o contato com as empresas em vermelho para evitar o acúmulo de débitos.
+              </p>
+            </div>
+
+            {overdueContributions.length === 0 ? (
+              <div className="p-10 text-center text-slate-500">
+                <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-emerald-300" />
+                <p className="font-medium text-slate-700">Nenhuma contribuição em atraso</p>
+                <p className="text-sm text-slate-500 mt-1">Todas as empresas estão em dia. Ótimo trabalho!</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {overdueContributions.map((c) => {
+                  const urgency = getUrgencyStyle(c.daysOverdue);
+                  return (
+                    <div
+                      key={c.id}
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 hover:bg-slate-50 transition-colors ${urgency.row}`}
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Building2 className="h-5 w-5 text-slate-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-medium text-slate-900 text-sm truncate">
+                            {c.employer?.name || "Empresa"}
+                          </h4>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {c.employer?.cnpj ? formatCNPJ(c.employer.cnpj) : "-"} • {MONTHS_FULL[c.competence_month - 1]}/{c.competence_year}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Venceu em {parseDateOnlyToLocalNoon(c.due_date).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0 pl-13 sm:pl-0">
+                        <div className="text-right">
+                          <p className="font-semibold text-slate-900 text-sm">{formatCurrencyLocal(c.value)}</p>
+                        </div>
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${urgency.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${urgency.dot}`} />
+                          {c.daysOverdue} {c.daysOverdue === 1 ? "dia" : "dias"} em atraso
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-100"
+                          onClick={() => {
+                            setFilterEmployer(c.employer_id);
+                            setActiveView("boletos");
+                          }}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Ver boleto
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
