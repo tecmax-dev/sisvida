@@ -594,7 +594,7 @@ export function MobileCreateDeclarationDialog({
             </>
           )}
 
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t shrink-0 pb-[env(safe-area-inset-bottom)]">
             <Button
               variant="outline"
               className="w-full"
