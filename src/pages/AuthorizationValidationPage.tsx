@@ -83,11 +83,8 @@ export default function AuthorizationValidationPage() {
         unionEntityData = entityByClinic;
       }
 
-      // Increment view count
-      await supabase
-        .from("union_authorizations")
-        .update({ view_count: (data.view_count || 0) + 1, last_viewed_at: new Date().toISOString() })
-        .eq("id", data.id);
+      // View count is incremented inside validate_authorization_full
+
 
       return { ...data, union_entity: unionEntityData };
     },
