@@ -61,6 +61,8 @@ interface Authorization {
     description: string | null;
     category: string | null;
     partner_name: string | null;
+    partner_address: string | null;
+    partner_phone: string | null;
   } | null;
   dependent: {
     id: string;
@@ -178,7 +180,9 @@ export default function MobileAuthorizationsPage() {
             name,
             description,
             category,
-            partner_name
+            partner_name,
+            partner_address,
+            partner_phone
           ),
           dependent:patient_dependents(
             id,
