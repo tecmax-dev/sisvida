@@ -504,4 +504,64 @@
   pointer-events: none !important;
 }
 
+/* Impressao - Fechamento de Caixa / Recibos (PDV, Financeiro, Sindical).
+   Corrige pagina em branco na impressao: sem estas regras o navegador
+   tenta imprimir o app inteiro (SPA com sidebar e overlays em position
+   fixed), e o conteudo do recibo fica fora da area impressa.
+   Uso: envolva o conteudo a imprimir em <div class="print-area">. */
+@media print {
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
+  }
+
+  .print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  [data-radix-dialog-overlay],
+  [data-radix-popper-content-wrapper] {
+    display: none !important;
+  }
+
+  [data-radix-dialog-content] {
+    position: static !important;
+    transform: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+}
+
 
