@@ -426,13 +426,14 @@ export function MobileCreateDeclarationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md mx-4 max-h-[90vh] h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="max-w-md mx-4 max-h-[85dvh] h-auto flex flex-col overflow-hidden p-4 sm:p-6">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-emerald-600" />
               Nova Declaração
             </DialogTitle>
           </DialogHeader>
+
 
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -455,7 +456,7 @@ export function MobileCreateDeclarationDialog({
           ) : (
             <>
               {/* Beneficiary Selection */}
-              <div className="space-y-3 pb-3 border-b">
+              <div className="space-y-3 pb-3 border-b shrink-0">
                 <Label className="text-sm font-medium">Para quem é a declaração?</Label>
                 <RadioGroup
                   value={beneficiaryType}
@@ -515,7 +516,7 @@ export function MobileCreateDeclarationDialog({
                 .
               </p>
 
-              <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
+              <div className="flex-1 min-h-0 -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-auto">
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
                     const isBiolifeDiscount = isBiolifeBenefit(benefit) && beneficiaryType === "dependent";
@@ -593,7 +594,7 @@ export function MobileCreateDeclarationDialog({
             </>
           )}
 
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t shrink-0 pb-[env(safe-area-inset-bottom)]">
             <Button
               variant="outline"
               className="w-full"
