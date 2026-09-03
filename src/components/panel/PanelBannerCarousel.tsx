@@ -12,6 +12,7 @@ export function PanelBannerCarousel({ banners, className }: PanelBannerCarouselP
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const intervalRef = useRef<number | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
   
   // Memoize banner IDs to detect actual changes, not just reference changes
   const bannerIds = useMemo(() => banners.map(b => b.id).join(','), [banners]);
@@ -54,6 +55,39 @@ export function PanelBannerCarousel({ banners, className }: PanelBannerCarouselP
     };
   }, [isAutoPlaying, nextSlide, bannersCount, currentIndex, bannerIds]);
 
+  // Pause auto-play when the tab/window is not visible, resume when it returns
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsAutoPlaying(document.visibilityState === "visible");
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const deltaX = (e.changedTouches[0]?.clientX ?? touchStartXRef.current) - touchStartXRef.current;
+    const SWIPE_THRESHOLD = 50;
+    if (deltaX > SWIPE_THRESHOLD) {
+      prevSlide();
+    } else if (deltaX < -SWIPE_THRESHOLD) {
+      nextSlide();
+    }
+    touchStartXRef.current = null;
+  }, [prevSlide, nextSlide]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") {
+      prevSlide();
+    } else if (e.key === "ArrowRight") {
+      nextSlide();
+    }
+  }, [prevSlide, nextSlide]);
+
   if (!banners || bannersCount === 0) {
     return null;
   }
@@ -62,9 +96,15 @@ export function PanelBannerCarousel({ banners, className }: PanelBannerCarouselP
 
   return (
     <div 
-      className={cn("relative w-full h-full overflow-hidden", className)}
+      className={cn("relative w-full h-full overflow-hidden outline-none", className)}
       onMouseEnter={() => setIsAutoPlaying(false)}
       onMouseLeave={() => setIsAutoPlaying(true)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onKeyDown={handleKeyDown}
+      tabIndex={bannersCount > 1 ? 0 : -1}
+      role={bannersCount > 1 ? "region" : undefined}
+      aria-roledescription={bannersCount > 1 ? "carousel" : undefined}
     >
       {/* Slides */}
       {banners.map((banner, index) => (
