@@ -456,7 +456,7 @@ export function MobileCreateDeclarationDialog({
           ) : (
             <>
               {/* Beneficiary Selection */}
-              <div className="space-y-3 pb-3 border-b">
+              <div className="space-y-3 pb-3 border-b shrink-0">
                 <Label className="text-sm font-medium">Para quem é a declaração?</Label>
                 <RadioGroup
                   value={beneficiaryType}
