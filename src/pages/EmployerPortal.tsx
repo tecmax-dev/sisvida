@@ -1088,79 +1088,78 @@ const [showTutorial, setShowTutorial] = useState(false);
         {activeView === "contributions" && (
           <>
             {/* Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex gap-0.5">
-                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
-                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
-                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
-                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
+            <div className="mb-5">
+              <div className="flex items-center gap-3 mb-1.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#26a69a]/10">
+                  <Receipt className="h-4.5 w-4.5 text-[#26a69a]" />
                 </div>
-                <h1 className="text-2xl font-semibold text-slate-800">Gerenciamento de contribuições</h1>
+                <h1 className="text-xl sm:text-2xl font-semibold text-slate-800">Contribuições</h1>
               </div>
-              <p className="text-slate-500">Gerenciamento de consulta e emissão de contribuições.</p>
+              <p className="text-sm text-slate-500 ml-12">Consulte, emita e acompanhe seus boletos.</p>
             </div>
 
             {/* Tabs */}
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-1.5 mb-4">
               <button
                 onClick={() => setActiveTab("pending")}
-                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium text-xs sm:text-sm transition-colors ${
                   activeTab === "pending" 
-                    ? "bg-[#26a69a] text-white shadow-md" 
+                    ? "bg-[#26a69a] text-white" 
                     : "bg-[#26a69a]/10 text-[#26a69a] hover:bg-[#26a69a]/20"
                 }`}
               >
+                <Clock className="h-3.5 w-3.5" />
                 A vencer
                 {stats.pending > 0 && (
-                  <Badge className="ml-2 bg-white/20 text-white border-0">{stats.pending}</Badge>
+                  <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-white/25 text-[10px] font-bold">{stats.pending}</span>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab("overdue")}
-                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium text-xs sm:text-sm transition-colors ${
                   activeTab === "overdue" 
-                    ? "bg-[#e89e4c] text-white shadow-md" 
+                    ? "bg-[#e89e4c] text-white" 
                     : "bg-[#e89e4c]/10 text-[#e89e4c] hover:bg-[#e89e4c]/20"
                 }`}
               >
+                <AlertCircle className="h-3.5 w-3.5" />
                 Vencidas
                 {stats.overdue > 0 && (
-                  <Badge className="ml-2 bg-white/20 text-white border-0">{stats.overdue}</Badge>
+                  <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-white/25 text-[10px] font-bold">{stats.overdue}</span>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab("paid")}
-                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium text-xs sm:text-sm transition-colors ${
                   activeTab === "paid" 
-                    ? "bg-[#607d8b] text-white shadow-md" 
+                    ? "bg-[#607d8b] text-white" 
                     : "bg-[#607d8b]/10 text-[#607d8b] hover:bg-[#607d8b]/20"
                 }`}
               >
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 Pagas
               </button>
               <button
                 onClick={() => setActiveTab("all")}
-                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium text-xs sm:text-sm transition-colors ${
                   activeTab === "all" 
-                    ? "bg-[#2c5282] text-white shadow-md" 
-                    : "bg-transparent text-[#2c5282] hover:bg-[#2c5282]/10 border border-[#2c5282]"
+                    ? "bg-[#2c5282] text-white" 
+                    : "bg-transparent text-[#2c5282] hover:bg-[#2c5282]/10 border border-[#2c5282]/30"
                 }`}
               >
-                Todos os boletos
+                <FileStack className="h-3.5 w-3.5" />
+                Todos
               </button>
             </div>
 
             {/* Table Card */}
             <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Listagem de contribuições.</h3>
-                
+              <CardContent className="p-4 sm:p-5">
                 {/* Table Controls */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
                     <Select value={String(itemsPerPage)} onValueChange={(v) => setItemsPerPage(Number(v))}>
-                      <SelectTrigger className="w-20 h-9">
+                      <SelectTrigger className="w-16 h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1170,38 +1169,38 @@ const [showTutorial, setShowTutorial] = useState(false);
                         <SelectItem value="50">50</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span className="text-sm text-slate-500">resultados por página</span>
+                    <span>por página</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-500">Pesquisar</span>
+                  <div className="relative w-full sm:w-56">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-48 h-9"
-                      placeholder="..."
+                      className="h-8 pl-8 text-sm"
+                      placeholder="Buscar competência..."
                     />
                   </div>
                 </div>
 
                 {/* Table */}
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border rounded-lg overflow-hidden overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        <TableHead className="w-24 font-medium text-slate-600">#</TableHead>
-                        <TableHead className="font-medium text-slate-600">Descrição</TableHead>
-                        <TableHead className="font-medium text-slate-600">Documento</TableHead>
-                        <TableHead className="font-medium text-slate-600">Vencimento</TableHead>
-                        <TableHead className="font-medium text-slate-600">Valor</TableHead>
-                        <TableHead className="w-20 font-medium text-slate-600 text-center">Ações</TableHead>
+                      <TableRow className="bg-slate-50 hover:bg-slate-50">
+                        <TableHead className="h-9 w-24 text-xs font-medium uppercase tracking-wide text-slate-500">Competência</TableHead>
+                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Tipo</TableHead>
+                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Vencimento</TableHead>
+                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Status</TableHead>
+                        <TableHead className="h-9 text-xs font-medium uppercase tracking-wide text-slate-500">Valor</TableHead>
+                        <TableHead className="h-9 w-16 text-xs font-medium uppercase tracking-wide text-slate-500 text-center">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedContributions.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-12 text-slate-500">
-                            <FileText className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                            <p>Nenhuma contribuição encontrada</p>
+                          <TableCell colSpan={6} className="text-center py-10 text-slate-500">
+                            <FileText className="h-10 w-10 mx-auto mb-2 text-slate-300" />
+                            <p className="text-sm">Nenhuma contribuição encontrada</p>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1216,36 +1215,28 @@ const [showTutorial, setShowTutorial] = useState(false);
 
                           const invoiceUrl = contrib.lytex_invoice_url;
                           const dueDate = new Date(contrib.due_date + "T12:00:00");
+                          const statusCfg = STATUS_CONFIG[contrib.status] || STATUS_CONFIG.pending;
                           
                           return (
-                            <TableRow key={contrib.id} className="hover:bg-slate-50/50">
-                              <TableCell className="font-mono text-sm text-slate-600">
+                            <TableRow key={contrib.id} className="hover:bg-slate-50/60">
+                              <TableCell className="py-2.5 font-mono text-xs text-slate-600 whitespace-nowrap">
                                 {formatCompetence(contrib.competence_month, contrib.competence_year)}
                               </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-slate-700">
-                                    {contrib.lytex_invoice_id?.slice(0, 6) || "—"} - {contrib.contribution_type?.name || "Contribuição"}
-                                  </span>
-                                </div>
+                              <TableCell className="py-2.5">
+                                <span className="text-sm text-slate-700">
+                                  {contrib.contribution_type?.name || "Contribuição"}
+                                </span>
                               </TableCell>
-                              <TableCell className="font-mono text-sm text-slate-600">
-                                {contrib.lytex_invoice_id?.slice(0, 8) || "—"}
+                              <TableCell className="py-2.5 text-sm text-slate-600 whitespace-nowrap">
+                                {format(dueDate, "dd/MM/yyyy")}
                               </TableCell>
-                              <TableCell>
-                                <Badge 
-                                  className={`font-medium ${
-                                    contrib.status === "overdue" 
-                                      ? "bg-[#26a69a] text-white border-0" 
-                                      : contrib.status === "paid"
-                                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                      : "bg-[#26a69a] text-white border-0"
-                                  }`}
-                                >
-                                  {format(dueDate, "dd/MM/yyyy")}
-                                </Badge>
+                              <TableCell className="py-2.5">
+                                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${statusCfg.bgColor} ${statusCfg.color}`}>
+                                  {statusCfg.icon}
+                                  {statusCfg.label}
+                                </span>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="py-2.5">
                                 {needsValue ? (
                                   <Button
                                     size="sm"
@@ -1257,15 +1248,15 @@ const [showTutorial, setShowTutorial] = useState(false);
                                       setSetValueDueDate(original && original >= today ? original : today);
                                       setShowSetValueDialog(true);
                                     }}
-                                    className="h-8 text-xs border-[#2c5282] text-[#2c5282] hover:bg-[#2c5282]/10"
+                                    className="h-7 text-xs border-[#2c5282] text-[#2c5282] hover:bg-[#2c5282]/10"
                                   >
-                                    Informar o valor
+                                    Informar valor
                                   </Button>
                                 ) : (
-                                  <span className="font-medium text-slate-700">{formatCurrency(value)}</span>
+                                  <span className="font-medium text-sm text-slate-700">{formatCurrency(value)}</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-center">
+                              <TableCell className="py-2.5 text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   {invoiceUrl && (
                                     <Button
@@ -1379,18 +1370,19 @@ const [showTutorial, setShowTutorial] = useState(false);
                 </div>
 
                 {/* Pagination Footer */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
-                  <p className="text-sm text-slate-500">
-                    Mostrando de {Math.min((currentPage - 1) * itemsPerPage + 1, filteredContributions.length)} até {Math.min(currentPage * itemsPerPage, filteredContributions.length)} de {filteredContributions.length} registros
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-3">
+                  <p className="text-xs text-slate-500">
+                    {Math.min((currentPage - 1) * itemsPerPage + 1, filteredContributions.length)}–{Math.min(currentPage * itemsPerPage, filteredContributions.length)} de {filteredContributions.length}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8 px-2.5 text-xs"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                     >
-                      Anterior
+                      <ChevronLeft className="h-3.5 w-3.5" />
                     </Button>
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
                       <Button
@@ -1398,7 +1390,7 @@ const [showTutorial, setShowTutorial] = useState(false);
                         variant={currentPage === page ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCurrentPage(page)}
-                        className={currentPage === page ? "bg-[#2c5282]" : ""}
+                        className={`h-8 w-8 p-0 text-xs ${currentPage === page ? "bg-[#2c5282]" : ""}`}
                       >
                         {page}
                       </Button>
@@ -1406,10 +1398,11 @@ const [showTutorial, setShowTutorial] = useState(false);
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8 px-2.5 text-xs"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages || totalPages === 0}
                     >
-                      Próximo
+                      <ChevronRight className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -1417,17 +1410,18 @@ const [showTutorial, setShowTutorial] = useState(false);
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 mt-6">
-              <Button className="bg-[#26a69a] hover:bg-[#1e8e82] text-white">
-                <FileStack className="h-4 w-4 mr-2" />
+            <div className="flex flex-wrap gap-2.5 mt-5">
+              <Button size="sm" className="bg-[#26a69a] hover:bg-[#1e8e82] text-white">
+                <FileStack className="h-3.5 w-3.5 mr-1.5" />
                 Exibir várias contribuições
               </Button>
               <Button 
+                size="sm"
                 variant="outline" 
                 onClick={() => setActiveView("home")}
                 className="border-[#607d8b] text-[#607d8b] hover:bg-[#607d8b]/10"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
                 Voltar
               </Button>
             </div>
