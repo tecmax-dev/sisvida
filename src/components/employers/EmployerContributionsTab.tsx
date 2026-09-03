@@ -138,13 +138,21 @@ interface Contribution {
 
 // Extracts the Lytex boleto title number ("nosso número") from raw invoice data
 export function getLytexTitleNumber(contrib: { lytex_raw_data?: any }): string | null {
-  const txs = contrib.lytex_raw_data?.transactions;
+  const raw = contrib.lytex_raw_data;
+  if (!raw) return null;
+
+  const txs = raw.transactions;
   if (Array.isArray(txs)) {
     for (const tx of txs) {
       const n = tx?.boleto?.ourNumber;
       if (n) return String(n);
     }
   }
+
+  // Fallback: invoices already paid may only carry ourNumber on lastPayment
+  const lastPaymentNumber = raw.lastPayment?.ourNumber;
+  if (lastPaymentNumber) return String(lastPaymentNumber);
+
   return null;
 }
 
@@ -948,8 +956,8 @@ export default function EmployerContributionsTab({
                         <TableCell className={`py-1.5 px-1.5 ${contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}`}>
                           {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy")}
                         </TableCell>
-                        <TableCell className="py-1.5 px-1.5 font-mono text-[11px] text-muted-foreground truncate max-w-[150px]" title={getLytexTitleNumber(contrib) || undefined}>
-                          {getLytexTitleNumber(contrib) || "-"}
+                        <TableCell className="py-1.5 px-1.5 font-mono text-[11px] text-muted-foreground truncate max-w-[150px]" title={getLytexTitleNumber(contrib) ? "Número do título gerado no boleto Lytex" : contrib.lytex_invoice_id ? "Identificador do documento na Lytex" : undefined}>
+                          {getLytexTitleNumber(contrib) || (contrib.lytex_invoice_id ? `Doc: ${contrib.lytex_invoice_id.slice(-8).toUpperCase()}` : "-")}
                         </TableCell>
                         <TableCell className="py-1.5 px-1.5 text-right font-semibold tabular-nums">{formatCurrency(contrib.value)}</TableCell>
                         <TableCell className="py-1.5 px-1.5">
