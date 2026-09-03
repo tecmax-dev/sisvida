@@ -204,7 +204,9 @@ export default function AuthorizationValidationPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">CPF</p>
-                <p className="font-mono">{formatCPF(data.patient?.cpf)}</p>
+                <p className="font-mono">
+                  {formatCPF(data.is_for_dependent ? (data.dependent?.cpf ?? null) : data.patient?.cpf)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Benefício</p>
