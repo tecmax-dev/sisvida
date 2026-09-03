@@ -69,12 +69,14 @@ export function CpfInputCard({
 }: CpfInputCardProps) {
   const { canSeeFull } = useCpfVisibility();
   const [revealed, setRevealed] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
 
   // Bloqueio de edição: se já existe um CPF de 11 dígitos salvo e não estamos
-  // em modo "allowEdit" (ex.: tela de busca/login), o campo é readonly por
-  // segurança. O trigger do banco também impede UPDATE.
+  // em modo "allowEdit", o campo fica readonly por segurança. Usuários com
+  // permissão para ver o CPF completo podem destravar a edição manualmente.
   const hasFullCpf = cleanCpf(value).length === 11;
-  const isReadOnly = !allowEdit && hasFullCpf;
+  const isReadOnly = !allowEdit && hasFullCpf && !unlocked;
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isReadOnly) return;
@@ -148,6 +150,19 @@ export function CpfInputCard({
                   somente leitura
                 </span>
               )}
+              {!allowEdit && hasFullCpf && canSeeFull && !disabled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUnlocked((u) => !u);
+                    setRevealed(true);
+                  }}
+                  className="ml-1 text-[10px] font-medium text-purple-700 dark:text-purple-300 underline underline-offset-2"
+                >
+                  {unlocked ? "Bloquear edição" : "Editar CPF"}
+                </button>
+              )}
+
             </Label>
             <div className="relative mt-1.5">
               <Input
