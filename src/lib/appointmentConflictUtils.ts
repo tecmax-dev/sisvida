@@ -21,6 +21,14 @@ interface ConflictCheckParams {
 }
 
 /**
+ * Statuses that free up a slot and must NOT be considered when detecting
+ * conflicts. Kept in sync with the database unique index
+ * idx_appointments_no_duplicate_slot (professional_id, appointment_date, start_time)
+ * WHERE status NOT IN ('cancelled', 'completed', 'no_show').
+ */
+const INACTIVE_STATUSES = new Set(['cancelled', 'completed', 'no_show']);
+
+/**
  * Converts time string (HH:MM) to total minutes from midnight
  */
 export function timeToMinutes(time: string): number {
@@ -90,8 +98,10 @@ export function findConflictingAppointments(
       return false;
     }
     
-    // Only check active appointments (not cancelled)
-    if (apt.status === 'cancelled') {
+    // Only check active appointments — excluded statuses must match the
+    // database unique index (idx_appointments_no_duplicate_slot), which
+    // ignores cancelled, completed and no_show appointments.
+    if (INACTIVE_STATUSES.has(apt.status)) {
       return false;
     }
     
@@ -138,7 +148,7 @@ export function findAllConflictingAppointments(appointments: AppointmentSlot[]):
   const grouped: Record<string, AppointmentSlot[]> = {};
   
   for (const apt of appointments) {
-    if (apt.status === 'cancelled') continue;
+    if (INACTIVE_STATUSES.has(apt.status)) continue;
     
     const key = `${apt.appointment_date}_${apt.professional_id}`;
     if (!grouped[key]) {
