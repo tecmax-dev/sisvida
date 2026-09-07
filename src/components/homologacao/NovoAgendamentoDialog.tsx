@@ -143,6 +143,38 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
       endDate.setHours(hours, minutes + durationMinutes);
       const end_time = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
 
+      // Guard against double-booking: reject if the professional already has an
+      // active (non-cancelled) appointment overlapping this exact date/time slot.
+      if (data.professional_id) {
+        const dateStr = format(data.appointment_date, "yyyy-MM-dd");
+        const { data: conflicting, error: conflictError } = await supabase
+          .from("homologacao_appointments")
+          .select("id, start_time, end_time, employee_name")
+          .eq("professional_id", data.professional_id)
+          .eq("appointment_date", dateStr)
+          .neq("status", "cancelled");
+        if (conflictError) throw conflictError;
+
+        const [newStartH, newStartM] = data.start_time.split(":").map(Number);
+        const newStart = newStartH * 60 + newStartM;
+        const [newEndH, newEndM] = end_time.split(":").map(Number);
+        const newEnd = newEndH * 60 + newEndM;
+
+        const hasOverlap = (conflicting || []).some((apt: any) => {
+          const [aH, aM] = String(apt.start_time).slice(0, 5).split(":").map(Number);
+          const [bH, bM] = String(apt.end_time).slice(0, 5).split(":").map(Number);
+          const aptStart = aH * 60 + aM;
+          const aptEnd = bH * 60 + bM;
+          return newStart < aptEnd && newEnd > aptStart;
+        });
+
+        if (hasOverlap) {
+          throw new Error(
+            "Este profissional já possui um agendamento neste horário. Escolha outro horário ou profissional."
+          );
+        }
+      }
+
       const { error } = await supabase
         .from("homologacao_appointments")
         .insert({
