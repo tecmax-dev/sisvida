@@ -79,6 +79,13 @@ interface Professional {
   name: string;
 }
 
+interface LastAppointmentInfo {
+  date: string;
+  time: string | null;
+  status: string;
+  professionalName: string | null;
+}
+
 interface WaitingListEntry {
   id: string;
   created_at: string;
@@ -103,6 +110,7 @@ function WaitingListContent() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const [entries, setEntries] = useState<WaitingListEntry[]>([]);
+  const [lastAppointments, setLastAppointments] = useState<Record<string, LastAppointmentInfo>>({});
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,8 +228,43 @@ function WaitingListContent() {
     if (error) {
       console.error('Error fetching waiting list:', error);
     }
-    setEntries(data as WaitingListEntry[] || []);
+    const list = (data as WaitingListEntry[]) || [];
+    setEntries(list);
     setLoading(false);
+    fetchLastAppointments(list);
+  };
+
+  const fetchLastAppointments = async (list: WaitingListEntry[]) => {
+    if (!currentClinic || list.length === 0) {
+      setLastAppointments({});
+      return;
+    }
+    const patientIds = Array.from(new Set(list.map((e) => e.patient.id)));
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('patient_id, appointment_date, start_time, status, professional:professionals!appointments_professional_id_fkey (name)')
+      .eq('clinic_id', currentClinic.id)
+      .in('patient_id', patientIds)
+      .order('appointment_date', { ascending: false })
+      .order('start_time', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching last appointments:', error);
+      return;
+    }
+
+    const map: Record<string, LastAppointmentInfo> = {};
+    for (const row of (data as any[]) || []) {
+      if (!map[row.patient_id]) {
+        map[row.patient_id] = {
+          date: row.appointment_date,
+          time: row.start_time,
+          status: row.status,
+          professionalName: row.professional?.name || null,
+        };
+      }
+    }
+    setLastAppointments(map);
   };
 
   const fetchProfessionals = async () => {
@@ -443,6 +486,29 @@ function WaitingListContent() {
 
   const timeOptions = ["Manhã", "Tarde", "Noite"];
 
+  const lastAppointmentStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return 'Atendido';
+      case 'confirmed': return 'Confirmado';
+      case 'no_show': return 'Faltou';
+      case 'cancelled': return 'Cancelado';
+      case 'scheduled': return 'Agendado';
+      case 'in_progress': return 'Em atendimento';
+      case 'arrived': return 'Chegou';
+      default: return status;
+    }
+  };
+
+  const lastAppointmentStatusClass = (status: string) => {
+    switch (status) {
+      case 'completed': return 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/30';
+      case 'confirmed': return 'text-blue-700 border-blue-300 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/30';
+      case 'no_show': return 'text-red-700 border-red-300 bg-red-50 dark:text-red-400 dark:bg-red-950/30';
+      case 'cancelled': return 'text-muted-foreground border-border bg-muted';
+      default: return 'text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/30';
+    }
+  };
+
   const filteredEntries = useMemo(() => {
     return entries.filter((entry) => {
       if (filterProfessional !== "all") {
@@ -507,8 +573,12 @@ function WaitingListContent() {
       filterStatus === "all" ? "Todos" : filterStatus === "notified" ? "Vaga oferecida" : "Aguardando";
 
     const rows = filteredEntries
-      .map(
-        (entry, idx) => `
+      .map((entry, idx) => {
+        const last = lastAppointments[entry.patient.id];
+        const lastInfo = last
+          ? `${new Date(last.date + "T12:00:00").toLocaleDateString("pt-BR")}${last.time ? " " + last.time.slice(0, 5) : ""} - ${last.professionalName || "-"} (${lastAppointmentStatusLabel(last.status)})`
+          : "Sem agendamentos anteriores";
+        return `
         <tr>
           <td style="text-align:center;">${idx + 1}</td>
           <td>${entry.patient.name}</td>
@@ -517,8 +587,9 @@ function WaitingListContent() {
           <td>${entry.preferred_times?.join(", ") || "-"}</td>
           <td>${entry.notification_status === "notified" ? "Vaga oferecida" : "Aguardando"}</td>
           <td>${new Date(entry.created_at).toLocaleDateString("pt-BR")}</td>
-        </tr>`
-      )
+          <td>${lastInfo}</td>
+        </tr>`;
+      })
       .join("");
 
     printWindow.document.write(`
@@ -557,10 +628,11 @@ function WaitingListContent() {
                 <th>Preferência</th>
                 <th>Status</th>
                 <th>Entrada</th>
+                <th>Último agendamento</th>
               </tr>
             </thead>
             <tbody>
-              ${rows || `<tr><td colspan="7" style="text-align:center;color:#777;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
+              ${rows || `<tr><td colspan="8" style="text-align:center;color:#777;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
             </tbody>
           </table>
         </body>
@@ -857,6 +929,21 @@ function WaitingListContent() {
                          <p className="text-sm text-muted-foreground mt-2 italic">
                            {entry.notes}
                          </p>
+                       )}
+                       {/* Último agendamento */}
+                       {lastAppointments[entry.patient.id] ? (
+                         <div className="mt-2 flex items-center gap-2 flex-wrap">
+                           <span className="text-xs text-muted-foreground">
+                             Último agendamento: {new Date(lastAppointments[entry.patient.id].date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                             {lastAppointments[entry.patient.id].time ? ` às ${lastAppointments[entry.patient.id].time!.slice(0, 5)}` : ''}
+                             {lastAppointments[entry.patient.id].professionalName ? ` com ${lastAppointments[entry.patient.id].professionalName}` : ''}
+                           </span>
+                           <Badge variant="outline" className={cn("text-xs", lastAppointmentStatusClass(lastAppointments[entry.patient.id].status))}>
+                             {lastAppointmentStatusLabel(lastAppointments[entry.patient.id].status)}
+                           </Badge>
+                         </div>
+                       ) : (
+                         <p className="text-xs text-muted-foreground mt-2">Sem agendamentos anteriores</p>
                        )}
                      </div>
                    </div>
