@@ -81,6 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn('[AUTH-PANIC] signOut error:', e);
     }
+
+    // Limpeza defensiva: garante que nenhum token/estado antigo (ex.: status de
+    // super admin desatualizado) sobreviva em localStorage após o logout.
+    try {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith('sb-'))
+        .forEach((key) => localStorage.removeItem(key));
+    } catch (e) {
+      console.warn('[AUTH-PANIC] localStorage cleanup error:', e);
+    }
     
     setProfile(null);
     setUserRoles([]);
