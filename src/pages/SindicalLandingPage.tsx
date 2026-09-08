@@ -80,7 +80,7 @@ const DEPOIMENTOS = [
   { nome: "Maria Roseane",cargo: "Pres. do SindVargem — Vargem Grande/MT", texto: "Temos o Prosinge há vários anos, o suporte é presente e o sistema é simples, completo e seguro." },
 ];
 
-const WHATSAPP_URL = "https://wa.me/557331989980?text=Ol%C3%A1!%20Gostaria%20de%20conhecer%20o%20Sindexa.";
+const WHATSAPP_URL = "https://wa.me/551151943839?text=Ol%C3%A1!%20Gostaria%20de%20conhecer%20o%20Sindexa.";
 
 /* ═══════════════════════════════════════════════════════════════
    HEADER
@@ -319,7 +319,7 @@ function Credibilidade() {
                 className="h-12 rounded-full px-8 text-base font-bold text-white"
                 style={{ backgroundColor: ORANGE }}
               >
-                <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Teste gratuitamente</a>
+                <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Teste gratuitamente</a>
               </Button>
             )}
           </div>
@@ -428,7 +428,7 @@ function Referencia() {
               className="h-12 md:h-14 rounded-full px-8 md:px-10 text-base font-bold text-white"
               style={{ backgroundColor: ORANGE }}
             >
-              <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Teste gratuitamente</a>
+              <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Teste gratuitamente</a>
             </Button>
           )}
         </div>
@@ -511,7 +511,7 @@ function Depoimentos() {
             className="h-12 rounded-full px-8 text-base font-bold text-white"
             style={{ backgroundColor: ORANGE }}
           >
-            <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Testar gratuitamente</a>
+            <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Testar gratuitamente</a>
           </Button>
         </div>
       </div>
@@ -535,7 +535,7 @@ function Contato() {
     const text =
       `Olá! Gostaria de mais informações sobre o Sindexa.%0A%0A` +
       `Nome: ${nome}%0AE-mail: ${email}%0ATelefone: ${tel}%0A%0A${msg}`;
-    window.open(`https://wa.me/557331989980?text=${text}`, "_blank");
+    window.open(`https://wa.me/551151943839?text=${text}`, "_blank");
     setSent(true);
   };
 
@@ -710,7 +710,7 @@ function SiteFooter() {
             className="mt-4 h-11 rounded-full px-6 text-sm font-bold text-white"
             style={{ backgroundColor: ORANGE }}
           >
-            <a href="https://wa.me/557331989980?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Testar gratuitamente</a>
+            <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Sindexa%20gratuitamente." target="_blank" rel="noopener noreferrer">Testar gratuitamente</a>
           </Button>
         </div>
       </div>
