@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Upload, Save, Cloud, Check } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Save, Cloud, Check, FileSignature, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -60,6 +61,8 @@ interface Professional {
   experience: string | null;
   schedule: Json;
   appointment_duration: number | null;
+  memed_token: string | null;
+  memed_enabled: boolean | null;
 }
 
 interface ClinicUser {
@@ -120,6 +123,9 @@ export default function ProfessionalEditPage() {
   const [userId, setUserId] = useState("");
   const [telemedicineEnabled, setTelemedicineEnabled] = useState(false);
   const [appointmentDuration, setAppointmentDuration] = useState(30);
+  const [memedToken, setMemedToken] = useState("");
+  const [memedEnabled, setMemedEnabled] = useState(false);
+  const [showMemedToken, setShowMemedToken] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Avatar
@@ -186,6 +192,8 @@ export default function ProfessionalEditPage() {
         setUserId(data.user_id || "");
         setTelemedicineEnabled(data.telemedicine_enabled || false);
         setAppointmentDuration(data.appointment_duration || 30);
+        setMemedToken(data.memed_token || "");
+        setMemedEnabled(data.memed_enabled || false);
         setAvatarPreview(data.avatar_url || null);
         setAddress(data.address || "");
         setCity(data.city || "");
@@ -219,6 +227,8 @@ export default function ProfessionalEditPage() {
           education: data.education || "",
           experience: data.experience || "",
           specialtyIds: existingIds,
+          memedToken: data.memed_token || "",
+          memedEnabled: data.memed_enabled || false,
         });
         setInitialFormData(initialData);
         hasLoadedRef.current = true;
@@ -417,6 +427,8 @@ export default function ProfessionalEditPage() {
           bio: bio.trim() || null,
           education: education.trim() || null,
           experience: experience.trim() || null,
+          memed_token: memedToken.trim() || null,
+          memed_enabled: memedToken.trim() ? memedEnabled : false,
         })
         .eq('id', id);
 
@@ -430,6 +442,7 @@ export default function ProfessionalEditPage() {
         name, councilType, crm, phone, email, userId, telemedicineEnabled,
         appointmentDuration, address, city, state, zipCode,
         whatsapp, bio, education, experience, specialtyIds,
+        memedToken, memedEnabled,
       });
       setInitialFormData(newInitialData);
       
@@ -441,7 +454,7 @@ export default function ProfessionalEditPage() {
     }
   }, [currentClinic, id, professional, isCreating, name, councilType, crm, phone, email, userId, telemedicineEnabled,
       appointmentDuration, address, city, state, zipCode, whatsapp, bio, education, 
-      experience, specialtyIds, getSpecialtyById, hasFeature, saveProfessionalSpecialties]);
+      experience, specialtyIds, getSpecialtyById, hasFeature, saveProfessionalSpecialties, memedToken, memedEnabled]);
 
   // Get current form data for comparison
   const getCurrentFormData = useCallback(() => {
@@ -449,10 +462,11 @@ export default function ProfessionalEditPage() {
       name, councilType, crm, phone, email, userId, telemedicineEnabled,
       appointmentDuration, address, city, state, zipCode,
       whatsapp, bio, education, experience, specialtyIds,
+      memedToken, memedEnabled,
     });
   }, [name, councilType, crm, phone, email, userId, telemedicineEnabled,
       appointmentDuration, address, city, state, zipCode,
-      whatsapp, bio, education, experience, specialtyIds]);
+      whatsapp, bio, education, experience, specialtyIds, memedToken, memedEnabled]);
 
   // Auto-save effect with debounce
   useEffect(() => {
@@ -544,6 +558,8 @@ export default function ProfessionalEditPage() {
             bio: bio.trim() || null,
             education: education.trim() || null,
             experience: experience.trim() || null,
+            memed_token: memedToken.trim() || null,
+            memed_enabled: memedToken.trim() ? memedEnabled : false,
           })
           .select('id')
           .single();
@@ -639,6 +655,8 @@ export default function ProfessionalEditPage() {
             bio: bio.trim() || null,
             education: education.trim() || null,
             experience: experience.trim() || null,
+            memed_token: memedToken.trim() || null,
+            memed_enabled: memedToken.trim() ? memedEnabled : false,
           })
           .eq('id', id)
           .select();
@@ -1067,6 +1085,85 @@ export default function ProfessionalEditPage() {
                       checked={telemedicineEnabled}
                       onCheckedChange={setTelemedicineEnabled}
                     />
+                  </div>
+                )}
+
+                {!isCreating && (
+                  <div className="rounded-lg border p-4 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <FileSignature className="h-5 w-5 text-primary" />
+                        <div>
+                          <Label className="text-base">Prescrição Digital Memed</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Emita receitas digitais assinadas eletronicamente direto do atendimento
+                          </p>
+                        </div>
+                      </div>
+                      {memedToken.trim() ? (
+                        <Badge variant={memedEnabled ? "default" : "secondary"} className="shrink-0">
+                          {memedEnabled ? "Ativo" : "Desativado"}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="shrink-0">Não configurado</Badge>
+                      )}
+                    </div>
+
+                    <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground space-y-1.5">
+                      <p className="font-medium text-foreground">Como habilitar em 3 passos:</p>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Crie/acesse sua conta em <span className="font-medium">memed.com.br</span> (grátis para o profissional)</li>
+                        <li>Copie o "Token de integração" na área de parceiros da Memed</li>
+                        <li>Cole abaixo e ative — pronto, o botão aparecerá no atendimento</li>
+                      </ol>
+                      <a
+                        href="https://memed.com.br"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline mt-1"
+                      >
+                        Obter meu token na Memed
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="memedToken">Token pessoal Memed</Label>
+                      <div className="relative mt-1.5">
+                        <Input
+                          id="memedToken"
+                          type={showMemedToken ? "text" : "password"}
+                          value={memedToken}
+                          onChange={(e) => setMemedToken(e.target.value)}
+                          placeholder="Cole aqui o token fornecido pela Memed"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowMemedToken((v) => !v)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          title={showMemedToken ? "Ocultar token" : "Mostrar token"}
+                        >
+                          {showMemedToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                      <div>
+                        <Label>Habilitar prescrição pela Memed</Label>
+                        <p className="text-xs text-muted-foreground">
+                          {memedToken.trim()
+                            ? "Exibe o botão \"Prescrever pela Memed\" na tela de atendimento"
+                            : "Cadastre um token acima para poder ativar"}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={memedEnabled && !!memedToken.trim()}
+                        disabled={!memedToken.trim()}
+                        onCheckedChange={setMemedEnabled}
+                      />
+                    </div>
                   </div>
                 )}
               </TabsContent>
