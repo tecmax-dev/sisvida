@@ -102,36 +102,7 @@ async function callLovableGateway(imageUrl: string, systemPrompt: string) {
   return extractJson(content);
 }
 
-async function callOpenAI(imageUrl: string, systemPrompt: string) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Analise este documento e verifique se é um contracheque válido com descontos sindicais." },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        },
-      ],
-      max_tokens: 500,
-      response_format: { type: "json_object" },
-    }),
-  });
 
-  const aiResult = await response.json();
-  if (aiResult.error) {
-    throw new Error(`OpenAI Error: ${aiResult.error.message}`);
-  }
-  return extractJson(aiResult.choices?.[0]?.message?.content);
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -143,8 +114,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing file_base64" }), { status: 400, headers: corsHeaders });
     }
 
-    if (!LOVABLE_API_KEY && !OPENAI_API_KEY) {
-      console.error("Nenhuma chave de IA configurada (LOVABLE_API_KEY ou OPENAI_API_KEY)");
+    if (!OPENAI_API_KEY && !LOVABLE_API_KEY) {
+      console.error("Nenhuma chave de IA configurada (OPENAI_API_KEY ou LOVABLE_API_KEY)");
       return new Response(JSON.stringify({
         error: "AI service not configured",
         is_payslip: false,
@@ -152,21 +123,21 @@ serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`[verify-payslip-document] Analyzing document for ${member_name} from ${employer_name} (provider: ${LOVABLE_API_KEY ? 'lovable-gateway' : 'openai'})`);
+    console.log(`[verify-payslip-document] Analyzing document for ${member_name} from ${employer_name} (provider: ${OPENAI_API_KEY ? 'openai' : 'lovable-gateway'})`);
 
     const imageUrl = file_base64.startsWith('data:') ? file_base64 : `data:${file_type || 'image/png'};base64,${file_base64}`;
     const systemPrompt = SYSTEM_PROMPT(member_name || "", employer_name || "", employer_cnpj || "");
 
     let result: any;
     try {
-      result = LOVABLE_API_KEY
-        ? await callLovableGateway(imageUrl, systemPrompt)
-        : await callOpenAI(imageUrl, systemPrompt);
+      result = OPENAI_API_KEY
+        ? await callOpenAI(imageUrl, systemPrompt)
+        : await callLovableGateway(imageUrl, systemPrompt);
     } catch (primaryErr: any) {
-      // Fallback: se o gateway Lovable falhar e houver chave OpenAI, tenta OpenAI
-      if (LOVABLE_API_KEY && OPENAI_API_KEY && primaryErr.code !== "RATE_LIMIT" && primaryErr.code !== "NO_CREDITS") {
-        console.warn(`[verify-payslip-document] Lovable gateway falhou (${primaryErr.message}), tentando fallback OpenAI`);
-        result = await callOpenAI(imageUrl, systemPrompt);
+      // Fallback: se a OpenAI falhar e houver chave do gateway Lovable, tenta o gateway
+      if (OPENAI_API_KEY && LOVABLE_API_KEY && primaryErr.code !== "RATE_LIMIT" && primaryErr.code !== "NO_CREDITS") {
+        console.warn(`[verify-payslip-document] OpenAI falhou (${primaryErr.message}), tentando fallback Lovable Gateway`);
+        result = await callLovableGateway(imageUrl, systemPrompt);
       } else {
         throw primaryErr;
       }
