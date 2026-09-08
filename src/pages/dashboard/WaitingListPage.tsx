@@ -13,6 +13,9 @@ import {
   Check,
   ChevronsUpDown,
   MessageSquare,
+  Printer,
+  Filter,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,7 +96,7 @@ interface WaitingListEntry {
   confirmed_at: string | null;
   skipped_at: string | null;
   patient: { id: string; name: string; phone: string };
-  professional: { name: string } | null;
+  professional: { id: string; name: string } | null;
 }
 
 function WaitingListContent() {
@@ -107,6 +110,13 @@ function WaitingListContent() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [smsSendingId, setSmsSendingId] = useState<string | null>(null);
+
+  // Filtros de visualização/impressão
+  const [filterProfessional, setFilterProfessional] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterPatientName, setFilterPatientName] = useState("");
 
   // Form state
   const [selectedPatient, setSelectedPatient] = useState("");
@@ -201,7 +211,7 @@ function WaitingListContent() {
         confirmed_at,
         skipped_at,
         patient:patients!waiting_list_patient_id_fkey (id, name, phone),
-        professional:professionals!waiting_list_professional_id_fkey (name)
+        professional:professionals!waiting_list_professional_id_fkey (id, name)
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('is_active', true)
@@ -433,6 +443,134 @@ function WaitingListContent() {
 
   const timeOptions = ["Manhã", "Tarde", "Noite"];
 
+  const filteredEntries = useMemo(() => {
+    return entries.filter((entry) => {
+      if (filterProfessional !== "all") {
+        if (filterProfessional === "none") {
+          if (entry.professional) return false;
+        } else if (entry.professional?.id !== filterProfessional) {
+          return false;
+        }
+      }
+
+      if (filterStatus === "notified" && entry.notification_status !== "notified") return false;
+      if (filterStatus === "waiting" && entry.notification_status === "notified") return false;
+
+      if (filterDateFrom) {
+        const entryDate = entry.created_at.slice(0, 10);
+        if (entryDate < filterDateFrom) return false;
+      }
+      if (filterDateTo) {
+        const entryDate = entry.created_at.slice(0, 10);
+        if (entryDate > filterDateTo) return false;
+      }
+
+      if (filterPatientName.trim()) {
+        if (!entry.patient.name.toLowerCase().includes(filterPatientName.trim().toLowerCase())) return false;
+      }
+
+      return true;
+    });
+  }, [entries, filterProfessional, filterStatus, filterDateFrom, filterDateTo, filterPatientName]);
+
+  const hasActiveFilters =
+    filterProfessional !== "all" || filterStatus !== "all" || !!filterDateFrom || !!filterDateTo || !!filterPatientName.trim();
+
+  const clearFilters = () => {
+    setFilterProfessional("all");
+    setFilterStatus("all");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setFilterPatientName("");
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+      toast({ title: "Não foi possível abrir a janela de impressão", description: "Verifique o bloqueador de pop-ups.", variant: "destructive" });
+      return;
+    }
+
+    const profName =
+      filterProfessional === "all"
+        ? "Todos os profissionais"
+        : filterProfessional === "none"
+          ? "Sem preferência de profissional"
+          : professionals.find((p) => p.id === filterProfessional)?.name || "—";
+
+    const periodo =
+      filterDateFrom || filterDateTo
+        ? `${filterDateFrom ? new Date(filterDateFrom + "T12:00:00").toLocaleDateString("pt-BR") : "início"} até ${filterDateTo ? new Date(filterDateTo + "T12:00:00").toLocaleDateString("pt-BR") : "hoje"}`
+        : "Todos os períodos";
+
+    const statusLabel =
+      filterStatus === "all" ? "Todos" : filterStatus === "notified" ? "Vaga oferecida" : "Aguardando";
+
+    const rows = filteredEntries
+      .map(
+        (entry, idx) => `
+        <tr>
+          <td style="text-align:center;">${idx + 1}</td>
+          <td>${entry.patient.name}</td>
+          <td>${entry.patient.phone || "-"}</td>
+          <td>${entry.professional?.name || "Qualquer profissional"}</td>
+          <td>${entry.preferred_times?.join(", ") || "-"}</td>
+          <td>${entry.notification_status === "notified" ? "Vaga oferecida" : "Aguardando"}</td>
+          <td>${new Date(entry.created_at).toLocaleDateString("pt-BR")}</td>
+        </tr>`
+      )
+      .join("");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Lista de Espera - ${currentClinic?.name || ""}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: Arial, Helvetica, sans-serif; padding: 24px; color: #1a1a1a; }
+            h1 { font-size: 20px; margin: 0 0 4px 0; }
+            .subtitle { color: #555; font-size: 13px; margin-bottom: 16px; }
+            .filters { font-size: 12px; color: #333; margin-bottom: 16px; display: flex; gap: 24px; flex-wrap: wrap; border: 1px solid #ddd; border-radius: 6px; padding: 10px 14px; background: #fafafa; }
+            .filters strong { color: #000; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+            th { background: #f2f2f2; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <h1>Lista de Espera</h1>
+          <div class="subtitle">${currentClinic?.name || ""} — gerado em ${new Date().toLocaleString("pt-BR")}</div>
+          <div class="filters">
+            <div><strong>Profissional:</strong> ${profName}</div>
+            <div><strong>Entrada na fila:</strong> ${periodo}</div>
+            <div><strong>Status:</strong> ${statusLabel}</div>
+            <div><strong>Total:</strong> ${filteredEntries.length} paciente(s)</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Paciente</th>
+                <th>Telefone</th>
+                <th>Profissional</th>
+                <th>Preferência</th>
+                <th>Status</th>
+                <th>Entrada</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || `<tr><td colspan="7" style="text-align:center;color:#777;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 250);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -576,13 +714,105 @@ function WaitingListContent() {
         </Dialog>
       </div>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filtrar lista
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-1" />
+                  Limpar filtros
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={handlePrint}>
+                <Printer className="h-4 w-4 mr-1" />
+                Imprimir lista
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+              <Label className="text-xs">Profissional</Label>
+              <Select value={filterProfessional} onValueChange={setFilterProfessional}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os profissionais</SelectItem>
+                  <SelectItem value="none">Sem preferência</SelectItem>
+                  {professionals.map((prof) => (
+                    <SelectItem key={prof.id} value={prof.id}>
+                      {prof.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Status</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="waiting">Aguardando</SelectItem>
+                  <SelectItem value="notified">Vaga oferecida</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Entrada de</Label>
+              <Input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Entrada até</Label>
+              <Input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Nome do paciente</Label>
+              <div className="relative mt-1">
+                <Search className="h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={filterPatientName}
+                  onChange={(e) => setFilterPatientName(e.target.value)}
+                  placeholder="Buscar por nome..."
+                  className="pl-8"
+                />
+              </div>
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <p className="text-xs text-muted-foreground mt-3">
+              Mostrando {filteredEntries.length} de {entries.length} paciente(s) na lista.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {loading ? (
         <div className="text-center py-12">
           <Loader2 className="h-8 w-8 animate-spin mx-auto" />
         </div>
-      ) : entries.length > 0 ? (
+      ) : filteredEntries.length > 0 ? (
         <div className="grid gap-4">
-          {entries.map((entry, index) => (
+          {filteredEntries.map((entry, index) => (
             <Card key={entry.id}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -711,11 +941,23 @@ function WaitingListContent() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="mb-4">Nenhum paciente na lista de espera</p>
-            <Button variant="outline" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar paciente
-            </Button>
+            {entries.length > 0 ? (
+              <>
+                <p className="mb-4">Nenhum paciente encontrado com os filtros aplicados</p>
+                <Button variant="outline" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-2" />
+                  Limpar filtros
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="mb-4">Nenhum paciente na lista de espera</p>
+                <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar paciente
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
