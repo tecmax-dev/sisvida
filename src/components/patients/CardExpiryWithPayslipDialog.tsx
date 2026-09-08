@@ -419,6 +419,17 @@ export function CardExpiryWithPayslipDialog({
                         <span>Nome do associado: {memberName} {nameFoundInDoc ? `| Nome no documento: ${nameFoundInDoc}` : ""}</span>
                       </div>
                     )}
+                    {file && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => verifyDocument(file)}
+                      >
+                        Tentar analisar novamente
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

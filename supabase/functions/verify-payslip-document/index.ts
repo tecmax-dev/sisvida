@@ -1,12 +1,117 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+
+const SYSTEM_PROMPT = (member_name: string, employer_name: string, employer_cnpj: string) => `Você é um especialista em análise de contracheques sindicais brasileiros (Holerites).
+Seu objetivo é verificar se a imagem enviada é um contracheque válido e se contém os descontos sindicais obrigatórios.
+
+Critérios de validação:
+1. Identificar se o documento é um Holerite/Contracheque.
+2. Procurar por rubricas/descrições como: "Mensalidade Sindical", "Contribuição Sindical", "Taxa Assistencial", "Taxa Negocial", "Contribuição Assistencial", ou variações destes nomes.
+3. Verificar se o nome do funcionário no documento é compatível com: "${member_name}".
+4. Verificar se a empresa ou CNPJ no documento é compatível com: "${employer_name}" ou "${employer_cnpj}".
+
+Responda ESTRITAMENTE em formato JSON, sem markdown, sem texto antes ou depois, apenas o objeto JSON:
+{
+  "is_payslip": boolean,
+  "found_items": {
+    "mensalidade_sindical": boolean,
+    "taxa_assistencial": boolean,
+    "taxa_negocial": boolean
+  },
+  "name_match": boolean,
+  "name_found_in_document": "string ou null",
+  "message": "Resumo em português da análise"
+}`;
+
+function extractJson(text: string): any {
+  if (!text) throw new Error("Resposta vazia da IA");
+  // Remove markdown code fences se existirem
+  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("Resposta da IA não contém JSON válido");
+  return JSON.parse(cleaned.slice(start, end + 1));
+}
+
+async function callLovableGateway(imageUrl: string, systemPrompt: string) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Analise este documento e verifique se é um contracheque válido com descontos sindicais. Responda apenas com o JSON solicitado." },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+      max_tokens: 600,
+    }),
+  });
+
+  if (response.status === 429) {
+    const err: any = new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
+    err.code = "RATE_LIMIT";
+    throw err;
+  }
+  if (response.status === 402) {
+    const err: any = new Error("Créditos de IA esgotados. Contate o suporte para regularizar.");
+    err.code = "NO_CREDITS";
+    throw err;
+  }
+
+  const json = await response.json();
+  if (!response.ok) {
+    throw new Error(json?.error?.message || `Erro no gateway de IA (status ${response.status})`);
+  }
+  const content = json?.choices?.[0]?.message?.content;
+  return extractJson(content);
+}
+
+async function callOpenAI(imageUrl: string, systemPrompt: string) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Analise este documento e verifique se é um contracheque válido com descontos sindicais." },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+      max_tokens: 500,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  const aiResult = await response.json();
+  if (aiResult.error) {
+    throw new Error(`OpenAI Error: ${aiResult.error.message}`);
+  }
+  return extractJson(aiResult.choices?.[0]?.message?.content);
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -18,75 +123,34 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing file_base64" }), { status: 400, headers: corsHeaders });
     }
 
-    if (!OPENAI_API_KEY) {
-      console.error("OPENAI_API_KEY not configured");
-      return new Response(JSON.stringify({ error: "AI service not configured" }), { status: 500, headers: corsHeaders });
+    if (!LOVABLE_API_KEY && !OPENAI_API_KEY) {
+      console.error("Nenhuma chave de IA configurada (LOVABLE_API_KEY ou OPENAI_API_KEY)");
+      return new Response(JSON.stringify({
+        error: "AI service not configured",
+        is_payslip: false,
+        message: "Serviço de verificação por IA não está configurado. Contate o suporte técnico.",
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`[verify-payslip-document] Analyzing document for ${member_name} from ${employer_name}`);
+    console.log(`[verify-payslip-document] Analyzing document for ${member_name} from ${employer_name} (provider: ${LOVABLE_API_KEY ? 'lovable-gateway' : 'openai'})`);
 
-    // Call OpenAI GPT-4o Vision
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um especialista em análise de contracheques sindicais brasileiros (Holerites). 
-            Seu objetivo é verificar se a imagem enviada é um contracheque válido e se contém os descontos sindicais obrigatórios.
-            
-            Critérios de validação:
-            1. Identificar se o documento é um Holerite/Contracheque.
-            2. Procurar por rubricas/descrições como: "Mensalidade Sindical", "Contribuição Sindical", "Taxa Assistencial", "Taxa Negocial", "Contribuição Assistencial", ou variações destes nomes.
-            3. Verificar se o nome do funcionário no documento é compatível com: "${member_name}".
-            4. Verificar se a empresa ou CNPJ no documento é compatível com: "${employer_name}" ou "${employer_cnpj}".
-            
-            Responda ESTRITAMENTE em formato JSON:
-            {
-              "is_payslip": boolean,
-              "found_items": {
-                "mensalidade_sindical": boolean,
-                "taxa_assistencial": boolean,
-                "taxa_negocial": boolean
-              },
-              "name_match": boolean,
-              "name_found_in_document": "string ou null",
-              "message": "Resumo em português da análise"
-            }`
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Analise este documento e verifique se é um contracheque válido com descontos sindicais."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: file_base64.startsWith('data:') ? file_base64 : `data:${file_type || 'image/png'};base64,${file_base64}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 500,
-        response_format: { type: "json_object" }
-      })
-    });
+    const imageUrl = file_base64.startsWith('data:') ? file_base64 : `data:${file_type || 'image/png'};base64,${file_base64}`;
+    const systemPrompt = SYSTEM_PROMPT(member_name || "", employer_name || "", employer_cnpj || "");
 
-    const aiResult = await response.json();
-    
-    if (aiResult.error) {
-        throw new Error(`OpenAI Error: ${aiResult.error.message}`);
+    let result: any;
+    try {
+      result = LOVABLE_API_KEY
+        ? await callLovableGateway(imageUrl, systemPrompt)
+        : await callOpenAI(imageUrl, systemPrompt);
+    } catch (primaryErr: any) {
+      // Fallback: se o gateway Lovable falhar e houver chave OpenAI, tenta OpenAI
+      if (LOVABLE_API_KEY && OPENAI_API_KEY && primaryErr.code !== "RATE_LIMIT" && primaryErr.code !== "NO_CREDITS") {
+        console.warn(`[verify-payslip-document] Lovable gateway falhou (${primaryErr.message}), tentando fallback OpenAI`);
+        result = await callOpenAI(imageUrl, systemPrompt);
+      } else {
+        throw primaryErr;
+      }
     }
-
-    const result = JSON.parse(aiResult.choices[0].message.content);
 
     console.log(`[verify-payslip-document] Result for ${member_name}:`, result);
 
@@ -95,11 +159,14 @@ serve(async (req) => {
     });
 
   } catch (error: any) {
-    console.error(`[verify-payslip-document] Error: ${error.message}`);
-    return new Response(JSON.stringify({ 
+    console.error(`[verify-payslip-document] Error: ${error.message}`, error);
+    const friendlyMessage = error.code === "RATE_LIMIT" || error.code === "NO_CREDITS"
+      ? error.message
+      : "Falha na análise automática do documento. Você pode tentar novamente ou, se for administrador, atualizar a data manualmente.";
+    return new Response(JSON.stringify({
       error: error.message,
       is_payslip: false,
-      message: "Falha na análise automática do documento."
+      message: friendlyMessage,
     }), {
       status: 200, // Return 200 so frontend can handle the error message gracefully
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
