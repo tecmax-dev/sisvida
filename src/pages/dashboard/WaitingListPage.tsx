@@ -126,6 +126,7 @@ function WaitingListContent() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterPatientName, setFilterPatientName] = useState("");
+  const [filterNeverAttended, setFilterNeverAttended] = useState(false);
 
   // Form state
   const [selectedPatient, setSelectedPatient] = useState("");
@@ -524,6 +525,16 @@ function WaitingListContent() {
     }
   };
 
+  const isNeverAttended = useCallback(
+    (entry: WaitingListEntry) => {
+      if (entry.professional) {
+        return !lastAppointmentsByProfessional[`${entry.patient.id}::${entry.professional.id}`];
+      }
+      return !lastAppointments[entry.patient.id];
+    },
+    [lastAppointments, lastAppointmentsByProfessional]
+  );
+
   const filteredEntries = useMemo(() => {
     return entries.filter((entry) => {
       if (filterProfessional !== "all") {
@@ -550,12 +561,14 @@ function WaitingListContent() {
         if (!entry.patient.name.toLowerCase().includes(filterPatientName.trim().toLowerCase())) return false;
       }
 
+      if (filterNeverAttended && !isNeverAttended(entry)) return false;
+
       return true;
     });
-  }, [entries, filterProfessional, filterStatus, filterDateFrom, filterDateTo, filterPatientName]);
+  }, [entries, filterProfessional, filterStatus, filterDateFrom, filterDateTo, filterPatientName, filterNeverAttended, isNeverAttended]);
 
   const hasActiveFilters =
-    filterProfessional !== "all" || filterStatus !== "all" || !!filterDateFrom || !!filterDateTo || !!filterPatientName.trim();
+    filterProfessional !== "all" || filterStatus !== "all" || !!filterDateFrom || !!filterDateTo || !!filterPatientName.trim() || filterNeverAttended;
 
   const clearFilters = () => {
     setFilterProfessional("all");
@@ -563,6 +576,7 @@ function WaitingListContent() {
     setFilterDateFrom("");
     setFilterDateTo("");
     setFilterPatientName("");
+    setFilterNeverAttended(false);
   };
 
   const handlePrint = () => {
@@ -654,6 +668,7 @@ function WaitingListContent() {
             <div><strong>Profissional:</strong> ${profName}</div>
             <div><strong>Período:</strong> ${periodo}</div>
             <div><strong>Status:</strong> ${statusLabel}</div>
+            ${filterNeverAttended ? `<div><strong>Histórico:</strong> Somente nunca atendidos</div>` : ""}
             <div><strong>Total:</strong> ${filteredEntries.length} paciente(s)</div>
           </div>
           <table>
@@ -848,7 +863,7 @@ function WaitingListContent() {
           </div>
         </CardHeader>
         <CardContent className="pb-3.5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
             <div>
               <Label className="text-xs">Profissional</Label>
               <Select value={filterProfessional} onValueChange={setFilterProfessional}>
@@ -908,6 +923,19 @@ function WaitingListContent() {
                   className="pl-8"
                 />
               </div>
+            </div>
+            <div className="flex flex-col justify-end">
+              <Label className="text-xs">Histórico</Label>
+              <Button
+                type="button"
+                variant={filterNeverAttended ? "default" : "outline"}
+                size="sm"
+                className="mt-1 h-9 text-xs justify-start"
+                onClick={() => setFilterNeverAttended((v) => !v)}
+              >
+                <User className="h-3.5 w-3.5 mr-1.5" />
+                Nunca atendido
+              </Button>
             </div>
           </div>
           {hasActiveFilters && (
