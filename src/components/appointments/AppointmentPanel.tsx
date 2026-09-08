@@ -60,6 +60,7 @@ import { Odontogram } from "@/components/medical/Odontogram";
 import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
 import { PrintDialog } from "@/components/medical/PrintDialog";
 import { MedicationSearch } from "@/components/medical/MedicationSearch";
+import { MemedPrescriptionButton } from "@/components/medical/MemedPrescriptionButton";
 
 interface Patient {
   id: string;
@@ -138,6 +139,8 @@ interface Professional {
   name: string;
   specialty?: string | null;
   registration_number?: string | null;
+  memed_token?: string | null;
+  memed_enabled?: boolean | null;
 }
 
 interface AppointmentPanelProps {
@@ -314,7 +317,7 @@ export function AppointmentPanel({
       // Load professional data
       const { data: profData } = await supabase
         .from("professionals")
-        .select("name, specialty, registration_number")
+        .select("name, specialty, registration_number, memed_token, memed_enabled")
         .eq("id", professionalId)
         .maybeSingle();
 
@@ -667,6 +670,22 @@ export function AppointmentPanel({
       return `${hours}h ${mins}min`;
     }
     return `${mins}min`;
+  };
+
+  const handleMemedPrescriptionCreated = async (prescriptionUrl: string) => {
+    try {
+      await supabase.from("medical_documents").insert({
+        clinic_id: clinicId,
+        patient_id: appointment.patient_id,
+        professional_id: professionalId,
+        document_type: "memed_prescription",
+        content: prescriptionUrl,
+        document_date: new Date().toISOString().split("T")[0],
+      });
+      loadPreviousPrescriptions();
+    } catch (error) {
+      console.error("Erro ao registrar prescrição Memed:", error);
+    }
   };
 
   const handleSendPrescriptionWhatsApp = async () => {
@@ -1377,6 +1396,19 @@ export function AppointmentPanel({
                   <Printer className="h-4 w-4 mr-2" />
                   Imprimir Receituário
                 </Button>
+
+                {/* Memed - prescrição digital assinada, somente para profissionais habilitados */}
+                {!isCompleted && professional?.memed_enabled && professional?.memed_token && (
+                  <MemedPrescriptionButton
+                    memedToken={professional.memed_token}
+                    patient={{
+                      external_id: appointment.patient_id,
+                      nome: displayName,
+                      telefone: appointment.patient.phone || undefined,
+                    }}
+                    onPrescriptionCreated={handleMemedPrescriptionCreated}
+                  />
+                )}
               </div>
               
               {isCompleted && recordForm.prescription && (
