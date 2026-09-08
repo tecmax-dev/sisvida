@@ -24,6 +24,45 @@ interface CardExpiryWithPayslipDialogProps {
 
 type VerificationStatus = "idle" | "uploading" | "verifying" | "valid" | "invalid";
 
+/**
+ * Resizes a base64 image (data URL) down to a max dimension and re-encodes
+ * as JPEG with quality reduction, to keep the payload well under the Edge
+ * Function body size limit (~6MB no Supabase). Fotos tiradas direto do
+ * celular costumam vir em altíssima resolução e causam falha silenciosa
+ * no envio ("Failed to send a request to the Edge Function").
+ */
+async function compressImageBase64(dataUrl: string, maxDimension = 1600, quality = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas context indisponível"));
+        return;
+      }
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => reject(new Error("Falha ao carregar imagem para compressão"));
+    img.src = dataUrl;
+  });
+}
+
 interface FoundItems {
   mensalidade_sindical?: boolean;
   taxa_assistencial?: boolean;
@@ -144,6 +183,15 @@ export function CardExpiryWithPayslipDialog({
         });
       }
 
+      // Compress/resize before sending to avoid exceeding the Edge Function
+      // request size limit (fotos de celular podem ter 5-10MB e travar o envio
+      // com o erro "Failed to send a request to the Edge Function").
+      try {
+        base64 = await compressImageBase64(base64);
+      } catch (compressErr) {
+        console.warn("Falha ao comprimir imagem, enviando original:", compressErr);
+      }
+
       setVerificationStatus("verifying");
 
       const { data, error } = await supabase.functions.invoke("verify-payslip-document", {
@@ -174,9 +222,20 @@ export function CardExpiryWithPayslipDialog({
         setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.");
       }
     } catch (err: any) {
-      const errorDetails = await extractFunctionsErrorAsync(err);
-      console.error("Verification error:", err, errorDetails);
+      console.error("Verification error:", err);
       setVerificationStatus("invalid");
+
+      // "Failed to send a request to the Edge Function" indica falha de rede/CORS/
+      // payload antes mesmo da function responder (não é erro de negócio).
+      const rawMessage = typeof err?.message === "string" ? err.message : "";
+      if (rawMessage.toLowerCase().includes("failed to send a request") || rawMessage.toLowerCase().includes("failed to fetch")) {
+        setVerificationMessage(
+          "Não foi possível enviar o documento ao servidor. Verifique sua conexão com a internet e tente novamente. Se o problema persistir, tente com uma foto de resolução menor."
+        );
+        return;
+      }
+
+      const errorDetails = await extractFunctionsErrorAsync(err);
       setVerificationMessage(errorDetails.message || "Erro ao verificar o documento. Tente novamente.");
     }
   };
