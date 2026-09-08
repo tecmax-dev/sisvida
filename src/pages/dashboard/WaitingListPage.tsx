@@ -111,6 +111,7 @@ function WaitingListContent() {
   const { toast } = useToast();
   const [entries, setEntries] = useState<WaitingListEntry[]>([]);
   const [lastAppointments, setLastAppointments] = useState<Record<string, LastAppointmentInfo>>({});
+  const [lastAppointmentsByProfessional, setLastAppointmentsByProfessional] = useState<Record<string, LastAppointmentInfo>>({});
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -237,12 +238,13 @@ function WaitingListContent() {
   const fetchLastAppointments = async (list: WaitingListEntry[]) => {
     if (!currentClinic || list.length === 0) {
       setLastAppointments({});
+      setLastAppointmentsByProfessional({});
       return;
     }
     const patientIds = Array.from(new Set(list.map((e) => e.patient.id)));
     const { data, error } = await supabase
       .from('appointments')
-      .select('patient_id, appointment_date, start_time, status, professional:professionals!appointments_professional_id_fkey (name)')
+      .select('patient_id, professional_id, appointment_date, start_time, status, professional:professionals!appointments_professional_id_fkey (name)')
       .eq('clinic_id', currentClinic.id)
       .in('patient_id', patientIds)
       .order('appointment_date', { ascending: false })
@@ -254,6 +256,7 @@ function WaitingListContent() {
     }
 
     const map: Record<string, LastAppointmentInfo> = {};
+    const mapByProfessional: Record<string, LastAppointmentInfo> = {};
     for (const row of (data as any[]) || []) {
       if (!map[row.patient_id]) {
         map[row.patient_id] = {
@@ -263,8 +266,20 @@ function WaitingListContent() {
           professionalName: row.professional?.name || null,
         };
       }
+      if (row.professional_id) {
+        const key = `${row.patient_id}::${row.professional_id}`;
+        if (!mapByProfessional[key]) {
+          mapByProfessional[key] = {
+            date: row.appointment_date,
+            time: row.start_time,
+            status: row.status,
+            professionalName: row.professional?.name || null,
+          };
+        }
+      }
     }
     setLastAppointments(map);
+    setLastAppointmentsByProfessional(mapByProfessional);
   };
 
   const fetchProfessionals = async () => {
@@ -578,6 +593,14 @@ function WaitingListContent() {
         const lastInfo = last
           ? `${new Date(last.date + "T12:00:00").toLocaleDateString("pt-BR")}${last.time ? " " + last.time.slice(0, 5) : ""} - ${last.professionalName || "-"} (${lastAppointmentStatusLabel(last.status)})`
           : "Sem agendamentos anteriores";
+        const lastWithWaitedProfessional = entry.professional
+          ? lastAppointmentsByProfessional[`${entry.patient.id}::${entry.professional.id}`]
+          : null;
+        const lastWithProfInfo = entry.professional
+          ? lastWithWaitedProfessional
+            ? `${new Date(lastWithWaitedProfessional.date + "T12:00:00").toLocaleDateString("pt-BR")} (${lastAppointmentStatusLabel(lastWithWaitedProfessional.status)})`
+            : "Nunca atendido"
+          : "-";
         return `
         <tr>
           <td style="text-align:center;">${idx + 1}</td>
@@ -588,6 +611,7 @@ function WaitingListContent() {
           <td>${entry.notification_status === "notified" ? "Vaga oferecida" : "Aguardando"}</td>
           <td>${new Date(entry.created_at).toLocaleDateString("pt-BR")}</td>
           <td>${lastInfo}</td>
+          <td>${lastWithProfInfo}</td>
         </tr>`;
       })
       .join("");
@@ -643,10 +667,11 @@ function WaitingListContent() {
                 <th>Status</th>
                 <th>Entrada</th>
                 <th>Último agendamento</th>
+                <th>Última c/ profissional aguardado</th>
               </tr>
             </thead>
             <tbody>
-              ${rows || `<tr><td colspan="8" style="text-align:center;color:#9ca3af;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
+              ${rows || `<tr><td colspan="9" style="text-align:center;color:#9ca3af;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
             </tbody>
           </table>
           <div class="footer-note">${currentClinic?.name || ""}</div>
@@ -901,6 +926,9 @@ function WaitingListContent() {
         <div className="space-y-1.5">
           {filteredEntries.map((entry, index) => {
             const last = lastAppointments[entry.patient.id];
+            const lastWithWaitedProfessional = entry.professional
+              ? lastAppointmentsByProfessional[`${entry.patient.id}::${entry.professional.id}`]
+              : null;
             return (
             <Card key={entry.id} className="shadow-none border-border/60 hover:border-border transition-colors">
               <CardContent className="p-2.5">
@@ -937,6 +965,21 @@ function WaitingListContent() {
                           </span>
                         ) : (
                           <span>Sem histórico</span>
+                        )}
+                        {entry.professional && (
+                          <>
+                            <span className="text-muted-foreground/70">·</span>
+                            {lastWithWaitedProfessional ? (
+                              <span className="inline-flex items-center gap-1">
+                                Última c/ {entry.professional.name}: {new Date(lastWithWaitedProfessional.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                <Badge variant="outline" className={cn("text-[9px] h-4 px-1 leading-none", lastAppointmentStatusClass(lastWithWaitedProfessional.status))}>
+                                  {lastAppointmentStatusLabel(lastWithWaitedProfessional.status)}
+                                </Badge>
+                              </span>
+                            ) : (
+                              <span>Nunca atendido por {entry.professional.name}</span>
+                            )}
+                          </>
                         )}
                       </div>
                       {entry.notification_status === 'notified' && entry.offered_appointment_date && (
