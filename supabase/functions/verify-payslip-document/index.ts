@@ -31,13 +31,21 @@ Responda ESTRITAMENTE em formato JSON, sem markdown, sem texto antes ou depois, 
 }`;
 
 function extractJson(text: string): any {
-  if (!text) throw new Error("Resposta vazia da IA");
+  if (!text || !text.trim()) throw new Error("A IA não retornou conteúdo (resposta vazia). Tente novamente.");
   // Remove markdown code fences se existirem
   const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("Resposta da IA não contém JSON válido");
-  return JSON.parse(cleaned.slice(start, end + 1));
+  if (start === -1 || end === -1) {
+    console.error("[verify-payslip-document] Conteúdo sem JSON:", cleaned.slice(0, 500));
+    throw new Error("Resposta da IA não contém JSON válido");
+  }
+  try {
+    return JSON.parse(cleaned.slice(start, end + 1));
+  } catch (e) {
+    console.error("[verify-payslip-document] Falha ao parsear JSON:", cleaned.slice(0, 500));
+    throw new Error("Não foi possível interpretar a resposta da IA. Tente novamente.");
+  }
 }
 
 async function callLovableGateway(imageUrl: string, systemPrompt: string) {
@@ -48,7 +56,8 @@ async function callLovableGateway(imageUrl: string, systemPrompt: string) {
       "Authorization": `Bearer ${LOVABLE_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-flash-lite",
+      temperature: 0,
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -59,7 +68,7 @@ async function callLovableGateway(imageUrl: string, systemPrompt: string) {
           ],
         },
       ],
-      max_tokens: 600,
+      max_tokens: 2048,
     }),
   });
 
@@ -74,11 +83,22 @@ async function callLovableGateway(imageUrl: string, systemPrompt: string) {
     throw err;
   }
 
-  const json = await response.json();
+  const rawText = await response.text();
+  let json: any;
+  try {
+    json = JSON.parse(rawText);
+  } catch {
+    console.error("[verify-payslip-document] Resposta não-JSON do gateway:", rawText.slice(0, 500));
+    throw new Error(`Resposta inesperada do gateway de IA (status ${response.status})`);
+  }
   if (!response.ok) {
+    console.error("[verify-payslip-document] Gateway retornou erro:", response.status, JSON.stringify(json).slice(0, 500));
     throw new Error(json?.error?.message || `Erro no gateway de IA (status ${response.status})`);
   }
   const content = json?.choices?.[0]?.message?.content;
+  if (!content) {
+    console.error("[verify-payslip-document] Sem content na resposta:", JSON.stringify(json).slice(0, 800));
+  }
   return extractJson(content);
 }
 
@@ -159,10 +179,10 @@ serve(async (req) => {
     });
 
   } catch (error: any) {
-    console.error(`[verify-payslip-document] Error: ${error.message}`, error);
+    console.error(`[verify-payslip-document] Error: ${error?.message}`, error?.stack || error);
     const friendlyMessage = error.code === "RATE_LIMIT" || error.code === "NO_CREDITS"
       ? error.message
-      : "Falha na análise automática do documento. Você pode tentar novamente ou, se for administrador, atualizar a data manualmente.";
+      : `Falha na análise automática do documento (${error?.message || "erro desconhecido"}). Você pode tentar novamente ou, se for administrador, atualizar a data manualmente.`;
     return new Response(JSON.stringify({
       error: error.message,
       is_payslip: false,
