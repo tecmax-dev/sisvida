@@ -48,6 +48,68 @@ function extractJson(text: string): any {
   }
 }
 
+async function callOpenAI(imageUrl: string, systemPrompt: string) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      max_tokens: 1024,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Analise este documento e verifique se é um contracheque válido com descontos sindicais. Responda apenas com o JSON solicitado." },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (response.status === 429) {
+    const err: any = new Error("Limite de uso da OpenAI atingido. Tente novamente em instantes.");
+    err.code = "RATE_LIMIT";
+    throw err;
+  }
+  if (response.status === 401) {
+    const err: any = new Error("Chave da OpenAI inválida ou expirada.");
+    err.code = "AUTH_ERROR";
+    throw err;
+  }
+  if (response.status === 402 || response.status === 403) {
+    const err: any = new Error("Créditos da OpenAI esgotados ou acesso negado. Verifique a conta OpenAI.");
+    err.code = "NO_CREDITS";
+    throw err;
+  }
+
+  const rawText = await response.text();
+  let json: any;
+  try {
+    json = JSON.parse(rawText);
+  } catch {
+    console.error("[verify-payslip-document] Resposta não-JSON da OpenAI:", rawText.slice(0, 500));
+    throw new Error(`Resposta inesperada da OpenAI (status ${response.status})`);
+  }
+  if (!response.ok) {
+    console.error("[verify-payslip-document] OpenAI retornou erro:", response.status, JSON.stringify(json).slice(0, 500));
+    const err: any = new Error(json?.error?.message || `Erro na OpenAI (status ${response.status})`);
+    if (json?.error?.code === "insufficient_quota") err.code = "NO_CREDITS";
+    throw err;
+  }
+  const content = json?.choices?.[0]?.message?.content;
+  if (!content) {
+    console.error("[verify-payslip-document] Sem content na resposta da OpenAI:", JSON.stringify(json).slice(0, 800));
+  }
+  return extractJson(content);
+}
+
 async function callLovableGateway(imageUrl: string, systemPrompt: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
