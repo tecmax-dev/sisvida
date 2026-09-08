@@ -603,33 +603,32 @@ function WaitingListContent() {
           <title>Lista de Espera - ${currentClinic?.name || ""}</title>
           <style>
             * { box-sizing: border-box; }
-            body { font-family: Arial, Helvetica, sans-serif; padding: 28px; color: #1f2937; }
-            .header { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #111827; padding-bottom: 14px; margin-bottom: 16px; }
-            .logo { height: 48px; width: auto; object-fit: contain; }
-            .logo-fallback { height: 48px; width: 48px; border-radius: 8px; background: #111827; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
-            .header-text h1 { font-size: 18px; margin: 0; font-weight: 700; }
-            .header-text .subtitle { color: #6b7280; font-size: 11.5px; margin-top: 2px; }
-            .filters { font-size: 11.5px; color: #374151; margin-bottom: 14px; display: flex; gap: 20px; flex-wrap: wrap; border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 14px; background: #f9fafb; }
-            .filters strong { color: #111827; font-weight: 600; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            th, td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
-            th { background: #f3f4f6; color: #374151; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
-            tr:nth-child(even) td { background: #fafafa; }
-            .footer-note { margin-top: 18px; font-size: 10px; color: #9ca3af; text-align: right; }
-            @media print { body { padding: 0 12px; } }
+            body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; padding: 32px 36px; color: #374151; }
+            .header { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid #e5e7eb; }
+            .logo { height: 56px; width: auto; object-fit: contain; margin-bottom: 4px; }
+            .logo-fallback { height: 56px; width: 56px; border-radius: 10px; background: #111827; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+            .header h1 { font-size: 16px; margin: 0; font-weight: 600; color: #111827; letter-spacing: 0.01em; }
+            .header .subtitle { color: #9ca3af; font-size: 10.5px; margin-top: 1px; }
+            .filters { font-size: 10.5px; color: #6b7280; margin-bottom: 16px; display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; }
+            .filters strong { color: #374151; font-weight: 600; }
+            table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+            th, td { border-bottom: 1px solid #f0f1f3; padding: 7px 9px; text-align: left; vertical-align: top; }
+            th { color: #9ca3af; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; border-bottom: 1.5px solid #d1d5db; }
+            td { color: #374151; }
+            .muted { color: #9ca3af; }
+            .footer-note { margin-top: 24px; font-size: 9.5px; color: #c1c5cc; text-align: center; }
+            @media print { body { padding: 10px 16px; } }
           </style>
         </head>
         <body>
           <div class="header">
             ${logoHtml}
-            <div class="header-text">
-              <h1>Lista de Espera — ${currentClinic?.name || ""}</h1>
-              <div class="subtitle">Gerado em ${new Date().toLocaleString("pt-BR")}</div>
-            </div>
+            <h1>Lista de Espera — ${currentClinic?.name || ""}</h1>
+            <div class="subtitle">Gerado em ${new Date().toLocaleString("pt-BR")}</div>
           </div>
           <div class="filters">
             <div><strong>Profissional:</strong> ${profName}</div>
-            <div><strong>Entrada na fila:</strong> ${periodo}</div>
+            <div><strong>Período:</strong> ${periodo}</div>
             <div><strong>Status:</strong> ${statusLabel}</div>
             <div><strong>Total:</strong> ${filteredEntries.length} paciente(s)</div>
           </div>
@@ -647,7 +646,7 @@ function WaitingListContent() {
               </tr>
             </thead>
             <tbody>
-              ${rows || `<tr><td colspan="8" style="text-align:center;color:#777;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
+              ${rows || `<tr><td colspan="8" style="text-align:center;color:#9ca3af;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
             </tbody>
           </table>
           <div class="footer-note">${currentClinic?.name || ""}</div>
@@ -899,127 +898,117 @@ function WaitingListContent() {
           <Loader2 className="h-8 w-8 animate-spin mx-auto" />
         </div>
       ) : filteredEntries.length > 0 ? (
-        <div className="space-y-2">
-          {filteredEntries.map((entry, index) => (
-            <Card key={entry.id} className="shadow-none border-border/70">
-              <CardContent className="p-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-7 h-7 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">
+        <div className="space-y-1.5">
+          {filteredEntries.map((entry, index) => {
+            const last = lastAppointments[entry.patient.id];
+            return (
+            <Card key={entry.id} className="shadow-none border-border/60 hover:border-border transition-colors">
+              <CardContent className="p-2.5">
+                <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-6 h-6 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">
                       {index + 1}
                     </div>
-                     <div className="min-w-0">
-                       <div className="flex items-center gap-2 flex-wrap">
-                         <h3 className="font-medium text-sm text-foreground">{entry.patient.name}</h3>
-                         <span className="text-xs text-muted-foreground">{entry.patient.phone}</span>
-                         {entry.notification_status === 'notified' && (
-                           <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-300">
-                             <Bell className="h-3 w-3 mr-1" />
-                             Vaga oferecida
-                           </Badge>
-                         )}
-                         {entry.notified_at && entry.notification_status !== 'notified' && (
-                           <Badge variant="outline" className="text-[10px] h-5">
-                             <Bell className="h-3 w-3 mr-1" />
-                             Notificado
-                           </Badge>
-                         )}
-                       </div>
-                       <div className="flex items-center gap-x-3 gap-y-0.5 flex-wrap mt-0.5 text-xs text-muted-foreground">
-                         <span>{entry.professional ? entry.professional.name : "Qualquer profissional"}</span>
-                         {entry.preferred_times && entry.preferred_times.length > 0 && (
-                           <span>· {entry.preferred_times.join(", ")}</span>
-                         )}
-                         <span>· Na fila desde {new Date(entry.created_at).toLocaleDateString('pt-BR')}</span>
-                       </div>
-                       {entry.notification_status === 'notified' && entry.offered_appointment_date && (
-                         <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                           🔔 Vaga: {new Date(entry.offered_appointment_date + 'T12:00:00').toLocaleDateString('pt-BR')} às {entry.offered_appointment_time?.slice(0, 5)} — {entry.offered_professional_name}
-                         </p>
-                       )}
-                       {entry.notes && (
-                         <p className="text-xs text-muted-foreground mt-1 italic truncate">
-                           {entry.notes}
-                         </p>
-                       )}
-                       {/* Último agendamento */}
-                       <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                         {lastAppointments[entry.patient.id] ? (
-                           <>
-                             <span className="text-xs text-muted-foreground">
-                               Último agendamento: {new Date(lastAppointments[entry.patient.id].date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                               {lastAppointments[entry.patient.id].time ? ` às ${lastAppointments[entry.patient.id].time!.slice(0, 5)}` : ''}
-                               {lastAppointments[entry.patient.id].professionalName ? ` com ${lastAppointments[entry.patient.id].professionalName}` : ''}
-                             </span>
-                             <Badge variant="outline" className={cn("text-[10px] h-5", lastAppointmentStatusClass(lastAppointments[entry.patient.id].status))}>
-                               {lastAppointmentStatusLabel(lastAppointments[entry.patient.id].status)}
-                             </Badge>
-                           </>
-                         ) : (
-                           <span className="text-xs text-muted-foreground">Sem agendamentos anteriores</span>
-                         )}
-                       </div>
-                     </div>
-                   </div>
-                   <div className="flex items-center gap-1 shrink-0">
-                     {/* Skip button - only for notified entries */}
-                     {entry.notification_status === 'notified' && (
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         className="h-7 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50"
-                         onClick={() => handleSkipPatient(entry)}
-                       >
-                         <User className="h-3.5 w-3.5 mr-1" />
-                         Pular
-                       </Button>
-                     )}
-
-                     <Button
-                       variant="ghost"
-                       size="sm"
-                       className="h-7 px-2 text-xs"
-                       onClick={() => handleNotifyPatient(entry)}
-                     >
-                       <Send className="h-3.5 w-3.5 mr-1" />
-                       WhatsApp
-                     </Button>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-medium text-sm text-foreground leading-tight">{entry.patient.name}</h3>
+                        <span className="text-[11px] text-muted-foreground">{entry.patient.phone}</span>
+                        {entry.notification_status === 'notified' && (
+                          <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 text-amber-600 border-amber-300">
+                            <Bell className="h-2.5 w-2.5 mr-1" />
+                            Vaga oferecida
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-x-1.5 flex-wrap text-[11px] text-muted-foreground leading-tight">
+                        <span>{entry.professional ? entry.professional.name : "Qualquer profissional"}</span>
+                        {entry.preferred_times && entry.preferred_times.length > 0 && (
+                          <span>· {entry.preferred_times.join(", ")}</span>
+                        )}
+                        <span>· desde {new Date(entry.created_at).toLocaleDateString('pt-BR')}</span>
+                        <span className="text-muted-foreground/70">·</span>
+                        {last ? (
+                          <span className="inline-flex items-center gap-1">
+                            Último: {new Date(last.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                            {last.professionalName ? ` (${last.professionalName})` : ''}
+                            <Badge variant="outline" className={cn("text-[9px] h-4 px-1 leading-none", lastAppointmentStatusClass(last.status))}>
+                              {lastAppointmentStatusLabel(last.status)}
+                            </Badge>
+                          </span>
+                        ) : (
+                          <span>Sem histórico</span>
+                        )}
+                      </div>
+                      {entry.notification_status === 'notified' && entry.offered_appointment_date && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-tight">
+                          🔔 {new Date(entry.offered_appointment_date + 'T12:00:00').toLocaleDateString('pt-BR')} às {entry.offered_appointment_time?.slice(0, 5)} — {entry.offered_professional_name}
+                        </p>
+                      )}
+                      {entry.notes && (
+                        <p className="text-[11px] text-muted-foreground italic truncate leading-tight">
+                          {entry.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {entry.notification_status === 'notified' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6.5 px-1.5 text-[11px] text-orange-600 border-orange-300 hover:bg-orange-50"
+                        onClick={() => handleSkipPatient(entry)}
+                      >
+                        Pular
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
+                      size="icon"
+                      className="h-6.5 w-6.5"
+                      title="Notificar via WhatsApp"
+                      onClick={() => handleNotifyPatient(entry)}
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6.5 w-6.5"
+                      title="Notificar via SMS"
                       disabled={smsSendingId === entry.id}
                       onClick={() => handleNotifyPatientSms(entry)}
                     >
                       {smsSendingId === entry.id ? (
-                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                        <MessageSquare className="h-3.5 w-3.5" />
                       )}
-                      SMS
                     </Button>
-                     <Button
-                       variant="default"
-                       size="sm"
-                       className="h-7 px-2 text-xs"
-                       onClick={() => handleSchedulePatient(entry)}
-                     >
-                       <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                       Confirmar
-                     </Button>
-                     <Button
-                       variant="ghost"
-                       size="icon"
-                       className="h-7 w-7 text-destructive"
-                       onClick={() => setDeleteId(entry.id)}
-                     >
-                       <Trash2 className="h-3.5 w-3.5" />
-                     </Button>
-                   </div>
-                 </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-6.5 px-2 text-[11px]"
+                      onClick={() => handleSchedulePatient(entry)}
+                    >
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Confirmar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6.5 w-6.5 text-destructive"
+                      title="Remover"
+                      onClick={() => setDeleteId(entry.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <Card>
