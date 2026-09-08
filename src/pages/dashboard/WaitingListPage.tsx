@@ -592,26 +592,41 @@ function WaitingListContent() {
       })
       .join("");
 
+    const logoUrl = (currentClinic as any)?.logo_url as string | undefined;
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${currentClinic?.name || "Logo"}" class="logo" />`
+      : `<div class="logo-fallback">${(currentClinic?.name || "C").slice(0, 1).toUpperCase()}</div>`;
+
     printWindow.document.write(`
       <html>
         <head>
           <title>Lista de Espera - ${currentClinic?.name || ""}</title>
           <style>
             * { box-sizing: border-box; }
-            body { font-family: Arial, Helvetica, sans-serif; padding: 24px; color: #1a1a1a; }
-            h1 { font-size: 20px; margin: 0 0 4px 0; }
-            .subtitle { color: #555; font-size: 13px; margin-bottom: 16px; }
-            .filters { font-size: 12px; color: #333; margin-bottom: 16px; display: flex; gap: 24px; flex-wrap: wrap; border: 1px solid #ddd; border-radius: 6px; padding: 10px 14px; background: #fafafa; }
-            .filters strong { color: #000; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-            th { background: #f2f2f2; }
-            @media print { body { padding: 0; } }
+            body { font-family: Arial, Helvetica, sans-serif; padding: 28px; color: #1f2937; }
+            .header { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #111827; padding-bottom: 14px; margin-bottom: 16px; }
+            .logo { height: 48px; width: auto; object-fit: contain; }
+            .logo-fallback { height: 48px; width: 48px; border-radius: 8px; background: #111827; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
+            .header-text h1 { font-size: 18px; margin: 0; font-weight: 700; }
+            .header-text .subtitle { color: #6b7280; font-size: 11.5px; margin-top: 2px; }
+            .filters { font-size: 11.5px; color: #374151; margin-bottom: 14px; display: flex; gap: 20px; flex-wrap: wrap; border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 14px; background: #f9fafb; }
+            .filters strong { color: #111827; font-weight: 600; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            th, td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+            th { background: #f3f4f6; color: #374151; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+            tr:nth-child(even) td { background: #fafafa; }
+            .footer-note { margin-top: 18px; font-size: 10px; color: #9ca3af; text-align: right; }
+            @media print { body { padding: 0 12px; } }
           </style>
         </head>
         <body>
-          <h1>Lista de Espera</h1>
-          <div class="subtitle">${currentClinic?.name || ""} — gerado em ${new Date().toLocaleString("pt-BR")}</div>
+          <div class="header">
+            ${logoHtml}
+            <div class="header-text">
+              <h1>Lista de Espera — ${currentClinic?.name || ""}</h1>
+              <div class="subtitle">Gerado em ${new Date().toLocaleString("pt-BR")}</div>
+            </div>
+          </div>
           <div class="filters">
             <div><strong>Profissional:</strong> ${profName}</div>
             <div><strong>Entrada na fila:</strong> ${periodo}</div>
@@ -635,6 +650,7 @@ function WaitingListContent() {
               ${rows || `<tr><td colspan="8" style="text-align:center;color:#777;">Nenhum registro encontrado com os filtros aplicados</td></tr>`}
             </tbody>
           </table>
+          <div class="footer-note">${currentClinic?.name || ""}</div>
         </body>
       </html>
     `);
@@ -786,28 +802,28 @@ function WaitingListContent() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="shadow-none border-border/70 bg-muted/30">
+        <CardHeader className="pb-2 pt-3.5">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Filter className="h-4 w-4" />
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+              <Filter className="h-3.5 w-3.5" />
               Filtrar lista
             </CardTitle>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="h-4 w-4 mr-1" />
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={clearFilters}>
+                  <X className="h-3.5 w-3.5 mr-1" />
                   Limpar filtros
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-1" />
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={handlePrint}>
+                <Printer className="h-3.5 w-3.5 mr-1" />
                 Imprimir lista
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-3.5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
               <Label className="text-xs">Profissional</Label>
@@ -883,142 +899,123 @@ function WaitingListContent() {
           <Loader2 className="h-8 w-8 animate-spin mx-auto" />
         </div>
       ) : filteredEntries.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="space-y-2">
           {filteredEntries.map((entry, index) => (
-            <Card key={entry.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+            <Card key={entry.id} className="shadow-none border-border/70">
+              <CardContent className="p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-7 h-7 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">
                       {index + 1}
                     </div>
-                     <div>
-                       <h3 className="font-semibold text-foreground">{entry.patient.name}</h3>
-                       <p className="text-sm text-muted-foreground">{entry.patient.phone}</p>
-                       {entry.professional && (
-                         <p className="text-sm text-muted-foreground mt-1">
-                           Preferência: {entry.professional.name}
+                     <div className="min-w-0">
+                       <div className="flex items-center gap-2 flex-wrap">
+                         <h3 className="font-medium text-sm text-foreground">{entry.patient.name}</h3>
+                         <span className="text-xs text-muted-foreground">{entry.patient.phone}</span>
+                         {entry.notification_status === 'notified' && (
+                           <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-300">
+                             <Bell className="h-3 w-3 mr-1" />
+                             Vaga oferecida
+                           </Badge>
+                         )}
+                         {entry.notified_at && entry.notification_status !== 'notified' && (
+                           <Badge variant="outline" className="text-[10px] h-5">
+                             <Bell className="h-3 w-3 mr-1" />
+                             Notificado
+                           </Badge>
+                         )}
+                       </div>
+                       <div className="flex items-center gap-x-3 gap-y-0.5 flex-wrap mt-0.5 text-xs text-muted-foreground">
+                         <span>{entry.professional ? entry.professional.name : "Qualquer profissional"}</span>
+                         {entry.preferred_times && entry.preferred_times.length > 0 && (
+                           <span>· {entry.preferred_times.join(", ")}</span>
+                         )}
+                         <span>· Na fila desde {new Date(entry.created_at).toLocaleDateString('pt-BR')}</span>
+                       </div>
+                       {entry.notification_status === 'notified' && entry.offered_appointment_date && (
+                         <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                           🔔 Vaga: {new Date(entry.offered_appointment_date + 'T12:00:00').toLocaleDateString('pt-BR')} às {entry.offered_appointment_time?.slice(0, 5)} — {entry.offered_professional_name}
                          </p>
                        )}
-                       {entry.preferred_times && entry.preferred_times.length > 0 && (
-                         <div className="flex gap-1 mt-2">
-                           {entry.preferred_times.map((time) => (
-                             <Badge key={time} variant="secondary" className="text-xs">
-                               {time}
-                             </Badge>
-                           ))}
-                         </div>
-                       )}
-                       {/* Slot offered info */}
-                       {entry.notification_status === 'notified' && entry.offered_appointment_date && (
-                         <div className="mt-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                           <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                             🔔 Vaga oferecida
-                           </p>
-                           <p className="text-xs text-amber-700 dark:text-amber-400">
-                             {new Date(entry.offered_appointment_date + 'T12:00:00').toLocaleDateString('pt-BR')} às {entry.offered_appointment_time?.slice(0, 5)} — {entry.offered_professional_name}
-                           </p>
-                           {entry.slot_offered_at && (
-                             <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                               Notificado em {new Date(entry.slot_offered_at).toLocaleString('pt-BR')}
-                             </p>
-                           )}
-                         </div>
-                       )}
                        {entry.notes && (
-                         <p className="text-sm text-muted-foreground mt-2 italic">
+                         <p className="text-xs text-muted-foreground mt-1 italic truncate">
                            {entry.notes}
                          </p>
                        )}
                        {/* Último agendamento */}
-                       {lastAppointments[entry.patient.id] ? (
-                         <div className="mt-2 flex items-center gap-2 flex-wrap">
-                           <span className="text-xs text-muted-foreground">
-                             Último agendamento: {new Date(lastAppointments[entry.patient.id].date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                             {lastAppointments[entry.patient.id].time ? ` às ${lastAppointments[entry.patient.id].time!.slice(0, 5)}` : ''}
-                             {lastAppointments[entry.patient.id].professionalName ? ` com ${lastAppointments[entry.patient.id].professionalName}` : ''}
-                           </span>
-                           <Badge variant="outline" className={cn("text-xs", lastAppointmentStatusClass(lastAppointments[entry.patient.id].status))}>
-                             {lastAppointmentStatusLabel(lastAppointments[entry.patient.id].status)}
-                           </Badge>
-                         </div>
-                       ) : (
-                         <p className="text-xs text-muted-foreground mt-2">Sem agendamentos anteriores</p>
-                       )}
+                       <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                         {lastAppointments[entry.patient.id] ? (
+                           <>
+                             <span className="text-xs text-muted-foreground">
+                               Último agendamento: {new Date(lastAppointments[entry.patient.id].date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                               {lastAppointments[entry.patient.id].time ? ` às ${lastAppointments[entry.patient.id].time!.slice(0, 5)}` : ''}
+                               {lastAppointments[entry.patient.id].professionalName ? ` com ${lastAppointments[entry.patient.id].professionalName}` : ''}
+                             </span>
+                             <Badge variant="outline" className={cn("text-[10px] h-5", lastAppointmentStatusClass(lastAppointments[entry.patient.id].status))}>
+                               {lastAppointmentStatusLabel(lastAppointments[entry.patient.id].status)}
+                             </Badge>
+                           </>
+                         ) : (
+                           <span className="text-xs text-muted-foreground">Sem agendamentos anteriores</span>
+                         )}
+                       </div>
                      </div>
                    </div>
-                   <div className="flex items-center gap-2 flex-wrap">
-                     {/* Status badge */}
-                     {entry.notification_status === 'notified' && (
-                       <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                         <Bell className="h-3 w-3 mr-1" />
-                         Aguardando resposta
-                       </Badge>
-                     )}
-                     {entry.notified_at && entry.notification_status !== 'notified' && (
-                       <Badge variant="outline" className="text-xs">
-                         <Bell className="h-3 w-3 mr-1" />
-                         Notificado
-                       </Badge>
-                     )}
-
+                   <div className="flex items-center gap-1 shrink-0">
                      {/* Skip button - only for notified entries */}
                      {entry.notification_status === 'notified' && (
                        <Button
                          variant="outline"
                          size="sm"
-                         className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                         className="h-7 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50"
                          onClick={() => handleSkipPatient(entry)}
                        >
-                         <User className="h-4 w-4 mr-1" />
-                         Pular → Próximo
+                         <User className="h-3.5 w-3.5 mr-1" />
+                         Pular
                        </Button>
                      )}
 
                      <Button
-                       variant="outline"
+                       variant="ghost"
                        size="sm"
+                       className="h-7 px-2 text-xs"
                        onClick={() => handleNotifyPatient(entry)}
                      >
-                       <Send className="h-4 w-4 mr-1" />
-                       Notificar
+                       <Send className="h-3.5 w-3.5 mr-1" />
+                       WhatsApp
                      </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
+                      className="h-7 px-2 text-xs"
                       disabled={smsSendingId === entry.id}
                       onClick={() => handleNotifyPatientSms(entry)}
                     >
                       {smsSendingId === entry.id ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
                       ) : (
-                        <MessageSquare className="h-4 w-4 mr-1" />
+                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
                       )}
-                      Notificar SMS
+                      SMS
                     </Button>
                      <Button
                        variant="default"
                        size="sm"
+                       className="h-7 px-2 text-xs"
                        onClick={() => handleSchedulePatient(entry)}
                      >
-                       <CheckCircle2 className="h-4 w-4 mr-1" />
+                       <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                        Confirmar
                      </Button>
                      <Button
                        variant="ghost"
                        size="icon"
-                       className="text-destructive"
+                       className="h-7 w-7 text-destructive"
                        onClick={() => setDeleteId(entry.id)}
                      >
-                       <Trash2 className="h-4 w-4" />
+                       <Trash2 className="h-3.5 w-3.5" />
                      </Button>
                    </div>
-                 </div>
-                 <div className="mt-4 pt-4 border-t border-border">
-                   <p className="text-xs text-muted-foreground">
-                     Na lista desde {new Date(entry.created_at).toLocaleDateString('pt-BR')}
-                     {entry.notification_status === 'notified' && ' • 🟡 Aguardando confirmação'}
-                   </p>
                  </div>
               </CardContent>
             </Card>
