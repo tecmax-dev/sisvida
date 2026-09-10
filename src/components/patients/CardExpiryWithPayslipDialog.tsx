@@ -354,8 +354,8 @@ export function CardExpiryWithPayslipDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetState(); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[90dvh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             Atualizar Validade da Carteirinha
@@ -367,7 +367,7 @@ export function CardExpiryWithPayslipDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
           {/* Date picker */}
           <div className="space-y-2">
             <Label>Nova data de validade</Label>
@@ -506,7 +506,7 @@ export function CardExpiryWithPayslipDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 pt-2 border-t">
           <Button variant="outline" onClick={() => { resetState(); onOpenChange(false); }} disabled={saving}>
             Cancelar
           </Button>
