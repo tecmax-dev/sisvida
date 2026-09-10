@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Barcode, ExternalLink, FileDown, RefreshCw, Search } from "lucide-react";
+import { Barcode, ExternalLink, FileDown, Loader2, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import { getLytexTitleNumber } from "@/components/employers/EmployerContributionsTab";
@@ -66,6 +66,8 @@ export default function UnionBoletosGeneratedPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [hasSearched, setHasSearched] = useState(false);
   const [appliedRange, setAppliedRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["union-lytex-boletos", clinicId, appliedRange.start, appliedRange.end],
@@ -127,6 +129,68 @@ export default function UnionBoletosGeneratedPage() {
     };
   }, [filtered]);
 
+  const syncWithLytex = async (ids: string[]) => {
+    if (!clinicId || ids.length === 0) return { updated: 0 };
+    const { data: result, error } = await supabase.functions.invoke("lytex-refresh-boletos", {
+      body: { clinicId, contributionIds: ids },
+    });
+    if (error) throw new Error(error.message);
+    if (result?.error) throw new Error(result.error);
+    return result as { updated: number; unchanged: number; checked: number; errors: string[] };
+  };
+
+  const handleSyncAll = async () => {
+    if (!filtered.length) {
+      toast.error("Nenhum boleto para atualizar");
+      return;
+    }
+    setSyncingAll(true);
+    try {
+      const ids = filtered.map((r) => r.id);
+      // Lytex processa em lotes para não sobrecarregar a API
+      const batchSize = 25;
+      let totalUpdated = 0;
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        const result = await syncWithLytex(batch);
+        totalUpdated += result.updated || 0;
+      }
+      toast.success(
+        totalUpdated > 0
+          ? `${totalUpdated} boleto(s) atualizado(s) com o status real da Lytex`
+          : "Boletos já estavam atualizados"
+      );
+      await refetch();
+    } catch (err: any) {
+      toast.error(`Erro ao sincronizar com a Lytex: ${err?.message || "erro desconhecido"}`);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
+  const handleSyncOne = async (id: string) => {
+    setSyncingIds((prev) => new Set(prev).add(id));
+    try {
+      const result = await syncWithLytex([id]);
+      if (result.errors?.length) {
+        toast.error(`Erro ao consultar a Lytex: ${result.errors[0]}`);
+      } else if (result.updated > 0) {
+        toast.success("Status e link do boleto atualizados");
+      } else {
+        toast.info("Boleto já está com o status mais recente");
+      }
+      await refetch();
+    } catch (err: any) {
+      toast.error(`Erro ao sincronizar boleto: ${err?.message || "erro desconhecido"}`);
+    } finally {
+      setSyncingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   const exportCsv = () => {
     if (!filtered.length) {
       toast.error("Nenhum boleto para exportar");
@@ -176,13 +240,18 @@ export default function UnionBoletosGeneratedPage() {
             Boletos Gerados (Lytex)
           </h1>
           <p className="text-muted-foreground text-sm">
-            Acompanhe data de geração, nosso número, valor e status de cada boleto emitido.
+            Acompanhe data de geração, nosso número, valor e status de cada boleto emitido — sincronizado em tempo real com a Lytex.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || !hasSearched}>
-            <RefreshCw className={`h-4 w-4 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
-            Atualizar
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSyncAll}
+            disabled={syncingAll || isFetching || !hasSearched || filtered.length === 0}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${syncingAll ? "animate-spin" : ""}`} />
+            {syncingAll ? "Sincronizando com a Lytex..." : "Atualizar com a Lytex"}
           </Button>
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <FileDown className="h-4 w-4 mr-1.5" />
@@ -335,15 +404,31 @@ export default function UnionBoletosGeneratedPage() {
                           <Badge variant={st.variant}>{st.label}</Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          {r.lytex_invoice_url ? (
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={r.lytex_invoice_url} target="_blank" rel="noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
+                          <div className="flex items-center justify-center gap-1">
+                            {r.lytex_invoice_url ? (
+                              <Button variant="ghost" size="sm" asChild>
+                                <a href={r.lytex_invoice_url} target="_blank" rel="noreferrer">
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground">–</span>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Sincronizar status com a Lytex"
+                              onClick={() => handleSyncOne(r.id)}
+                              disabled={syncingIds.has(r.id)}
+                            >
+                              {syncingIds.has(r.id) ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              )}
                             </Button>
-                          ) : (
-                            "–"
-                          )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
