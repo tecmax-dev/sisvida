@@ -367,7 +367,7 @@ export function CardExpiryWithPayslipDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
           {/* Date picker */}
           <div className="space-y-2">
             <Label>Nova data de validade</Label>
@@ -506,7 +506,7 @@ export function CardExpiryWithPayslipDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 pt-2 border-t">
           <Button variant="outline" onClick={() => { resetState(); onOpenChange(false); }} disabled={saving}>
             Cancelar
           </Button>
