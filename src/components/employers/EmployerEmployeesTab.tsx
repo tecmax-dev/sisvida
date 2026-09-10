@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, Users, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { formatCnpj, normalizeCnpj } from "@/lib/cnpj-search-utils";
 
 interface Props {
   employerId: string;
@@ -36,24 +37,53 @@ export default function EmployerEmployeesTab({ employerId, employerCnpj, clinicI
   const load = async () => {
     setLoading(true);
     try {
-      const cnpjDigits = (employerCnpj || "").replace(/\D/g, "");
-      const orParts = [`employer_id.eq.${employerId}`];
-      if (cnpjDigits.length >= 11) {
-        orParts.push(`employer_cnpj.eq.${cnpjDigits}`);
-        orParts.push(`employer_cnpj.ilike.%${cnpjDigits}%`);
-      }
+      const cnpjDigits = normalizeCnpj(employerCnpj);
+      const cnpjValues = Array.from(
+        new Set([cnpjDigits, formatCnpj(cnpjDigits)].filter(Boolean))
+      );
 
-      let query = supabase
-        .from("patients")
-        .select("id, name, cpf, phone, email, registration_number, is_active")
-        .or(orParts.join(","))
-        .order("name");
+      const fetchByEmployerId = async () => {
+        let query = supabase
+          .from("patients")
+          .select("id, name, cpf, phone, email, registration_number, is_active")
+          .eq("employer_id", employerId)
+          .order("name")
+          .order("id")
+          .limit(1000);
 
-      if (clinicId) query = query.eq("clinic_id", clinicId);
+        if (clinicId) query = query.eq("clinic_id", clinicId);
+        return query;
+      };
 
-      const { data, error } = await query.limit(1000);
-      if (error) throw error;
-      setRows((data || []) as Collaborator[]);
+      const fetchByCnpj = async () => {
+        if (cnpjValues.length === 0) return { data: [], error: null };
+
+        let query = supabase
+          .from("patients")
+          .select("id, name, cpf, phone, email, registration_number, is_active")
+          .in("employer_cnpj", cnpjValues)
+          .order("name")
+          .order("id")
+          .limit(1000);
+
+        if (clinicId) query = query.eq("clinic_id", clinicId);
+        return query;
+      };
+
+      const [byId, byCnpj] = await Promise.all([fetchByEmployerId(), fetchByCnpj()]);
+      if (byId.error) throw byId.error;
+      if (byCnpj.error) throw byCnpj.error;
+
+      const uniqueRows = new Map<string, Collaborator>();
+      [...(byId.data || []), ...(byCnpj.data || [])].forEach((row) => {
+        uniqueRows.set(row.id, row as Collaborator);
+      });
+
+      setRows(
+        Array.from(uniqueRows.values()).sort((a, b) =>
+          a.name.localeCompare(b.name, "pt-BR")
+        )
+      );
     } catch (e) {
       console.error("Erro ao carregar colaboradores:", e);
       toast.error("Erro ao carregar colaboradores");
