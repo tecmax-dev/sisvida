@@ -171,7 +171,7 @@ export default function UnionBoletosGeneratedPage() {
   const handleSyncOne = async (id: string) => {
     setSyncingIds((prev) => new Set(prev).add(id));
     try {
-      const result = await syncWithLytex([id]);
+      const result = (await syncWithLytex([id])) as { updated: number; errors?: string[] };
       if (result.errors?.length) {
         toast.error(`Erro ao consultar a Lytex: ${result.errors[0]}`);
       } else if (result.updated > 0) {
