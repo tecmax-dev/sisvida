@@ -277,7 +277,11 @@ export default function EmployerDetailPage({
               />
             </TabsContent>
             <TabsContent value="employees" className="m-0 p-6">
-              <div className="text-center py-12 text-muted-foreground">Lista de colaboradores vinculados à empresa.</div>
+              <EmployerEmployeesTab
+                employerId={employer.id}
+                employerCnpj={employer.cnpj}
+                clinicId={currentClinic?.id}
+              />
             </TabsContent>
             <TabsContent value="negotiations" className="m-0 p-6">
               <NegotiationInstallmentsTab 
