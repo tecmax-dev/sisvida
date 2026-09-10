@@ -9976,6 +9976,8 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           max_patient_age: number | null
+          memed_enabled: boolean
+          memed_token: string | null
           name: string
           phone: string | null
           registration_number: string | null
@@ -10006,6 +10008,8 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           max_patient_age?: number | null
+          memed_enabled?: boolean
+          memed_token?: string | null
           name: string
           phone?: string | null
           registration_number?: string | null
@@ -10036,6 +10040,8 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           max_patient_age?: number | null
+          memed_enabled?: boolean
+          memed_token?: string | null
           name?: string
           phone?: string | null
           registration_number?: string | null

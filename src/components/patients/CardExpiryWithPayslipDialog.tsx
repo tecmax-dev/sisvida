@@ -208,19 +208,29 @@ export function CardExpiryWithPayslipDialog({
 
       if (error) throw error;
 
-      if (data?.is_payslip) {
+      const items = data?.found_items || {};
+      const hasUnionDiscount = Boolean(
+        items.mensalidade_sindical || items.taxa_negocial || items.taxa_assistencial
+      );
+
+      if (data?.is_payslip && hasUnionDiscount) {
         setVerificationStatus("valid");
-        setFoundItems(data.found_items || {});
+        setFoundItems(items);
         setNameMatch(data.name_match ?? null);
         setNameFoundInDoc(data.name_found_in_document || null);
         setVerificationMessage(data.message || "Documento identificado como contracheque válido.");
       } else {
         setVerificationStatus("invalid");
-        setFoundItems(data?.found_items || {});
+        setFoundItems(items);
         setNameMatch(data?.name_match ?? null);
         setNameFoundInDoc(data?.name_found_in_document || null);
-        setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.");
+        setVerificationMessage(
+          data?.is_payslip && !hasUnionDiscount
+            ? "Contracheque válido, porém não foi encontrado desconto de mensalidade sindical, taxa negocial ou taxa assistencial. Atualização não permitida."
+            : (data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.")
+        );
       }
+
     } catch (err: any) {
       console.error("Verification error:", err);
       setVerificationStatus("invalid");
