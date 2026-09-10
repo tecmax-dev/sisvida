@@ -13,6 +13,7 @@ import { useModal } from "@/contexts/ModalContext";
 import { toast } from "sonner";
 
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
+import EmployerEmployeesTab from "@/components/employers/EmployerEmployeesTab";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 
