@@ -278,7 +278,14 @@ serve(async (req) => {
       null,
     );
   }
-  if (candidates.length > 1) {
+  // Desambiguação: ignora cadastros de teste/inativos quando há um sócio ativo
+  const ativos = candidates.filter(
+    (c) => c.is_active === true && c.union_member_status === "ativo",
+  );
+  const pool = ativos.length > 0 ? ativos : candidates.filter((c) => c.is_active === true);
+  const effective = pool.length > 0 ? pool : candidates;
+
+  if (effective.length > 1) {
     return await answer(
       "Encontrei mais de um cadastro com este número. Por segurança, vou encaminhar para um atendente.",
       "HANDOFF",
@@ -287,7 +294,7 @@ serve(async (req) => {
     );
   }
 
-  const patient = candidates[0];
+  const patient = effective[0];
   const first = String(patient.name ?? "").split(" ")[0];
 
   if (intent === "MENU") {
