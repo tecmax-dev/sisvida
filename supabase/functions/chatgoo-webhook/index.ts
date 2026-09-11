@@ -316,13 +316,42 @@ serve(async (req) => {
     });
   }
 
+  // O ChatGoo/Whaticket entrega o número em formatos diferentes conforme o
+  // evento. Percorremos todos os caminhos conhecidos e, como último recurso,
+  // extraímos do remoteJid/wamid — assim nenhuma mensagem fica sem destino
+  // (era a causa do erro "The parameter to is required" e do silêncio).
+  const jidToDigits = (v: unknown) => String(v ?? "").split("@")[0].replace(/\D/g, "");
+  const fromWamid = (() => {
+    const m = String(messageId || "").match(/^wamid\.([A-Za-z0-9+/=]+)/);
+    if (!m) return "";
+    try {
+      const decoded = atob(m[1].replace(/-/g, "+").replace(/_/g, "/"));
+      const found = decoded.match(/55\d{9,11}/);
+      return found ? found[0] : "";
+    } catch {
+      return "";
+    }
+  })();
   const rawPhone =
-    body?.contactNumber ??
-    body?.contact?.number ??
-    body?.ticket?.contact?.number ??
-    body?.number ??
-    body?.phone ??
-    "";
+    [
+      body?.contactNumber,
+      body?.contact?.number,
+      body?.ticket?.contact?.number,
+      body?.data?.contact?.number,
+      body?.data?.ticket?.contact?.number,
+      body?.data?.number,
+      body?.message?.contact?.number,
+      body?.number,
+      body?.phone,
+      body?.from,
+      body?.wa_id,
+      body?.message?.from,
+      body?.rawMsg?.key?.remoteJid,
+      body?.message?.key?.remoteJid,
+      body?.data?.key?.remoteJid,
+    ]
+      .map(jidToDigits)
+      .find((d) => d.length >= 10) ?? fromWamid;
   const text = String(
     body?.messageText ??
       body?.message?.body ??
@@ -918,6 +947,14 @@ serve(async (req) => {
   };
 
   if (!phoneOk || !e164) {
+    // Guarda o payload bruto (limitado) para diagnóstico do formato recebido.
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "webhook",
+      decision: "BLOCKED",
+      reason: "PHONE_NOT_FOUND_IN_PAYLOAD",
+      payload: { raw: rawBody.slice(0, 2000) },
+    });
     return await answer(
       "Não consegui identificar seu número. Vou encaminhar para um atendente.",
       "HANDOFF",
@@ -925,6 +962,7 @@ serve(async (req) => {
       null,
     );
   }
+
 
   if (intent === "HUMANO") {
     const queueId = Deno.env.get("CHATGOO_HUMAN_QUEUE_ID");
