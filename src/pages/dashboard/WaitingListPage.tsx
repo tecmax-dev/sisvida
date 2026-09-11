@@ -405,6 +405,49 @@ function WaitingListContent() {
     }
   };
 
+  const handleConfirmSlotAndNotify = async () => {
+    if (!slotEntry) return;
+    if (!slotDate || !slotTime) {
+      toast({ title: "Informe a data e o horário da vaga", variant: "destructive" });
+      return;
+    }
+    const professionalId = slotProfessionalId !== "none" ? slotProfessionalId : null;
+    const professionalName =
+      professionals.find((p) => p.id === professionalId)?.name ||
+      slotEntry.professional?.name ||
+      "Profissional";
+
+    setSlotSending(true);
+    try {
+      const { error } = await supabase
+        .from("waiting_list")
+        .update({
+          offered_appointment_date: slotDate,
+          offered_appointment_time: slotTime.length === 5 ? `${slotTime}:00` : slotTime,
+          offered_professional_id: professionalId,
+          offered_professional_name: professionalName,
+          slot_offered_at: new Date().toISOString(),
+        })
+        .eq("id", slotEntry.id);
+      if (error) throw error;
+
+      const entryToNotify = slotEntry;
+      setSlotEntry(null);
+      await handleNotifyPatient(entryToNotify, {
+        date: slotDate,
+        time: slotTime.length === 5 ? `${slotTime}:00` : slotTime,
+        professionalId,
+        professionalName,
+      });
+    } catch (error: any) {
+      toast({ title: "Erro ao definir vaga", description: error.message, variant: "destructive" });
+    } finally {
+      setSlotSending(false);
+    }
+  };
+
+
+
 
   const handleSchedulePatient = async (entry: WaitingListEntry) => {
     return _handleSchedulePatient(entry);
