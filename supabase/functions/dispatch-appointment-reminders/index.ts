@@ -36,7 +36,21 @@ function timeToMinutes(t: string): number {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
-  const internal = isInternalCaller(req);
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+
+  let internal = isInternalCaller(req);
+
+  // Chamada do agendador interno (pg_cron) autenticada por chave do cofre
+  if (!internal) {
+    const cronKey = req.headers.get("x-cron-key");
+    if (cronKey) {
+      const { data: valid } = await admin.rpc("verify_reminder_cron_key", { _key: cronKey });
+      internal = valid === true;
+    }
+  }
+
   if (!internal) {
     try {
       await requireStaff(req);
@@ -46,10 +60,6 @@ serve(async (req) => {
       throw authErr;
     }
   }
-
-  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-  const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
   const body = await req.json().catch(() => ({} as any));
   const dryRun = body?.dryRun === true;
