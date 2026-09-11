@@ -143,14 +143,28 @@ serve(async (req) => {
     return { res, result: await res.json().catch(() => ({})) };
   };
 
-  let templateUsed = TEMPLATE_NAME;
-  let { res, result } = await send(TEMPLATE_NAME, true);
+  // Uso exclusivo do template oficial criado (lembrete_consulta_v4).
+  // Enquanto não estiver aprovado pela Meta, o envio é bloqueado (fail-closed), sem fallback.
+  const templateUsed = TEMPLATE_NAME;
+  const { res, result } = await send(TEMPLATE_NAME, true);
 
-  // Se o v4 ainda não estiver aprovado na Meta, cai para o informativo aprovado.
   if (!res.ok) {
-    templateUsed = FALLBACK_TEMPLATE;
-    ({ res, result } = await send(FALLBACK_TEMPLATE, false));
+    await admin.from("whatsapp_compliance_logs").insert({
+      intent: "APPOINTMENT_REMINDER",
+      decision: "TEMPLATE_NOT_AVAILABLE",
+      metadata: { build: BUILD, appointment_id: appt.id, template: templateUsed, http: res.status, response: result },
+    });
+    return json({
+      ok: false,
+      blocked: true,
+      reason: "TEMPLATE_NOT_APPROVED",
+      template: templateUsed,
+      http: res.status,
+      result,
+      build: BUILD,
+    }, 200);
   }
+
 
   await admin.from("whatsapp_compliance_logs").insert({
     intent: "APPOINTMENT_REMINDER",
