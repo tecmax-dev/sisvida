@@ -13,7 +13,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
-  chatgooSendText,
+  chatgooSendTextViaMeta,
   chatgooTransferToQueue,
   verifyChatgooSignature,
 } from "../_shared/chatgoo-client.ts";
@@ -234,7 +234,8 @@ serve(async (req) => {
     reason: string | null,
     patientId: string | null,
   ) => {
-    const result = await chatgooSendText(e164 ?? "", reply, { ticketId });
+    // Resposta sai pela Meta Cloud API oficial (conexão 3223-Oficial é Meta oficial).
+    const result = await chatgooSendTextViaMeta(supabase, e164 ?? "", reply);
     await log(decision, reason, patientId, reply);
     return new Response(
       JSON.stringify({ status: decision, intent, dry_run: result.dry_run, reply }),
