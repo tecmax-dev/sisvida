@@ -125,7 +125,15 @@ export default function PublicContributionValue() {
         p_token: decodedToken,
       });
       if (Array.isArray(typesData)) {
-        setTypes(typesData as any);
+        // Somente os tipos permitidos no link seguro: 124, 125 e 126
+        const ALLOWED_PREFIXES = ["124 -", "125 -", "126 -"];
+        const allowed = (typesData as any[]).filter((t) =>
+          ALLOWED_PREFIXES.some((p) => String(t?.name || "").trim().startsWith(p))
+        );
+        setTypes(allowed as any);
+        if (!allowed.some((t) => t.id === (contributionData.contribution_type_id ?? ""))) {
+          setTypeId("");
+        }
       }
 
       if (contributionData.contribution_type?.default_value) {
