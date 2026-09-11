@@ -362,24 +362,37 @@ serve(async (req) => {
   // Perfil escolhido anteriormente (válido por 6 horas), para interpretar números
   // no submenu correto sem perguntar de novo a cada mensagem.
   let profile: Profile = null;
+  // Estado "aguardando CNPJ" (válido por 30 minutos) para o fluxo de atualização
+  // de boleto. Nenhum dado sensível é coletado no chat: apenas o CNPJ para
+  // localizar os boletos e devolver o link seguro de atualização.
+  let awaitCnpj: "EMPRESA" | "CONTABILIDADE" | null = null;
   if (e164) {
     const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
     const { data: last } = await supabase
       .from("chatgoo_events")
-      .select("payload")
+      .select("payload,created_at")
       .eq("event", "message")
       .eq("phone", e164)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(5);
-    for (const row of last ?? []) {
+    const rows = last ?? [];
+    for (const row of rows) {
       const p = (row as any)?.payload?.profile;
       if (p === "ASSOCIADO" || p === "EMPRESA" || p === "CONTABILIDADE") {
         profile = p;
         break;
       }
     }
+    const lastRow = rows[0] as any;
+    const pending = lastRow?.payload?.await_cnpj;
+    const recent = lastRow?.created_at &&
+      Date.now() - new Date(lastRow.created_at).getTime() < 30 * 60 * 1000;
+    if (recent && (pending === "EMPRESA" || pending === "CONTABILIDADE")) {
+      awaitCnpj = pending;
+    }
   }
+
 
   const numberMap = profile === "EMPRESA"
     ? EMP_NUMBER_MAP
