@@ -66,6 +66,8 @@ export default function PublicContributionValue() {
   const [newDueDate, setNewDueDate] = useState("");
   const [success, setSuccess] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [types, setTypes] = useState<{ id: string; name: string; default_value: number }[]>([]);
+  const [typeId, setTypeId] = useState<string>("");
 
   useEffect(() => {
     if (rawToken) {
@@ -116,6 +118,15 @@ export default function PublicContributionValue() {
       };
 
       setContribution(contributionData);
+      setTypeId(contributionData.contribution_type_id ?? "");
+
+      // Tipos de contribuição disponíveis para escolha (link seguro)
+      const { data: typesData } = await supabase.rpc("get_public_contribution_types", {
+        p_token: decodedToken,
+      });
+      if (Array.isArray(typesData)) {
+        setTypes(typesData as any);
+      }
 
       if (contributionData.contribution_type?.default_value) {
         setValue((contributionData.contribution_type.default_value / 100).toFixed(2).replace(".", ","));
@@ -158,6 +169,18 @@ export default function PublicContributionValue() {
 
     setSubmitting(true);
     try {
+      // Tipo de contribuição escolhido no link seguro
+      if (typeId && typeId !== contribution.contribution_type_id) {
+        const { data: typeOk } = await supabase.rpc("set_contribution_type_by_public_token", {
+          p_token: rawToken ? decodeURIComponent(rawToken).trim() : rawToken,
+          p_type_id: typeId,
+        });
+        if (typeOk === false) {
+          toast.error("Não foi possível alterar o tipo de contribuição");
+          return;
+        }
+      }
+
       const { data, error: submitError } = await supabase.functions.invoke("set-contribution-value", {
         body: {
           contribution_id: contribution.id,
@@ -301,6 +324,31 @@ export default function PublicContributionValue() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {types.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="type">Tipo de Contribuição *</Label>
+                  <select
+                    id="type"
+                    value={typeId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setTypeId(id);
+                      const t = types.find((x) => x.id === id);
+                      if (t?.default_value) {
+                        setValue((t.default_value / 100).toFixed(2).replace(".", ","));
+                      }
+                    }}
+                    required
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">Selecione o tipo</option>
+                    {types.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="value">Valor da Contribuição *</Label>
                 <div className="relative">
