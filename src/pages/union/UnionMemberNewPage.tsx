@@ -298,7 +298,7 @@ export default function UnionMemberNewPage() {
       }
 
       const consentResult = await persistWhatsappConsent({
-        clinicId: (newPatient as any)?.clinic_id || clinicIdForConsent,
+        clinicId: resolvedClinic.id,
         patientId: newPatient.id,
         phone: formData.phone,
         name: formData.name,
