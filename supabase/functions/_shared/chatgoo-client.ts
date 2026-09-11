@@ -82,6 +82,47 @@ const META_PHONE_NUMBER_ID = "1213495528515111";
 // Meta exige template aprovado — enviar texto livre causa bloqueio/banimento.
 // Esta trava é FAIL-CLOSED: se não for possível comprovar a janela, NÃO envia.
 const SESSION_WINDOW_MS = 24 * 60 * 60 * 1000;
+const META_MAX_ATTEMPTS = 3;
+
+async function postMetaMessage(
+  token: string,
+  payload: Record<string, unknown>,
+): Promise<ChatgooSendResult> {
+  let lastStatus: number | null = null;
+  let lastBody: string | null = null;
+  let lastError = "META_ERROR";
+
+  for (let attempt = 1; attempt <= META_MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const text = await res.text();
+      lastStatus = res.status;
+      lastBody = text;
+
+      if (res.ok) {
+        return { sent: true, dry_run: false, status: res.status, body: text, error: null };
+      }
+
+      // Erros de validação/autorização não melhoram com repetição. Repetimos
+      // apenas indisponibilidade, limite temporário e falhas internas da Meta.
+      if (res.status !== 429 && res.status < 500) break;
+      console.error(`[chatgoo/meta] tentativa ${attempt}/${META_MAX_ATTEMPTS} falhou [${res.status}]`);
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
+      console.error(`[chatgoo/meta] tentativa ${attempt}/${META_MAX_ATTEMPTS} falhou: ${lastError}`);
+    }
+
+    if (attempt < META_MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+    }
+  }
+
+  return { sent: false, dry_run: false, status: lastStatus, body: lastBody, error: lastError };
+}
 
 interface SupabaseLike {
   rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
@@ -157,22 +198,12 @@ export async function chatgooSendTextViaMeta(
     if (!token) {
       return { sent: false, dry_run: false, status: null, body: null, error: "META_TOKEN_MISSING" };
     }
-    const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: phoneE164,
-        type: "text",
-        text: { preview_url: true, body: message },
-      }),
+    return await postMetaMessage(token, {
+      messaging_product: "whatsapp",
+      to: phoneE164,
+      type: "text",
+      text: { preview_url: true, body: message },
     });
-    const text = await res.text();
-    if (!res.ok) {
-      console.error(`[chatgoo/meta] envio falhou [${res.status}]: ${text}`);
-      return { sent: false, dry_run: false, status: res.status, body: text, error: "META_ERROR" };
-    }
-    return { sent: true, dry_run: false, status: res.status, body: text, error: null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`[chatgoo/meta] erro de rede: ${msg}`);
@@ -252,22 +283,12 @@ export async function chatgooSendListViaMeta(
     if (list.header) interactive.header = { type: "text", text: list.header.slice(0, 60) };
     if (list.footer) interactive.footer = { text: list.footer.slice(0, 60) };
 
-    const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: phoneE164,
-        type: "interactive",
-        interactive,
-      }),
+    return await postMetaMessage(token, {
+      messaging_product: "whatsapp",
+      to: phoneE164,
+      type: "interactive",
+      interactive,
     });
-    const text = await res.text();
-    if (!res.ok) {
-      console.error(`[chatgoo/meta] envio de lista falhou [${res.status}]: ${text}`);
-      return { sent: false, dry_run: false, status: res.status, body: text, error: "META_ERROR" };
-    }
-    return { sent: true, dry_run: false, status: res.status, body: text, error: null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`[chatgoo/meta] erro de rede (lista): ${msg}`);
@@ -333,22 +354,12 @@ export async function chatgooSendButtonsViaMeta(
     };
     if (payload.footer) interactive.footer = { text: payload.footer.slice(0, 60) };
 
-    const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: phoneE164,
-        type: "interactive",
-        interactive,
-      }),
+    return await postMetaMessage(token, {
+      messaging_product: "whatsapp",
+      to: phoneE164,
+      type: "interactive",
+      interactive,
     });
-    const text = await res.text();
-    if (!res.ok) {
-      console.error(`[chatgoo/meta] envio de botões falhou [${res.status}]: ${text}`);
-      return { sent: false, dry_run: false, status: res.status, body: text, error: "META_ERROR" };
-    }
-    return { sent: true, dry_run: false, status: res.status, body: text, error: null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`[chatgoo/meta] erro de rede (botões): ${msg}`);

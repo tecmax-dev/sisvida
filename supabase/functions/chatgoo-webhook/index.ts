@@ -296,6 +296,7 @@ serve(async (req) => {
       .from("chatgoo_events")
       .select("id")
       .eq("event", "message")
+      .neq("decision", "SEND_FAILED")
       .contains("payload", { message_id: messageId })
       .limit(1)
       .maybeSingle();
@@ -496,10 +497,25 @@ serve(async (req) => {
   ) => {
     // Resposta sai pela Meta Cloud API oficial (conexão 3223-Oficial é Meta oficial).
     const result = await chatgooSendTextViaMeta(supabase, e164 ?? "", reply, { inboundNow: true });
-    await log(decision, reason, patientId, reply);
+    const delivered = result.sent || result.dry_run;
+    await log(
+      delivered ? decision : "SEND_FAILED",
+      delivered ? reason : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
+      patientId,
+      reply,
+    );
     return new Response(
-      JSON.stringify({ status: decision, intent, dry_run: result.dry_run, reply }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({
+        status: delivered ? decision : "SEND_FAILED",
+        intent,
+        dry_run: result.dry_run,
+        delivered: result.sent,
+        reply,
+      }),
+      {
+        status: delivered ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   };
 
@@ -524,15 +540,53 @@ serve(async (req) => {
       footer: "Toque em uma opção",
       sections: [{ title: config.title, rows: config.rows }],
     }, { inboundNow: true });
+    let finalResult = result;
     if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
-      await chatgooSendTextViaMeta(supabase, e164 ?? "", `${bodyText}\n\n${config.fallback}`, { inboundNow: true });
+      finalResult = await chatgooSendTextViaMeta(
+        supabase,
+        e164 ?? "",
+        `${bodyText}\n\n${config.fallback}`,
+        { inboundNow: true },
+      );
     }
-    await log("ANSWERED", null, patientId, bodyText);
+    const delivered = finalResult.sent || finalResult.dry_run;
+    await log(
+      delivered ? "ANSWERED" : "SEND_FAILED",
+      delivered ? null : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
+      patientId,
+      bodyText,
+    );
     return new Response(
-      JSON.stringify({ status: "ANSWERED", intent, dry_run: result.dry_run, reply: bodyText }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({
+        status: delivered ? "ANSWERED" : "SEND_FAILED",
+        intent,
+        dry_run: finalResult.dry_run,
+        delivered: finalResult.sent,
+        reply: bodyText,
+      }),
+      {
+        status: delivered ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   };
+
+  // Nenhum fluxo pode tentar responder sem um destinatário válido. Alguns
+  // formatos do ChatGoo omitem o telefone; antes isso chegava ao consentimento,
+  // era marcado como respondido e enviava para um destino vazio.
+  if (!phoneOk || !e164) {
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "webhook",
+      decision: "BLOCKED",
+      reason: "PHONE_NOT_FOUND_IN_PAYLOAD",
+      payload: { raw: rawBody.slice(0, 2000), message_id: messageId || null },
+    });
+    return new Response(
+      JSON.stringify({ status: "BLOCKED", reason: "PHONE_INVALID" }),
+      { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   // ===== DESCADASTRO (OPT-OUT) — EXIGÊNCIA META =====
   // "SAIR/PARAR/CANCELAR" encerra o envio: registra o opt-out, envia UMA única
@@ -703,12 +757,25 @@ serve(async (req) => {
             footer: "Sindicato • atendimento oficial",
           }, { inboundNow: true });
           // Se os botões falharem, garante que o contato receba a pergunta em texto.
+          let finalConsentResult = consentResult;
           if (!consentResult.sent && !consentResult.dry_run) {
-            await chatgooSendTextViaMeta(
+            finalConsentResult = await chatgooSendTextViaMeta(
               supabase,
               e164,
               `${consentBody}\n\nResponda AUTORIZO para continuar, ou SAIR para não receber mensagens.`,
               { inboundNow: true },
+            );
+          }
+          if (!finalConsentResult.sent && !finalConsentResult.dry_run) {
+            await log(
+              "SEND_FAILED",
+              finalConsentResult.error ?? `META_HTTP_${finalConsentResult.status ?? "NETWORK"}`,
+              null,
+              consentBody,
+            );
+            return new Response(
+              JSON.stringify({ status: "SEND_FAILED", intent: "CONSENT_PROMPT" }),
+              { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
             );
           }
           await supabase.from("chatgoo_events").insert({
@@ -945,24 +1012,6 @@ serve(async (req) => {
       null,
     );
   };
-
-  if (!phoneOk || !e164) {
-    // Guarda o payload bruto (limitado) para diagnóstico do formato recebido.
-    await supabase.from("chatgoo_events").insert({
-      direction: "inbound",
-      event: "webhook",
-      decision: "BLOCKED",
-      reason: "PHONE_NOT_FOUND_IN_PAYLOAD",
-      payload: { raw: rawBody.slice(0, 2000) },
-    });
-    return await answer(
-      "Não consegui identificar seu número. Vou encaminhar para um atendente.",
-      "HANDOFF",
-      "PHONE_INVALID",
-      null,
-    );
-  }
-
 
   if (intent === "HUMANO") {
     const queueId = Deno.env.get("CHATGOO_HUMAN_QUEUE_ID");
