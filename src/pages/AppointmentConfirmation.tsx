@@ -305,6 +305,16 @@ export default function AppointmentConfirmation() {
                     )}
                     Confirmar Presença
                   </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => window.location.assign("/app/agendar")}
+                    disabled={actionLoading}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Reagendar
+                  </Button>
                   <Button 
                     variant="outline" 
                     onClick={() => setShowCancelForm(true)}
@@ -316,6 +326,7 @@ export default function AppointmentConfirmation() {
                     Cancelar Consulta
                   </Button>
                 </>
+
               ) : (
                 <>
                   <Button 
