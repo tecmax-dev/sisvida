@@ -343,16 +343,22 @@ function WaitingListContent() {
     }
   };
 
-  const handleNotifyPatient = async (entry: WaitingListEntry) => {
+  const handleNotifyPatient = async (
+    entry: WaitingListEntry,
+    override?: { date: string; time: string; professionalId: string | null; professionalName: string },
+  ) => {
     try {
-      if (!entry.offered_appointment_date || !entry.offered_appointment_time) {
-        toast({
-          title: "Sem vaga definida",
-          description: "Defina a data e o horário da vaga antes de avisar pelo WhatsApp.",
-          variant: "destructive",
-        });
+      const slotDateValue = override?.date || entry.offered_appointment_date;
+      const slotTimeValue = override?.time || entry.offered_appointment_time;
+
+      if (!slotDateValue || !slotTimeValue) {
+        setSlotEntry(entry);
+        setSlotDate("");
+        setSlotTime("");
+        setSlotProfessionalId(entry.professional?.id ?? "none");
         return;
       }
+
 
       const { data, error } = await supabase.functions.invoke('send-waiting-list-slot', {
         body: {
