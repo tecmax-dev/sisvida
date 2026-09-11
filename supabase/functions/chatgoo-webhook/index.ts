@@ -501,6 +501,89 @@ serve(async (req) => {
     );
   };
 
+  // ===== DESCADASTRO (OPT-OUT) — EXIGÊNCIA META =====
+  // "SAIR/PARAR/CANCELAR" encerra o envio: registra o opt-out, envia UMA única
+  // confirmação e, a partir daí, o robô fica em silêncio (nada é enviado).
+  {
+    const t = String(text ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim();
+    const isStop = /^(sair|parar|pare|cancelar|stop|descadastrar|remover|nao quero mais receber|nao quero receber|nao enviar mais)$/
+      .test(t);
+    const isResume = /^(voltar a receber|quero receber|reativar|receber novamente|voltar)$/.test(t);
+
+    const phoneVariants = (() => {
+      const p = e164 ?? "";
+      const local = p.slice(2);
+      const set = new Set<string>([p, `+${p}`, local]);
+      if (local.length === 11) set.add(local.slice(0, 2) + local.slice(3));
+      return [...set].filter(Boolean);
+    })();
+
+    const { data: activeOptOut } = await supabase
+      .from("whatsapp_opt_outs")
+      .select("id")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .in("phone", phoneVariants)
+      .is("reactivated_at", null)
+      .limit(1);
+    const isOptedOut = Array.isArray(activeOptOut) && activeOptOut.length > 0;
+
+    if (isStop) {
+      if (!isOptedOut) {
+        await supabase.from("whatsapp_opt_outs").insert({
+          clinic_id: SINDICATO_CLINIC_ID,
+          phone: e164,
+          source: "user_reply",
+          reason: `keyword:${t}`,
+        });
+        return await answer(
+          [
+            "Pronto. Você não receberá mais mensagens automáticas neste número.",
+            "",
+            'Se quiser voltar a receber, é só enviar "VOLTAR A RECEBER".',
+          ].join("\n"),
+          "OPT_OUT",
+          "USER_REQUESTED_STOP",
+          null,
+        );
+      }
+      // Já estava descadastrado: silêncio total, apenas auditoria.
+      await log("SILENCED", "ALREADY_OPTED_OUT", null, "");
+      return new Response(
+        JSON.stringify({ status: "SILENCED", reason: "ALREADY_OPTED_OUT" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (isOptedOut) {
+      if (isResume) {
+        await supabase
+          .from("whatsapp_opt_outs")
+          .update({ reactivated_at: new Date().toISOString() })
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .in("phone", phoneVariants)
+          .is("reactivated_at", null);
+        return await answer(
+          'Tudo certo! Você voltou a receber nossas mensagens. Envie "MENU" para começar.',
+          "OPT_IN",
+          "USER_REQUESTED_RESUME",
+          null,
+        );
+      }
+      // Contato descadastrado: nenhuma resposta automática é enviada.
+      await log("SILENCED", "OPTED_OUT", null, "");
+      return new Response(
+        JSON.stringify({ status: "SILENCED", reason: "OPTED_OUT" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+  }
+
+
   // Telefones de empresas/escritórios podem estar com máscara; casamos pelos
   // 8 últimos dígitos, que identificam a linha independentemente da formatação.
   const last8 = (e164 ?? "").slice(-8);
