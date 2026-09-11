@@ -118,6 +118,15 @@ export default function PublicContributionValue() {
       };
 
       setContribution(contributionData);
+      setTypeId(contributionData.contribution_type_id ?? "");
+
+      // Tipos de contribuição disponíveis para escolha (link seguro)
+      const { data: typesData } = await supabase.rpc("get_public_contribution_types", {
+        p_token: decodedToken,
+      });
+      if (Array.isArray(typesData)) {
+        setTypes(typesData as any);
+      }
 
       if (contributionData.contribution_type?.default_value) {
         setValue((contributionData.contribution_type.default_value / 100).toFixed(2).replace(".", ","));
