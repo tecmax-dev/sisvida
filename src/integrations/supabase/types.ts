@@ -18539,6 +18539,48 @@ export type Database = {
           },
         ]
       }
+      whatsapp_opt_ins: {
+        Row: {
+          clinic_id: string
+          consented_at: string
+          created_at: string
+          id: string
+          phone: string
+          source: string
+        }
+        Insert: {
+          clinic_id: string
+          consented_at?: string
+          created_at?: string
+          id?: string
+          phone: string
+          source?: string
+        }
+        Update: {
+          clinic_id?: string
+          consented_at?: string
+          created_at?: string
+          id?: string
+          phone?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_opt_ins_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_opt_ins_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_opt_outs: {
         Row: {
           clinic_id: string

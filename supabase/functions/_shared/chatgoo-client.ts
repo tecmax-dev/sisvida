@@ -264,6 +264,85 @@ export async function chatgooSendListViaMeta(
   }
 }
 
+export interface ChatgooButtonsPayload {
+  body: string;
+  buttons: { id: string; title: string }[]; // máx. 3 botões, título até 20 chars
+  footer?: string;
+}
+
+/**
+ * Envia mensagem interativa com botões de resposta rápida (reply buttons) via
+ * Meta Cloud API. Usado no fluxo de consentimento (opt-in) — dentro da janela
+ * de 24h, pois é sempre resposta a uma mensagem recebida do contato.
+ */
+export async function chatgooSendButtonsViaMeta(
+  supabaseAdmin: SupabaseLike,
+  phoneE164: string,
+  payload: ChatgooButtonsPayload,
+): Promise<ChatgooSendResult> {
+  if (!chatgooSendEnabled()) {
+    return { sent: false, dry_run: true, status: null, body: null, error: null };
+  }
+
+  const windowOpen = await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  if (!windowOpen) {
+    try {
+      await supabaseAdmin.from("chatgoo_events").insert({
+        direction: "outbound",
+        event: "meta_send_buttons",
+        phone: phoneE164,
+        decision: "BLOCKED",
+        reason: "OUTSIDE_24H_WINDOW",
+        payload: { preview: payload.body.slice(0, 200) },
+      });
+    } catch { /* auditoria best-effort */ }
+    return { sent: false, dry_run: false, status: null, body: null, error: "OUTSIDE_24H_WINDOW" };
+  }
+
+  try {
+    const { data: secret } = await supabaseAdmin.rpc("get_meta_vault_secret", {
+      _secret_name: "META_WHATSAPP_TOKEN_V2",
+    });
+    const token = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
+    if (!token) {
+      return { sent: false, dry_run: false, status: null, body: null, error: "META_TOKEN_MISSING" };
+    }
+
+    const interactive: Record<string, unknown> = {
+      type: "button",
+      body: { text: payload.body.slice(0, 1024) },
+      action: {
+        buttons: payload.buttons.slice(0, 3).map((b) => ({
+          type: "reply",
+          reply: { id: b.id.slice(0, 256), title: b.title.slice(0, 20) },
+        })),
+      },
+    };
+    if (payload.footer) interactive.footer = { text: payload.footer.slice(0, 60) };
+
+    const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: phoneE164,
+        type: "interactive",
+        interactive,
+      }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      console.error(`[chatgoo/meta] envio de botões falhou [${res.status}]: ${text}`);
+      return { sent: false, dry_run: false, status: res.status, body: text, error: "META_ERROR" };
+    }
+    return { sent: true, dry_run: false, status: res.status, body: text, error: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[chatgoo/meta] erro de rede (botões): ${msg}`);
+    return { sent: false, dry_run: false, status: null, body: null, error: msg };
+  }
+}
+
 /** Transfere o atendimento para uma fila humana no ChatGoo. */
 export async function chatgooTransferToQueue(
   ticketId: string | number,
