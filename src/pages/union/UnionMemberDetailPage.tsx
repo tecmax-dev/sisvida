@@ -414,6 +414,9 @@ export default function UnionMemberDetailPage({
           // ignore
         }
 
+        const hasConsent = await loadWhatsappConsent(id);
+        loadedData.whatsappConsent = hasConsent;
+
         setFormData(loadedData);
         setInitialData(loadedData);
 
