@@ -29,6 +29,8 @@ type Intent =
   | "HOMOLOGACAO"
   | "FINANCEIRO"
   | "EMP_BOLETOS"
+  | "EMP_2VIA"
+  | "CTB_2VIA"
   | "EMP_HOMOLOGACAO"
   | "EMP_DADOS"
   | "CTB_EMPRESAS"
@@ -37,6 +39,7 @@ type Intent =
   | "MENU_EMPRESA"
   | "MENU_CONTABILIDADE"
   | "HUMANO"
+  | "SEGUNDA_VIA"
   | "MENU";
 
 function detectIntent(text: string): Intent {
@@ -52,7 +55,8 @@ function detectIntent(text: string): Intent {
   if (/(carteirinha|carteira|validade)/.test(t)) return "CARTEIRINHA";
   if (/(consulta|agendamento|marcac|horario|medic)/.test(t)) return "AGENDAMENTOS";
   if (/(homologa|rescis)/.test(t)) return "HOMOLOGACAO";
-  if (/(boleto|contribui|mensalidade|pagamento|2a via|segunda via|debito)/.test(t)) return "FINANCEIRO";
+  if (/(2a via|2 via|segunda via|reemitir|reemissao|reenviar boleto)/.test(t)) return "SEGUNDA_VIA";
+  if (/(boleto|contribui|mensalidade|pagamento|debito)/.test(t)) return "FINANCEIRO";
   if (/(cadastro|meus dados|situacao)/.test(t)) return "CADASTRO";
   return "MENU";
 }
@@ -117,13 +121,15 @@ const EMP_MENU = [
   "Atendimento à empresa:",
   "1 - Boletos e contribuições da empresa",
   "2 - Homologações da empresa",
-  "3 - Dados cadastrais da empresa",
-  "4 - Falar com um atendente",
+  "3 - Segunda via de boleto",
+  "4 - Dados cadastrais da empresa",
+  "5 - Falar com um atendente",
 ].join("\n");
 
 const EMP_LIST_ROWS = [
   { id: "OPT_EMP_BOLETOS", title: "Boletos", description: "Contribuições em aberto da empresa" },
   { id: "OPT_EMP_HOMOLOGACAO", title: "Homologações", description: "Agendamentos de rescisão" },
+  { id: "OPT_EMP_2VIA", title: "2ª via de boleto", description: "Reenviar link e código do boleto" },
   { id: "OPT_EMP_DADOS", title: "Dados cadastrais", description: "Dados da empresa no sindicato" },
   { id: "OPT_EMP_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
@@ -132,12 +138,14 @@ const CTB_MENU = [
   "Atendimento à contabilidade:",
   "1 - Empresas do escritório",
   "2 - Boletos em aberto das empresas",
-  "3 - Falar com um atendente",
+  "3 - Segunda via de boleto",
+  "4 - Falar com um atendente",
 ].join("\n");
 
 const CTB_LIST_ROWS = [
   { id: "OPT_CTB_EMPRESAS", title: "Empresas", description: "Empresas vinculadas ao escritório" },
   { id: "OPT_CTB_BOLETOS", title: "Boletos", description: "Contribuições em aberto das empresas" },
+  { id: "OPT_CTB_2VIA", title: "2ª via de boleto", description: "Reenviar link e código do boleto" },
   { id: "OPT_CTB_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
 
@@ -159,14 +167,16 @@ const ASSOC_NUMBER_MAP: Record<string, Intent> = {
 const EMP_NUMBER_MAP: Record<string, Intent> = {
   "1": "EMP_BOLETOS",
   "2": "EMP_HOMOLOGACAO",
-  "3": "EMP_DADOS",
-  "4": "HUMANO",
+  "3": "EMP_2VIA",
+  "4": "EMP_DADOS",
+  "5": "HUMANO",
 };
 
 const CTB_NUMBER_MAP: Record<string, Intent> = {
   "1": "CTB_EMPRESAS",
   "2": "CTB_BOLETOS",
-  "3": "HUMANO",
+  "3": "CTB_2VIA",
+  "4": "HUMANO",
 };
 
 // IDs das opções do menu interativo (botões/lista Meta). Quando o contato toca
@@ -183,10 +193,12 @@ const OPTION_ID_MAP: Record<string, Intent> = {
   OPT_HUMANO: "HUMANO",
   OPT_EMP_BOLETOS: "EMP_BOLETOS",
   OPT_EMP_HOMOLOGACAO: "EMP_HOMOLOGACAO",
+  OPT_EMP_2VIA: "EMP_2VIA",
   OPT_EMP_DADOS: "EMP_DADOS",
   OPT_EMP_HUMANO: "HUMANO",
   OPT_CTB_EMPRESAS: "CTB_EMPRESAS",
   OPT_CTB_BOLETOS: "CTB_BOLETOS",
+  OPT_CTB_2VIA: "CTB_2VIA",
   OPT_CTB_HUMANO: "HUMANO",
 };
 
@@ -372,8 +384,14 @@ serve(async (req) => {
   if (intent === "MENU_ASSOCIADO") profile = "ASSOCIADO";
   else if (intent === "MENU_EMPRESA") profile = "EMPRESA";
   else if (intent === "MENU_CONTABILIDADE") profile = "CONTABILIDADE";
-  else if (intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS") profile = "EMPRESA";
-  else if (intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS") profile = "CONTABILIDADE";
+  else if (
+    intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS" || intent === "EMP_2VIA"
+  ) profile = "EMPRESA";
+  else if (intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" || intent === "CTB_2VIA") profile = "CONTABILIDADE";
+  // "segunda via" genérico é resolvido pelo perfil já ativo na conversa
+  if (intent === "SEGUNDA_VIA") {
+    intent = profile === "CONTABILIDADE" ? "CTB_2VIA" : profile === "EMPRESA" ? "EMP_2VIA" : "FINANCEIRO";
+  }
   else if (
     intent === "CADASTRO" || intent === "CARTEIRINHA" || intent === "AGENDAMENTOS" ||
     intent === "HOMOLOGACAO" || intent === "FINANCEIRO"
@@ -498,7 +516,10 @@ serve(async (req) => {
   }
 
   // ===================== PERFIL: EMPRESA =====================
-  if (intent === "MENU_EMPRESA" || intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS") {
+  if (
+    intent === "MENU_EMPRESA" || intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" ||
+    intent === "EMP_DADOS" || intent === "EMP_2VIA"
+  ) {
     const empresas = await employerLookup();
     if (empresas.length === 0) {
       return await answer(
@@ -603,7 +624,10 @@ serve(async (req) => {
   }
 
   // ===================== PERFIL: CONTABILIDADE =====================
-  if (intent === "MENU_CONTABILIDADE" || intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS") {
+  if (
+    intent === "MENU_CONTABILIDADE" || intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" ||
+    intent === "CTB_2VIA"
+  ) {
     const escritorios = await accountingLookup();
     if (escritorios.length === 0) {
       return await answer(
