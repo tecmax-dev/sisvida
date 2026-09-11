@@ -1,96 +1,56 @@
-// Diagnóstico temporário: testa combinações de endpoint/auth do ChatGoo.
-// Não expõe o token; apenas status e corpo da resposta do gateway.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
 
-const cors = {
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+const META_PHONE_NUMBER_ID = "1213495528515111";
 
-  const base = (Deno.env.get("CHATGOO_BASE_URL") ?? "").replace(/\/+$/, "");
-  const token = Deno.env.get("CHATGOO_API_TOKEN") ?? "";
-  if (!base || !token) {
-    return new Response(JSON.stringify({ error: "CHATGOO_NOT_CONFIGURED", base_set: !!base, token_set: !!token }), {
-      status: 400,
-      headers: { ...cors, "Content-Type": "application/json" },
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+
+  const { data: secret } = await supabase.rpc("get_meta_vault_secret", {
+    _secret_name: "META_WHATSAPP_TOKEN_V2",
+  });
+  const token = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
+  if (!token) {
+    return new Response(JSON.stringify({ error: "META_TOKEN_MISSING" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
     });
   }
 
-  let body: Record<string, unknown> = {};
-  try {
-    body = await req.json();
-  } catch (_) { /* ignore */ }
-  const number = String(body.number ?? "5573988633535");
-  const text = String(body.message ?? "teste de integração");
+  const body = await req.json().catch(() => ({}));
+  const to = typeof body.to === "string" ? body.to : null;
 
-  // Primeiro: consultar sessões/conexões para ver o estado real da caixa.
-  const getPaths = ["/api/sessions", "/api/session", "/api/status", "/api/connections", "/api/whatsapp", "/api/instances"];
-  const diag: unknown[] = [];
-  for (const p of getPaths) {
-    try {
-      const res = await fetch(`${base}${p}`, { headers: { Authorization: `Bearer ${token}` } });
-      diag.push({ path: p, status: res.status, body: (await res.text()).slice(0, 500) });
-    } catch (e) {
-      diag.push({ path: p, error: e instanceof Error ? e.message : String(e) });
-    }
+  const infoRes = await fetch(
+    `https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}?fields=display_phone_number,verified_name,quality_rating,platform_type,throughput`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  const info = await infoRes.text();
+
+  let send: unknown = null;
+  if (to) {
+    const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "text",
+        text: { body: "Teste de entrega do atendimento automático do sindicato." },
+      }),
+    });
+    send = { status: res.status, body: await res.text() };
   }
 
-  // Tentar iniciar a sessão via API (caso a caixa precise de start no backend da API).
-  const startPaths = ["/api/session/start", "/api/sessions/start", "/api/whatsapp/start", "/api/messages/start", "/api/start"];
-  for (const p of startPaths) {
-    try {
-      const res = await fetch(`${base}${p}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      diag.push({ start: p, status: res.status, body: (await res.text()).slice(0, 300) });
-    } catch (e) {
-      diag.push({ start: p, error: e instanceof Error ? e.message : String(e) });
-    }
-  }
-
-  const payloads: Array<[string, Record<string, unknown>]> = [
-    ["number+body", { number, body: text }],
-    ["number+message", { number, message: text }],
-    ["number+body+session", { number, body: text, session: "3223-Oficial" }],
-    ["number+message+whatsapp", { number, message: text, whatsapp: "3223-Oficial" }],
-    ["jid+body", { number: `${number}@s.whatsapp.net`, body: text }],
-  ];
-  const paths = ["/api/messages/send", "/api/messages", `/api/messages/${number}`];
-  const auths: Array<[string, Record<string, string>]> = [
-    ["bearer", { Authorization: `Bearer ${token}` }],
-    ["raw", { Authorization: token }],
-    ["token-header", { token }],
-  ];
-
-  const results: unknown[] = [];
-  for (const path of paths) {
-    for (const [authName, headers] of auths) {
-      for (const [payloadName, payload] of payloads) {
-        try {
-          const res = await fetch(`${base}${path}`, {
-            method: "POST",
-            headers: { ...headers, "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          const respText = (await res.text()).slice(0, 200);
-          results.push({ path, auth: authName, payload: payloadName, status: res.status, body: respText });
-          if (res.ok) {
-            return new Response(JSON.stringify({ success: true, winner: { path, auth: authName, payload: payloadName }, diag, results }, null, 2), {
-              headers: { ...cors, "Content-Type": "application/json" },
-            });
-          }
-        } catch (e) {
-          results.push({ path, auth: authName, payload: payloadName, error: e instanceof Error ? e.message : String(e) });
-        }
-      }
-    }
-  }
-
-  return new Response(JSON.stringify({ success: false, diag, results }, null, 2), {
-    headers: { ...cors, "Content-Type": "application/json" },
+  return new Response(JSON.stringify({ phone_info: { status: infoRes.status, body: info }, send }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
