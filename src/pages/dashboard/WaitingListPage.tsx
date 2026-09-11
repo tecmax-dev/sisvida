@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { findNextFreeSlot } from "@/lib/waitingListNextSlot";
 import { FeatureGate } from "@/components/features/FeatureGate";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
@@ -124,6 +125,7 @@ function WaitingListContent() {
   const [slotTime, setSlotTime] = useState("");
   const [slotProfessionalId, setSlotProfessionalId] = useState<string>("none");
   const [slotSending, setSlotSending] = useState(false);
+  const [autoSearchId, setAutoSearchId] = useState<string | null>(null);
 
 
   // Filtros de visualização/impressão
@@ -354,10 +356,48 @@ function WaitingListContent() {
     override?: { date: string; time: string; professionalId: string | null; professionalName: string },
   ) => {
     try {
-      const slotDateValue = override?.date || entry.offered_appointment_date;
-      const slotTimeValue = override?.time || entry.offered_appointment_time;
+      let slotDateValue = override?.date || entry.offered_appointment_date;
+      let slotTimeValue = override?.time || entry.offered_appointment_time;
+      let slotProfId =
+        override?.professionalId ?? entry.offered_professional_id ?? entry.professional?.id ?? null;
+      let slotProfName =
+        override?.professionalName || entry.offered_professional_name || entry.professional?.name || "Profissional";
+
+      // Busca automática da próxima vaga livre na agenda do profissional
+      if ((!slotDateValue || !slotTimeValue) && currentClinic && slotProfId) {
+        setAutoSearchId(entry.id);
+        try {
+          const found = await findNextFreeSlot({
+            clinicId: currentClinic.id,
+            professionalId: slotProfId,
+            preferredTimes: entry.preferred_times,
+          });
+          if (found) {
+            slotDateValue = found.date;
+            slotTimeValue = found.time;
+            slotProfId = found.professionalId;
+            slotProfName = found.professionalName;
+            await supabase
+              .from("waiting_list")
+              .update({
+                offered_appointment_date: found.date,
+                offered_appointment_time: found.time,
+                offered_professional_id: found.professionalId,
+                offered_professional_name: found.professionalName,
+                slot_offered_at: new Date().toISOString(),
+              })
+              .eq("id", entry.id);
+          }
+        } finally {
+          setAutoSearchId(null);
+        }
+      }
 
       if (!slotDateValue || !slotTimeValue) {
+        toast({
+          title: "Nenhuma vaga livre encontrada",
+          description: "Não achei horário livre na agenda. Informe a vaga manualmente.",
+        });
         setSlotEntry(entry);
         setSlotDate("");
         setSlotTime("");
@@ -366,20 +406,17 @@ function WaitingListContent() {
       }
 
 
+
       const { data, error } = await supabase.functions.invoke('send-waiting-list-slot', {
         body: {
           waitingListId: entry.id,
           appointmentDate: slotDateValue,
           startTime: slotTimeValue,
-          professionalId:
-            override?.professionalId ?? entry.offered_professional_id ?? entry.professional?.id ?? null,
-          professionalName:
-            override?.professionalName ||
-            entry.offered_professional_name ||
-            entry.professional?.name ||
-            "Profissional",
+          professionalId: slotProfId,
+          professionalName: slotProfName,
         },
       });
+
 
 
       if (error) throw error;
@@ -394,7 +431,10 @@ function WaitingListContent() {
         throw new Error(map[reason] || reason || "Não foi possível enviar a mensagem.");
       }
 
-      toast({ title: "Paciente notificado via WhatsApp!" });
+      toast({
+        title: "Paciente notificado via WhatsApp!",
+        description: `Vaga ${new Date(`${slotDateValue}T12:00:00`).toLocaleDateString("pt-BR")} às ${String(slotTimeValue).slice(0, 5)} com ${slotProfName}`,
+      });
       fetchWaitingList();
     } catch (error: any) {
       toast({ 
@@ -1113,10 +1153,15 @@ function WaitingListContent() {
                       variant="ghost"
                       size="icon"
                       className="h-6.5 w-6.5"
-                      title="Notificar via WhatsApp"
+                      title="Notificar via WhatsApp (busca a vaga livre automaticamente)"
+                      disabled={autoSearchId === entry.id}
                       onClick={() => handleNotifyPatient(entry)}
                     >
-                      <Send className="h-3.5 w-3.5" />
+                      {autoSearchId === entry.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
