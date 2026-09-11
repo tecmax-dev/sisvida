@@ -334,13 +334,15 @@ serve(async (req) => {
   ).trim();
   const ticketId = body?.ticketId ?? body?.ticket?.id ?? null;
 
-  // WhatsApp entrega números BR antigos sem o 9 (12 dígitos). Reconstitui antes de validar.
+  // IMPORTANTE: o número que responde DEVE ser exatamente o wa_id recebido.
+  // Números BR antigos chegam com 12 dígitos (sem o 9). Inserir o 9 aqui cria
+  // um destino inexistente na Meta e a resposta some (silêncio no WhatsApp).
+  // O 9 só é usado como VARIANTE de busca no banco (phoneVariants).
   const digits = String(rawPhone ?? "").replace(/\D/g, "");
-  const normalizedRawPhone =
-    digits.length === 12 && digits.startsWith("55")
-      ? `${digits.slice(0, 4)}9${digits.slice(4)}`
-      : digits;
-  const { valid: phoneOk, e164 } = normalizeBrPhone(normalizedRawPhone);
+  const legacyBr = digits.length === 12 && digits.startsWith("55");
+  const base = normalizeBrPhone(digits);
+  const phoneOk = legacyBr ? true : base.valid;
+  const e164 = legacyBr ? digits : base.e164;
 
   // Quando o contato toca em um botão/opção da lista, o ChatGoo pode devolver o
   // id selecionado em formatos diferentes; cobrimos os mais comuns.
