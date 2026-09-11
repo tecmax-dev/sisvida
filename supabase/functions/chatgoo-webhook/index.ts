@@ -76,21 +76,78 @@ function fmtMoney(v: unknown): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-const MENU = [
+// Menu inicial: separa o atendimento pelo perfil de quem está falando.
+const ROOT_MENU = [
   "Olá! Sou o atendimento automático do sindicato.",
   "",
-  "Posso ajudar com:",
+  "Para começar, me diga quem é você:",
+  "1 - Sou associado",
+  "2 - Sou empresa",
+  "3 - Sou contabilidade",
+  "",
+  "Responda com o número da opção.",
+].join("\n");
+
+const ROOT_LIST_ROWS = [
+  { id: "OPT_PERFIL_ASSOCIADO", title: "Sou associado", description: "Cadastro, carteirinha, consultas e boletos" },
+  { id: "OPT_PERFIL_EMPRESA", title: "Sou empresa", description: "Contribuições, boletos e homologação" },
+  { id: "OPT_PERFIL_CONTABILIDADE", title: "Sou contabilidade", description: "Empresas do escritório e boletos" },
+];
+
+const ASSOC_MENU = [
+  "Atendimento ao associado:",
   "1 - Meu cadastro / situação",
   "2 - Carteirinha (validade)",
   "3 - Meus agendamentos",
   "4 - Homologação de rescisão",
   "5 - Boletos e contribuições",
   "6 - Falar com um atendente",
-  "",
-  "Responda com o número ou escreva o que precisa.",
 ].join("\n");
 
-const NUMBER_MAP: Record<string, Intent> = {
+const ASSOC_LIST_ROWS = [
+  { id: "OPT_CADASTRO", title: "Meu cadastro", description: "Dados e situação de associado" },
+  { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
+  { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
+  { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
+  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
+  { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
+
+const EMP_MENU = [
+  "Atendimento à empresa:",
+  "1 - Boletos e contribuições da empresa",
+  "2 - Homologações da empresa",
+  "3 - Dados cadastrais da empresa",
+  "4 - Falar com um atendente",
+].join("\n");
+
+const EMP_LIST_ROWS = [
+  { id: "OPT_EMP_BOLETOS", title: "Boletos", description: "Contribuições em aberto da empresa" },
+  { id: "OPT_EMP_HOMOLOGACAO", title: "Homologações", description: "Agendamentos de rescisão" },
+  { id: "OPT_EMP_DADOS", title: "Dados cadastrais", description: "Dados da empresa no sindicato" },
+  { id: "OPT_EMP_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
+
+const CTB_MENU = [
+  "Atendimento à contabilidade:",
+  "1 - Empresas do escritório",
+  "2 - Boletos em aberto das empresas",
+  "3 - Falar com um atendente",
+].join("\n");
+
+const CTB_LIST_ROWS = [
+  { id: "OPT_CTB_EMPRESAS", title: "Empresas", description: "Empresas vinculadas ao escritório" },
+  { id: "OPT_CTB_BOLETOS", title: "Boletos", description: "Contribuições em aberto das empresas" },
+  { id: "OPT_CTB_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
+
+const ROOT_NUMBER_MAP: Record<string, Intent> = {
+  "1": "MENU_ASSOCIADO",
+  "2": "MENU_EMPRESA",
+  "3": "MENU_CONTABILIDADE",
+};
+
+const ASSOC_NUMBER_MAP: Record<string, Intent> = {
   "1": "CADASTRO",
   "2": "CARTEIRINHA",
   "3": "AGENDAMENTOS",
@@ -99,25 +156,41 @@ const NUMBER_MAP: Record<string, Intent> = {
   "6": "HUMANO",
 };
 
+const EMP_NUMBER_MAP: Record<string, Intent> = {
+  "1": "EMP_BOLETOS",
+  "2": "EMP_HOMOLOGACAO",
+  "3": "EMP_DADOS",
+  "4": "HUMANO",
+};
+
+const CTB_NUMBER_MAP: Record<string, Intent> = {
+  "1": "CTB_EMPRESAS",
+  "2": "CTB_BOLETOS",
+  "3": "HUMANO",
+};
+
 // IDs das opções do menu interativo (botões/lista Meta). Quando o contato toca
 // em uma opção, o ChatGoo devolve o id e/ou o título da linha selecionada.
 const OPTION_ID_MAP: Record<string, Intent> = {
+  OPT_PERFIL_ASSOCIADO: "MENU_ASSOCIADO",
+  OPT_PERFIL_EMPRESA: "MENU_EMPRESA",
+  OPT_PERFIL_CONTABILIDADE: "MENU_CONTABILIDADE",
   OPT_CADASTRO: "CADASTRO",
   OPT_CARTEIRINHA: "CARTEIRINHA",
   OPT_AGENDAMENTOS: "AGENDAMENTOS",
   OPT_HOMOLOGACAO: "HOMOLOGACAO",
   OPT_FINANCEIRO: "FINANCEIRO",
   OPT_HUMANO: "HUMANO",
+  OPT_EMP_BOLETOS: "EMP_BOLETOS",
+  OPT_EMP_HOMOLOGACAO: "EMP_HOMOLOGACAO",
+  OPT_EMP_DADOS: "EMP_DADOS",
+  OPT_EMP_HUMANO: "HUMANO",
+  OPT_CTB_EMPRESAS: "CTB_EMPRESAS",
+  OPT_CTB_BOLETOS: "CTB_BOLETOS",
+  OPT_CTB_HUMANO: "HUMANO",
 };
 
-const MENU_LIST_ROWS = [
-  { id: "OPT_CADASTRO", title: "Meu cadastro", description: "Dados e situação de associado" },
-  { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
-  { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
-  { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
-  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
-  { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
-];
+type Profile = "ASSOCIADO" | "EMPRESA" | "CONTABILIDADE" | null;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
