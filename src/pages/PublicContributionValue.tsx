@@ -142,12 +142,8 @@ export default function PublicContributionValue() {
 
       // Pré-preenche com a data de vencimento atual (se ainda for futura)
       const currentDue = (contributionData.due_date || "").slice(0, 10);
-      if (currentDue) {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        if (currentDue >= todayStr) {
-          setNewDueDate(currentDue);
-        }
-      }
+      const todayStr = new Date().toISOString().slice(0, 10);
+      setNewDueDate(currentDue && currentDue >= todayStr ? currentDue : todayStr);
 
       if (contributionData.status !== "awaiting_value" && contributionData.lytex_invoice_url) {
         setSuccess(true);
