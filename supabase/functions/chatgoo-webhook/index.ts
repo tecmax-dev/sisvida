@@ -496,5 +496,5 @@ serve(async (req) => {
     );
   }
 
-  return await answer(`Olá, ${first}!\n\n${MENU}`, "ANSWERED", null, patient.id);
+  return await answerMenu(first, patient.id);
 });
