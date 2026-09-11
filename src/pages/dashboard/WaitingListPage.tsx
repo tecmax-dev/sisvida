@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { findNextFreeSlot } from "@/lib/waitingListNextSlot";
 import { FeatureGate } from "@/components/features/FeatureGate";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
@@ -124,6 +125,7 @@ function WaitingListContent() {
   const [slotTime, setSlotTime] = useState("");
   const [slotProfessionalId, setSlotProfessionalId] = useState<string>("none");
   const [slotSending, setSlotSending] = useState(false);
+  const [autoSearchId, setAutoSearchId] = useState<string | null>(null);
 
 
   // Filtros de visualização/impressão
@@ -429,7 +431,10 @@ function WaitingListContent() {
         throw new Error(map[reason] || reason || "Não foi possível enviar a mensagem.");
       }
 
-      toast({ title: "Paciente notificado via WhatsApp!" });
+      toast({
+        title: "Paciente notificado via WhatsApp!",
+        description: `Vaga ${new Date(`${slotDateValue}T12:00:00`).toLocaleDateString("pt-BR")} às ${String(slotTimeValue).slice(0, 5)} com ${slotProfName}`,
+      });
       fetchWaitingList();
     } catch (error: any) {
       toast({ 
@@ -1148,10 +1153,15 @@ function WaitingListContent() {
                       variant="ghost"
                       size="icon"
                       className="h-6.5 w-6.5"
-                      title="Notificar via WhatsApp"
+                      title="Notificar via WhatsApp (busca a vaga livre automaticamente)"
+                      disabled={autoSearchId === entry.id}
                       onClick={() => handleNotifyPatient(entry)}
                     >
-                      <Send className="h-3.5 w-3.5" />
+                      {autoSearchId === entry.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
