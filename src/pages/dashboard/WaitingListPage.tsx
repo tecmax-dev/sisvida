@@ -345,22 +345,37 @@ function WaitingListContent() {
 
   const handleNotifyPatient = async (entry: WaitingListEntry) => {
     try {
-      // Call the WhatsApp edge function
-      const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+      if (!entry.offered_appointment_date || !entry.offered_appointment_time) {
+        toast({
+          title: "Sem vaga definida",
+          description: "Defina a data e o horário da vaga antes de avisar pelo WhatsApp.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-waiting-list-slot', {
         body: {
-          phone: entry.patient.phone,
-          message: `Olá ${entry.patient.name}! 👋\n\nTemos uma vaga disponível para você! Entre em contato conosco para agendar sua consulta.\n\nClínica: ${currentClinic?.name}`,
-          clinicId: currentClinic?.id,
+          waitingListId: entry.id,
+          appointmentDate: entry.offered_appointment_date,
+          startTime: entry.offered_appointment_time,
+          professionalId: entry.offered_professional_id ?? entry.professional_id ?? null,
+          professionalName:
+            entry.offered_professional_name || entry.professional?.name || "Profissional",
         },
       });
 
       if (error) throw error;
-
-      // Update notified_at
-      await supabase
-        .from('waiting_list')
-        .update({ notified_at: new Date().toISOString() })
-        .eq('id', entry.id);
+      if (!(data as any)?.ok) {
+        const reason = (data as any)?.reason;
+        const map: Record<string, string> = {
+          NO_CONSENT: "Paciente ainda não autorizou receber mensagens no WhatsApp.",
+          OPT_OUT: "Paciente pediu para não receber mensagens.",
+          INVALID_PHONE: "Telefone inválido no cadastro.",
+          TEMPLATE_NOT_APPROVED: "O modelo oficial não pôde ser enviado agora.",
+        };
+        throw new Error(map[reason] || reason || "Não foi possível enviar a mensagem.");
+      }
 
       toast({ title: "Paciente notificado via WhatsApp!" });
       fetchWaitingList();
@@ -372,6 +387,7 @@ function WaitingListContent() {
       });
     }
   };
+
 
   const handleSchedulePatient = async (entry: WaitingListEntry) => {
     return _handleSchedulePatient(entry);
