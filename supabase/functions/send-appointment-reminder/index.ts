@@ -73,7 +73,16 @@ serve(async (req) => {
   const professional: any = appt.professional;
   const displayName = String(dependent?.name || patient?.name || "Associado");
   const { valid, e164 } = normalizeBrPhone(patient?.phone);
-  if (!valid || !e164) return json({ ok: false, blocked: true, reason: "INVALID_PHONE", build: BUILD });
+  if (!valid || !e164) {
+    // Bloqueio explícito: evento sem telefone válido nunca deve ser enviado nem
+    // contabilizado como tentativa — fail-closed com auditoria.
+    await admin.from("whatsapp_compliance_logs").insert({
+      intent: "APPOINTMENT_REMINDER",
+      decision: "BLOCKED",
+      metadata: { build: BUILD, appointment_id: appt.id, reason: "NO_VALID_PHONE" },
+    });
+    return json({ ok: false, blocked: true, reason: "INVALID_PHONE", build: BUILD });
+  }
 
   // Opt-out da clínica tem precedência absoluta
   const { data: optOut } = await admin
@@ -124,7 +133,7 @@ serve(async (req) => {
     { type: "text", text: String(professional?.name || "Profissional") },
   ];
 
-  const send = async (templateName: string, withButton: boolean) => {
+  const sendOnce = async (templateName: string, withButton: boolean) => {
     const components: unknown[] = [{ type: "body", parameters: bodyParams }];
     if (withButton) {
       components.push({ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: token }] });
@@ -140,41 +149,71 @@ serve(async (req) => {
         template: { name: templateName, language: { code: "pt_BR" }, components },
       }),
     });
-    return { res, result: await res.json().catch(() => ({})) };
+    let result: any = {};
+    try { result = await res.json(); } catch { result = {}; }
+    return { res, result };
   };
 
   // Uso exclusivo do template oficial criado (lembrete_consulta_v4).
   // Enquanto não estiver aprovado pela Meta, o envio é bloqueado (fail-closed), sem fallback.
   const templateUsed = TEMPLATE_NAME;
-  const { res, result } = await send(TEMPLATE_NAME, true);
+  const MAX_ATTEMPTS = 3;
+  let res: Response | null = null;
+  let result: any = {};
+  let attemptsUsed = 0;
 
-  if (!res.ok) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    attemptsUsed = attempt;
+    const outcome = await sendOnce(TEMPLATE_NAME, true);
+    res = outcome.res;
+    result = outcome.result;
+
+    if (res.ok) break;
+
+    // Erros de validação/parâmetro/autorização (4xx, exceto 429) não melhoram
+    // com nova tentativa — repetir só em indisponibilidade/limite temporário.
+    if (res.status !== 429 && res.status < 500) break;
+
+    if (attempt < MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+    }
+  }
+
+  if (!res) {
+    return json({ ok: false, error: "SEND_NO_RESPONSE", build: BUILD }, 500);
+  }
+
+  // Confirmação REAL de envio: a Meta só retorna sucesso com um message id
+  // presente em messages[0].id. Sem isso, mesmo com HTTP 200 não é sucesso —
+  // evita o "falso sucesso" de marcar reminder_sent sem confirmação da Meta.
+  const metaMessageId: string | null = result?.messages?.[0]?.id ?? null;
+  const confirmedSent = res.ok && !!metaMessageId;
+
+  if (!confirmedSent) {
     await admin.from("whatsapp_compliance_logs").insert({
       intent: "APPOINTMENT_REMINDER",
-      decision: "TEMPLATE_NOT_AVAILABLE",
-      metadata: { build: BUILD, appointment_id: appt.id, template: templateUsed, http: res.status, response: result },
+      decision: res.ok ? "SENT_UNCONFIRMED" : "TEMPLATE_NOT_AVAILABLE",
+      metadata: { build: BUILD, appointment_id: appt.id, template: templateUsed, http: res.status, response: result, attempts: attemptsUsed },
     });
     return json({
       ok: false,
       blocked: true,
-      reason: "TEMPLATE_NOT_APPROVED",
+      reason: res.ok ? "SEND_NOT_CONFIRMED" : "TEMPLATE_NOT_APPROVED",
       template: templateUsed,
       http: res.status,
       result,
+      attempts: attemptsUsed,
       build: BUILD,
     }, 200);
   }
 
-
   await admin.from("whatsapp_compliance_logs").insert({
     intent: "APPOINTMENT_REMINDER",
-    decision: res.ok ? "SENT" : "SEND_FAILED",
-    metadata: { build: BUILD, appointment_id: appt.id, template: templateUsed, http: res.status, response: result },
+    decision: "SENT",
+    metadata: { build: BUILD, appointment_id: appt.id, template: templateUsed, http: res.status, response: result, message_id: metaMessageId, attempts: attemptsUsed },
   });
 
-  if (res.ok) {
-    await admin.from("appointments").update({ reminder_sent: true }).eq("id", appt.id);
-  }
+  await admin.from("appointments").update({ reminder_sent: true }).eq("id", appt.id);
 
-  return json({ ok: res.ok, http: res.status, template: templateUsed, result, build: BUILD });
+  return json({ ok: true, http: res.status, template: templateUsed, result, message_id: metaMessageId, attempts: attemptsUsed, build: BUILD });
 });
