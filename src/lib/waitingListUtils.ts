@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 interface CancelledSlot {
   appointmentDate: string;
