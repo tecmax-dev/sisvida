@@ -98,10 +98,7 @@ export default function PublicContributionValue() {
         return;
       }
 
-      const [employerResult, contributionTypeResult, clinicResult] = await Promise.all([
-        baseContribution.employer_id
-          ? supabase.from("employers").select("id, name, cnpj").eq("id", baseContribution.employer_id).maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
+      const [contributionTypeResult, clinicResult] = await Promise.all([
         baseContribution.contribution_type_id
           ? supabase.from("contribution_types").select("name, default_value").eq("id", baseContribution.contribution_type_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -112,7 +109,14 @@ export default function PublicContributionValue() {
 
       const contributionData: ContributionData = {
         ...baseContribution,
-        employer: employerResult.data ?? null,
+        // Empresa vem do RPC seguro (público não tem acesso direto à tabela de empresas)
+        employer: baseContribution.employer_name || baseContribution.employer_cnpj
+          ? {
+              id: baseContribution.employer_id ?? "",
+              name: baseContribution.employer_name ?? "",
+              cnpj: baseContribution.employer_cnpj ?? "",
+            }
+          : null,
         contribution_type: contributionTypeResult.data ?? null,
         clinic: clinicResult.data ?? null,
       };
