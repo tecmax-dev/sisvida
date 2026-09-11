@@ -488,6 +488,225 @@ serve(async (req) => {
     );
   }
 
+  // MENU INICIAL: separa o atendimento por perfil (associado, empresa, contabilidade)
+  if (intent === "MENU") {
+    return await answerMenu(
+      "ROOT",
+      "Olá! Sou o atendimento automático do sindicato. Para começar, me diga quem é você:",
+      null,
+    );
+  }
+
+  // ===================== PERFIL: EMPRESA =====================
+  if (intent === "MENU_EMPRESA" || intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS") {
+    const empresas = await employerLookup();
+    if (empresas.length === 0) {
+      return await answer(
+        "Não localizei uma empresa cadastrada com este número. Vou encaminhar para um atendente confirmar os dados.",
+        "HANDOFF",
+        "EMPLOYER_NOT_FOUND",
+        null,
+      );
+    }
+    if (empresas.length > 1) {
+      return await answer(
+        "Encontrei mais de uma empresa com este número. Por segurança, vou encaminhar para um atendente.",
+        "HANDOFF",
+        "AMBIGUOUS_EMPLOYER_MATCH",
+        null,
+      );
+    }
+    const empresa = empresas[0];
+    const nomeEmpresa = empresa.trade_name || empresa.name || "Empresa";
+
+    if (intent === "MENU_EMPRESA") {
+      return await answerMenu("EMPRESA", `Olá, ${nomeEmpresa}! Escolha uma opção:`, null);
+    }
+
+    if (intent === "EMP_DADOS") {
+      return await answer(
+        [
+          `Dados da empresa no sindicato:`,
+          `• Razão social: ${empresa.name ?? "-"}`,
+          `• CNPJ: ${empresa.cnpj ?? "-"}`,
+          empresa.city ? `• Cidade: ${empresa.city}/${empresa.state ?? "-"}` : null,
+          empresa.email ? `• E-mail: ${empresa.email}` : null,
+          "",
+          "Para alterar dados, responda \"atendente\".",
+        ].filter(Boolean).join("\n"),
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    if (intent === "EMP_BOLETOS") {
+      const { data: contribs } = await supabase
+        .from("employer_contributions")
+        .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url")
+        .eq("employer_id", empresa.id)
+        .in("status", ["pending", "overdue", "awaiting_value"])
+        .order("due_date", { ascending: true })
+        .limit(5);
+
+      if (!contribs || contribs.length === 0) {
+        return await answer(
+          `${nomeEmpresa}, não encontrei contribuições em aberto.`,
+          "ANSWERED",
+          null,
+          null,
+        );
+      }
+      const linhas = contribs.map((c: any) => {
+        const comp = c.competence_month && c.competence_year
+          ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+          : "-";
+        return `• ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}${c.lytex_invoice_url ? `\n  ${c.lytex_invoice_url}` : ""}`;
+      });
+      return await answer(
+        [`${nomeEmpresa}, contribuições em aberto:`, ...linhas, "", "Dúvidas? Responda \"atendente\"."].join("\n"),
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    // EMP_HOMOLOGACAO
+    const cnpjDigits = String(empresa.cnpj ?? "").replace(/\D/g, "");
+    const { data: homs } = await supabase
+      .from("homologacao_appointments")
+      .select("protocol_number,appointment_date,start_time,status,employee_name")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .eq("company_cnpj", cnpjDigits)
+      .order("appointment_date", { ascending: false })
+      .limit(5);
+
+    if (!homs || homs.length === 0) {
+      return await answer(
+        `${nomeEmpresa}, não encontrei homologações registradas para este CNPJ.`,
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+    return await answer(
+      [
+        `${nomeEmpresa}, homologações registradas:`,
+        ...homs.map((h: any) =>
+          `• ${fmtDate(h.appointment_date)} às ${String(h.start_time).slice(0, 5)} — ${h.employee_name ?? "-"} (protocolo ${h.protocol_number ?? "-"})`
+        ),
+      ].join("\n"),
+      "ANSWERED",
+      null,
+      null,
+    );
+  }
+
+  // ===================== PERFIL: CONTABILIDADE =====================
+  if (intent === "MENU_CONTABILIDADE" || intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS") {
+    const escritorios = await accountingLookup();
+    if (escritorios.length === 0) {
+      return await answer(
+        "Não localizei um escritório de contabilidade com este número. Vou encaminhar para um atendente.",
+        "HANDOFF",
+        "ACCOUNTING_NOT_FOUND",
+        null,
+      );
+    }
+    if (escritorios.length > 1) {
+      return await answer(
+        "Encontrei mais de um escritório com este número. Por segurança, vou encaminhar para um atendente.",
+        "HANDOFF",
+        "AMBIGUOUS_ACCOUNTING_MATCH",
+        null,
+      );
+    }
+    const escritorio = escritorios[0];
+    const nomeEscritorio = escritorio.trade_name || escritorio.name || "Escritório";
+
+    if (intent === "MENU_CONTABILIDADE") {
+      return await answerMenu("CONTABILIDADE", `Olá, ${nomeEscritorio}! Escolha uma opção:`, null);
+    }
+
+    const { data: vinculos } = await supabase
+      .from("accounting_office_employers")
+      .select("employer_id")
+      .eq("accounting_office_id", escritorio.id);
+    const employerIds = (vinculos ?? []).map((v: any) => v.employer_id).filter(Boolean);
+
+    if (employerIds.length === 0) {
+      return await answer(
+        `${nomeEscritorio}, não encontrei empresas vinculadas ao escritório.`,
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    const { data: empresasVinculadas } = await supabase
+      .from("employers")
+      .select("id,name,trade_name,cnpj")
+      .in("id", employerIds)
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .order("name", { ascending: true })
+      .limit(200);
+
+    if (intent === "CTB_EMPRESAS") {
+      const lista = (empresasVinculadas ?? []).slice(0, 10).map(
+        (e: any) => `• ${e.trade_name || e.name} — ${e.cnpj ?? "-"}`,
+      );
+      const total = (empresasVinculadas ?? []).length;
+      return await answer(
+        [
+          `${nomeEscritorio}, empresas vinculadas (${total}):`,
+          ...lista,
+          total > 10 ? `... e mais ${total - 10} empresa(s). Acesse o portal da contabilidade para ver todas.` : null,
+        ].filter(Boolean).join("\n"),
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    // CTB_BOLETOS
+    const nameById = new Map((empresasVinculadas ?? []).map((e: any) => [e.id, e.trade_name || e.name]));
+    const { data: abertos } = await supabase
+      .from("employer_contributions")
+      .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
+      .in("employer_id", employerIds)
+      .in("status", ["pending", "overdue", "awaiting_value"])
+      .order("due_date", { ascending: true })
+      .limit(10);
+
+    if (!abertos || abertos.length === 0) {
+      return await answer(
+        `${nomeEscritorio}, não encontrei contribuições em aberto nas empresas do escritório.`,
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+    const totalAberto = abertos.reduce((s: number, c: any) => s + Number(c.value ?? 0), 0);
+    const linhas = abertos.map((c: any) => {
+      const comp = c.competence_month && c.competence_year
+        ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+        : "-";
+      return `• ${nameById.get(c.employer_id) ?? "Empresa"} — ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}${c.lytex_invoice_url ? `\n  ${c.lytex_invoice_url}` : ""}`;
+    });
+    return await answer(
+      [
+        `${nomeEscritorio}, contribuições em aberto (mostrando até 10):`,
+        ...linhas,
+        "",
+        `Total listado: ${fmtMoney(totalAberto)}`,
+      ].join("\n"),
+      "ANSWERED",
+      null,
+      null,
+    );
+  }
+
+  // ===================== PERFIL: ASSOCIADO =====================
   // Identificação escopada ao tenant do sindicato
   const { data: candidates } = await supabase
     .from("patients")
