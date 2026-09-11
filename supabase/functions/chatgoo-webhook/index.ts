@@ -166,8 +166,7 @@ const ASSOC_NUMBER_MAP: Record<string, Intent> = {
   "2": "CARTEIRINHA",
   "3": "AGENDAMENTOS",
   "4": "HOMOLOGACAO",
-  "5": "FINANCEIRO",
-  "6": "HUMANO",
+  "5": "HUMANO",
 };
 
 const EMP_NUMBER_MAP: Record<string, Intent> = {
