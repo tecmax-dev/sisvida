@@ -49,17 +49,31 @@ export async function chatgooSendText(
   if (opts.queueId != null) payload.queueId = opts.queueId;
 
   try {
-    const res = await fetch(`${url}/api/messages/send`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    const text = await res.text();
+    const doSend = () =>
+      fetch(`${url}/api/messages/send`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+    let res = await doSend();
+    let text = await res.text();
+
+    // ChatGoo rotaciona o token da conexão: ao responder
+    // "Invalid token. We'll try to assign a new one on next request",
+    // uma nova tentativa imediata usa o token recém-atribuído no servidor.
+    if (res.status === 401 && /invalid token/i.test(text)) {
+      console.warn("[chatgoo] 401 invalid token — retentando uma vez (rotação de token)");
+      res = await doSend();
+      text = await res.text();
+    }
+
     if (!res.ok) {
-      console.error(`[chatgoo] envio falhou [${res.status}]: ${text}`);
+      const newToken = res.headers.get("x-new-token") ?? res.headers.get("x-api-token") ?? null;
+      console.error(`[chatgoo] envio falhou [${res.status}]: ${text}${newToken ? " | header novo token presente" : ""}`);
       return { sent: false, dry_run: false, status: res.status, body: text, error: "GATEWAY_ERROR" };
     }
     return { sent: true, dry_run: false, status: res.status, body: text, error: null };
