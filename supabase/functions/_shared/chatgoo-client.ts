@@ -114,17 +114,26 @@ async function isWithinSessionWindow(
   }
 }
 
+/**
+ * `opts.inboundNow` = true quando o envio é resposta imediata a uma mensagem
+ * recebida agora do contato. Nesse caso a janela de 24h está aberta por
+ * definição (a própria mensagem do contato a abriu), mesmo que o evento ainda
+ * não esteja gravado — caso típico de um número entrando em contato pela
+ * primeira vez.
+ */
 export async function chatgooSendTextViaMeta(
   supabaseAdmin: SupabaseLike,
   phoneE164: string,
   message: string,
+  opts?: { inboundNow?: boolean },
 ): Promise<ChatgooSendResult> {
   if (!chatgooSendEnabled()) {
     return { sent: false, dry_run: true, status: null, body: null, error: null };
   }
 
   // Trava de compliance: fora da janela de 24h, bloqueia e registra auditoria.
-  const windowOpen = await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  const windowOpen = opts?.inboundNow === true ||
+    await isWithinSessionWindow(supabaseAdmin, phoneE164);
   if (!windowOpen) {
     try {
       await supabaseAdmin.from("chatgoo_events").insert({
@@ -193,12 +202,14 @@ export async function chatgooSendListViaMeta(
   supabaseAdmin: SupabaseLike,
   phoneE164: string,
   list: ChatgooListPayload,
+  opts?: { inboundNow?: boolean },
 ): Promise<ChatgooSendResult> {
   if (!chatgooSendEnabled()) {
     return { sent: false, dry_run: true, status: null, body: null, error: null };
   }
 
-  const windowOpen = await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  const windowOpen = opts?.inboundNow === true ||
+    await isWithinSessionWindow(supabaseAdmin, phoneE164);
   if (!windowOpen) {
     try {
       await supabaseAdmin.from("chatgoo_events").insert({
@@ -279,12 +290,14 @@ export async function chatgooSendButtonsViaMeta(
   supabaseAdmin: SupabaseLike,
   phoneE164: string,
   payload: ChatgooButtonsPayload,
+  opts?: { inboundNow?: boolean },
 ): Promise<ChatgooSendResult> {
   if (!chatgooSendEnabled()) {
     return { sent: false, dry_run: true, status: null, body: null, error: null };
   }
 
-  const windowOpen = await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  const windowOpen = opts?.inboundNow === true ||
+    await isWithinSessionWindow(supabaseAdmin, phoneE164);
   if (!windowOpen) {
     try {
       await supabaseAdmin.from("chatgoo_events").insert({
