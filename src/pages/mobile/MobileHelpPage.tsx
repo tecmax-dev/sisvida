@@ -35,7 +35,7 @@ const defaultContent: HelpContentData = {
   address: "Rua do Sindicato, 123 - Centro",
   city_state: "São Paulo - SP",
   cep: "01310-000",
-  phone: "(73) 3231-1784",
+  phone: "(73) 3223-9980",
   whatsapp: "(73) 3223-9980",
   email: "contato@sindicato.org.br",
   weekday_hours: "08:00 - 17:00",

@@ -316,8 +316,8 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       toast({
         title: cpfExistsType === 'paciente' ? "Você já é associado(a)" : "CPF já cadastrado",
         description: cpfExistsType === 'paciente' 
-          ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3231-1784."
-          : "Este CPF já possui uma solicitação de filiação. Entre em contato com o sindicato pelo (73) 3231-1784.",
+          ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3223-9980."
+          : "Este CPF já possui uma solicitação de filiação. Entre em contato com o sindicato pelo (73) 3223-9980.",
         variant: "destructive",
       });
       return;
@@ -610,11 +610,11 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                         : "Este CPF já possui uma solicitação de filiação em análise. Entre em contato com o sindicato para mais informações."}
                     </p>
                     <a 
-                      href="tel:7332311784"
+                      href="tel:7332239980"
                       className="inline-flex items-center gap-2 text-sm font-medium text-amber-800 hover:text-amber-900"
                     >
                       <Phone className="h-4 w-4" />
-                      (73) 3231-1784
+                      (73) 3223-9980
                     </a>
                   </div>
                 </div>
