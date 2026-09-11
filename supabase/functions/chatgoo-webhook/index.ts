@@ -13,6 +13,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
+  chatgooSendListViaMeta,
   chatgooSendTextViaMeta,
   chatgooTransferToQueue,
   verifyChatgooSignature,
@@ -85,6 +86,26 @@ const NUMBER_MAP: Record<string, Intent> = {
   "5": "FINANCEIRO",
   "6": "HUMANO",
 };
+
+// IDs das opções do menu interativo (botões/lista Meta). Quando o contato toca
+// em uma opção, o ChatGoo devolve o id e/ou o título da linha selecionada.
+const OPTION_ID_MAP: Record<string, Intent> = {
+  OPT_CADASTRO: "CADASTRO",
+  OPT_CARTEIRINHA: "CARTEIRINHA",
+  OPT_AGENDAMENTOS: "AGENDAMENTOS",
+  OPT_HOMOLOGACAO: "HOMOLOGACAO",
+  OPT_FINANCEIRO: "FINANCEIRO",
+  OPT_HUMANO: "HUMANO",
+};
+
+const MENU_LIST_ROWS = [
+  { id: "OPT_CADASTRO", title: "Meu cadastro", description: "Dados e situação de associado" },
+  { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
+  { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
+  { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
+  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
+  { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -212,7 +233,25 @@ serve(async (req) => {
       ? `${digits.slice(0, 4)}9${digits.slice(4)}`
       : digits;
   const { valid: phoneOk, e164 } = normalizeBrPhone(normalizedRawPhone);
-  const intent: Intent = NUMBER_MAP[text] ?? detectIntent(text);
+
+  // Quando o contato toca em um botão/opção da lista, o ChatGoo pode devolver o
+  // id selecionado em formatos diferentes; cobrimos os mais comuns.
+  const selectedId = String(
+    body?.selectedId ??
+      body?.selectedRowId ??
+      body?.message?.selectedId ??
+      body?.message?.selectedRowId ??
+      body?.message?.listResponse?.id ??
+      body?.message?.buttonReply?.id ??
+      body?.message?.interactive?.list_reply?.id ??
+      body?.message?.interactive?.button_reply?.id ??
+      body?.rawMsg?.message?.listResponseMessage?.singleSelectReply?.selectedRowId ??
+      body?.rawMsg?.message?.buttonsResponseMessage?.selectedButtonId ??
+      "",
+  ).trim();
+
+  const intent: Intent =
+    OPTION_ID_MAP[selectedId] ?? NUMBER_MAP[text] ?? detectIntent(text);
 
   const log = async (decision: string, reason: string | null, patientId: string | null, reply: string) => {
     await supabase.from("chatgoo_events").insert({
@@ -239,6 +278,26 @@ serve(async (req) => {
     await log(decision, reason, patientId, reply);
     return new Response(
       JSON.stringify({ status: decision, intent, dry_run: result.dry_run, reply }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  };
+
+  // Menu com botões (lista interativa Meta). Se o envio da lista falhar por
+  // erro da Meta, cai no menu numerado em texto como reserva.
+  const answerMenu = async (first: string, patientId: string | null) => {
+    const bodyText = `Olá, ${first}! Sou o atendimento automático do sindicato. Escolha uma opção:`;
+    const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
+      body: bodyText,
+      buttonLabel: "Ver opções",
+      footer: "Toque em uma opção",
+      sections: [{ title: "Como posso ajudar?", rows: MENU_LIST_ROWS }],
+    });
+    if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
+      await chatgooSendTextViaMeta(supabase, e164 ?? "", `Olá, ${first}!\n\n${MENU}`);
+    }
+    await log("ANSWERED", null, patientId, bodyText);
+    return new Response(
+      JSON.stringify({ status: "ANSWERED", intent: "MENU", dry_run: result.dry_run, reply: bodyText }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   };
@@ -299,7 +358,7 @@ serve(async (req) => {
   const first = String(patient.name ?? "").split(" ")[0];
 
   if (intent === "MENU") {
-    return await answer(`Olá, ${first}!\n\n${MENU}`, "ANSWERED", null, patient.id);
+    return await answerMenu(first, patient.id);
   }
 
   if (intent === "CADASTRO") {
@@ -437,5 +496,5 @@ serve(async (req) => {
     );
   }
 
-  return await answer(`Olá, ${first}!\n\n${MENU}`, "ANSWERED", null, patient.id);
+  return await answerMenu(first, patient.id);
 });

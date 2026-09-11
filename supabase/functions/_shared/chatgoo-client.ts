@@ -171,6 +171,99 @@ export async function chatgooSendTextViaMeta(
   }
 }
 
+// ---- MENSAGEM INTERATIVA (BOTÕES/LISTA) ----
+// Lista interativa é "session message": permitida pela Meta DENTRO da janela de
+// 24h, igual ao texto livre. Mesma trava fail-closed de janela aplicada acima.
+// Limites Meta: título de linha <= 24 chars, botão <= 20 chars, <= 10 linhas.
+export interface ChatgooListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface ChatgooListPayload {
+  body: string;
+  buttonLabel: string; // ex.: "Ver opções"
+  sections: { title?: string; rows: ChatgooListRow[] }[];
+  header?: string;
+  footer?: string;
+}
+
+export async function chatgooSendListViaMeta(
+  supabaseAdmin: SupabaseLike,
+  phoneE164: string,
+  list: ChatgooListPayload,
+): Promise<ChatgooSendResult> {
+  if (!chatgooSendEnabled()) {
+    return { sent: false, dry_run: true, status: null, body: null, error: null };
+  }
+
+  const windowOpen = await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  if (!windowOpen) {
+    try {
+      await supabaseAdmin.from("chatgoo_events").insert({
+        direction: "outbound",
+        event: "meta_send_list",
+        phone: phoneE164,
+        decision: "BLOCKED",
+        reason: "OUTSIDE_24H_WINDOW",
+        payload: { preview: list.body.slice(0, 200) },
+      });
+    } catch { /* auditoria best-effort */ }
+    console.error(`[chatgoo/meta] LISTA bloqueada fora da janela de 24h: ${phoneE164}`);
+    return { sent: false, dry_run: false, status: null, body: null, error: "OUTSIDE_24H_WINDOW" };
+  }
+
+  try {
+    const { data: secret } = await supabaseAdmin.rpc("get_meta_vault_secret", {
+      _secret_name: "META_WHATSAPP_TOKEN_V2",
+    });
+    const token = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
+    if (!token) {
+      return { sent: false, dry_run: false, status: null, body: null, error: "META_TOKEN_MISSING" };
+    }
+
+    const interactive: Record<string, unknown> = {
+      type: "list",
+      body: { text: list.body.slice(0, 1024) },
+      action: {
+        button: list.buttonLabel.slice(0, 20),
+        sections: list.sections.map((s) => ({
+          ...(s.title ? { title: s.title.slice(0, 24) } : {}),
+          rows: s.rows.slice(0, 10).map((r) => ({
+            id: r.id.slice(0, 200),
+            title: r.title.slice(0, 24),
+            ...(r.description ? { description: r.description.slice(0, 72) } : {}),
+          })),
+        })),
+      },
+    };
+    if (list.header) interactive.header = { type: "text", text: list.header.slice(0, 60) };
+    if (list.footer) interactive.footer = { text: list.footer.slice(0, 60) };
+
+    const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: phoneE164,
+        type: "interactive",
+        interactive,
+      }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      console.error(`[chatgoo/meta] envio de lista falhou [${res.status}]: ${text}`);
+      return { sent: false, dry_run: false, status: res.status, body: text, error: "META_ERROR" };
+    }
+    return { sent: true, dry_run: false, status: res.status, body: text, error: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[chatgoo/meta] erro de rede (lista): ${msg}`);
+    return { sent: false, dry_run: false, status: null, body: null, error: msg };
+  }
+}
+
 /** Transfere o atendimento para uma fila humana no ChatGoo. */
 export async function chatgooTransferToQueue(
   ticketId: string | number,
