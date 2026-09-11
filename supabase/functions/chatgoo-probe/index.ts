@@ -25,9 +25,39 @@ Deno.serve(async (req) => {
   const number = String(body.number ?? "5573988633535");
   const text = String(body.message ?? "teste de integração");
 
+  // Primeiro: consultar sessões/conexões para ver o estado real da caixa.
+  const getPaths = ["/api/sessions", "/api/session", "/api/status", "/api/connections", "/api/whatsapp", "/api/instances"];
+  const diag: unknown[] = [];
+  for (const p of getPaths) {
+    try {
+      const res = await fetch(`${base}${p}`, { headers: { Authorization: `Bearer ${token}` } });
+      diag.push({ path: p, status: res.status, body: (await res.text()).slice(0, 500) });
+    } catch (e) {
+      diag.push({ path: p, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  // Tentar iniciar a sessão via API (caso a caixa precise de start no backend da API).
+  const startPaths = ["/api/session/start", "/api/sessions/start", "/api/whatsapp/start", "/api/messages/start", "/api/start"];
+  for (const p of startPaths) {
+    try {
+      const res = await fetch(`${base}${p}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      diag.push({ start: p, status: res.status, body: (await res.text()).slice(0, 300) });
+    } catch (e) {
+      diag.push({ start: p, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
   const payloads: Array<[string, Record<string, unknown>]> = [
     ["number+body", { number, body: text }],
     ["number+message", { number, message: text }],
+    ["number+body+session", { number, body: text, session: "3223-Oficial" }],
+    ["number+message+whatsapp", { number, message: text, whatsapp: "3223-Oficial" }],
+    ["jid+body", { number: `${number}@s.whatsapp.net`, body: text }],
   ];
   const paths = ["/api/messages/send", "/api/messages", `/api/messages/${number}`];
   const auths: Array<[string, Record<string, string>]> = [
@@ -49,7 +79,7 @@ Deno.serve(async (req) => {
           const respText = (await res.text()).slice(0, 200);
           results.push({ path, auth: authName, payload: payloadName, status: res.status, body: respText });
           if (res.ok) {
-            return new Response(JSON.stringify({ success: true, winner: { path, auth: authName, payload: payloadName }, results }, null, 2), {
+            return new Response(JSON.stringify({ success: true, winner: { path, auth: authName, payload: payloadName }, diag, results }, null, 2), {
               headers: { ...cors, "Content-Type": "application/json" },
             });
           }
@@ -60,7 +90,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ success: false, results }, null, 2), {
+  return new Response(JSON.stringify({ success: false, diag, results }, null, 2), {
     headers: { ...cors, "Content-Type": "application/json" },
   });
 });
