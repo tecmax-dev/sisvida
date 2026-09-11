@@ -108,8 +108,7 @@ const ASSOC_MENU = [
   "2 - Carteirinha (validade)",
   "3 - Meus agendamentos",
   "4 - Homologação de rescisão",
-  "5 - Boletos e contribuições",
-  "6 - Falar com um atendente",
+  "5 - Falar com um atendente",
 ].join("\n");
 
 const ASSOC_LIST_ROWS = [
@@ -117,7 +116,6 @@ const ASSOC_LIST_ROWS = [
   { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
   { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
   { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
-  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
   { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
 
