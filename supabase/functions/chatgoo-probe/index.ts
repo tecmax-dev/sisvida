@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
           const respText = (await res.text()).slice(0, 200);
           results.push({ path, auth: authName, payload: payloadName, status: res.status, body: respText });
           if (res.ok) {
-            return new Response(JSON.stringify({ success: true, winner: { path, auth: authName, payload: payloadName }, results }, null, 2), {
+            return new Response(JSON.stringify({ success: true, winner: { path, auth: authName, payload: payloadName }, diag, results }, null, 2), {
               headers: { ...cors, "Content-Type": "application/json" },
             });
           }
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ success: false, results }, null, 2), {
+  return new Response(JSON.stringify({ success: false, diag, results }, null, 2), {
     headers: { ...cors, "Content-Type": "application/json" },
   });
 });
