@@ -601,6 +601,21 @@ export default function PatientEditPage() {
 
       if (error) throw error;
 
+      const consentResult = await persistWhatsappConsent({
+        clinicId: currentClinic?.id,
+        patientId: id,
+        phone: formData.phone,
+        name: formData.name,
+        granted: !!formData.whatsappConsent,
+      });
+      if (!consentResult.ok) {
+        toast({
+          title: "Consentimento não salvo",
+          description: consentResult.error || "Não foi possível registrar o consentimento do WhatsApp.",
+          variant: "destructive",
+        });
+      }
+
       // Clear the draft after successful manual save
       if (id) {
         try {
