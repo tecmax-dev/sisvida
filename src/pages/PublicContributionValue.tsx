@@ -381,7 +381,7 @@ export default function PublicContributionValue() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="due_date">Data de Vencimento *</Label>
+                <Label htmlFor="due_date">Nova Data de Vencimento *</Label>
                 <Input
                   id="due_date"
                   type="date"
