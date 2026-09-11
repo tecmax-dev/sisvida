@@ -742,8 +742,8 @@ serve(async (req) => {
   const patient = effective[0];
   const first = String(patient.name ?? "").split(" ")[0];
 
-  if (intent === "MENU") {
-    return await answerMenu(first, patient.id);
+  if (intent === "MENU_ASSOCIADO") {
+    return await answerMenu("ASSOCIADO", `Olá, ${first}! Escolha uma opção:`, patient.id);
   }
 
   if (intent === "CADASTRO") {
