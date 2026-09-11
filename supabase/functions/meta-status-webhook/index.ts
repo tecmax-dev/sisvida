@@ -22,8 +22,11 @@ serve(async (req) => {
     return new Response("forbidden", { status: 403, headers: cors });
   }
 
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const body = await req.json().catch(() => ({}));
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const admin = createClient(supabaseUrl, serviceRoleKey);
+  const rawBody = await req.text();
+  const body = JSON.parse(rawBody || "{}");
 
   try {
     const rows: any[] = [];
@@ -45,6 +48,38 @@ serve(async (req) => {
       }
     }
     if (rows.length) await admin.from("whatsapp_message_status").insert(rows);
+
+    // Este é o webhook cadastrado no número oficial da Meta. Além dos status,
+    // ele também recebe as mensagens dos usuários. Encaminha essas mensagens
+    // ao fluxo único de automação; antes elas eram confirmadas e descartadas.
+    const hasInboundMessage = (body?.entry ?? []).some((entry: any) =>
+      (entry?.changes ?? []).some((change: any) =>
+        Array.isArray(change?.value?.messages) && change.value.messages.length > 0
+      )
+    );
+
+    if (hasInboundMessage) {
+      const automationResponse = await fetch(`${supabaseUrl}/functions/v1/chatgoo-webhook`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+          "x-internal-meta-relay": "1",
+        },
+        body: rawBody,
+      });
+
+      if (!automationResponse.ok) {
+        await admin.from("chatgoo_events").insert({
+          direction: "inbound",
+          event: "meta_relay",
+          decision: "SEND_FAILED",
+          reason: `AUTOMATION_HTTP_${automationResponse.status}`,
+          payload: {},
+        });
+      }
+    }
   } catch (_e) { /* never break the webhook */ }
 
   return new Response(JSON.stringify({ received: true }), {
