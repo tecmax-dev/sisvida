@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
+import { loadWhatsappConsent, persistWhatsappConsent } from "@/lib/whatsappConsentSave";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -414,6 +415,9 @@ export default function UnionMemberDetailPage({
           // ignore
         }
 
+        const hasConsent = await loadWhatsappConsent(id);
+        loadedData.whatsappConsent = hasConsent;
+
         setFormData(loadedData);
         setInitialData(loadedData);
 
@@ -724,6 +728,21 @@ export default function UnionMemberDetailPage({
         .eq('id', id);
 
       if (error) throw error;
+
+      const consentResult = await persistWhatsappConsent({
+        clinicId: resolvedClinic?.id,
+        patientId: id,
+        phone: formData.phone,
+        name: formData.name,
+        granted: !!formData.whatsappConsent,
+      });
+      if (!consentResult.ok) {
+        toast({
+          title: "Consentimento não salvo",
+          description: consentResult.error || "Não foi possível registrar o consentimento do WhatsApp.",
+          variant: "destructive",
+        });
+      }
 
       if (id) {
         try {

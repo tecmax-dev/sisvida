@@ -23,6 +23,7 @@ import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAp
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { PatientOdontogramModal } from "@/components/patients/modals/PatientOdontogramModal";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
+import { loadWhatsappConsent, persistWhatsappConsent } from "@/lib/whatsappConsentSave";
 import { PatientSearchBox } from "@/components/patients/PatientSearchBox";
 
 interface InsurancePlan {
@@ -321,6 +322,8 @@ export default function PatientEditPage() {
           // ignore
         }
 
+        loadedData.whatsappConsent = await loadWhatsappConsent(id);
+
         setFormData(loadedData);
         setInitialData(loadedData);
         
@@ -599,6 +602,21 @@ export default function PatientEditPage() {
         .eq('id', id);
 
       if (error) throw error;
+
+      const consentResult = await persistWhatsappConsent({
+        clinicId: currentClinic?.id,
+        patientId: id,
+        phone: formData.phone,
+        name: formData.name,
+        granted: !!formData.whatsappConsent,
+      });
+      if (!consentResult.ok) {
+        toast({
+          title: "Consentimento não salvo",
+          description: consentResult.error || "Não foi possível registrar o consentimento do WhatsApp.",
+          variant: "destructive",
+        });
+      }
 
       // Clear the draft after successful manual save
       if (id) {

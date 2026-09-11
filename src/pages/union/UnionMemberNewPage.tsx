@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { PatientFormFields, PatientFormData } from "@/components/patients/PatientFormFields";
 
+import { persistWhatsappConsent } from "@/lib/whatsappConsentSave";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 // Validação de CPF brasileiro
 const isValidCPF = (cpf: string): boolean => {
@@ -294,6 +295,21 @@ export default function UnionMemberNewPage() {
         if (pwError) {
           console.error('Error setting password:', pwError);
         }
+      }
+
+      const consentResult = await persistWhatsappConsent({
+        clinicId: resolvedClinic.id,
+        patientId: newPatient.id,
+        phone: formData.phone,
+        name: formData.name,
+        granted: !!formData.whatsappConsent,
+      });
+      if (!consentResult.ok) {
+        toast({
+          title: "Consentimento não salvo",
+          description: consentResult.error || "Não foi possível registrar o consentimento do WhatsApp.",
+          variant: "destructive",
+        });
       }
 
       toast({
