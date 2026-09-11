@@ -571,6 +571,23 @@ serve(async (req) => {
     );
   };
 
+  // Nenhum fluxo pode tentar responder sem um destinatário válido. Alguns
+  // formatos do ChatGoo omitem o telefone; antes isso chegava ao consentimento,
+  // era marcado como respondido e enviava para um destino vazio.
+  if (!phoneOk || !e164) {
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "webhook",
+      decision: "BLOCKED",
+      reason: "PHONE_NOT_FOUND_IN_PAYLOAD",
+      payload: { raw: rawBody.slice(0, 2000), message_id: messageId || null },
+    });
+    return new Response(
+      JSON.stringify({ status: "BLOCKED", reason: "PHONE_INVALID" }),
+      { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   // ===== DESCADASTRO (OPT-OUT) — EXIGÊNCIA META =====
   // "SAIR/PARAR/CANCELAR" encerra o envio: registra o opt-out, envia UMA única
   // confirmação e, a partir daí, o robô fica em silêncio (nada é enviado).
@@ -995,24 +1012,6 @@ serve(async (req) => {
       null,
     );
   };
-
-  if (!phoneOk || !e164) {
-    // Guarda o payload bruto (limitado) para diagnóstico do formato recebido.
-    await supabase.from("chatgoo_events").insert({
-      direction: "inbound",
-      event: "webhook",
-      decision: "BLOCKED",
-      reason: "PHONE_NOT_FOUND_IN_PAYLOAD",
-      payload: { raw: rawBody.slice(0, 2000) },
-    });
-    return await answer(
-      "Não consegui identificar seu número. Vou encaminhar para um atendente.",
-      "HANDOFF",
-      "PHONE_INVALID",
-      null,
-    );
-  }
-
 
   if (intent === "HUMANO") {
     const queueId = Deno.env.get("CHATGOO_HUMAN_QUEUE_ID");
