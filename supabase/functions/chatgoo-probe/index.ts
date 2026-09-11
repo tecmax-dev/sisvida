@@ -37,9 +37,27 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Tentar iniciar a sessão via API (caso a caixa precise de start no backend da API).
+  const startPaths = ["/api/session/start", "/api/sessions/start", "/api/whatsapp/start", "/api/messages/start", "/api/start"];
+  for (const p of startPaths) {
+    try {
+      const res = await fetch(`${base}${p}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      diag.push({ start: p, status: res.status, body: (await res.text()).slice(0, 300) });
+    } catch (e) {
+      diag.push({ start: p, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
   const payloads: Array<[string, Record<string, unknown>]> = [
     ["number+body", { number, body: text }],
     ["number+message", { number, message: text }],
+    ["number+body+session", { number, body: text, session: "3223-Oficial" }],
+    ["number+message+whatsapp", { number, message: text, whatsapp: "3223-Oficial" }],
+    ["jid+body", { number: `${number}@s.whatsapp.net`, body: text }],
   ];
   const paths = ["/api/messages/send", "/api/messages", `/api/messages/${number}`];
   const auths: Array<[string, Record<string, string>]> = [
