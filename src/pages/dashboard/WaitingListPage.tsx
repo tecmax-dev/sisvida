@@ -363,13 +363,18 @@ function WaitingListContent() {
       const { data, error } = await supabase.functions.invoke('send-waiting-list-slot', {
         body: {
           waitingListId: entry.id,
-          appointmentDate: entry.offered_appointment_date,
-          startTime: entry.offered_appointment_time,
-          professionalId: entry.offered_professional_id ?? entry.professional?.id ?? null,
+          appointmentDate: slotDateValue,
+          startTime: slotTimeValue,
+          professionalId:
+            override?.professionalId ?? entry.offered_professional_id ?? entry.professional?.id ?? null,
           professionalName:
-            entry.offered_professional_name || entry.professional?.name || "Profissional",
+            override?.professionalName ||
+            entry.offered_professional_name ||
+            entry.professional?.name ||
+            "Profissional",
         },
       });
+
 
       if (error) throw error;
       if (!(data as any)?.ok) {
