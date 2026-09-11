@@ -197,18 +197,9 @@ function MobileAppointmentsPageContent() {
         return;
       }
 
-      const fetchAllAppointments = () => supabase
-        .from("appointments")
-        .select(`
-          id, appointment_date, start_time, end_time, status, type, notes, dependent_id,
-          professional:professionals(id, name, specialty),
-          procedure:procedures(id, name),
-          dependent:patient_dependents!appointments_dependent_id_fkey(id, name)
-        `)
-        .eq("patient_id", patientId)
-        .eq("clinic_id", clinicId)
-        .order("appointment_date", { ascending: false })
-        .order("start_time", { ascending: false });
+      // A identidade vem da sessão autenticada no banco. Isso evita listas vazias
+      // quando o armazenamento local do PWA ainda contém um patientId antigo.
+      const fetchAllAppointments = () => supabase.rpc("get_my_mobile_appointments");
 
       let result = await fetchAllAppointments();
 
