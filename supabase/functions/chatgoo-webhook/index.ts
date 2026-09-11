@@ -296,6 +296,7 @@ serve(async (req) => {
       .from("chatgoo_events")
       .select("id")
       .eq("event", "message")
+      .neq("decision", "SEND_FAILED")
       .contains("payload", { message_id: messageId })
       .limit(1)
       .maybeSingle();
