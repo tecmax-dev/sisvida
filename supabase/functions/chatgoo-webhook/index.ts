@@ -596,9 +596,6 @@ serve(async (req) => {
       .replace(/[̀-ͯ]/g, "")
       .replace(/[^a-z0-9 ]/g, "")
       .trim();
-    const saidYes =
-      selectedId === "CONSENT_SIM" ||
-      /^(sim autorizo|autorizo|eu autorizo|sim)$/.test(tConsent) === true && selectedId === "CONSENT_SIM";
     const saidNo =
       selectedId === "CONSENT_NAO" || tConsent === "nao autorizo";
 
