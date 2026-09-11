@@ -358,7 +358,7 @@ serve(async (req) => {
   const first = String(patient.name ?? "").split(" ")[0];
 
   if (intent === "MENU") {
-    return await answer(`Olá, ${first}!\n\n${MENU}`, "ANSWERED", null, patient.id);
+    return await answerMenu(first, patient.id);
   }
 
   if (intent === "CADASTRO") {
