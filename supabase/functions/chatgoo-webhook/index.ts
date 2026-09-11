@@ -561,6 +561,53 @@ serve(async (req) => {
       );
     }
 
+    // SEGUNDA VIA DE BOLETO (empresa): reenvia o link/linha digitável já emitidos.
+    // Conteúdo transacional, enviado apenas dentro da janela de 24h da Meta
+    // (o guard fail-closed do envio bloqueia fora da janela).
+    if (intent === "EMP_2VIA") {
+      const { data: docs } = await supabase
+        .from("employer_contributions")
+        .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url,lytex_boleto_digitable_line")
+        .eq("employer_id", empresa.id)
+        .in("status", ["pending", "overdue"])
+        .not("lytex_invoice_url", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(3);
+
+      if (!docs || docs.length === 0) {
+        return await answer(
+          `${nomeEmpresa}, não encontrei boleto emitido em aberto para segunda via. Se precisar emitir um novo boleto, responda "atendente".`,
+          "ANSWERED",
+          "NO_INVOICE_TO_REISSUE",
+          null,
+        );
+      }
+
+      const blocos = docs.map((c: any) => {
+        const comp = c.competence_month && c.competence_year
+          ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+          : "-";
+        return [
+          `• Competência ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}`,
+          `  Boleto: ${c.lytex_invoice_url}`,
+          c.lytex_boleto_digitable_line ? `  Linha digitável: ${c.lytex_boleto_digitable_line}` : null,
+        ].filter(Boolean).join("\n");
+      });
+
+      return await answer(
+        [
+          `${nomeEmpresa}, segue a 2ª via dos boletos em aberto:`,
+          ...blocos,
+          "",
+          "Boletos vencidos podem ter juros recalculados no pagamento.",
+          "Precisa de outra competência? Responda \"atendente\".",
+        ].join("\n"),
+        "ANSWERED",
+        "SECOND_COPY_SENT",
+        null,
+      );
+    }
+
     if (intent === "EMP_BOLETOS") {
       const { data: contribs } = await supabase
         .from("employer_contributions")
@@ -688,6 +735,51 @@ serve(async (req) => {
         ].filter(Boolean).join("\n"),
         "ANSWERED",
         null,
+        null,
+      );
+    }
+
+    // SEGUNDA VIA DE BOLETO (contabilidade)
+    if (intent === "CTB_2VIA") {
+      const nomes = new Map((empresasVinculadas ?? []).map((e: any) => [e.id, e.trade_name || e.name]));
+      const { data: docs } = await supabase
+        .from("employer_contributions")
+        .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,lytex_boleto_digitable_line")
+        .in("employer_id", employerIds)
+        .in("status", ["pending", "overdue"])
+        .not("lytex_invoice_url", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(5);
+
+      if (!docs || docs.length === 0) {
+        return await answer(
+          `${nomeEscritorio}, não encontrei boleto emitido em aberto para segunda via nas empresas do escritório. Se precisar emitir novos boletos, responda "atendente".`,
+          "ANSWERED",
+          "NO_INVOICE_TO_REISSUE",
+          null,
+        );
+      }
+
+      const blocos = docs.map((c: any) => {
+        const comp = c.competence_month && c.competence_year
+          ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+          : "-";
+        return [
+          `• ${nomes.get(c.employer_id) ?? "Empresa"} — ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}`,
+          `  Boleto: ${c.lytex_invoice_url}`,
+          c.lytex_boleto_digitable_line ? `  Linha digitável: ${c.lytex_boleto_digitable_line}` : null,
+        ].filter(Boolean).join("\n");
+      });
+
+      return await answer(
+        [
+          `${nomeEscritorio}, segue a 2ª via dos boletos em aberto (até 5):`,
+          ...blocos,
+          "",
+          "Para outras competências ou empresas, use o portal da contabilidade ou responda \"atendente\".",
+        ].join("\n"),
+        "ANSWERED",
+        "SECOND_COPY_SENT",
         null,
       );
     }
