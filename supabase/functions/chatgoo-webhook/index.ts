@@ -97,7 +97,7 @@ const ROOT_MENU = [
 ].join("\n");
 
 const ROOT_LIST_ROWS = [
-  { id: "OPT_PERFIL_ASSOCIADO", title: "Sou associado", description: "Cadastro, carteirinha, consultas e boletos" },
+  { id: "OPT_PERFIL_ASSOCIADO", title: "Sou associado", description: "Cadastro, carteirinha e consultas" },
   { id: "OPT_PERFIL_EMPRESA", title: "Sou empresa", description: "Contribuições, boletos e homologação" },
   { id: "OPT_PERFIL_CONTABILIDADE", title: "Sou contabilidade", description: "Empresas do escritório e boletos" },
 ];
