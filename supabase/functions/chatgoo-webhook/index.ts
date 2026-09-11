@@ -640,15 +640,23 @@ serve(async (req) => {
 
     const blocos: string[] = [];
     for (const c of elegiveis) {
-      let token = c.public_access_token as string | null;
+      let token = (c.public_access_token as string | null) || null;
       if (!token) {
-        const { data: gen } = await supabase.rpc("generate_contribution_access_token");
-        token = (gen as string) ?? null;
-        if (token) {
-          await supabase
-            .from("employer_contributions")
-            .update({ public_access_token: token })
-            .eq("id", c.id);
+        // Gera token localmente (URL-safe) e persiste no registro.
+        const bytes = new Uint8Array(24);
+        crypto.getRandomValues(bytes);
+        const candidato = btoa(String.fromCharCode(...bytes))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+        const { error: updErr } = await supabase
+          .from("employer_contributions")
+          .update({ public_access_token: candidato })
+          .eq("id", c.id);
+        if (updErr) {
+          console.error("token_persist_failed", c.id, updErr.message);
+        } else {
+          token = candidato;
         }
       }
       if (!token) continue;
