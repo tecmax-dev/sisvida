@@ -46,7 +46,7 @@ export default function SindicatoPrivacyPolicy() {
                 <p className="text-muted-foreground"><strong>CNPJ:</strong> 14.173.298/0001-46</p>
                 <p className="text-muted-foreground"><strong>Endereço:</strong> Rua Coronel Paiva, nº 99, Centro, Ilhéus - BA, CEP 45653-310</p>
                 <p className="text-muted-foreground"><strong>E-mail:</strong> comerciariosilheus@gmail.com</p>
-                <p className="text-muted-foreground"><strong>Telefone:</strong> (73) 3231-1784</p>
+                <p className="text-muted-foreground"><strong>Telefone:</strong> (73) 3223-9980</p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -164,7 +164,7 @@ export default function SindicatoPrivacyPolicy() {
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
                   <p><strong>Sindicato dos Comerciários de Ilhéus</strong></p>
                   <p>E-mail: <a href="mailto:comerciariosilheus@gmail.com" className="text-primary hover:underline">comerciariosilheus@gmail.com</a></p>
-                  <p>Telefone: <a href="tel:+557332311784" className="text-primary hover:underline">(73) 3231-1784</a></p>
+                  <p>Telefone: <a href="tel:+557332239980" className="text-primary hover:underline">(73) 3223-9980</a></p>
                 </div>
               </div>
             }

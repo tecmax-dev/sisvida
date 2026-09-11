@@ -39,8 +39,8 @@ const SindicatoExclusaoConta = () => {
               <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
                 <li>
                   Entre em contato com o sindicato pelo telefone{" "}
-                  <a href="tel:+557332311784" className="text-primary hover:underline">
-                    (73) 3231-1784
+                  <a href="tel:+557332239980" className="text-primary hover:underline">
+                    (73) 3223-9980
                   </a>{" "}
                   ou pelo e-mail{" "}
                   <a
@@ -81,8 +81,8 @@ const SindicatoExclusaoConta = () => {
               <div className="space-y-2">
                 <p className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-primary" />
-                  <a href="tel:+557332311784" className="hover:underline">
-                    (73) 3231-1784
+                  <a href="tel:+557332239980" className="hover:underline">
+                    (73) 3223-9980
                   </a>
                 </p>
                 <p className="flex items-center gap-2">
@@ -175,8 +175,8 @@ const SindicatoExclusaoConta = () => {
                     comerciariosilheus@gmail.com
                   </a>{" "}
                   ou ligue para{" "}
-                  <a href="tel:+557332311784" className="text-primary hover:underline">
-                    (73) 3231-1784
+                  <a href="tel:+557332239980" className="text-primary hover:underline">
+                    (73) 3223-9980
                   </a>
                   .
                 </li>

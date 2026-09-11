@@ -96,7 +96,7 @@ ${appointment.professional ? `👤 *Profissional:* ${appointment.professional.na
 📍 *Local:* Rua Coronel Paiva, 99, Centro
    Ilhéus - BA
    _(Ao lado da Sorveteria Chiquinho)_
-📞 *Telefone:* (73) 3231-1784
+📞 *Telefone:* (73) 3223-9980
 
 ${docInstruction}
 
@@ -128,7 +128,7 @@ ${appointment.professional ? `👤 *Profissional:* ${appointment.professional.na
 📍 *Local:* Rua Coronel Paiva, 99, Centro
    Ilhéus - BA
    _(Ao lado da Sorveteria Chiquinho)_
-📞 *Telefone:* (73) 3231-1784
+📞 *Telefone:* (73) 3223-9980
 
 ${docInstruction}
 
@@ -152,7 +152,7 @@ ${!isJuridico ? `🏢 *Empresa:* ${appointment.company_name}\n` : ""}📅 *Data:
 📍 *Local:* Rua Coronel Paiva, 99, Centro
    Ilhéus - BA
    _(Ao lado da Sorveteria Chiquinho)_
-📞 *Telefone:* (73) 3231-1784
+📞 *Telefone:* (73) 3223-9980
 
 Guarde este protocolo para seus registros.
 

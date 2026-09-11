@@ -18,7 +18,7 @@ const LOCAL = {
   address: "Rua Coronel Paiva, 99, Centro",
   complement: "Ao lado da Sorveteria Chiquinho",
   city: "Ilhéus - BA",
-  phone: "(73) 3231-1784",
+  phone: "(73) 3223-9980",
 };
 
 export function HomologacaoPrintProtocolDialog({ open, onOpenChange, appointment }: Props) {

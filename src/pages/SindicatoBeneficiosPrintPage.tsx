@@ -304,7 +304,7 @@ export default function SindicatoBeneficiosPrintPage() {
           <div className="flex items-center justify-center gap-6 mt-6">
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-white/70" />
-              <span className="text-sm font-semibold">(73) 3231-1784</span>
+              <span className="text-sm font-semibold">(73) 3223-9980</span>
             </div>
             <div className="text-white/40">•</div>
             <div className="text-sm">

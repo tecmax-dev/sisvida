@@ -1284,7 +1284,7 @@ function DocumentosContent() {
 function AtendimentosContent() {
   const canais = [
     { id: "1", titulo: "Atendimento Presencial", descricao: "De segunda a sexta, das 9h às 16h", icone: Building, info: "Rua Coronel Paiva, 99 - Centro, Ilhéus - BA" },
-    { id: "2", titulo: "Telefone", descricao: "Central de Atendimento", icone: Phone, info: "(73) 3231-1784" },
+    { id: "2", titulo: "Telefone", descricao: "Central de Atendimento", icone: Phone, info: "(73) 3223-9980" },
     { id: "3", titulo: "WhatsApp", descricao: "Atendimento via mensagem", icone: MessageCircle, info: "(73) 3223-9980" },
     { id: "4", titulo: "Atendimento Jurídico", descricao: "Terças e quintas, das 9h às 12h", icone: ClipboardList, info: "Agendar com antecedência" },
   ];
