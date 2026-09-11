@@ -1199,6 +1199,48 @@ function WaitingListContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!slotEntry} onOpenChange={(open) => !open && setSlotEntry(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Definir vaga para {slotEntry?.patient?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Data da vaga</Label>
+              <Input type="date" value={slotDate} onChange={(e) => setSlotDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Horário</Label>
+              <Input type="time" value={slotTime} onChange={(e) => setSlotTime(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Profissional</Label>
+              <Select value={slotProfessionalId} onValueChange={setSlotProfessionalId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem profissional definido</SelectItem>
+                  {professionals.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setSlotEntry(null)} disabled={slotSending}>
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmSlotAndNotify} disabled={slotSending}>
+                {slotSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Avisar pelo WhatsApp
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
