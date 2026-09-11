@@ -12,7 +12,7 @@ const cors = {
 const BUILD = "APPT-REMINDER-URL-2026-09-11-A";
 const PHONE_ID = "1213495528515111";
 const TEMPLATE_NAME = "lembrete_consulta_v4";
-const FALLBACK_TEMPLATE = "lembrete_consulta_v3"; // informativo, sem botão (enquanto v4 não aprovado)
+// Sem fallback: apenas o template oficial acima é usado.
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
