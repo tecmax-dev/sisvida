@@ -3124,14 +3124,18 @@ const updateData: Record<string, any> = {
             body: { appointmentId: appointment.id },
           });
           if (reminderError || !reminderData?.ok) {
-            console.error(`[BULK REMINDER] [${i+1}] BLOCKED/ERROR:`, reminderError || reminderData?.reason);
+            const reason = String(reminderData?.reason || reminderError?.message || 'ERRO');
+            console.error(`[BULK REMINDER] [${i+1}] BLOCKED/ERROR:`, reason);
+            blockedReasons[reason] = (blockedReasons[reason] ?? 0) + 1;
             errorCount++;
           } else {
             successCount++;
           }
-          await new Promise((resolve) => setTimeout(resolve, 1200));
+          // Ritmo conservador para preservar a qualidade do número oficial Meta
+          await new Promise((resolve) => setTimeout(resolve, 1500));
           continue;
         }
+
 
         const { data, error } = await supabase.functions.invoke('send-whatsapp', {
           body: { 
