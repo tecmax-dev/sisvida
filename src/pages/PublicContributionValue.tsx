@@ -324,6 +324,31 @@ export default function PublicContributionValue() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {types.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="type">Tipo de Contribuição *</Label>
+                  <select
+                    id="type"
+                    value={typeId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setTypeId(id);
+                      const t = types.find((x) => x.id === id);
+                      if (t?.default_value) {
+                        setValue((t.default_value / 100).toFixed(2).replace(".", ","));
+                      }
+                    }}
+                    required
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">Selecione o tipo</option>
+                    {types.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="value">Valor da Contribuição *</Label>
                 <div className="relative">
