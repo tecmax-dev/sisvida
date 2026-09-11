@@ -87,6 +87,26 @@ const NUMBER_MAP: Record<string, Intent> = {
   "6": "HUMANO",
 };
 
+// IDs das opções do menu interativo (botões/lista Meta). Quando o contato toca
+// em uma opção, o ChatGoo devolve o id e/ou o título da linha selecionada.
+const OPTION_ID_MAP: Record<string, Intent> = {
+  OPT_CADASTRO: "CADASTRO",
+  OPT_CARTEIRINHA: "CARTEIRINHA",
+  OPT_AGENDAMENTOS: "AGENDAMENTOS",
+  OPT_HOMOLOGACAO: "HOMOLOGACAO",
+  OPT_FINANCEIRO: "FINANCEIRO",
+  OPT_HUMANO: "HUMANO",
+};
+
+const MENU_LIST_ROWS = [
+  { id: "OPT_CADASTRO", title: "Meu cadastro", description: "Dados e situação de associado" },
+  { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
+  { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
+  { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
+  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
+  { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
