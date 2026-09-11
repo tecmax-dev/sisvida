@@ -119,6 +119,12 @@ function WaitingListContent() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [smsSendingId, setSmsSendingId] = useState<string | null>(null);
+  const [slotEntry, setSlotEntry] = useState<WaitingListEntry | null>(null);
+  const [slotDate, setSlotDate] = useState("");
+  const [slotTime, setSlotTime] = useState("");
+  const [slotProfessionalId, setSlotProfessionalId] = useState<string>("none");
+  const [slotSending, setSlotSending] = useState(false);
+
 
   // Filtros de visualização/impressão
   const [filterProfessional, setFilterProfessional] = useState("all");
