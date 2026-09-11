@@ -97,7 +97,7 @@ const ROOT_MENU = [
 ].join("\n");
 
 const ROOT_LIST_ROWS = [
-  { id: "OPT_PERFIL_ASSOCIADO", title: "Sou associado", description: "Cadastro, carteirinha, consultas e boletos" },
+  { id: "OPT_PERFIL_ASSOCIADO", title: "Sou associado", description: "Cadastro, carteirinha e consultas" },
   { id: "OPT_PERFIL_EMPRESA", title: "Sou empresa", description: "Contribuições, boletos e homologação" },
   { id: "OPT_PERFIL_CONTABILIDADE", title: "Sou contabilidade", description: "Empresas do escritório e boletos" },
 ];
@@ -108,8 +108,7 @@ const ASSOC_MENU = [
   "2 - Carteirinha (validade)",
   "3 - Meus agendamentos",
   "4 - Homologação de rescisão",
-  "5 - Boletos e contribuições",
-  "6 - Falar com um atendente",
+  "5 - Falar com um atendente",
 ].join("\n");
 
 const ASSOC_LIST_ROWS = [
@@ -117,7 +116,6 @@ const ASSOC_LIST_ROWS = [
   { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
   { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
   { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
-  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
   { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
 
@@ -168,8 +166,7 @@ const ASSOC_NUMBER_MAP: Record<string, Intent> = {
   "2": "CARTEIRINHA",
   "3": "AGENDAMENTOS",
   "4": "HOMOLOGACAO",
-  "5": "FINANCEIRO",
-  "6": "HUMANO",
+  "5": "HUMANO",
 };
 
 const EMP_NUMBER_MAP: Record<string, Intent> = {
