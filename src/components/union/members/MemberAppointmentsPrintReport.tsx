@@ -146,7 +146,7 @@ export function MemberAppointmentsPrintReport({ patientId, patientName }: Member
         </head>
         <body>
           <h1>Relatório de Agendamentos</h1>
-          <h2>Titular: ${patientName}${dateFrom || dateTo ? ` | Período: ${dateFrom ? format(parseISO(dateFrom), "dd/MM/yyyy") : "..."} a ${dateTo ? format(parseISO(dateTo), "dd/MM/yyyy") : "..."}` : ""}</h2>
+          <h2>Titular: ${patientName}${dateFrom || dateTo ? ` | Período: ${dateFrom ? safeDate(dateFrom) : "..."} a ${dateTo ? safeDate(dateTo) : "..."}` : ""}</h2>
           <div class="summary">
             Total: <span>${filteredAppointments.length}</span> agendamentos
             &nbsp;|&nbsp; Titular: <span>${filteredAppointments.filter(a => !a.dependent_id).length}</span>
