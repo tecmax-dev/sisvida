@@ -3203,6 +3203,8 @@ const updateData: Record<string, any> = {
       OPT_OUT: 'pediram para não receber',
       INVALID_PHONE: 'telefone inválido',
       APPOINTMENT_NOT_ELIGIBLE: 'agendamento não elegível',
+      TEMPLATE_NOT_APPROVED: 'modelo oficial ainda em aprovação',
+
     };
     const reasonText = Object.entries(blockedReasons)
       .map(([reason, count]) => `${count} ${reasonLabels[reason] ?? reason.toLowerCase()}`)
