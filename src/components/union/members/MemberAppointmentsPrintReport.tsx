@@ -103,14 +103,21 @@ export function MemberAppointmentsPrintReport({ patientId, patientName }: Member
     return filtered;
   }, [appointments, filterStatus, filterPerson]);
 
+  const safeDate = (value?: string | null, pattern = "dd/MM/yyyy") => {
+    if (!value) return "-";
+    try {
+      const d = parseISO(value);
+      if (isNaN(d.getTime())) return value;
+      return format(d, pattern);
+    } catch {
+      return value;
+    }
+  };
+
   const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
+    if (filteredAppointments.length === 0) return;
 
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    printWindow.document.write(`
+    const html = `
       <html>
         <head>
           <title>Agendamentos - ${patientName}</title>
@@ -139,7 +146,7 @@ export function MemberAppointmentsPrintReport({ patientId, patientName }: Member
         </head>
         <body>
           <h1>Relatório de Agendamentos</h1>
-          <h2>Titular: ${patientName}${dateFrom || dateTo ? ` | Período: ${dateFrom ? format(parseISO(dateFrom), "dd/MM/yyyy") : "..."} a ${dateTo ? format(parseISO(dateTo), "dd/MM/yyyy") : "..."}` : ""}</h2>
+          <h2>Titular: ${patientName}${dateFrom || dateTo ? ` | Período: ${dateFrom ? safeDate(dateFrom) : "..."} a ${dateTo ? safeDate(dateTo) : "..."}` : ""}</h2>
           <div class="summary">
             Total: <span>${filteredAppointments.length}</span> agendamentos
             &nbsp;|&nbsp; Titular: <span>${filteredAppointments.filter(a => !a.dependent_id).length}</span>
@@ -160,8 +167,8 @@ export function MemberAppointmentsPrintReport({ patientId, patientName }: Member
             <tbody>
               ${filteredAppointments.map(apt => `
                 <tr>
-                  <td>${format(parseISO(apt.appointment_date), "dd/MM/yyyy")}</td>
-                  <td>${apt.start_time.slice(0, 5)} - ${apt.end_time.slice(0, 5)}</td>
+                  <td>${safeDate(apt.appointment_date)}</td>
+                  <td>${(apt.start_time || "").slice(0, 5)} - ${(apt.end_time || "").slice(0, 5)}</td>
                   <td>
                     ${apt.dependent_id && apt.dependent ? `<span class="badge badge-dep">${apt.dependent.name}</span>` : patientName}
                   </td>
@@ -178,9 +185,40 @@ export function MemberAppointmentsPrintReport({ patientId, patientName }: Member
           </div>
         </body>
       </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    `;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const triggerPrint = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 1000);
+      }
+    };
+
+    // Aguarda o conteúdo ser renderizado antes de imprimir
+    setTimeout(triggerPrint, 300);
   };
 
   return (
