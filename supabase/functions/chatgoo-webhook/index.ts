@@ -410,18 +410,32 @@ serve(async (req) => {
   else if (intent === "MENU_EMPRESA") profile = "EMPRESA";
   else if (intent === "MENU_CONTABILIDADE") profile = "CONTABILIDADE";
   else if (
-    intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS" || intent === "EMP_2VIA"
+    intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS" ||
+    intent === "EMP_2VIA" || intent === "EMP_ATUALIZAR"
   ) profile = "EMPRESA";
-  else if (intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" || intent === "CTB_2VIA") profile = "CONTABILIDADE";
+  else if (
+    intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" || intent === "CTB_2VIA" ||
+    intent === "CTB_ATUALIZAR"
+  ) profile = "CONTABILIDADE";
   // "segunda via" genérico é resolvido pelo perfil já ativo na conversa
   if (intent === "SEGUNDA_VIA") {
     intent = profile === "CONTABILIDADE" ? "CTB_2VIA" : profile === "EMPRESA" ? "EMP_2VIA" : "FINANCEIRO";
+  }
+  else if (intent === "ATUALIZAR_BOLETO") {
+    intent = profile === "CONTABILIDADE"
+      ? "CTB_ATUALIZAR"
+      : profile === "EMPRESA"
+      ? "EMP_ATUALIZAR"
+      : "MENU";
   }
   else if (
     intent === "CADASTRO" || intent === "CARTEIRINHA" || intent === "AGENDAMENTOS" ||
     intent === "HOMOLOGACAO" || intent === "FINANCEIRO"
   ) profile = "ASSOCIADO";
   else if (intent === "MENU") profile = null;
+
+  // Quando o bot pergunta o CNPJ, o próximo evento registrado guarda esse estado.
+  let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | null = null;
 
   const log = async (decision: string, reason: string | null, patientId: string | null, reply: string) => {
     await supabase.from("chatgoo_events").insert({
@@ -433,7 +447,14 @@ serve(async (req) => {
       intent,
       decision,
       reason,
-      payload: { text, ticket_id: ticketId, message_id: messageId || null, reply, profile },
+      payload: {
+        text,
+        ticket_id: ticketId,
+        message_id: messageId || null,
+        reply,
+        profile,
+        await_cnpj: nextAwaitCnpj,
+      },
     });
   };
 
