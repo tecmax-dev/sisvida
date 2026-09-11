@@ -146,9 +146,22 @@ serve(async (req) => {
   }
 
   const rawPhone =
-    body?.contact?.number ?? body?.ticket?.contact?.number ?? body?.number ?? body?.phone ?? "";
-  const text = String(body?.message?.body ?? body?.body ?? body?.text ?? "").trim();
-  const ticketId = body?.ticket?.id ?? body?.ticketId ?? null;
+    body?.contactNumber ??
+    body?.contact?.number ??
+    body?.ticket?.contact?.number ??
+    body?.number ??
+    body?.phone ??
+    "";
+  const text = String(
+    body?.messageText ??
+      body?.message?.body ??
+      body?.message?.conversation ??
+      body?.rawMsg?.message?.conversation ??
+      body?.body ??
+      body?.text ??
+      "",
+  ).trim();
+  const ticketId = body?.ticketId ?? body?.ticket?.id ?? null;
 
   const { valid: phoneOk, e164 } = normalizeBrPhone(rawPhone);
   const intent: Intent = NUMBER_MAP[text] ?? detectIntent(text);
