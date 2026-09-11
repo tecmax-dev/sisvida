@@ -354,16 +354,55 @@ function WaitingListContent() {
     override?: { date: string; time: string; professionalId: string | null; professionalName: string },
   ) => {
     try {
-      const slotDateValue = override?.date || entry.offered_appointment_date;
-      const slotTimeValue = override?.time || entry.offered_appointment_time;
+      let slotDateValue = override?.date || entry.offered_appointment_date;
+      let slotTimeValue = override?.time || entry.offered_appointment_time;
+      let slotProfId =
+        override?.professionalId ?? entry.offered_professional_id ?? entry.professional?.id ?? null;
+      let slotProfName =
+        override?.professionalName || entry.offered_professional_name || entry.professional?.name || "Profissional";
+
+      // Busca automática da próxima vaga livre na agenda do profissional
+      if ((!slotDateValue || !slotTimeValue) && currentClinic && slotProfId) {
+        setAutoSearchId(entry.id);
+        try {
+          const found = await findNextFreeSlot({
+            clinicId: currentClinic.id,
+            professionalId: slotProfId,
+            preferredTimes: entry.preferred_times,
+          });
+          if (found) {
+            slotDateValue = found.date;
+            slotTimeValue = found.time;
+            slotProfId = found.professionalId;
+            slotProfName = found.professionalName;
+            await supabase
+              .from("waiting_list")
+              .update({
+                offered_appointment_date: found.date,
+                offered_appointment_time: found.time,
+                offered_professional_id: found.professionalId,
+                offered_professional_name: found.professionalName,
+                slot_offered_at: new Date().toISOString(),
+              })
+              .eq("id", entry.id);
+          }
+        } finally {
+          setAutoSearchId(null);
+        }
+      }
 
       if (!slotDateValue || !slotTimeValue) {
+        toast({
+          title: "Nenhuma vaga livre encontrada",
+          description: "Não achei horário livre na agenda. Informe a vaga manualmente.",
+        });
         setSlotEntry(entry);
         setSlotDate("");
         setSlotTime("");
         setSlotProfessionalId(entry.professional?.id ?? "none");
         return;
       }
+
 
 
       const { data, error } = await supabase.functions.invoke('send-waiting-list-slot', {
