@@ -104,7 +104,18 @@ async function postMetaMessage(
       lastBody = text;
 
       if (res.ok) {
-        return { sent: true, dry_run: false, status: res.status, body: text, error: null };
+        let confirmed = false;
+        try {
+          const parsed = JSON.parse(text);
+          confirmed = typeof parsed?.messages?.[0]?.id === "string";
+        } catch {
+          confirmed = false;
+        }
+        if (confirmed) {
+          return { sent: true, dry_run: false, status: res.status, body: text, error: null };
+        }
+        lastError = "META_SEND_UNCONFIRMED";
+        console.error(`[chatgoo/meta] tentativa ${attempt}/${META_MAX_ATTEMPTS} sem confirmação de message id`);
       }
 
       // Erros de validação/autorização não melhoram com repetição. Repetimos
