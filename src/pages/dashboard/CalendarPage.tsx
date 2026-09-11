@@ -3076,6 +3076,8 @@ const updateData: Record<string, any> = {
 
     let successCount = 0;
     let errorCount = 0;
+    const blockedReasons: Record<string, number> = {};
+
 
     console.log(`[BULK REMINDER] Starting bulk send for ${eligibleAppointments.length} appointments`);
 
@@ -3124,14 +3126,18 @@ const updateData: Record<string, any> = {
             body: { appointmentId: appointment.id },
           });
           if (reminderError || !reminderData?.ok) {
-            console.error(`[BULK REMINDER] [${i+1}] BLOCKED/ERROR:`, reminderError || reminderData?.reason);
+            const reason = String(reminderData?.reason || reminderError?.message || 'ERRO');
+            console.error(`[BULK REMINDER] [${i+1}] BLOCKED/ERROR:`, reason);
+            blockedReasons[reason] = (blockedReasons[reason] ?? 0) + 1;
             errorCount++;
           } else {
             successCount++;
           }
-          await new Promise((resolve) => setTimeout(resolve, 1200));
+          // Ritmo conservador para preservar a qualidade do número oficial Meta
+          await new Promise((resolve) => setTimeout(resolve, 1500));
           continue;
         }
+
 
         const { data, error } = await supabase.functions.invoke('send-whatsapp', {
           body: { 
@@ -3191,11 +3197,26 @@ const updateData: Record<string, any> = {
 
     setSendingBulkReminder(null);
 
+    const reasonLabels: Record<string, string> = {
+      REMINDER_ALREADY_SENT: 'já haviam recebido o lembrete',
+      NO_CONSENT: 'sem autorização para receber mensagens',
+      OPT_OUT: 'pediram para não receber',
+      INVALID_PHONE: 'telefone inválido',
+      APPOINTMENT_NOT_ELIGIBLE: 'agendamento não elegível',
+    };
+    const reasonText = Object.entries(blockedReasons)
+      .map(([reason, count]) => `${count} ${reasonLabels[reason] ?? reason.toLowerCase()}`)
+      .join(', ');
+
     toast({
       title: "Lembretes enviados",
-      description: `${successCount} enviado(s) com sucesso${errorCount > 0 ? `, ${errorCount} falha(s)` : ''}.`,
+      description:
+        `${successCount} enviado(s) com sucesso` +
+        (errorCount > 0 ? `, ${errorCount} não enviado(s)` : '') +
+        (reasonText ? ` — ${reasonText}.` : '.'),
       variant: successCount > 0 ? "default" : "destructive",
     });
+
   };
 
   // Envio de lembretes em massa via SMS (Confirmar/Cancelar via link curto)
