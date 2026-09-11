@@ -3197,11 +3197,26 @@ const updateData: Record<string, any> = {
 
     setSendingBulkReminder(null);
 
+    const reasonLabels: Record<string, string> = {
+      REMINDER_ALREADY_SENT: 'já haviam recebido o lembrete',
+      NO_CONSENT: 'sem autorização para receber mensagens',
+      OPT_OUT: 'pediram para não receber',
+      INVALID_PHONE: 'telefone inválido',
+      APPOINTMENT_NOT_ELIGIBLE: 'agendamento não elegível',
+    };
+    const reasonText = Object.entries(blockedReasons)
+      .map(([reason, count]) => `${count} ${reasonLabels[reason] ?? reason.toLowerCase()}`)
+      .join(', ');
+
     toast({
       title: "Lembretes enviados",
-      description: `${successCount} enviado(s) com sucesso${errorCount > 0 ? `, ${errorCount} falha(s)` : ''}.`,
+      description:
+        `${successCount} enviado(s) com sucesso` +
+        (errorCount > 0 ? `, ${errorCount} não enviado(s)` : '') +
+        (reasonText ? ` — ${reasonText}.` : '.'),
       variant: successCount > 0 ? "default" : "destructive",
     });
+
   };
 
   // Envio de lembretes em massa via SMS (Confirmar/Cancelar via link curto)
