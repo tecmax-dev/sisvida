@@ -881,5 +881,5 @@ serve(async (req) => {
     );
   }
 
-  return await answerMenu(first, patient.id);
+  return await answerMenu("ASSOCIADO", `Olá, ${first}! Escolha uma opção:`, patient.id);
 });
