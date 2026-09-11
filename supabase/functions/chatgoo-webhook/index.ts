@@ -163,7 +163,13 @@ serve(async (req) => {
   ).trim();
   const ticketId = body?.ticketId ?? body?.ticket?.id ?? null;
 
-  const { valid: phoneOk, e164 } = normalizeBrPhone(rawPhone);
+  // WhatsApp entrega números BR antigos sem o 9 (12 dígitos). Reconstitui antes de validar.
+  const digits = String(rawPhone ?? "").replace(/\D/g, "");
+  const normalizedRawPhone =
+    digits.length === 12 && digits.startsWith("55")
+      ? `${digits.slice(0, 4)}9${digits.slice(4)}`
+      : digits;
+  const { valid: phoneOk, e164 } = normalizeBrPhone(normalizedRawPhone);
   const intent: Intent = NUMBER_MAP[text] ?? detectIntent(text);
 
   const log = async (decision: string, reason: string | null, patientId: string | null, reply: string) => {
