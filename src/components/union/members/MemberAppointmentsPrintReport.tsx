@@ -103,14 +103,21 @@ export function MemberAppointmentsPrintReport({ patientId, patientName }: Member
     return filtered;
   }, [appointments, filterStatus, filterPerson]);
 
+  const safeDate = (value?: string | null, pattern = "dd/MM/yyyy") => {
+    if (!value) return "-";
+    try {
+      const d = parseISO(value);
+      if (isNaN(d.getTime())) return value;
+      return format(d, pattern);
+    } catch {
+      return value;
+    }
+  };
+
   const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
+    if (filteredAppointments.length === 0) return;
 
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    printWindow.document.write(`
+    const html = `
       <html>
         <head>
           <title>Agendamentos - ${patientName}</title>
