@@ -98,20 +98,34 @@ serve(async (req) => {
   const signature =
     req.headers.get("x-chatgoo-signature") ?? req.headers.get("x-hub-signature-256");
 
-  const valid = await verifyChatgooSignature(rawBody, signature);
-  if (!valid) {
+  // ChatGoo (Whaticket-like) não envia assinatura HMAC no webhook de projeto.
+  // Quando a assinatura vier, ela é validada; quando não vier, o evento é aceito
+  // e registrado como UNSIGNED (o fluxo é somente leitura + handoff humano).
+  if (signature) {
+    const valid = await verifyChatgooSignature(rawBody, signature);
+    if (!valid) {
+      await supabase.from("chatgoo_events").insert({
+        direction: "inbound",
+        event: "webhook",
+        decision: "BLOCKED",
+        reason: "INVALID_SIGNATURE",
+        payload: { raw: rawBody.slice(0, 2000) },
+      });
+      return new Response(JSON.stringify({ error: "invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  } else {
     await supabase.from("chatgoo_events").insert({
       direction: "inbound",
       event: "webhook",
-      decision: "BLOCKED",
-      reason: "INVALID_SIGNATURE",
+      decision: "ACCEPTED",
+      reason: "UNSIGNED",
       payload: { raw: rawBody.slice(0, 2000) },
     });
-    return new Response(JSON.stringify({ error: "invalid signature" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   }
+
 
   let body: Record<string, any> = {};
   try {
