@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { PatientFormFields, PatientFormData } from "@/components/patients/PatientFormFields";
 
+import { persistWhatsappConsent } from "@/lib/whatsappConsentSave";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 // Validação de CPF brasileiro
 const isValidCPF = (cpf: string): boolean => {

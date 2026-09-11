@@ -23,6 +23,7 @@ import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAp
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { PatientOdontogramModal } from "@/components/patients/modals/PatientOdontogramModal";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
+import { loadWhatsappConsent, persistWhatsappConsent } from "@/lib/whatsappConsentSave";
 import { PatientSearchBox } from "@/components/patients/PatientSearchBox";
 
 interface InsurancePlan {

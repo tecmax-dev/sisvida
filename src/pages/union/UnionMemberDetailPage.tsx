@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
+import { loadWhatsappConsent, persistWhatsappConsent } from "@/lib/whatsappConsentSave";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
