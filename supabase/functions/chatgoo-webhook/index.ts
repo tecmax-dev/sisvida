@@ -233,7 +233,25 @@ serve(async (req) => {
       ? `${digits.slice(0, 4)}9${digits.slice(4)}`
       : digits;
   const { valid: phoneOk, e164 } = normalizeBrPhone(normalizedRawPhone);
-  const intent: Intent = NUMBER_MAP[text] ?? detectIntent(text);
+
+  // Quando o contato toca em um botão/opção da lista, o ChatGoo pode devolver o
+  // id selecionado em formatos diferentes; cobrimos os mais comuns.
+  const selectedId = String(
+    body?.selectedId ??
+      body?.selectedRowId ??
+      body?.message?.selectedId ??
+      body?.message?.selectedRowId ??
+      body?.message?.listResponse?.id ??
+      body?.message?.buttonReply?.id ??
+      body?.message?.interactive?.list_reply?.id ??
+      body?.message?.interactive?.button_reply?.id ??
+      body?.rawMsg?.message?.listResponseMessage?.singleSelectReply?.selectedRowId ??
+      body?.rawMsg?.message?.buttonsResponseMessage?.selectedButtonId ??
+      "",
+  ).trim();
+
+  const intent: Intent =
+    OPTION_ID_MAP[selectedId] ?? NUMBER_MAP[text] ?? detectIntent(text);
 
   const log = async (decision: string, reason: string | null, patientId: string | null, reply: string) => {
     await supabase.from("chatgoo_events").insert({
