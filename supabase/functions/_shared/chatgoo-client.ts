@@ -202,12 +202,14 @@ export async function chatgooSendListViaMeta(
   supabaseAdmin: SupabaseLike,
   phoneE164: string,
   list: ChatgooListPayload,
+  opts?: { inboundNow?: boolean },
 ): Promise<ChatgooSendResult> {
   if (!chatgooSendEnabled()) {
     return { sent: false, dry_run: true, status: null, body: null, error: null };
   }
 
-  const windowOpen = await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  const windowOpen = opts?.inboundNow === true ||
+    await isWithinSessionWindow(supabaseAdmin, phoneE164);
   if (!windowOpen) {
     try {
       await supabaseAdmin.from("chatgoo_events").insert({
