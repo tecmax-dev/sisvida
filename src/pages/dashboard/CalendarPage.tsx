@@ -3116,21 +3116,23 @@ const updateData: Record<string, any> = {
           directReplyEnabled
         );
 
-        console.log(`[BULK REMINDER] [${i+1}] Invoking send-whatsapp for ${phoneToUse}...`);
+        console.log(`[BULK REMINDER] [${i+1}] Invoking send for ${phoneToUse}...`);
         const isSindicato = currentClinic?.id === SINDICATO_CLINIC_ID;
-        const professionalName = appointment.professional?.name || 'Profissional';
-        const templatePayload = isSindicato ? {
-          templateName: 'lembrete_consulta_v2',
-          templateLanguage: 'pt_BR',
-          templateComponents: [
-            displayName,
-            professionalName,
-            appointment.professional?.specialty || 'Consulta',
-            formattedDate,
-            appointment.start_time.slice(0, 5),
-            getOfficialReminderLocation(professionalName, currentClinic?.name || 'Sindicato'),
-          ],
-        } : {};
+
+        if (isSindicato) {
+          const { data: reminderData, error: reminderError } = await supabase.functions.invoke('send-appointment-reminder', {
+            body: { appointmentId: appointment.id },
+          });
+          if (reminderError || !reminderData?.ok) {
+            console.error(`[BULK REMINDER] [${i+1}] BLOCKED/ERROR:`, reminderError || reminderData?.reason);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1200));
+          continue;
+        }
+
         const { data, error } = await supabase.functions.invoke('send-whatsapp', {
           body: { 
             phone: phoneToUse, 
@@ -3138,9 +3140,9 @@ const updateData: Record<string, any> = {
             clinicId: currentClinic?.id,
             type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder',
             appointmentId: appointment.id,
-            ...templatePayload,
           },
         });
+
 
         console.log(`[BULK REMINDER] [${i+1}] Result: error=${JSON.stringify(error)}, data.success=${data?.success}, data.error=${data?.error}`);
 
