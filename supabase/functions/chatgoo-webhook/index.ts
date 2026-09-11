@@ -282,6 +282,26 @@ serve(async (req) => {
     );
   };
 
+  // Menu com botões (lista interativa Meta). Se o envio da lista falhar por
+  // erro da Meta, cai no menu numerado em texto como reserva.
+  const answerMenu = async (first: string, patientId: string | null) => {
+    const bodyText = `Olá, ${first}! Sou o atendimento automático do sindicato. Escolha uma opção:`;
+    const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
+      body: bodyText,
+      buttonLabel: "Ver opções",
+      footer: "Toque em uma opção",
+      sections: [{ title: "Como posso ajudar?", rows: MENU_LIST_ROWS }],
+    });
+    if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
+      await chatgooSendTextViaMeta(supabase, e164 ?? "", `Olá, ${first}!\n\n${MENU}`);
+    }
+    await log("ANSWERED", null, patientId, bodyText);
+    return new Response(
+      JSON.stringify({ status: "ANSWERED", intent: "MENU", dry_run: result.dry_run, reply: bodyText }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  };
+
   if (!phoneOk || !e164) {
     return await answer(
       "Não consegui identificar seu número. Vou encaminhar para um atendente.",
