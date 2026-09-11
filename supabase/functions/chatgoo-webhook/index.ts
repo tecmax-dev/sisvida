@@ -411,22 +411,43 @@ serve(async (req) => {
 
   // Menu com botões (lista interativa Meta). Se o envio da lista falhar por
   // erro da Meta, cai no menu numerado em texto como reserva.
-  const answerMenu = async (first: string, patientId: string | null) => {
-    const bodyText = `Olá, ${first}! Sou o atendimento automático do sindicato. Escolha uma opção:`;
+  const answerMenu = async (
+    kind: "ROOT" | "ASSOCIADO" | "EMPRESA" | "CONTABILIDADE",
+    greeting: string,
+    patientId: string | null,
+  ) => {
+    const config = {
+      ROOT: { rows: ROOT_LIST_ROWS, title: "Você é...", fallback: ROOT_MENU },
+      ASSOCIADO: { rows: ASSOC_LIST_ROWS, title: "Associado", fallback: ASSOC_MENU },
+      EMPRESA: { rows: EMP_LIST_ROWS, title: "Empresa", fallback: EMP_MENU },
+      CONTABILIDADE: { rows: CTB_LIST_ROWS, title: "Contabilidade", fallback: CTB_MENU },
+    }[kind];
+
+    const bodyText = greeting;
     const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
       body: bodyText,
       buttonLabel: "Ver opções",
       footer: "Toque em uma opção",
-      sections: [{ title: "Como posso ajudar?", rows: MENU_LIST_ROWS }],
+      sections: [{ title: config.title, rows: config.rows }],
     });
     if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
-      await chatgooSendTextViaMeta(supabase, e164 ?? "", `Olá, ${first}!\n\n${MENU}`);
+      await chatgooSendTextViaMeta(supabase, e164 ?? "", `${bodyText}\n\n${config.fallback}`);
     }
     await log("ANSWERED", null, patientId, bodyText);
     return new Response(
-      JSON.stringify({ status: "ANSWERED", intent: "MENU", dry_run: result.dry_run, reply: bodyText }),
+      JSON.stringify({ status: "ANSWERED", intent, dry_run: result.dry_run, reply: bodyText }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  };
+
+  const employerLookup = async () => {
+    const { data } = await supabase
+      .from("employers")
+      .select("id,name,trade_name,cnpj,phone,email,city,state,is_active")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .in("phone", phoneVariants(e164 ?? ""))
+      .limit(5);
+    return data ?? [];
   };
 
   if (!phoneOk || !e164) {
