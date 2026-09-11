@@ -126,14 +126,16 @@ const EMP_MENU = [
   "1 - Boletos e contribuições da empresa",
   "2 - Homologações da empresa",
   "3 - Segunda via de boleto",
-  "4 - Dados cadastrais da empresa",
-  "5 - Falar com um atendente",
+  "4 - Informar valor / atualizar vencimento",
+  "5 - Dados cadastrais da empresa",
+  "6 - Falar com um atendente",
 ].join("\n");
 
 const EMP_LIST_ROWS = [
   { id: "OPT_EMP_BOLETOS", title: "Boletos", description: "Contribuições em aberto da empresa" },
   { id: "OPT_EMP_HOMOLOGACAO", title: "Homologações", description: "Agendamentos de rescisão" },
   { id: "OPT_EMP_2VIA", title: "2ª via de boleto", description: "Reenviar link e código do boleto" },
+  { id: "OPT_EMP_ATUALIZAR", title: "Informar valor", description: "Valor, tipo e novo vencimento" },
   { id: "OPT_EMP_DADOS", title: "Dados cadastrais", description: "Dados da empresa no sindicato" },
   { id: "OPT_EMP_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
@@ -143,13 +145,15 @@ const CTB_MENU = [
   "1 - Empresas do escritório",
   "2 - Boletos em aberto das empresas",
   "3 - Segunda via de boleto",
-  "4 - Falar com um atendente",
+  "4 - Informar valor / atualizar vencimento",
+  "5 - Falar com um atendente",
 ].join("\n");
 
 const CTB_LIST_ROWS = [
   { id: "OPT_CTB_EMPRESAS", title: "Empresas", description: "Empresas vinculadas ao escritório" },
   { id: "OPT_CTB_BOLETOS", title: "Boletos", description: "Contribuições em aberto das empresas" },
   { id: "OPT_CTB_2VIA", title: "2ª via de boleto", description: "Reenviar link e código do boleto" },
+  { id: "OPT_CTB_ATUALIZAR", title: "Informar valor", description: "Valor, tipo e novo vencimento" },
   { id: "OPT_CTB_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
 
@@ -172,15 +176,17 @@ const EMP_NUMBER_MAP: Record<string, Intent> = {
   "1": "EMP_BOLETOS",
   "2": "EMP_HOMOLOGACAO",
   "3": "EMP_2VIA",
-  "4": "EMP_DADOS",
-  "5": "HUMANO",
+  "4": "EMP_ATUALIZAR",
+  "5": "EMP_DADOS",
+  "6": "HUMANO",
 };
 
 const CTB_NUMBER_MAP: Record<string, Intent> = {
   "1": "CTB_EMPRESAS",
   "2": "CTB_BOLETOS",
   "3": "CTB_2VIA",
-  "4": "HUMANO",
+  "4": "CTB_ATUALIZAR",
+  "5": "HUMANO",
 };
 
 // IDs das opções do menu interativo (botões/lista Meta). Quando o contato toca
