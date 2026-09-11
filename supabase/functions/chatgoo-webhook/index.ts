@@ -440,15 +440,33 @@ serve(async (req) => {
     );
   };
 
+  // Telefones de empresas/escritórios podem estar com máscara; casamos pelos
+  // 8 últimos dígitos, que identificam a linha independentemente da formatação.
+  const last8 = (e164 ?? "").slice(-8);
+  const phoneMatches = (value: unknown) => {
+    const d = String(value ?? "").replace(/\D/g, "");
+    return d.length >= 8 && d.slice(-8) === last8;
+  };
+
   const employerLookup = async () => {
     const { data } = await supabase
       .from("employers")
       .select("id,name,trade_name,cnpj,phone,email,city,state,is_active")
       .eq("clinic_id", SINDICATO_CLINIC_ID)
-      .in("phone", phoneVariants(e164 ?? ""))
-      .limit(5);
-    return data ?? [];
+      .ilike("phone", `%${last8}%`)
+      .limit(10);
+    return (data ?? []).filter((e) => phoneMatches(e.phone));
   };
+
+  const accountingLookup = async () => {
+    const { data } = await supabase
+      .from("accounting_offices")
+      .select("id,name,trade_name,cnpj,phone,email")
+      .ilike("phone", `%${last8}%`)
+      .limit(10);
+    return (data ?? []).filter((a) => phoneMatches(a.phone));
+  };
+
 
   if (!phoneOk || !e164) {
     return await answer(
