@@ -169,6 +169,18 @@ export default function PublicContributionValue() {
 
     setSubmitting(true);
     try {
+      // Tipo de contribuição escolhido no link seguro
+      if (typeId && typeId !== contribution.contribution_type_id) {
+        const { data: typeOk } = await supabase.rpc("set_contribution_type_by_public_token", {
+          p_token: rawToken ? decodeURIComponent(rawToken).trim() : rawToken,
+          p_type_id: typeId,
+        });
+        if (typeOk === false) {
+          toast.error("Não foi possível alterar o tipo de contribuição");
+          return;
+        }
+      }
+
       const { data, error: submitError } = await supabase.functions.invoke("set-contribution-value", {
         body: {
           contribution_id: contribution.id,
