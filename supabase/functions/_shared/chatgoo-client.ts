@@ -77,14 +77,69 @@ export async function chatgooSendText(
 // do ChatGoo (/api/messages/send) é para conexões Baileys e não se aplica.
 const META_PHONE_NUMBER_ID = "1213495528515111";
 
+// COMPLIANCE META: mensagem livre (session message) só pode ser enviada dentro
+// da janela de 24h aberta pela última mensagem do contato. Fora da janela, a
+// Meta exige template aprovado — enviar texto livre causa bloqueio/banimento.
+// Esta trava é FAIL-CLOSED: se não for possível comprovar a janela, NÃO envia.
+const SESSION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+interface SupabaseLike {
+  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  // deno-lint-ignore no-explicit-any
+  from: (table: string) => any;
+}
+
+async function isWithinSessionWindow(
+  supabaseAdmin: SupabaseLike,
+  phoneE164: string,
+): Promise<boolean> {
+  try {
+    const since = new Date(Date.now() - SESSION_WINDOW_MS).toISOString();
+    const { data, error } = await supabaseAdmin
+      .from("chatgoo_events")
+      .select("id")
+      .eq("direction", "inbound")
+      .eq("event", "message")
+      .eq("phone", phoneE164)
+      .gte("created_at", since)
+      .limit(1);
+    if (error) {
+      console.error(`[chatgoo/meta] falha ao verificar janela 24h: ${JSON.stringify(error)}`);
+      return false; // fail-closed
+    }
+    return Array.isArray(data) && data.length > 0;
+  } catch (e) {
+    console.error(`[chatgoo/meta] exceção ao verificar janela 24h: ${e instanceof Error ? e.message : String(e)}`);
+    return false; // fail-closed
+  }
+}
+
 export async function chatgooSendTextViaMeta(
-  supabaseAdmin: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> },
+  supabaseAdmin: SupabaseLike,
   phoneE164: string,
   message: string,
 ): Promise<ChatgooSendResult> {
   if (!chatgooSendEnabled()) {
     return { sent: false, dry_run: true, status: null, body: null, error: null };
   }
+
+  // Trava de compliance: fora da janela de 24h, bloqueia e registra auditoria.
+  const windowOpen = await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  if (!windowOpen) {
+    try {
+      await supabaseAdmin.from("chatgoo_events").insert({
+        direction: "outbound",
+        event: "meta_send",
+        phone: phoneE164,
+        decision: "BLOCKED",
+        reason: "OUTSIDE_24H_WINDOW",
+        payload: { preview: message.slice(0, 200) },
+      });
+    } catch { /* auditoria best-effort */ }
+    console.error(`[chatgoo/meta] BLOQUEADO fora da janela de 24h: ${phoneE164}`);
+    return { sent: false, dry_run: false, status: null, body: null, error: "OUTSIDE_24H_WINDOW" };
+  }
+
   try {
     const { data: secret } = await supabaseAdmin.rpc("get_meta_vault_secret", {
       _secret_name: "META_WHATSAPP_TOKEN_V2",
