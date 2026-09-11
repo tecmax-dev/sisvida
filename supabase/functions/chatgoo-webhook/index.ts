@@ -611,16 +611,33 @@ serve(async (req) => {
     }
 
     const hoje = new Date().toISOString().slice(0, 10);
+
+    // Somente os tipos autorizados: 124 Mensalidade Sindical,
+    // 125 Taxa Negocial (Mercados) e 126 Taxa Negocial (COM VAREJ).
+    const { data: tipos } = await supabase
+      .from("contribution_types")
+      .select("id,name")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .limit(200);
+    const tiposPermitidos = new Set(
+      (tipos ?? [])
+        .filter((t: any) => /^\s*(124|125|126)\s*-/.test(String(t.name ?? "")))
+        .map((t: any) => String(t.id)),
+    );
+
     const { data: contribs } = await supabase
       .from("employer_contributions")
-      .select("id,competence_month,competence_year,due_date,value,status,public_access_token")
+      .select("id,competence_month,competence_year,due_date,value,status,public_access_token,contribution_type_id")
       .eq("employer_id", empresa.id)
       .in("status", ["awaiting_value", "pending", "overdue"])
+      .gte("due_date", "2026-01-01")
       .order("due_date", { ascending: true })
-      .limit(20);
+      .limit(50);
 
-    // Elegíveis: boletos zerados (a vencer ou vencidos) e boletos vencidos.
+    // Elegíveis: boletos zerados (a vencer ou vencidos) e boletos vencidos,
+    // a partir de 2026 e somente dos tipos 124/125/126.
     const elegiveis = (contribs ?? []).filter((c: any) => {
+      if (!tiposPermitidos.has(String(c.contribution_type_id ?? ""))) return false;
       const zerado = !c.value || Number(c.value) === 0 || c.status === "awaiting_value";
       const vencido = c.status === "overdue" ||
         String(c.due_date ?? "").slice(0, 10) < hoje;
