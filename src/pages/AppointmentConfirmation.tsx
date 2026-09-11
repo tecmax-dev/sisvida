@@ -245,14 +245,21 @@ export default function AppointmentConfirmation() {
           )}
 
           {actionComplete === "cancelled" && (
-            <div className="flex items-center gap-3 p-4 bg-destructive/10 rounded-lg border border-destructive/20">
-              <XCircle className="h-6 w-6 text-destructive" />
-              <div>
-                <p className="font-medium text-destructive">Consulta cancelada</p>
-                <p className="text-sm text-muted-foreground">Caso precise reagendar, entre em contato com a clínica.</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                <XCircle className="h-6 w-6 text-destructive" />
+                <div>
+                  <p className="font-medium text-destructive">Consulta cancelada</p>
+                  <p className="text-sm text-muted-foreground">Se precisar, você pode agendar um novo atendimento pelo aplicativo.</p>
+                </div>
               </div>
+              <Button variant="secondary" className="w-full" size="lg" onClick={() => window.location.assign("/app/agendar")}>
+                <Calendar className="h-4 w-4 mr-2" />
+                Agendar novo atendimento
+              </Button>
             </div>
           )}
+
 
           {/* Already processed status */}
           {!actionComplete && isAlreadyProcessed && (
@@ -305,6 +312,16 @@ export default function AppointmentConfirmation() {
                     )}
                     Confirmar Presença
                   </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => window.location.assign("/app/agendar")}
+                    disabled={actionLoading}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Reagendar
+                  </Button>
                   <Button 
                     variant="outline" 
                     onClick={() => setShowCancelForm(true)}
@@ -316,6 +333,7 @@ export default function AppointmentConfirmation() {
                     Cancelar Consulta
                   </Button>
                 </>
+
               ) : (
                 <>
                   <Button 
