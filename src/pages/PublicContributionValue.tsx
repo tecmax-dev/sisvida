@@ -66,6 +66,8 @@ export default function PublicContributionValue() {
   const [newDueDate, setNewDueDate] = useState("");
   const [success, setSuccess] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [types, setTypes] = useState<{ id: string; name: string; default_value: number }[]>([]);
+  const [typeId, setTypeId] = useState<string>("");
 
   useEffect(() => {
     if (rawToken) {
