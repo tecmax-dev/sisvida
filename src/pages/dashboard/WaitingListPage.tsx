@@ -410,15 +410,11 @@ function WaitingListContent() {
           waitingListId: entry.id,
           appointmentDate: slotDateValue,
           startTime: slotTimeValue,
-          professionalId:
-            override?.professionalId ?? entry.offered_professional_id ?? entry.professional?.id ?? null,
-          professionalName:
-            override?.professionalName ||
-            entry.offered_professional_name ||
-            entry.professional?.name ||
-            "Profissional",
+          professionalId: slotProfId,
+          professionalName: slotProfName,
         },
       });
+
 
 
       if (error) throw error;
