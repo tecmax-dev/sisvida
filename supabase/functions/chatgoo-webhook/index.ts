@@ -531,6 +531,164 @@ serve(async (req) => {
     return (data ?? []).filter((a) => phoneMatches(a.phone));
   };
 
+  // ===== ATUALIZAÇÃO DE BOLETO (valor / tipo / novo vencimento) =====
+  // Compliance Meta: nenhum dado financeiro é coletado por texto livre no
+  // WhatsApp. O contato informa apenas o CNPJ e recebe um link seguro, com
+  // token por boleto, onde preenche valor, tipo de contribuição e vencimento.
+  const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
+
+  const askCnpj = async (scope: "EMPRESA" | "CONTABILIDADE") => {
+    nextAwaitCnpj = scope;
+    return await answer(
+      [
+        "Para atualizar boleto (valor, tipo de contribuição ou novo vencimento),",
+        "me informe o CNPJ da empresa (somente números).",
+        "",
+        "Exemplo: 12345678000199",
+      ].join("\n"),
+      "ANSWERED",
+      "ASK_CNPJ",
+      null,
+    );
+  };
+
+  const sendUpdateLinks = async (
+    cnpjDigits: string,
+    scope: "EMPRESA" | "CONTABILIDADE",
+  ) => {
+    // Autorização: o CNPJ precisa pertencer ao tenant do sindicato e, no caso da
+    // contabilidade, estar vinculado ao escritório identificado pelo telefone.
+    const { data: empresas } = await supabase
+      .from("employers")
+      .select("id,name,trade_name,cnpj")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .limit(2000);
+    const empresa = (empresas ?? []).find(
+      (e: any) => String(e.cnpj ?? "").replace(/\D/g, "") === cnpjDigits,
+    );
+
+    if (!empresa) {
+      return await answer(
+        "Não localizei empresa com este CNPJ no sindicato. Confira os números ou responda \"atendente\".",
+        "ANSWERED",
+        "CNPJ_NOT_FOUND",
+        null,
+      );
+    }
+
+    if (scope === "EMPRESA") {
+      const vinculadas = await employerLookup();
+      const autorizada = vinculadas.some((e: any) => e.id === empresa.id);
+      if (!autorizada) {
+        return await answer(
+          "Por segurança, só posso atualizar boletos da empresa vinculada a este número. Vou encaminhar para um atendente.",
+          "HANDOFF",
+          "CNPJ_NOT_LINKED_TO_PHONE",
+          null,
+        );
+      }
+    } else {
+      const escritorios = await accountingLookup();
+      if (escritorios.length !== 1) {
+        return await answer(
+          "Não consegui confirmar o escritório com segurança. Vou encaminhar para um atendente.",
+          "HANDOFF",
+          "ACCOUNTING_NOT_RESOLVED",
+          null,
+        );
+      }
+      const { data: vinculo } = await supabase
+        .from("accounting_office_employers")
+        .select("employer_id")
+        .eq("accounting_office_id", escritorios[0].id)
+        .eq("employer_id", empresa.id)
+        .maybeSingle();
+      if (!vinculo) {
+        return await answer(
+          "Este CNPJ não está vinculado ao escritório deste número. Vou encaminhar para um atendente.",
+          "HANDOFF",
+          "CNPJ_NOT_LINKED_TO_OFFICE",
+          null,
+        );
+      }
+    }
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const { data: contribs } = await supabase
+      .from("employer_contributions")
+      .select("id,competence_month,competence_year,due_date,value,status,public_access_token")
+      .eq("employer_id", empresa.id)
+      .in("status", ["awaiting_value", "pending", "overdue"])
+      .order("due_date", { ascending: true })
+      .limit(20);
+
+    // Elegíveis: boletos zerados (a vencer ou vencidos) e boletos vencidos.
+    const elegiveis = (contribs ?? []).filter((c: any) => {
+      const zerado = !c.value || Number(c.value) === 0 || c.status === "awaiting_value";
+      const vencido = c.status === "overdue" ||
+        String(c.due_date ?? "").slice(0, 10) < hoje;
+      return zerado || vencido;
+    }).slice(0, 5);
+
+    const nomeEmpresa = empresa.trade_name || empresa.name || "Empresa";
+
+    if (elegiveis.length === 0) {
+      return await answer(
+        `${nomeEmpresa}: não encontrei boleto zerado ou vencido para atualizar. Se precisar de outra competência, responda "atendente".`,
+        "ANSWERED",
+        "NO_ELIGIBLE_CONTRIBUTION",
+        null,
+      );
+    }
+
+    const blocos: string[] = [];
+    for (const c of elegiveis) {
+      let token = c.public_access_token as string | null;
+      if (!token) {
+        const { data: gen } = await supabase.rpc("generate_contribution_access_token");
+        token = (gen as string) ?? null;
+        if (token) {
+          await supabase
+            .from("employer_contributions")
+            .update({ public_access_token: token })
+            .eq("id", c.id);
+        }
+      }
+      if (!token) continue;
+      const comp = c.competence_month && c.competence_year
+        ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+        : "-";
+      blocos.push(
+        [
+          `• Competência ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}`,
+          `  Atualizar: ${APP_BASE_URL}/contribuicao/${encodeURIComponent(token)}`,
+        ].join("\n"),
+      );
+    }
+
+    if (blocos.length === 0) {
+      return await answer(
+        `${nomeEmpresa}: não consegui gerar o link seguro agora. Vou encaminhar para um atendente.`,
+        "HANDOFF",
+        "TOKEN_GENERATION_FAILED",
+        null,
+      );
+    }
+
+    return await answer(
+      [
+        `${nomeEmpresa} — CNPJ ${cnpjDigits}`,
+        "Nos links abaixo você informa o valor, o tipo de contribuição e, para boletos vencidos, a nova data de vencimento. O boleto é gerado na hora.",
+        "",
+        ...blocos,
+        "",
+        "Os links são pessoais e de uso exclusivo desta solicitação.",
+      ].join("\n"),
+      "ANSWERED",
+      "UPDATE_LINKS_SENT",
+      null,
+    );
+  };
 
   if (!phoneOk || !e164) {
     return await answer(
@@ -551,6 +709,28 @@ serve(async (req) => {
       null,
     );
   }
+
+  if (intent === "EMP_ATUALIZAR") return await askCnpj("EMPRESA");
+  if (intent === "CTB_ATUALIZAR") return await askCnpj("CONTABILIDADE");
+
+  // Resposta com o CNPJ solicitado no passo anterior
+  if (awaitCnpj) {
+    const digits = text.replace(/\D/g, "");
+    if (digits.length === 14) {
+      intent = awaitCnpj === "CONTABILIDADE" ? "CTB_ATUALIZAR" : "EMP_ATUALIZAR";
+      return await sendUpdateLinks(digits, awaitCnpj);
+    }
+    if (digits.length > 0 && digits.length < 14 && !selectedId) {
+      nextAwaitCnpj = awaitCnpj;
+      return await answer(
+        "CNPJ inválido. Envie os 14 números do CNPJ, sem pontos ou barras.",
+        "ANSWERED",
+        "INVALID_CNPJ",
+        null,
+      );
+    }
+  }
+
 
   // MENU INICIAL: separa o atendimento por perfil (associado, empresa, contabilidade)
   if (intent === "MENU") {
