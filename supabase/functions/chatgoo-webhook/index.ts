@@ -585,6 +585,110 @@ serve(async (req) => {
     }
   }
 
+  // ===== CONSENTIMENTO (OPT-IN) COM BOTÕES — BOAS PRÁTICAS META =====
+  // No primeiro contato, perguntamos uma única vez se a pessoa autoriza receber
+  // mensagens. A resposta do botão ("Sim, autorizo" / "Não autorizo") fica
+  // registrada com data/hora como prova auditável de consentimento.
+  {
+    const tConsent = String(text ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim();
+    const saidYes =
+      selectedId === "CONSENT_SIM" ||
+      /^(sim autorizo|autorizo|eu autorizo|sim)$/.test(tConsent) === true && selectedId === "CONSENT_SIM";
+    const saidNo =
+      selectedId === "CONSENT_NAO" || tConsent === "nao autorizo";
+
+    // Aceita "sim" digitado APENAS como resposta ao botão (selectedId) ou frase
+    // explícita de autorização — nunca um "sim" solto de outro contexto.
+    const explicitYes =
+      selectedId === "CONSENT_SIM" ||
+      /^(sim autorizo|autorizo|eu autorizo|autorizo sim)$/.test(tConsent);
+
+    if (explicitYes || saidNo) {
+      if (explicitYes) {
+        await supabase.from("whatsapp_opt_ins").upsert(
+          {
+            clinic_id: SINDICATO_CLINIC_ID,
+            phone: e164,
+            source: "consent_button",
+            consented_at: new Date().toISOString(),
+          },
+          { onConflict: "clinic_id,phone" },
+        );
+        return await answer(
+          "Obrigado! Seu consentimento foi registrado. Envie \"MENU\" para começar.",
+          "OPT_IN",
+          "CONSENT_GRANTED_BUTTON",
+          null,
+        );
+      }
+      // Recusa explícita: registra opt-out e silencia (uma única confirmação).
+      await supabase.from("whatsapp_opt_outs").insert({
+        clinic_id: SINDICATO_CLINIC_ID,
+        phone: e164,
+        source: "consent_button",
+        reason: "consent_declined",
+      });
+      return await answer(
+        "Entendido. Você não receberá mensagens automáticas neste número.",
+        "OPT_OUT",
+        "CONSENT_DECLINED_BUTTON",
+        null,
+      );
+    }
+
+    // Envia o convite de consentimento UMA vez a cada 30 dias, apenas para
+    // contatos que ainda não consentiram e não estão descadastrados.
+    if (e164) {
+      const { data: optin } = await supabase
+        .from("whatsapp_opt_ins")
+        .select("id")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .eq("phone", e164)
+        .limit(1);
+      if (!optin || optin.length === 0) {
+        const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: prompted } = await supabase
+          .from("chatgoo_events")
+          .select("id")
+          .eq("event", "consent_prompt")
+          .eq("phone", e164)
+          .gte("created_at", since30d)
+          .limit(1);
+        if (!prompted || prompted.length === 0) {
+          await chatgooSendButtonsViaMeta(supabase, e164, {
+            body: [
+              "Antes de continuarmos: você autoriza o recebimento de mensagens",
+              "informativas e operacionais do sindicato neste número?",
+              "",
+              "Você pode cancelar a qualquer momento enviando SAIR.",
+            ].join("\n"),
+            buttons: [
+              { id: "CONSENT_SIM", title: "Sim, autorizo" },
+              { id: "CONSENT_NAO", title: "Não autorizo" },
+            ],
+            footer: "Sindicato • atendimento oficial",
+          });
+          await supabase.from("chatgoo_events").insert({
+            direction: "outbound",
+            event: "consent_prompt",
+            phone: e164,
+            clinic_id: SINDICATO_CLINIC_ID,
+            decision: "ANSWERED",
+            reason: "CONSENT_PROMPT_SENT",
+            payload: { ticket_id: ticketId },
+          });
+        }
+      }
+    }
+  }
+
+
+
 
   // Telefones de empresas/escritórios podem estar com máscara; casamos pelos
   // 8 últimos dígitos, que identificam a linha independentemente da formatação.
