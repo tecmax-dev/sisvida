@@ -79,8 +79,9 @@ function fmtDate(value: string | null | undefined): string {
   return y && m && d ? `${d}/${m}/${y}` : String(value);
 }
 
+// Valores de contribuição são armazenados em CENTAVOS no banco.
 function fmtMoney(v: unknown): string {
-  const n = Number(v ?? 0);
+  const n = Number(v ?? 0) / 100;
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
