@@ -263,7 +263,9 @@ serve(async (req) => {
         payload: { raw: rawBody.slice(0, 2000) },
       });
       return new Response(JSON.stringify({ error: "invalid signature" }), {
-        status: 401,
+        // Webhooks devem sempre receber 200 para não entrarem em backoff ou
+        // serem desativados pelo provedor. A mensagem continua bloqueada.
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -272,8 +274,15 @@ serve(async (req) => {
   try {
     body = JSON.parse(rawBody || "{}");
   } catch {
-    return new Response(JSON.stringify({ error: "invalid json" }), {
-      status: 400,
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "webhook",
+      decision: "BLOCKED",
+      reason: "INVALID_JSON",
+      payload: { raw: rawBody.slice(0, 2000) },
+    });
+    return new Response(JSON.stringify({ status: "BLOCKED", reason: "INVALID_JSON" }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -350,17 +359,6 @@ serve(async (req) => {
   // extraímos do remoteJid/wamid — assim nenhuma mensagem fica sem destino
   // (era a causa do erro "The parameter to is required" e do silêncio).
   const jidToDigits = (v: unknown) => String(v ?? "").split("@")[0].replace(/\D/g, "");
-  const fromWamid = (() => {
-    const m = String(messageId || "").match(/^wamid\.([A-Za-z0-9+/=]+)/);
-    if (!m) return "";
-    try {
-      const decoded = atob(m[1].replace(/-/g, "+").replace(/_/g, "/"));
-      const found = decoded.match(/55\d{9,11}/);
-      return found ? found[0] : "";
-    } catch {
-      return "";
-    }
-  })();
   const rawPhone =
     [
       body?.contactNumber,
@@ -393,7 +391,7 @@ serve(async (req) => {
       metaMessage?.from,
     ]
       .map(jidToDigits)
-      .find((d) => d.length >= 10) ?? fromWamid;
+      .find((d) => d.length >= 10) ?? "";
   const text = firstString([
     body?.messageText,
     body?.message?.body,
@@ -644,7 +642,7 @@ serve(async (req) => {
     });
     return new Response(
       JSON.stringify({ status: "BLOCKED", reason: "PHONE_INVALID" }),
-      { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
