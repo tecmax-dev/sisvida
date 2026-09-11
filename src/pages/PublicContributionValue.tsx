@@ -125,7 +125,15 @@ export default function PublicContributionValue() {
         p_token: decodedToken,
       });
       if (Array.isArray(typesData)) {
-        setTypes(typesData as any);
+        // Somente os tipos permitidos no link seguro: 124, 125 e 126
+        const ALLOWED_PREFIXES = ["124 -", "125 -", "126 -"];
+        const allowed = (typesData as any[]).filter((t) =>
+          ALLOWED_PREFIXES.some((p) => String(t?.name || "").trim().startsWith(p))
+        );
+        setTypes(allowed as any);
+        if (!allowed.some((t) => t.id === (contributionData.contribution_type_id ?? ""))) {
+          setTypeId("");
+        }
       }
 
       if (contributionData.contribution_type?.default_value) {
@@ -134,12 +142,8 @@ export default function PublicContributionValue() {
 
       // Pré-preenche com a data de vencimento atual (se ainda for futura)
       const currentDue = (contributionData.due_date || "").slice(0, 10);
-      if (currentDue) {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        if (currentDue >= todayStr) {
-          setNewDueDate(currentDue);
-        }
-      }
+      const todayStr = new Date().toISOString().slice(0, 10);
+      setNewDueDate(currentDue && currentDue >= todayStr ? currentDue : todayStr);
 
       if (contributionData.status !== "awaiting_value" && contributionData.lytex_invoice_url) {
         setSuccess(true);
@@ -377,7 +381,7 @@ export default function PublicContributionValue() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="due_date">Data de Vencimento *</Label>
+                <Label htmlFor="due_date">Nova Data de Vencimento *</Label>
                 <Input
                   id="due_date"
                   type="date"
