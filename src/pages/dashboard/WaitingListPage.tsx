@@ -119,6 +119,12 @@ function WaitingListContent() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [smsSendingId, setSmsSendingId] = useState<string | null>(null);
+  const [slotEntry, setSlotEntry] = useState<WaitingListEntry | null>(null);
+  const [slotDate, setSlotDate] = useState("");
+  const [slotTime, setSlotTime] = useState("");
+  const [slotProfessionalId, setSlotProfessionalId] = useState<string>("none");
+  const [slotSending, setSlotSending] = useState(false);
+
 
   // Filtros de visualização/impressão
   const [filterProfessional, setFilterProfessional] = useState("all");
@@ -343,27 +349,38 @@ function WaitingListContent() {
     }
   };
 
-  const handleNotifyPatient = async (entry: WaitingListEntry) => {
+  const handleNotifyPatient = async (
+    entry: WaitingListEntry,
+    override?: { date: string; time: string; professionalId: string | null; professionalName: string },
+  ) => {
     try {
-      if (!entry.offered_appointment_date || !entry.offered_appointment_time) {
-        toast({
-          title: "Sem vaga definida",
-          description: "Defina a data e o horário da vaga antes de avisar pelo WhatsApp.",
-          variant: "destructive",
-        });
+      const slotDateValue = override?.date || entry.offered_appointment_date;
+      const slotTimeValue = override?.time || entry.offered_appointment_time;
+
+      if (!slotDateValue || !slotTimeValue) {
+        setSlotEntry(entry);
+        setSlotDate("");
+        setSlotTime("");
+        setSlotProfessionalId(entry.professional?.id ?? "none");
         return;
       }
+
 
       const { data, error } = await supabase.functions.invoke('send-waiting-list-slot', {
         body: {
           waitingListId: entry.id,
-          appointmentDate: entry.offered_appointment_date,
-          startTime: entry.offered_appointment_time,
-          professionalId: entry.offered_professional_id ?? entry.professional?.id ?? null,
+          appointmentDate: slotDateValue,
+          startTime: slotTimeValue,
+          professionalId:
+            override?.professionalId ?? entry.offered_professional_id ?? entry.professional?.id ?? null,
           professionalName:
-            entry.offered_professional_name || entry.professional?.name || "Profissional",
+            override?.professionalName ||
+            entry.offered_professional_name ||
+            entry.professional?.name ||
+            "Profissional",
         },
       });
+
 
       if (error) throw error;
       if (!(data as any)?.ok) {
@@ -387,6 +404,49 @@ function WaitingListContent() {
       });
     }
   };
+
+  const handleConfirmSlotAndNotify = async () => {
+    if (!slotEntry) return;
+    if (!slotDate || !slotTime) {
+      toast({ title: "Informe a data e o horário da vaga", variant: "destructive" });
+      return;
+    }
+    const professionalId = slotProfessionalId !== "none" ? slotProfessionalId : null;
+    const professionalName =
+      professionals.find((p) => p.id === professionalId)?.name ||
+      slotEntry.professional?.name ||
+      "Profissional";
+
+    setSlotSending(true);
+    try {
+      const { error } = await supabase
+        .from("waiting_list")
+        .update({
+          offered_appointment_date: slotDate,
+          offered_appointment_time: slotTime.length === 5 ? `${slotTime}:00` : slotTime,
+          offered_professional_id: professionalId,
+          offered_professional_name: professionalName,
+          slot_offered_at: new Date().toISOString(),
+        })
+        .eq("id", slotEntry.id);
+      if (error) throw error;
+
+      const entryToNotify = slotEntry;
+      setSlotEntry(null);
+      await handleNotifyPatient(entryToNotify, {
+        date: slotDate,
+        time: slotTime.length === 5 ? `${slotTime}:00` : slotTime,
+        professionalId,
+        professionalName,
+      });
+    } catch (error: any) {
+      toast({ title: "Erro ao definir vaga", description: error.message, variant: "destructive" });
+    } finally {
+      setSlotSending(false);
+    }
+  };
+
+
 
 
   const handleSchedulePatient = async (entry: WaitingListEntry) => {
@@ -1139,6 +1199,48 @@ function WaitingListContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!slotEntry} onOpenChange={(open) => !open && setSlotEntry(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Definir vaga para {slotEntry?.patient?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Data da vaga</Label>
+              <Input type="date" value={slotDate} onChange={(e) => setSlotDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Horário</Label>
+              <Input type="time" value={slotTime} onChange={(e) => setSlotTime(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Profissional</Label>
+              <Select value={slotProfessionalId} onValueChange={setSlotProfessionalId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem profissional definido</SelectItem>
+                  {professionals.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setSlotEntry(null)} disabled={slotSending}>
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmSlotAndNotify} disabled={slotSending}>
+                {slotSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Avisar pelo WhatsApp
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
