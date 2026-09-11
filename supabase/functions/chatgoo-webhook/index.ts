@@ -28,6 +28,14 @@ type Intent =
   | "AGENDAMENTOS"
   | "HOMOLOGACAO"
   | "FINANCEIRO"
+  | "EMP_BOLETOS"
+  | "EMP_HOMOLOGACAO"
+  | "EMP_DADOS"
+  | "CTB_EMPRESAS"
+  | "CTB_BOLETOS"
+  | "MENU_ASSOCIADO"
+  | "MENU_EMPRESA"
+  | "MENU_CONTABILIDADE"
   | "HUMANO"
   | "MENU";
 
@@ -37,11 +45,15 @@ function detectIntent(text: string): Intent {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
   if (/(atendente|humano|falar com|pessoa|suporte)/.test(t)) return "HUMANO";
+  if (/(menu|inicio|voltar|opcoes)/.test(t)) return "MENU";
+  if (/(sou empresa|empresa|empregador)/.test(t)) return "MENU_EMPRESA";
+  if (/(contabilidade|contador|escritorio)/.test(t)) return "MENU_CONTABILIDADE";
+  if (/(sou associado|associado|socio)/.test(t)) return "MENU_ASSOCIADO";
   if (/(carteirinha|carteira|validade)/.test(t)) return "CARTEIRINHA";
   if (/(consulta|agendamento|marcac|horario|medic)/.test(t)) return "AGENDAMENTOS";
   if (/(homologa|rescis)/.test(t)) return "HOMOLOGACAO";
   if (/(boleto|contribui|mensalidade|pagamento|2a via|segunda via|debito)/.test(t)) return "FINANCEIRO";
-  if (/(cadastro|meus dados|situacao|associado)/.test(t)) return "CADASTRO";
+  if (/(cadastro|meus dados|situacao)/.test(t)) return "CADASTRO";
   return "MENU";
 }
 
