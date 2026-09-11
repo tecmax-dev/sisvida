@@ -322,6 +322,8 @@ export default function PatientEditPage() {
           // ignore
         }
 
+        loadedData.whatsappConsent = await loadWhatsappConsent(id);
+
         setFormData(loadedData);
         setInitialData(loadedData);
         
