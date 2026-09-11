@@ -31,6 +31,9 @@ type Intent =
   | "EMP_BOLETOS"
   | "EMP_2VIA"
   | "CTB_2VIA"
+  | "EMP_ATUALIZAR"
+  | "CTB_ATUALIZAR"
+  | "ATUALIZAR_BOLETO"
   | "EMP_HOMOLOGACAO"
   | "EMP_DADOS"
   | "CTB_EMPRESAS"
@@ -55,6 +58,7 @@ function detectIntent(text: string): Intent {
   if (/(carteirinha|carteira|validade)/.test(t)) return "CARTEIRINHA";
   if (/(consulta|agendamento|marcac|horario|medic)/.test(t)) return "AGENDAMENTOS";
   if (/(homologa|rescis)/.test(t)) return "HOMOLOGACAO";
+  if (/(informar valor|atualizar boleto|boleto zerado|valor zerado|novo vencimento|alterar vencimento|mudar vencimento)/.test(t)) return "ATUALIZAR_BOLETO";
   if (/(2a via|2 via|segunda via|reemitir|reemissao|reenviar boleto)/.test(t)) return "SEGUNDA_VIA";
   if (/(boleto|contribui|mensalidade|pagamento|debito)/.test(t)) return "FINANCEIRO";
   if (/(cadastro|meus dados|situacao)/.test(t)) return "CADASTRO";
