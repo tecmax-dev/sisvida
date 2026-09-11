@@ -135,6 +135,7 @@ function MobileAppointmentsPageContent() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [dependentAppointments, setDependentAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -177,29 +178,26 @@ function MobileAppointmentsPageContent() {
       return;
     }
     
-    try {
-      // Fetch all appointments (titular)
-      const { data: myAppointments, error: myError } = await supabase
-        .from("appointments")
-        .select(`
-          id, appointment_date, start_time, end_time, status, type, notes, dependent_id,
-          professional:professionals(id, name, specialty),
-          procedure:procedures(id, name)
-        `)
-        .eq("patient_id", patientId)
-        .eq("clinic_id", clinicId)
-        .is("dependent_id", null)
-        .order("appointment_date", { ascending: false })
-        .order("start_time", { ascending: false });
+    setLoading(true);
+    setLoadError(null);
 
-      if (myError) {
-        console.error("Error fetching appointments:", myError);
-      } else {
-        setAppointments(myAppointments as unknown as Appointment[]);
+    try {
+      // O contexto móvel pode ser restaurado do armazenamento local antes do JWT.
+      // Aguarde a sessão autenticada para que o RLS não transforme a resposta em lista vazia.
+      let session = (await supabase.auth.getSession()).data.session;
+      if (!session) {
+        const refreshed = await supabase.auth.refreshSession();
+        session = refreshed.data.session;
       }
 
-      // Fetch dependent appointments
-      const { data: depAppointments, error: depError } = await supabase
+      if (!session) {
+        setAppointments([]);
+        setDependentAppointments([]);
+        setLoadError("Sua sessão expirou. Entre novamente para visualizar os agendamentos.");
+        return;
+      }
+
+      const fetchAllAppointments = () => supabase
         .from("appointments")
         .select(`
           id, appointment_date, start_time, end_time, status, type, notes, dependent_id,
@@ -209,17 +207,33 @@ function MobileAppointmentsPageContent() {
         `)
         .eq("patient_id", patientId)
         .eq("clinic_id", clinicId)
-        .not("dependent_id", "is", null)
         .order("appointment_date", { ascending: false })
         .order("start_time", { ascending: false });
 
-      if (depError) {
-        console.error("Error fetching dependent appointments:", depError);
-      } else {
-        setDependentAppointments(depAppointments as unknown as Appointment[]);
+      let result = await fetchAllAppointments();
+
+      // Tokens restaurados pelo PWA podem estar próximos da expiração. Atualize e repita
+      // uma vez antes de concluir que o associado não possui agendamentos.
+      if (result.error) {
+        console.warn("[MobileAppointments] Primeira consulta falhou; renovando sessão", result.error);
+        const refreshed = await supabase.auth.refreshSession();
+        if (refreshed.data.session) {
+          result = await fetchAllAppointments();
+        }
       }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      const allRows = (result.data || []) as unknown as Appointment[];
+      setAppointments(allRows.filter((appointment) => !appointment.dependent_id));
+      setDependentAppointments(allRows.filter((appointment) => Boolean(appointment.dependent_id)));
     } catch (err) {
-      console.error("Error:", err);
+      console.error("[MobileAppointments] Erro ao carregar agendamentos:", err);
+      setAppointments([]);
+      setDependentAppointments([]);
+      setLoadError("Não foi possível carregar seus agendamentos. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -586,6 +600,21 @@ function MobileAppointmentsPageContent() {
     </div>
   );
 
+  const renderLoadError = () => (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+      <h3 className="text-lg font-semibold text-foreground mb-2">Agendamentos indisponíveis</h3>
+      <p className="text-muted-foreground text-center text-sm">{loadError}</p>
+      <Button
+        variant="outline"
+        className="mt-4"
+        onClick={() => patientId && clinicId && loadAppointments(patientId, clinicId)}
+      >
+        Tentar novamente
+      </Button>
+    </div>
+  );
+
   // Aguardar inicialização do contexto de auth
   if (!initialized || authLoading) {
     return (
@@ -680,6 +709,8 @@ function MobileAppointmentsPageContent() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
             </div>
+          ) : loadError ? (
+            renderLoadError()
           ) : upcomingAppointments.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="p-4">
@@ -696,6 +727,8 @@ function MobileAppointmentsPageContent() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
             </div>
+          ) : loadError ? (
+            renderLoadError()
           ) : historyAppointments.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="p-4">
