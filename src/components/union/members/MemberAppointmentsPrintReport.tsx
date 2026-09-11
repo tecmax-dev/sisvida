@@ -167,8 +167,8 @@ export function MemberAppointmentsPrintReport({ patientId, patientName }: Member
             <tbody>
               ${filteredAppointments.map(apt => `
                 <tr>
-                  <td>${format(parseISO(apt.appointment_date), "dd/MM/yyyy")}</td>
-                  <td>${apt.start_time.slice(0, 5)} - ${apt.end_time.slice(0, 5)}</td>
+                  <td>${safeDate(apt.appointment_date)}</td>
+                  <td>${(apt.start_time || "").slice(0, 5)} - ${(apt.end_time || "").slice(0, 5)}</td>
                   <td>
                     ${apt.dependent_id && apt.dependent ? `<span class="badge badge-dep">${apt.dependent.name}</span>` : patientName}
                   </td>
