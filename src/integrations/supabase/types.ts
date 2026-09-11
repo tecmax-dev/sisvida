@@ -20226,6 +20226,22 @@ export type Database = {
         }
       }
       get_meta_vault_secret: { Args: { _secret_name: string }; Returns: string }
+      get_my_mobile_appointments: {
+        Args: never
+        Returns: {
+          appointment_date: string
+          dependent: Json
+          dependent_id: string
+          end_time: string
+          id: string
+          notes: string
+          procedure: Json
+          professional: Json
+          start_time: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          type: Database["public"]["Enums"]["appointment_type"]
+        }[]
+      }
       get_negotiation_preview_by_token: {
         Args: { p_token: string }
         Returns: {
