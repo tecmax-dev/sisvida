@@ -3076,6 +3076,8 @@ const updateData: Record<string, any> = {
 
     let successCount = 0;
     let errorCount = 0;
+    const blockedReasons: Record<string, number> = {};
+
 
     console.log(`[BULK REMINDER] Starting bulk send for ${eligibleAppointments.length} appointments`);
 
