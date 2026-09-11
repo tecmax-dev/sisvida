@@ -947,6 +947,14 @@ serve(async (req) => {
   };
 
   if (!phoneOk || !e164) {
+    // Guarda o payload bruto (limitado) para diagnóstico do formato recebido.
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "webhook",
+      decision: "BLOCKED",
+      reason: "PHONE_NOT_FOUND_IN_PAYLOAD",
+      payload: { raw: rawBody.slice(0, 2000) },
+    });
     return await answer(
       "Não consegui identificar seu número. Vou encaminhar para um atendente.",
       "HANDOFF",
@@ -954,6 +962,7 @@ serve(async (req) => {
       null,
     );
   }
+
 
   if (intent === "HUMANO") {
     const queueId = Deno.env.get("CHATGOO_HUMAN_QUEUE_ID");
