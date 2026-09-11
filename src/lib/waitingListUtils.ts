@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 interface CancelledSlot {
   appointmentDate: string;
@@ -126,62 +125,39 @@ export async function notifyNextInWaitingList(
       return { notified: false, waitingCount: matchingPatients.length, error: 'Paciente sem telefone' };
     }
 
-    // Format date for message
-    const dateObj = new Date(slot.appointmentDate + 'T12:00:00');
-    const formattedDate = dateObj.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    const formattedTime = slot.startTime.slice(0, 5);
-
-    const message = `🔔 *Vaga Disponível!*
-
-Olá ${patient.name.split(' ')[0]}! 
-
-Uma vaga abriu na agenda de *${slot.professionalName}* e você está na lista de espera!
-
-📅 *Data:* ${formattedDate}
-⏰ *Horário:* ${formattedTime}
-
-Para confirmar, entre em contato conosco o mais rápido possível.
-
-Caso não confirme a tempo, a vaga será oferecida ao próximo da lista.
-
-_${clinicName}_`;
-
-    // Send WhatsApp
-    const sendResult = await sendWhatsAppMessage({
-      phone: patient.phone,
-      message,
-      clinicId,
-      type: 'custom',
+    // Envio pelo canal oficial (Meta) usando template aprovado, com gates de consentimento/opt-out
+    const { data: sendData, error: sendError } = await supabase.functions.invoke('send-waiting-list-slot', {
+      body: {
+        waitingListId: firstInLine.id,
+        appointmentDate: slot.appointmentDate,
+        startTime: slot.startTime,
+        professionalId: slot.professionalId,
+        professionalName: slot.professionalName,
+      },
     });
 
-    // Update waiting list entry with slot info regardless of send result
-    const updateData: Record<string, any> = {
-      notification_status: sendResult.success ? 'notified' : 'pending',
-      notified_at: sendResult.success ? new Date().toISOString() : null,
-      offered_appointment_date: slot.appointmentDate,
-      offered_appointment_time: slot.startTime,
-      offered_professional_id: slot.professionalId,
-      offered_professional_name: slot.professionalName,
-      slot_offered_at: sendResult.success ? new Date().toISOString() : null,
-    };
+    const ok = (sendData as any)?.ok === true;
+    const failReason = sendError?.message || (sendData as any)?.reason;
 
-    await supabase
-      .from('waiting_list')
-      .update(updateData as any)
-      .eq('id', firstInLine.id);
+    if (!ok) {
+      await supabase
+        .from('waiting_list')
+        .update({
+          offered_appointment_date: slot.appointmentDate,
+          offered_appointment_time: slot.startTime,
+          offered_professional_id: slot.professionalId,
+          offered_professional_name: slot.professionalName,
+        } as any)
+        .eq('id', firstInLine.id);
+    }
 
-    console.log(`[waitingList] Notified ${patient.name}: success=${sendResult.success}`);
+    console.log(`[waitingList] Notified ${patient.name}: success=${ok}`);
 
     return {
-      notified: sendResult.success,
+      notified: ok,
       patientName: patient.name,
       waitingCount: matchingPatients.length,
-      error: sendResult.error,
+      error: ok ? undefined : failReason,
     };
   } catch (err: any) {
     console.error('[waitingList] Unexpected error:', err);
