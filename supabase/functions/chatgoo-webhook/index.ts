@@ -116,17 +116,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-  } else {
-    await supabase.from("chatgoo_events").insert({
-      direction: "inbound",
-      event: "webhook",
-      decision: "ACCEPTED",
-      reason: "UNSIGNED",
-      payload: { raw: rawBody.slice(0, 2000) },
-    });
-  }
-
-
   let body: Record<string, any> = {};
   try {
     body = JSON.parse(rawBody || "{}");
@@ -137,11 +126,63 @@ serve(async (req) => {
     });
   }
 
-  // Mensagens enviadas pelo próprio sistema/atendente são ignoradas (anti-loop).
-  const fromMe = body?.message?.fromMe ?? body?.fromMe ?? false;
-  if (fromMe === true) {
+  const isTrue = (value: unknown) => value === true || value === 1 || value === "true" || value === "1";
+  const messageId = String(
+    body?.messageId ??
+      body?.message?.id ??
+      body?.message?.key?.id ??
+      body?.rawMsg?.key?.id ??
+      "",
+  ).trim();
+  const eventName = String(body?.event ?? body?.type ?? body?.eventType ?? "").toLowerCase();
+
+  // Bloqueia mensagens do próprio sistema/atendente e eventos de atualização (anti-loop).
+  const fromMe = [
+    body?.fromMe,
+    body?.message?.fromMe,
+    body?.message?.key?.fromMe,
+    body?.rawMsg?.fromMe,
+    body?.rawMsg?.key?.fromMe,
+    body?.data?.fromMe,
+    body?.data?.key?.fromMe,
+  ].some(isTrue);
+  const outboundEvent = /(message\.ack|message_ack|message\.update|message_update|sent|delivered|read|outbound)/.test(eventName);
+  if (fromMe || outboundEvent) {
+    await supabase.from("chatgoo_events").insert({
+      direction: "outbound",
+      event: "webhook_echo",
+      decision: "IGNORED",
+      reason: fromMe ? "FROM_ME" : "OUTBOUND_EVENT",
+      payload: { message_id: messageId || null, event: eventName || null },
+    });
     return new Response(JSON.stringify({ status: "ignored_outbound_echo" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // O mesmo evento pode ser reenviado pelo ChatGoo; processa cada mensagem apenas uma vez.
+  if (messageId) {
+    const { data: duplicate } = await supabase
+      .from("chatgoo_events")
+      .select("id")
+      .eq("event", "message")
+      .contains("payload", { message_id: messageId })
+      .limit(1)
+      .maybeSingle();
+    if (duplicate) {
+      return new Response(JSON.stringify({ status: "ignored_duplicate" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  if (!signature) {
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "webhook",
+      decision: "ACCEPTED",
+      reason: "UNSIGNED",
+      payload: { message_id: messageId || null },
     });
   }
 
@@ -182,7 +223,7 @@ serve(async (req) => {
       intent,
       decision,
       reason,
-      payload: { text, ticket_id: ticketId, reply },
+      payload: { text, ticket_id: ticketId, message_id: messageId || null, reply },
     });
   };
 
