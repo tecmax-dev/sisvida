@@ -215,6 +215,28 @@ const OPTION_ID_MAP: Record<string, Intent> = {
 
 type Profile = "ASSOCIADO" | "EMPRESA" | "CONTABILIDADE" | null;
 
+function firstString(values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" || typeof value === "number") {
+      const text = String(value).trim();
+      if (text) return text;
+    }
+  }
+  return "";
+}
+
+function extractMetaMessage(body: Record<string, any>): Record<string, any> | null {
+  const entries = Array.isArray(body?.entry) ? body.entry : [];
+  for (const entry of entries) {
+    const changes = Array.isArray(entry?.changes) ? entry.changes : [];
+    for (const change of changes) {
+      const messages = Array.isArray(change?.value?.messages) ? change.value.messages : [];
+      if (messages[0]) return messages[0];
+    }
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -256,14 +278,20 @@ serve(async (req) => {
     });
   }
 
+  const metaMessage = extractMetaMessage(body);
+
   const isTrue = (value: unknown) => value === true || value === 1 || value === "true" || value === "1";
-  const messageId = String(
-    body?.messageId ??
-      body?.message?.id ??
-      body?.message?.key?.id ??
-      body?.rawMsg?.key?.id ??
-      "",
-  ).trim();
+  const messageId = firstString([
+    body?.messageId,
+    body?.message?.id,
+    body?.message?.key?.id,
+    body?.rawMsg?.key?.id,
+    body?.data?.id,
+    body?.data?.key?.id,
+    body?.data?.message?.id,
+    body?.data?.message?.key?.id,
+    metaMessage?.id,
+  ]);
   const eventName = String(body?.event ?? body?.type ?? body?.eventType ?? "").toLowerCase();
 
   // Bloqueia mensagens do próprio sistema/atendente e eventos de atualização (anti-loop).
@@ -337,32 +365,57 @@ serve(async (req) => {
     [
       body?.contactNumber,
       body?.contact?.number,
+      body?.contact?.phoneNumber,
+      body?.contact?.phone_number,
       body?.ticket?.contact?.number,
+      body?.ticket?.contact?.phoneNumber,
       body?.data?.contact?.number,
+      body?.data?.contact?.phoneNumber,
+      body?.data?.contact?.phone_number,
       body?.data?.ticket?.contact?.number,
+      body?.data?.ticket?.contact?.phoneNumber,
       body?.data?.number,
+      body?.data?.phone,
+      body?.data?.from,
       body?.message?.contact?.number,
       body?.number,
       body?.phone,
       body?.from,
       body?.wa_id,
       body?.message?.from,
+      body?.data?.remoteJid,
       body?.rawMsg?.key?.remoteJid,
       body?.message?.key?.remoteJid,
       body?.data?.key?.remoteJid,
+      body?.data?.message?.key?.remoteJid,
+      body?.conversation?.contact?.phone_number,
+      body?.conversation?.contact_inbox?.contact?.phone_number,
+      metaMessage?.from,
     ]
       .map(jidToDigits)
       .find((d) => d.length >= 10) ?? fromWamid;
-  const text = String(
-    body?.messageText ??
-      body?.message?.body ??
-      body?.message?.conversation ??
-      body?.rawMsg?.message?.conversation ??
-      body?.body ??
-      body?.text ??
-      "",
-  ).trim();
-  const ticketId = body?.ticketId ?? body?.ticket?.id ?? null;
+  const text = firstString([
+    body?.messageText,
+    body?.message?.body,
+    body?.message?.conversation,
+    body?.message?.text,
+    body?.rawMsg?.message?.conversation,
+    body?.rawMsg?.message?.extendedTextMessage?.text,
+    body?.data?.message?.conversation,
+    body?.data?.message?.extendedTextMessage?.text,
+    body?.data?.message?.body,
+    body?.data?.body,
+    body?.data?.content,
+    body?.content,
+    body?.body,
+    body?.text,
+    metaMessage?.text?.body,
+    metaMessage?.interactive?.list_reply?.title,
+    metaMessage?.interactive?.button_reply?.title,
+    metaMessage?.button?.text,
+  ]);
+  const ticketId = body?.ticketId ?? body?.ticket?.id ?? body?.data?.ticketId ??
+    body?.data?.ticket?.id ?? body?.conversation?.id ?? null;
 
   // IMPORTANTE: o número que responde DEVE ser exatamente o wa_id recebido.
   // Números BR antigos chegam com 12 dígitos (sem o 9). Inserir o 9 aqui cria
@@ -387,6 +440,10 @@ serve(async (req) => {
       body?.message?.interactive?.button_reply?.id ??
       body?.rawMsg?.message?.listResponseMessage?.singleSelectReply?.selectedRowId ??
       body?.rawMsg?.message?.buttonsResponseMessage?.selectedButtonId ??
+      body?.data?.message?.listResponseMessage?.singleSelectReply?.selectedRowId ??
+      body?.data?.message?.buttonsResponseMessage?.selectedButtonId ??
+      metaMessage?.interactive?.list_reply?.id ??
+      metaMessage?.interactive?.button_reply?.id ??
       "",
   ).trim();
 
@@ -513,7 +570,10 @@ serve(async (req) => {
         reply,
       }),
       {
-        status: delivered ? 200 : 502,
+        // O webhook sempre confirma o recebimento ao ChatGoo. A falha de saída
+        // já fica registrada como SEND_FAILED; devolver 5xx faz o provedor
+        // repetir/desativar o webhook e era a causa da intermitência.
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
@@ -565,7 +625,7 @@ serve(async (req) => {
         reply: bodyText,
       }),
       {
-        status: delivered ? 200 : 502,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
@@ -775,7 +835,7 @@ serve(async (req) => {
             );
             return new Response(
               JSON.stringify({ status: "SEND_FAILED", intent: "CONSENT_PROMPT" }),
-              { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
             );
           }
           await supabase.from("chatgoo_events").insert({
