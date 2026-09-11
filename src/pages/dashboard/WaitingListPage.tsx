@@ -359,7 +359,7 @@ function WaitingListContent() {
           waitingListId: entry.id,
           appointmentDate: entry.offered_appointment_date,
           startTime: entry.offered_appointment_time,
-          professionalId: entry.offered_professional_id ?? entry.professional_id ?? null,
+          professionalId: entry.offered_professional_id ?? entry.professional?.id ?? null,
           professionalName:
             entry.offered_professional_name || entry.professional?.name || "Profissional",
         },
