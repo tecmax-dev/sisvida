@@ -657,19 +657,29 @@ serve(async (req) => {
           .gte("created_at", since30d)
           .limit(1);
         if (!prompted || prompted.length === 0) {
-          await chatgooSendButtonsViaMeta(supabase, e164, {
-            body: [
-              "Antes de continuarmos: você autoriza o recebimento de mensagens",
-              "informativas e operacionais do sindicato neste número?",
-              "",
-              "Você pode cancelar a qualquer momento enviando SAIR.",
-            ].join("\n"),
+          const consentBody = [
+            "Antes de continuarmos: você autoriza o recebimento de mensagens",
+            "informativas e operacionais do sindicato neste número?",
+            "",
+            "Você pode cancelar a qualquer momento enviando SAIR.",
+          ].join("\n");
+          const consentResult = await chatgooSendButtonsViaMeta(supabase, e164, {
+            body: consentBody,
             buttons: [
               { id: "CONSENT_SIM", title: "Sim, autorizo" },
               { id: "CONSENT_NAO", title: "Não autorizo" },
             ],
             footer: "Sindicato • atendimento oficial",
-          });
+          }, { inboundNow: true });
+          // Se os botões falharem, garante que o contato receba a pergunta em texto.
+          if (!consentResult.sent && !consentResult.dry_run) {
+            await chatgooSendTextViaMeta(
+              supabase,
+              e164,
+              `${consentBody}\n\nResponda AUTORIZO para continuar, ou SAIR para não receber mensagens.`,
+              { inboundNow: true },
+            );
+          }
           await supabase.from("chatgoo_events").insert({
             direction: "outbound",
             event: "consent_prompt",
