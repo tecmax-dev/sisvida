@@ -689,6 +689,13 @@ serve(async (req) => {
             reason: "CONSENT_PROMPT_SENT",
             payload: { ticket_id: ticketId },
           });
+          // Registra a mensagem recebida (abre a janela de 24h) e aguarda a
+          // resposta do botão antes de seguir para o menu.
+          await log("ANSWERED", "AWAITING_CONSENT", null, consentBody);
+          return new Response(
+            JSON.stringify({ status: "ANSWERED", intent: "CONSENT_PROMPT" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
         }
       }
     }
