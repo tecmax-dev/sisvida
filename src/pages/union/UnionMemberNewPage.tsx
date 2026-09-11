@@ -297,6 +297,21 @@ export default function UnionMemberNewPage() {
         }
       }
 
+      const consentResult = await persistWhatsappConsent({
+        clinicId: (newPatient as any)?.clinic_id || clinicIdForConsent,
+        patientId: newPatient.id,
+        phone: formData.phone,
+        name: formData.name,
+        granted: !!formData.whatsappConsent,
+      });
+      if (!consentResult.ok) {
+        toast({
+          title: "Consentimento não salvo",
+          description: consentResult.error || "Não foi possível registrar o consentimento do WhatsApp.",
+          variant: "destructive",
+        });
+      }
+
       toast({
         title: "Sócio cadastrado!",
         description: "O novo sócio foi criado com sucesso.",
