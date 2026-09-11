@@ -116,6 +116,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+  }
   let body: Record<string, any> = {};
   try {
     body = JSON.parse(rawBody || "{}");
