@@ -728,6 +728,21 @@ export default function UnionMemberDetailPage({
 
       if (error) throw error;
 
+      const consentResult = await persistWhatsappConsent({
+        clinicId: resolvedClinic?.id,
+        patientId: id,
+        phone: formData.phone,
+        name: formData.name,
+        granted: !!formData.whatsappConsent,
+      });
+      if (!consentResult.ok) {
+        toast({
+          title: "Consentimento não salvo",
+          description: consentResult.error || "Não foi possível registrar o consentimento do WhatsApp.",
+          variant: "destructive",
+        });
+      }
+
       if (id) {
         try {
           localStorage.removeItem(`union-member-edit-draft:${id}`);
