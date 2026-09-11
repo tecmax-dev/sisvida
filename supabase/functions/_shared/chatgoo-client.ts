@@ -72,6 +72,50 @@ export async function chatgooSendText(
   }
 }
 
+// A conexão 3223-Oficial é Meta Cloud API oficial. Respostas dentro da janela
+// de 24h (mensagens de sessão) saem direto pela Graph API — o endpoint interno
+// do ChatGoo (/api/messages/send) é para conexões Baileys e não se aplica.
+const META_PHONE_NUMBER_ID = "1213495528515111";
+
+export async function chatgooSendTextViaMeta(
+  supabaseAdmin: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> },
+  phoneE164: string,
+  message: string,
+): Promise<ChatgooSendResult> {
+  if (!chatgooSendEnabled()) {
+    return { sent: false, dry_run: true, status: null, body: null, error: null };
+  }
+  try {
+    const { data: secret } = await supabaseAdmin.rpc("get_meta_vault_secret", {
+      _secret_name: "META_WHATSAPP_TOKEN_V2",
+    });
+    const token = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
+    if (!token) {
+      return { sent: false, dry_run: false, status: null, body: null, error: "META_TOKEN_MISSING" };
+    }
+    const res = await fetch(`https://graph.facebook.com/v20.0/${META_PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: phoneE164,
+        type: "text",
+        text: { preview_url: true, body: message },
+      }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      console.error(`[chatgoo/meta] envio falhou [${res.status}]: ${text}`);
+      return { sent: false, dry_run: false, status: res.status, body: text, error: "META_ERROR" };
+    }
+    return { sent: true, dry_run: false, status: res.status, body: text, error: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[chatgoo/meta] erro de rede: ${msg}`);
+    return { sent: false, dry_run: false, status: null, body: null, error: msg };
+  }
+}
+
 /** Transfere o atendimento para uma fila humana no ChatGoo. */
 export async function chatgooTransferToQueue(
   ticketId: string | number,
