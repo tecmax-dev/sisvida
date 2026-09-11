@@ -464,7 +464,7 @@ serve(async (req) => {
     patientId: string | null,
   ) => {
     // Resposta sai pela Meta Cloud API oficial (conexão 3223-Oficial é Meta oficial).
-    const result = await chatgooSendTextViaMeta(supabase, e164 ?? "", reply);
+    const result = await chatgooSendTextViaMeta(supabase, e164 ?? "", reply, { inboundNow: true });
     await log(decision, reason, patientId, reply);
     return new Response(
       JSON.stringify({ status: decision, intent, dry_run: result.dry_run, reply }),
@@ -492,9 +492,9 @@ serve(async (req) => {
       buttonLabel: "Ver opções",
       footer: "Toque em uma opção",
       sections: [{ title: config.title, rows: config.rows }],
-    });
+    }, { inboundNow: true });
     if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
-      await chatgooSendTextViaMeta(supabase, e164 ?? "", `${bodyText}\n\n${config.fallback}`);
+      await chatgooSendTextViaMeta(supabase, e164 ?? "", `${bodyText}\n\n${config.fallback}`, { inboundNow: true });
     }
     await log("ANSWERED", null, patientId, bodyText);
     return new Response(
