@@ -20870,6 +20870,7 @@ export type Database = {
           patient_name: string
         }[]
       }
+      verify_reminder_cron_key: { Args: { _key: string }; Returns: boolean }
       wa_can_send: {
         Args: {
           _category: string
