@@ -28,6 +28,14 @@ type Intent =
   | "AGENDAMENTOS"
   | "HOMOLOGACAO"
   | "FINANCEIRO"
+  | "EMP_BOLETOS"
+  | "EMP_HOMOLOGACAO"
+  | "EMP_DADOS"
+  | "CTB_EMPRESAS"
+  | "CTB_BOLETOS"
+  | "MENU_ASSOCIADO"
+  | "MENU_EMPRESA"
+  | "MENU_CONTABILIDADE"
   | "HUMANO"
   | "MENU";
 
@@ -37,11 +45,15 @@ function detectIntent(text: string): Intent {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
   if (/(atendente|humano|falar com|pessoa|suporte)/.test(t)) return "HUMANO";
+  if (/(menu|inicio|voltar|opcoes)/.test(t)) return "MENU";
+  if (/(sou empresa|empresa|empregador)/.test(t)) return "MENU_EMPRESA";
+  if (/(contabilidade|contador|escritorio)/.test(t)) return "MENU_CONTABILIDADE";
+  if (/(sou associado|associado|socio)/.test(t)) return "MENU_ASSOCIADO";
   if (/(carteirinha|carteira|validade)/.test(t)) return "CARTEIRINHA";
   if (/(consulta|agendamento|marcac|horario|medic)/.test(t)) return "AGENDAMENTOS";
   if (/(homologa|rescis)/.test(t)) return "HOMOLOGACAO";
   if (/(boleto|contribui|mensalidade|pagamento|2a via|segunda via|debito)/.test(t)) return "FINANCEIRO";
-  if (/(cadastro|meus dados|situacao|associado)/.test(t)) return "CADASTRO";
+  if (/(cadastro|meus dados|situacao)/.test(t)) return "CADASTRO";
   return "MENU";
 }
 
@@ -64,21 +76,78 @@ function fmtMoney(v: unknown): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-const MENU = [
+// Menu inicial: separa o atendimento pelo perfil de quem está falando.
+const ROOT_MENU = [
   "Olá! Sou o atendimento automático do sindicato.",
   "",
-  "Posso ajudar com:",
+  "Para começar, me diga quem é você:",
+  "1 - Sou associado",
+  "2 - Sou empresa",
+  "3 - Sou contabilidade",
+  "",
+  "Responda com o número da opção.",
+].join("\n");
+
+const ROOT_LIST_ROWS = [
+  { id: "OPT_PERFIL_ASSOCIADO", title: "Sou associado", description: "Cadastro, carteirinha, consultas e boletos" },
+  { id: "OPT_PERFIL_EMPRESA", title: "Sou empresa", description: "Contribuições, boletos e homologação" },
+  { id: "OPT_PERFIL_CONTABILIDADE", title: "Sou contabilidade", description: "Empresas do escritório e boletos" },
+];
+
+const ASSOC_MENU = [
+  "Atendimento ao associado:",
   "1 - Meu cadastro / situação",
   "2 - Carteirinha (validade)",
   "3 - Meus agendamentos",
   "4 - Homologação de rescisão",
   "5 - Boletos e contribuições",
   "6 - Falar com um atendente",
-  "",
-  "Responda com o número ou escreva o que precisa.",
 ].join("\n");
 
-const NUMBER_MAP: Record<string, Intent> = {
+const ASSOC_LIST_ROWS = [
+  { id: "OPT_CADASTRO", title: "Meu cadastro", description: "Dados e situação de associado" },
+  { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
+  { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
+  { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
+  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
+  { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
+
+const EMP_MENU = [
+  "Atendimento à empresa:",
+  "1 - Boletos e contribuições da empresa",
+  "2 - Homologações da empresa",
+  "3 - Dados cadastrais da empresa",
+  "4 - Falar com um atendente",
+].join("\n");
+
+const EMP_LIST_ROWS = [
+  { id: "OPT_EMP_BOLETOS", title: "Boletos", description: "Contribuições em aberto da empresa" },
+  { id: "OPT_EMP_HOMOLOGACAO", title: "Homologações", description: "Agendamentos de rescisão" },
+  { id: "OPT_EMP_DADOS", title: "Dados cadastrais", description: "Dados da empresa no sindicato" },
+  { id: "OPT_EMP_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
+
+const CTB_MENU = [
+  "Atendimento à contabilidade:",
+  "1 - Empresas do escritório",
+  "2 - Boletos em aberto das empresas",
+  "3 - Falar com um atendente",
+].join("\n");
+
+const CTB_LIST_ROWS = [
+  { id: "OPT_CTB_EMPRESAS", title: "Empresas", description: "Empresas vinculadas ao escritório" },
+  { id: "OPT_CTB_BOLETOS", title: "Boletos", description: "Contribuições em aberto das empresas" },
+  { id: "OPT_CTB_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
+];
+
+const ROOT_NUMBER_MAP: Record<string, Intent> = {
+  "1": "MENU_ASSOCIADO",
+  "2": "MENU_EMPRESA",
+  "3": "MENU_CONTABILIDADE",
+};
+
+const ASSOC_NUMBER_MAP: Record<string, Intent> = {
   "1": "CADASTRO",
   "2": "CARTEIRINHA",
   "3": "AGENDAMENTOS",
@@ -87,25 +156,41 @@ const NUMBER_MAP: Record<string, Intent> = {
   "6": "HUMANO",
 };
 
+const EMP_NUMBER_MAP: Record<string, Intent> = {
+  "1": "EMP_BOLETOS",
+  "2": "EMP_HOMOLOGACAO",
+  "3": "EMP_DADOS",
+  "4": "HUMANO",
+};
+
+const CTB_NUMBER_MAP: Record<string, Intent> = {
+  "1": "CTB_EMPRESAS",
+  "2": "CTB_BOLETOS",
+  "3": "HUMANO",
+};
+
 // IDs das opções do menu interativo (botões/lista Meta). Quando o contato toca
 // em uma opção, o ChatGoo devolve o id e/ou o título da linha selecionada.
 const OPTION_ID_MAP: Record<string, Intent> = {
+  OPT_PERFIL_ASSOCIADO: "MENU_ASSOCIADO",
+  OPT_PERFIL_EMPRESA: "MENU_EMPRESA",
+  OPT_PERFIL_CONTABILIDADE: "MENU_CONTABILIDADE",
   OPT_CADASTRO: "CADASTRO",
   OPT_CARTEIRINHA: "CARTEIRINHA",
   OPT_AGENDAMENTOS: "AGENDAMENTOS",
   OPT_HOMOLOGACAO: "HOMOLOGACAO",
   OPT_FINANCEIRO: "FINANCEIRO",
   OPT_HUMANO: "HUMANO",
+  OPT_EMP_BOLETOS: "EMP_BOLETOS",
+  OPT_EMP_HOMOLOGACAO: "EMP_HOMOLOGACAO",
+  OPT_EMP_DADOS: "EMP_DADOS",
+  OPT_EMP_HUMANO: "HUMANO",
+  OPT_CTB_EMPRESAS: "CTB_EMPRESAS",
+  OPT_CTB_BOLETOS: "CTB_BOLETOS",
+  OPT_CTB_HUMANO: "HUMANO",
 };
 
-const MENU_LIST_ROWS = [
-  { id: "OPT_CADASTRO", title: "Meu cadastro", description: "Dados e situação de associado" },
-  { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
-  { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
-  { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
-  { id: "OPT_FINANCEIRO", title: "Boletos", description: "Contribuições em aberto" },
-  { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
-];
+type Profile = "ASSOCIADO" | "EMPRESA" | "CONTABILIDADE" | null;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -250,8 +335,50 @@ serve(async (req) => {
       "",
   ).trim();
 
-  const intent: Intent =
-    OPTION_ID_MAP[selectedId] ?? NUMBER_MAP[text] ?? detectIntent(text);
+  // Perfil escolhido anteriormente (válido por 6 horas), para interpretar números
+  // no submenu correto sem perguntar de novo a cada mensagem.
+  let profile: Profile = null;
+  if (e164) {
+    const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+    const { data: last } = await supabase
+      .from("chatgoo_events")
+      .select("payload")
+      .eq("event", "message")
+      .eq("phone", e164)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    for (const row of last ?? []) {
+      const p = (row as any)?.payload?.profile;
+      if (p === "ASSOCIADO" || p === "EMPRESA" || p === "CONTABILIDADE") {
+        profile = p;
+        break;
+      }
+    }
+  }
+
+  const numberMap = profile === "EMPRESA"
+    ? EMP_NUMBER_MAP
+    : profile === "CONTABILIDADE"
+    ? CTB_NUMBER_MAP
+    : profile === "ASSOCIADO"
+    ? ASSOC_NUMBER_MAP
+    : ROOT_NUMBER_MAP;
+
+  let intent: Intent =
+    OPTION_ID_MAP[selectedId] ?? numberMap[text] ?? detectIntent(text);
+
+  // Alinha o perfil ativo com a escolha atual do contato.
+  if (intent === "MENU_ASSOCIADO") profile = "ASSOCIADO";
+  else if (intent === "MENU_EMPRESA") profile = "EMPRESA";
+  else if (intent === "MENU_CONTABILIDADE") profile = "CONTABILIDADE";
+  else if (intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS") profile = "EMPRESA";
+  else if (intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS") profile = "CONTABILIDADE";
+  else if (
+    intent === "CADASTRO" || intent === "CARTEIRINHA" || intent === "AGENDAMENTOS" ||
+    intent === "HOMOLOGACAO" || intent === "FINANCEIRO"
+  ) profile = "ASSOCIADO";
+  else if (intent === "MENU") profile = null;
 
   const log = async (decision: string, reason: string | null, patientId: string | null, reply: string) => {
     await supabase.from("chatgoo_events").insert({
@@ -263,7 +390,7 @@ serve(async (req) => {
       intent,
       decision,
       reason,
-      payload: { text, ticket_id: ticketId, message_id: messageId || null, reply },
+      payload: { text, ticket_id: ticketId, message_id: messageId || null, reply, profile },
     });
   };
 
@@ -284,23 +411,62 @@ serve(async (req) => {
 
   // Menu com botões (lista interativa Meta). Se o envio da lista falhar por
   // erro da Meta, cai no menu numerado em texto como reserva.
-  const answerMenu = async (first: string, patientId: string | null) => {
-    const bodyText = `Olá, ${first}! Sou o atendimento automático do sindicato. Escolha uma opção:`;
+  const answerMenu = async (
+    kind: "ROOT" | "ASSOCIADO" | "EMPRESA" | "CONTABILIDADE",
+    greeting: string,
+    patientId: string | null,
+  ) => {
+    const config = {
+      ROOT: { rows: ROOT_LIST_ROWS, title: "Você é...", fallback: ROOT_MENU },
+      ASSOCIADO: { rows: ASSOC_LIST_ROWS, title: "Associado", fallback: ASSOC_MENU },
+      EMPRESA: { rows: EMP_LIST_ROWS, title: "Empresa", fallback: EMP_MENU },
+      CONTABILIDADE: { rows: CTB_LIST_ROWS, title: "Contabilidade", fallback: CTB_MENU },
+    }[kind];
+
+    const bodyText = greeting;
     const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
       body: bodyText,
       buttonLabel: "Ver opções",
       footer: "Toque em uma opção",
-      sections: [{ title: "Como posso ajudar?", rows: MENU_LIST_ROWS }],
+      sections: [{ title: config.title, rows: config.rows }],
     });
     if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
-      await chatgooSendTextViaMeta(supabase, e164 ?? "", `Olá, ${first}!\n\n${MENU}`);
+      await chatgooSendTextViaMeta(supabase, e164 ?? "", `${bodyText}\n\n${config.fallback}`);
     }
     await log("ANSWERED", null, patientId, bodyText);
     return new Response(
-      JSON.stringify({ status: "ANSWERED", intent: "MENU", dry_run: result.dry_run, reply: bodyText }),
+      JSON.stringify({ status: "ANSWERED", intent, dry_run: result.dry_run, reply: bodyText }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   };
+
+  // Telefones de empresas/escritórios podem estar com máscara; casamos pelos
+  // 8 últimos dígitos, que identificam a linha independentemente da formatação.
+  const last8 = (e164 ?? "").slice(-8);
+  const phoneMatches = (value: unknown) => {
+    const d = String(value ?? "").replace(/\D/g, "");
+    return d.length >= 8 && d.slice(-8) === last8;
+  };
+
+  const employerLookup = async () => {
+    const { data } = await supabase
+      .from("employers")
+      .select("id,name,trade_name,cnpj,phone,email,city,state,is_active")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .ilike("phone", `%${last8}%`)
+      .limit(10);
+    return (data ?? []).filter((e) => phoneMatches(e.phone));
+  };
+
+  const accountingLookup = async () => {
+    const { data } = await supabase
+      .from("accounting_offices")
+      .select("id,name,trade_name,cnpj,phone,email")
+      .ilike("phone", `%${last8}%`)
+      .limit(10);
+    return (data ?? []).filter((a) => phoneMatches(a.phone));
+  };
+
 
   if (!phoneOk || !e164) {
     return await answer(
@@ -322,6 +488,225 @@ serve(async (req) => {
     );
   }
 
+  // MENU INICIAL: separa o atendimento por perfil (associado, empresa, contabilidade)
+  if (intent === "MENU") {
+    return await answerMenu(
+      "ROOT",
+      "Olá! Sou o atendimento automático do sindicato. Para começar, me diga quem é você:",
+      null,
+    );
+  }
+
+  // ===================== PERFIL: EMPRESA =====================
+  if (intent === "MENU_EMPRESA" || intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS") {
+    const empresas = await employerLookup();
+    if (empresas.length === 0) {
+      return await answer(
+        "Não localizei uma empresa cadastrada com este número. Vou encaminhar para um atendente confirmar os dados.",
+        "HANDOFF",
+        "EMPLOYER_NOT_FOUND",
+        null,
+      );
+    }
+    if (empresas.length > 1) {
+      return await answer(
+        "Encontrei mais de uma empresa com este número. Por segurança, vou encaminhar para um atendente.",
+        "HANDOFF",
+        "AMBIGUOUS_EMPLOYER_MATCH",
+        null,
+      );
+    }
+    const empresa = empresas[0];
+    const nomeEmpresa = empresa.trade_name || empresa.name || "Empresa";
+
+    if (intent === "MENU_EMPRESA") {
+      return await answerMenu("EMPRESA", `Olá, ${nomeEmpresa}! Escolha uma opção:`, null);
+    }
+
+    if (intent === "EMP_DADOS") {
+      return await answer(
+        [
+          `Dados da empresa no sindicato:`,
+          `• Razão social: ${empresa.name ?? "-"}`,
+          `• CNPJ: ${empresa.cnpj ?? "-"}`,
+          empresa.city ? `• Cidade: ${empresa.city}/${empresa.state ?? "-"}` : null,
+          empresa.email ? `• E-mail: ${empresa.email}` : null,
+          "",
+          "Para alterar dados, responda \"atendente\".",
+        ].filter(Boolean).join("\n"),
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    if (intent === "EMP_BOLETOS") {
+      const { data: contribs } = await supabase
+        .from("employer_contributions")
+        .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url")
+        .eq("employer_id", empresa.id)
+        .in("status", ["pending", "overdue", "awaiting_value"])
+        .order("due_date", { ascending: true })
+        .limit(5);
+
+      if (!contribs || contribs.length === 0) {
+        return await answer(
+          `${nomeEmpresa}, não encontrei contribuições em aberto.`,
+          "ANSWERED",
+          null,
+          null,
+        );
+      }
+      const linhas = contribs.map((c: any) => {
+        const comp = c.competence_month && c.competence_year
+          ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+          : "-";
+        return `• ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}${c.lytex_invoice_url ? `\n  ${c.lytex_invoice_url}` : ""}`;
+      });
+      return await answer(
+        [`${nomeEmpresa}, contribuições em aberto:`, ...linhas, "", "Dúvidas? Responda \"atendente\"."].join("\n"),
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    // EMP_HOMOLOGACAO
+    const cnpjDigits = String(empresa.cnpj ?? "").replace(/\D/g, "");
+    const { data: homs } = await supabase
+      .from("homologacao_appointments")
+      .select("protocol_number,appointment_date,start_time,status,employee_name")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .eq("company_cnpj", cnpjDigits)
+      .order("appointment_date", { ascending: false })
+      .limit(5);
+
+    if (!homs || homs.length === 0) {
+      return await answer(
+        `${nomeEmpresa}, não encontrei homologações registradas para este CNPJ.`,
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+    return await answer(
+      [
+        `${nomeEmpresa}, homologações registradas:`,
+        ...homs.map((h: any) =>
+          `• ${fmtDate(h.appointment_date)} às ${String(h.start_time).slice(0, 5)} — ${h.employee_name ?? "-"} (protocolo ${h.protocol_number ?? "-"})`
+        ),
+      ].join("\n"),
+      "ANSWERED",
+      null,
+      null,
+    );
+  }
+
+  // ===================== PERFIL: CONTABILIDADE =====================
+  if (intent === "MENU_CONTABILIDADE" || intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS") {
+    const escritorios = await accountingLookup();
+    if (escritorios.length === 0) {
+      return await answer(
+        "Não localizei um escritório de contabilidade com este número. Vou encaminhar para um atendente.",
+        "HANDOFF",
+        "ACCOUNTING_NOT_FOUND",
+        null,
+      );
+    }
+    if (escritorios.length > 1) {
+      return await answer(
+        "Encontrei mais de um escritório com este número. Por segurança, vou encaminhar para um atendente.",
+        "HANDOFF",
+        "AMBIGUOUS_ACCOUNTING_MATCH",
+        null,
+      );
+    }
+    const escritorio = escritorios[0];
+    const nomeEscritorio = escritorio.trade_name || escritorio.name || "Escritório";
+
+    if (intent === "MENU_CONTABILIDADE") {
+      return await answerMenu("CONTABILIDADE", `Olá, ${nomeEscritorio}! Escolha uma opção:`, null);
+    }
+
+    const { data: vinculos } = await supabase
+      .from("accounting_office_employers")
+      .select("employer_id")
+      .eq("accounting_office_id", escritorio.id);
+    const employerIds = (vinculos ?? []).map((v: any) => v.employer_id).filter(Boolean);
+
+    if (employerIds.length === 0) {
+      return await answer(
+        `${nomeEscritorio}, não encontrei empresas vinculadas ao escritório.`,
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    const { data: empresasVinculadas } = await supabase
+      .from("employers")
+      .select("id,name,trade_name,cnpj")
+      .in("id", employerIds)
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .order("name", { ascending: true })
+      .limit(200);
+
+    if (intent === "CTB_EMPRESAS") {
+      const lista = (empresasVinculadas ?? []).slice(0, 10).map(
+        (e: any) => `• ${e.trade_name || e.name} — ${e.cnpj ?? "-"}`,
+      );
+      const total = (empresasVinculadas ?? []).length;
+      return await answer(
+        [
+          `${nomeEscritorio}, empresas vinculadas (${total}):`,
+          ...lista,
+          total > 10 ? `... e mais ${total - 10} empresa(s). Acesse o portal da contabilidade para ver todas.` : null,
+        ].filter(Boolean).join("\n"),
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+
+    // CTB_BOLETOS
+    const nameById = new Map((empresasVinculadas ?? []).map((e: any) => [e.id, e.trade_name || e.name]));
+    const { data: abertos } = await supabase
+      .from("employer_contributions")
+      .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
+      .in("employer_id", employerIds)
+      .in("status", ["pending", "overdue", "awaiting_value"])
+      .order("due_date", { ascending: true })
+      .limit(10);
+
+    if (!abertos || abertos.length === 0) {
+      return await answer(
+        `${nomeEscritorio}, não encontrei contribuições em aberto nas empresas do escritório.`,
+        "ANSWERED",
+        null,
+        null,
+      );
+    }
+    const totalAberto = abertos.reduce((s: number, c: any) => s + Number(c.value ?? 0), 0);
+    const linhas = abertos.map((c: any) => {
+      const comp = c.competence_month && c.competence_year
+        ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+        : "-";
+      return `• ${nameById.get(c.employer_id) ?? "Empresa"} — ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}${c.lytex_invoice_url ? `\n  ${c.lytex_invoice_url}` : ""}`;
+    });
+    return await answer(
+      [
+        `${nomeEscritorio}, contribuições em aberto (mostrando até 10):`,
+        ...linhas,
+        "",
+        `Total listado: ${fmtMoney(totalAberto)}`,
+      ].join("\n"),
+      "ANSWERED",
+      null,
+      null,
+    );
+  }
+
+  // ===================== PERFIL: ASSOCIADO =====================
   // Identificação escopada ao tenant do sindicato
   const { data: candidates } = await supabase
     .from("patients")
@@ -357,8 +742,8 @@ serve(async (req) => {
   const patient = effective[0];
   const first = String(patient.name ?? "").split(" ")[0];
 
-  if (intent === "MENU") {
-    return await answerMenu(first, patient.id);
+  if (intent === "MENU_ASSOCIADO") {
+    return await answerMenu("ASSOCIADO", `Olá, ${first}! Escolha uma opção:`, patient.id);
   }
 
   if (intent === "CADASTRO") {
@@ -496,5 +881,5 @@ serve(async (req) => {
     );
   }
 
-  return await answerMenu(first, patient.id);
+  return await answerMenu("ASSOCIADO", `Olá, ${first}! Escolha uma opção:`, patient.id);
 });
