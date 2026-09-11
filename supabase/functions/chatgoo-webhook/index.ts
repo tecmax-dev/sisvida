@@ -496,10 +496,25 @@ serve(async (req) => {
   ) => {
     // Resposta sai pela Meta Cloud API oficial (conexão 3223-Oficial é Meta oficial).
     const result = await chatgooSendTextViaMeta(supabase, e164 ?? "", reply, { inboundNow: true });
-    await log(decision, reason, patientId, reply);
+    const delivered = result.sent || result.dry_run;
+    await log(
+      delivered ? decision : "SEND_FAILED",
+      delivered ? reason : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
+      patientId,
+      reply,
+    );
     return new Response(
-      JSON.stringify({ status: decision, intent, dry_run: result.dry_run, reply }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({
+        status: delivered ? decision : "SEND_FAILED",
+        intent,
+        dry_run: result.dry_run,
+        delivered: result.sent,
+        reply,
+      }),
+      {
+        status: delivered ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   };
 
@@ -524,13 +539,34 @@ serve(async (req) => {
       footer: "Toque em uma opção",
       sections: [{ title: config.title, rows: config.rows }],
     }, { inboundNow: true });
+    let finalResult = result;
     if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
-      await chatgooSendTextViaMeta(supabase, e164 ?? "", `${bodyText}\n\n${config.fallback}`, { inboundNow: true });
+      finalResult = await chatgooSendTextViaMeta(
+        supabase,
+        e164 ?? "",
+        `${bodyText}\n\n${config.fallback}`,
+        { inboundNow: true },
+      );
     }
-    await log("ANSWERED", null, patientId, bodyText);
+    const delivered = finalResult.sent || finalResult.dry_run;
+    await log(
+      delivered ? "ANSWERED" : "SEND_FAILED",
+      delivered ? null : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
+      patientId,
+      bodyText,
+    );
     return new Response(
-      JSON.stringify({ status: "ANSWERED", intent, dry_run: result.dry_run, reply: bodyText }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({
+        status: delivered ? "ANSWERED" : "SEND_FAILED",
+        intent,
+        dry_run: finalResult.dry_run,
+        delivered: finalResult.sent,
+        reply: bodyText,
+      }),
+      {
+        status: delivered ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   };
 
@@ -703,12 +739,25 @@ serve(async (req) => {
             footer: "Sindicato • atendimento oficial",
           }, { inboundNow: true });
           // Se os botões falharem, garante que o contato receba a pergunta em texto.
+          let finalConsentResult = consentResult;
           if (!consentResult.sent && !consentResult.dry_run) {
-            await chatgooSendTextViaMeta(
+            finalConsentResult = await chatgooSendTextViaMeta(
               supabase,
               e164,
               `${consentBody}\n\nResponda AUTORIZO para continuar, ou SAIR para não receber mensagens.`,
               { inboundNow: true },
+            );
+          }
+          if (!finalConsentResult.sent && !finalConsentResult.dry_run) {
+            await log(
+              "SEND_FAILED",
+              finalConsentResult.error ?? `META_HTTP_${finalConsentResult.status ?? "NETWORK"}`,
+              null,
+              consentBody,
+            );
+            return new Response(
+              JSON.stringify({ status: "SEND_FAILED", intent: "CONSENT_PROMPT" }),
+              { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
             );
           }
           await supabase.from("chatgoo_events").insert({
