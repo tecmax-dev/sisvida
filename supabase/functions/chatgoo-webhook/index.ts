@@ -335,8 +335,50 @@ serve(async (req) => {
       "",
   ).trim();
 
-  const intent: Intent =
-    OPTION_ID_MAP[selectedId] ?? NUMBER_MAP[text] ?? detectIntent(text);
+  // Perfil escolhido anteriormente (válido por 6 horas), para interpretar números
+  // no submenu correto sem perguntar de novo a cada mensagem.
+  let profile: Profile = null;
+  if (e164) {
+    const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+    const { data: last } = await supabase
+      .from("chatgoo_events")
+      .select("payload")
+      .eq("event", "message")
+      .eq("phone", e164)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    for (const row of last ?? []) {
+      const p = (row as any)?.payload?.profile;
+      if (p === "ASSOCIADO" || p === "EMPRESA" || p === "CONTABILIDADE") {
+        profile = p;
+        break;
+      }
+    }
+  }
+
+  const numberMap = profile === "EMPRESA"
+    ? EMP_NUMBER_MAP
+    : profile === "CONTABILIDADE"
+    ? CTB_NUMBER_MAP
+    : profile === "ASSOCIADO"
+    ? ASSOC_NUMBER_MAP
+    : ROOT_NUMBER_MAP;
+
+  let intent: Intent =
+    OPTION_ID_MAP[selectedId] ?? numberMap[text] ?? detectIntent(text);
+
+  // Alinha o perfil ativo com a escolha atual do contato.
+  if (intent === "MENU_ASSOCIADO") profile = "ASSOCIADO";
+  else if (intent === "MENU_EMPRESA") profile = "EMPRESA";
+  else if (intent === "MENU_CONTABILIDADE") profile = "CONTABILIDADE";
+  else if (intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS") profile = "EMPRESA";
+  else if (intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS") profile = "CONTABILIDADE";
+  else if (
+    intent === "CADASTRO" || intent === "CARTEIRINHA" || intent === "AGENDAMENTOS" ||
+    intent === "HOMOLOGACAO" || intent === "FINANCEIRO"
+  ) profile = "ASSOCIADO";
+  else if (intent === "MENU") profile = null;
 
   const log = async (decision: string, reason: string | null, patientId: string | null, reply: string) => {
     await supabase.from("chatgoo_events").insert({
@@ -348,7 +390,7 @@ serve(async (req) => {
       intent,
       decision,
       reason,
-      payload: { text, ticket_id: ticketId, message_id: messageId || null, reply },
+      payload: { text, ticket_id: ticketId, message_id: messageId || null, reply, profile },
     });
   };
 
