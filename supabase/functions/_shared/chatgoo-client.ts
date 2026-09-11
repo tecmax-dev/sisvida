@@ -49,7 +49,7 @@ export async function chatgooSendText(
   if (opts.queueId != null) payload.queueId = opts.queueId;
 
   try {
-    const res = await fetch(`${url}/api/messages`, {
+    const res = await fetch(`${url}/api/messages/send`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
