@@ -25,6 +25,18 @@ Deno.serve(async (req) => {
   const number = String(body.number ?? "5573988633535");
   const text = String(body.message ?? "teste de integração");
 
+  // Primeiro: consultar sessões/conexões para ver o estado real da caixa.
+  const getPaths = ["/api/sessions", "/api/session", "/api/status", "/api/connections", "/api/whatsapp", "/api/instances"];
+  const diag: unknown[] = [];
+  for (const p of getPaths) {
+    try {
+      const res = await fetch(`${base}${p}`, { headers: { Authorization: `Bearer ${token}` } });
+      diag.push({ path: p, status: res.status, body: (await res.text()).slice(0, 500) });
+    } catch (e) {
+      diag.push({ path: p, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
   const payloads: Array<[string, Record<string, unknown>]> = [
     ["number+body", { number, body: text }],
     ["number+message", { number, message: text }],
