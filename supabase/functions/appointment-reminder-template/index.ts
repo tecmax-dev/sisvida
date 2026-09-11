@@ -52,13 +52,20 @@ const json = (body: unknown, status = 200) =>
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  try {
-    await requireStaff(req);
-  } catch (authErr) {
-    const denied = authErrorResponse(authErr, corsHeaders);
-    if (denied) return denied;
-    throw authErr;
+  const taskKey = Deno.env.get("TEMPLATE_TASK_KEY");
+  const providedKey = req.headers.get("x-template-task-key");
+  const machineAuthorized = !!taskKey && providedKey === taskKey;
+
+  if (!machineAuthorized) {
+    try {
+      await requireStaff(req);
+    } catch (authErr) {
+      const denied = authErrorResponse(authErr, corsHeaders);
+      if (denied) return denied;
+      throw authErr;
+    }
   }
+
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
