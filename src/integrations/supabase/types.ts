@@ -20401,6 +20401,10 @@ export type Database = {
           type: string
         }[]
       }
+      get_public_contribution_types: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       get_queue_users: {
         Args: { p_queue_id: string }
         Returns: {
@@ -20740,6 +20744,10 @@ export type Database = {
       set_clinic_booking_months_ahead: {
         Args: { p_clinic_id: string; p_months_ahead: number }
         Returns: undefined
+      }
+      set_contribution_type_by_public_token: {
+        Args: { p_token: string; p_type_id: string }
+        Returns: boolean
       }
       set_meta_vault_secret: {
         Args: { _actor: string; _secret_name: string; _secret_value: string }
