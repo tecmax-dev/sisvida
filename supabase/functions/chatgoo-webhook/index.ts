@@ -325,9 +325,9 @@ serve(async (req) => {
   if (intent === "FINANCEIRO") {
     const { data: contribs } = await supabase
       .from("member_contributions")
-      .select("competence,due_date,value,status,payment_link")
-      .eq("patient_id", patient.id)
-      .in("status", ["pending", "overdue"])
+      .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url")
+      .eq("member_id", patient.id)
+      .in("status", ["pending", "overdue", "awaiting_value"])
       .order("due_date", { ascending: true })
       .limit(5);
 
@@ -339,10 +339,13 @@ serve(async (req) => {
         patient.id,
       );
     }
-    const linhas = contribs.map(
-      (c: any) =>
-        `• ${c.competence ?? "-"} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}${c.payment_link ? `\n  ${c.payment_link}` : ""}`,
-    );
+    const linhas = contribs.map((c: any) => {
+      const comp = c.competence_month && c.competence_year
+        ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
+        : "-";
+      return `• ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}${c.lytex_invoice_url ? `\n  ${c.lytex_invoice_url}` : ""}`;
+    });
+
     return await answer(
       [`${first}, contribuições em aberto:`, ...linhas, "", "Dúvidas sobre pagamento? Responda \"atendente\"."].join("\n"),
       "ANSWERED",
