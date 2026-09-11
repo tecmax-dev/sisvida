@@ -2017,6 +2017,48 @@ export type Database = {
         }
         Relationships: []
       }
+      chatgoo_events: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          decision: string | null
+          direction: string
+          event: string
+          id: string
+          intent: string | null
+          patient_id: string | null
+          payload: Json
+          phone: string | null
+          reason: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          decision?: string | null
+          direction: string
+          event: string
+          id?: string
+          intent?: string | null
+          patient_id?: string | null
+          payload?: Json
+          phone?: string | null
+          reason?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          decision?: string | null
+          direction?: string
+          event?: string
+          id?: string
+          intent?: string | null
+          patient_id?: string | null
+          payload?: Json
+          phone?: string | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
       chatwoot_configs: {
         Row: {
           chatwoot_account_id: string
