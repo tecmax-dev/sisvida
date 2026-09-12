@@ -856,7 +856,9 @@ serve(async (req) => {
             "Antes de continuarmos: você autoriza o recebimento de mensagens",
             "informativas e operacionais do sindicato neste número?",
             "",
+            "Responda SIM para autorizar ou NÃO para recusar.",
             "Você pode cancelar a qualquer momento enviando SAIR.",
+
           ].join("\n");
           const consentResult = await chatgooSendButtonsViaMeta(supabase, e164, {
             body: consentBody,
