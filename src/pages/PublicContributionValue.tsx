@@ -343,7 +343,7 @@ export default function PublicContributionValue() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {types.length > 0 && (
+              {!hasValue && types.length > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor="type">Tipo de Contribuição *</Label>
                   <select
