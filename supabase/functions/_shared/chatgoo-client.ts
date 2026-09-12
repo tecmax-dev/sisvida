@@ -11,6 +11,7 @@ export interface ChatgooSendResult {
   status: number | null;
   body: string | null;
   error: string | null;
+  message_id?: string | null;
 }
 
 function baseUrl(): string {
@@ -112,7 +113,15 @@ async function postMetaMessage(
           confirmed = false;
         }
         if (confirmed) {
-          return { sent: true, dry_run: false, status: res.status, body: text, error: null };
+          const parsed = JSON.parse(text);
+          return {
+            sent: true,
+            dry_run: false,
+            status: res.status,
+            body: text,
+            error: null,
+            message_id: parsed.messages[0].id,
+          };
         }
         lastError = "META_SEND_UNCONFIRMED";
         console.error(`[chatgoo/meta] tentativa ${attempt}/${META_MAX_ATTEMPTS} sem confirmação de message id`);
