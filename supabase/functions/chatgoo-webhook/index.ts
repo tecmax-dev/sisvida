@@ -1126,9 +1126,18 @@ serve(async (req) => {
     );
   }
 
+  // A escolha do perfil apenas abre o submenu. A identificação pelo telefone
+  // acontece depois, quando o contato solicita dados protegidos.
+  if (intent === "MENU_EMPRESA") {
+    return await answerMenu("EMPRESA", "Atendimento à empresa. Escolha uma opção:", null);
+  }
+  if (intent === "MENU_CONTABILIDADE") {
+    return await answerMenu("CONTABILIDADE", "Atendimento à contabilidade. Escolha uma opção:", null);
+  }
+
   // ===================== PERFIL: EMPRESA =====================
   if (
-    intent === "MENU_EMPRESA" || intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" ||
+    intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" ||
     intent === "EMP_DADOS" || intent === "EMP_2VIA"
   ) {
     const empresas = await employerLookup();
@@ -1283,7 +1292,7 @@ serve(async (req) => {
 
   // ===================== PERFIL: CONTABILIDADE =====================
   if (
-    intent === "MENU_CONTABILIDADE" || intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" ||
+    intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" ||
     intent === "CTB_2VIA"
   ) {
     const escritorios = await accountingLookup();
