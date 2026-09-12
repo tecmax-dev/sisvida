@@ -20025,6 +20025,10 @@ export type Database = {
       }
     }
     Functions: {
+      act_on_appointment_by_token: {
+        Args: { _action: string; _reason?: string; _token: string }
+        Returns: string
+      }
       authenticate_patient_hybrid: {
         Args: { p_cpf: string; p_password: string }
         Returns: Json
@@ -20192,6 +20196,20 @@ export type Database = {
           calculation_type: string
           rule_id: string
           value: number
+        }[]
+      }
+      get_appointment_by_confirmation_token: {
+        Args: { _token: string }
+        Returns: {
+          appointment_date: string
+          clinic_address: string
+          clinic_name: string
+          clinic_phone: string
+          id: string
+          patient_name: string
+          professional_name: string
+          start_time: string
+          status: string
         }[]
       }
       get_appointment_slots: {
