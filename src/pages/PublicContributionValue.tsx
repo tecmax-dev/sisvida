@@ -368,32 +368,39 @@ export default function PublicContributionValue() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="value">Valor da Contribuição *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    R$
-                  </span>
-                  <Input
-                    id="value"
-                    type="text"
-                    placeholder="0,00"
-                    value={value}
-                    onChange={(e) => {
-                      // Allow only numbers and comma
-                      const val = e.target.value.replace(/[^\d,]/g, "");
-                      setValue(val);
-                    }}
-                    className="pl-10 text-lg font-medium"
-                    required
-                  />
+              {hasValue ? (
+                <div className="space-y-2">
+                  <Label>Valor da Contribuição</Label>
+                  <p className="text-lg font-semibold">{formatCurrency(Number(contribution.value))}</p>
                 </div>
-                {contribution.contribution_type?.default_value > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Valor sugerido: {formatCurrency(contribution.contribution_type.default_value)}
-                  </p>
-                )}
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="value">Valor da Contribuição *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      R$
+                    </span>
+                    <Input
+                      id="value"
+                      type="text"
+                      placeholder="0,00"
+                      value={value}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^\d,]/g, "");
+                        setValue(val);
+                      }}
+                      className="pl-10 text-lg font-medium"
+                      required
+                    />
+                  </div>
+                  {contribution.contribution_type?.default_value > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Valor sugerido: {formatCurrency(contribution.contribution_type.default_value)}
+                    </p>
+                  )}
+                </div>
+              )}
+
 
               <div className="space-y-2">
                 <Label htmlFor="due_date">Nova Data de Vencimento *</Label>
