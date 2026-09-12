@@ -87,15 +87,14 @@ export default function AppointmentConfirmation() {
 
     setActionLoading(true);
     try {
-      const { error: updateError } = await supabase
-        .from("appointments")
-        .update({ 
-          status: "confirmed",
-          confirmed_at: new Date().toISOString()
-        })
-        .eq("confirmation_token", token);
+      const { data: result, error: updateError } = await supabase.rpc(
+        "act_on_appointment_by_token" as any,
+        { _token: token, _action: "confirm" }
+      );
 
       if (updateError) throw updateError;
+      if (result !== "OK") throw new Error(String(result));
+
 
       setActionComplete("confirmed");
       setAppointment({ ...appointment, status: "confirmed" });
