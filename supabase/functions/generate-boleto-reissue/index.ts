@@ -284,9 +284,14 @@ serve(async (req) => {
     }
 
     // Atualizar status da contribuição antiga para cancelado
+    const publicToken = portal_type === "public_token" ? contribution.public_access_token : null;
+
     await supabase
       .from("employer_contributions")
-      .update({ status: "cancelled" })
+      .update({
+        status: "cancelled",
+        ...(publicToken ? { public_access_token: null } : {}),
+      })
       .eq("id", contribution_id);
 
     // Calcular novo contador de reemissões (incrementa apenas se veio de portal)
@@ -308,6 +313,7 @@ serve(async (req) => {
         status: "pending",
         notes: `2ª via gerada em ${new Date().toLocaleDateString("pt-BR")}. Original: ${contribution.id}`,
         portal_reissue_count: newReissueCount,
+        ...(publicToken ? { public_access_token: publicToken } : {}),
       })
       .select()
       .single();
