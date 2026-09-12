@@ -140,7 +140,10 @@ export default function PublicContributionValue() {
         }
       }
 
-      if (contributionData.contribution_type?.default_value) {
+      if (Number(contributionData.value) > 0) {
+        // Valor já informado: mantém o valor atual (não permite alteração)
+        setValue((Number(contributionData.value) / 100).toFixed(2).replace(".", ","));
+      } else if (contributionData.contribution_type?.default_value) {
         setValue((contributionData.contribution_type.default_value / 100).toFixed(2).replace(".", ","));
       }
 
@@ -252,6 +255,8 @@ export default function PublicContributionValue() {
     );
   }
 
+  const hasValue = Number(contribution.value) > 0;
+
   return (
     <div className="min-h-screen bg-background p-4 flex items-center justify-center">
       <Card className="w-full max-w-lg shadow-xl">
@@ -338,7 +343,7 @@ export default function PublicContributionValue() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {types.length > 0 && (
+              {!hasValue && types.length > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor="type">Tipo de Contribuição *</Label>
                   <select
@@ -363,32 +368,39 @@ export default function PublicContributionValue() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="value">Valor da Contribuição *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    R$
-                  </span>
-                  <Input
-                    id="value"
-                    type="text"
-                    placeholder="0,00"
-                    value={value}
-                    onChange={(e) => {
-                      // Allow only numbers and comma
-                      const val = e.target.value.replace(/[^\d,]/g, "");
-                      setValue(val);
-                    }}
-                    className="pl-10 text-lg font-medium"
-                    required
-                  />
+              {hasValue ? (
+                <div className="space-y-2">
+                  <Label>Valor da Contribuição</Label>
+                  <p className="text-lg font-semibold">{formatCurrency(Number(contribution.value))}</p>
                 </div>
-                {contribution.contribution_type?.default_value > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Valor sugerido: {formatCurrency(contribution.contribution_type.default_value)}
-                  </p>
-                )}
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="value">Valor da Contribuição *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      R$
+                    </span>
+                    <Input
+                      id="value"
+                      type="text"
+                      placeholder="0,00"
+                      value={value}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^\d,]/g, "");
+                        setValue(val);
+                      }}
+                      className="pl-10 text-lg font-medium"
+                      required
+                    />
+                  </div>
+                  {contribution.contribution_type?.default_value > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Valor sugerido: {formatCurrency(contribution.contribution_type.default_value)}
+                    </p>
+                  )}
+                </div>
+              )}
+
 
               <div className="space-y-2">
                 <Label htmlFor="due_date">Nova Data de Vencimento *</Label>
