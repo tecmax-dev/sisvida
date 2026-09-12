@@ -1202,14 +1202,8 @@ serve(async (req) => {
     if (digits.length === 14) {
       if (awaitCnpj === "EMPRESA_IDENT") {
         // Identificação da empresa: o CNPJ precisa existir no sindicato.
-        const { data: empresas } = await supabase
-          .from("employers")
-          .select("id,name,trade_name,cnpj")
-          .eq("clinic_id", SINDICATO_CLINIC_ID)
-          .limit(2000);
-        const empresa = (empresas ?? []).find(
-          (e: any) => String(e.cnpj ?? "").replace(/\D/g, "") === digits,
-        );
+        const empresa = await findEmpresaByCnpj(digits);
+
         if (!empresa) {
           nextAwaitCnpj = "EMPRESA_IDENT";
           return await answer(
@@ -1280,15 +1274,12 @@ serve(async (req) => {
     // fallback quando nenhum CNPJ foi identificado.
     let empresa: any = null;
     if (empresaCnpj) {
-      const { data: todas } = await supabase
-        .from("employers")
-        .select("id,name,trade_name,cnpj,phone,email,city,state,is_active")
-        .eq("clinic_id", SINDICATO_CLINIC_ID)
-        .limit(2000);
-      empresa = (todas ?? []).find(
-        (e: any) => String(e.cnpj ?? "").replace(/\D/g, "") === empresaCnpj,
-      ) ?? null;
+      empresa = await findEmpresaByCnpj(
+        empresaCnpj,
+        "id,name,trade_name,cnpj,phone,email,city,state,is_active",
+      );
     }
+
     if (!empresa) {
       const empresas = await employerLookup();
       if (empresas.length !== 1) {
