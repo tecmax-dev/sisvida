@@ -140,7 +140,10 @@ export default function PublicContributionValue() {
         }
       }
 
-      if (contributionData.contribution_type?.default_value) {
+      if (Number(contributionData.value) > 0) {
+        // Valor já informado: mantém o valor atual (não permite alteração)
+        setValue((Number(contributionData.value) / 100).toFixed(2).replace(".", ","));
+      } else if (contributionData.contribution_type?.default_value) {
         setValue((contributionData.contribution_type.default_value / 100).toFixed(2).replace(".", ","));
       }
 
