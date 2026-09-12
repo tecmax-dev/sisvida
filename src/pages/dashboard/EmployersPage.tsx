@@ -296,7 +296,14 @@ export default function EmployersPage() {
           .range(from, to)
       );
 
-      const normalizeCnpj = (v: string | null | undefined) => (v || "").replace(/\D/g, "");
+      // Alguns cadastros legados (Excel/importação) perdem o zero à esquerda
+      // do CNPJ. Sem o padStart, "3995515032360" (13 dígitos) nunca batia com
+      // o CNPJ correto "03995515032360" (14 dígitos) cadastrado na empresa,
+      // e o colaborador ficava "órfão" mesmo com a empresa já cadastrada.
+      const normalizeCnpj = (v: string | null | undefined) => {
+        const digits = (v || "").replace(/\D/g, "");
+        return digits.length > 0 && digits.length < 14 ? digits.padStart(14, "0") : digits;
+      };
 
       const employersWithPatients = (employersData || []).map((employer) => {
         const employerCnpj = normalizeCnpj(employer.cnpj);

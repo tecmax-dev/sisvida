@@ -1,3 +1,13 @@
 project_id = "czmnkrurkzuerrcjzbkp"
 [functions.homologacao-dry-run]
 verify_jwt = false
+
+# O ChatGoo (e a Meta, quando reenvia eventos) chama este webhook sem enviar o
+# JWT do Supabase. Sem verify_jwt = false, toda chamada externa recebe 401
+# antes mesmo de chegar ao código da função — o bot fica "sem responder" para
+# quem está de fora, mesmo com toda a lógica de atendimento correta.
+[functions.chatgoo-webhook]
+verify_jwt = false
+
+[functions.chatgoo-probe]
+verify_jwt = false
