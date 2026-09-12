@@ -144,6 +144,18 @@ export default function AppointmentConfirmation() {
     return timeStr.substring(0, 5);
   };
 
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return "";
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return phone;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -361,7 +373,7 @@ export default function AppointmentConfirmation() {
           {/* Contact info */}
           {appointment.clinic?.phone && (
             <p className="text-center text-sm text-muted-foreground">
-              Dúvidas? Entre em contato: {appointment.clinic.phone}
+              Dúvidas? Entre em contato: {formatPhone(appointment.clinic.phone)}
             </p>
           )}
         </CardContent>
