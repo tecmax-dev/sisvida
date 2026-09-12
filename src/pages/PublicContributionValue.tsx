@@ -200,7 +200,7 @@ export default function PublicContributionValue() {
               contribution_id: contribution.id,
               new_due_date: newDueDate,
               portal_type: "public_token",
-              portal_id: contribution.employer_id || contribution.id,
+              portal_id: rawToken ? decodeURIComponent(rawToken).trim() : rawToken,
             },
           }
         );
