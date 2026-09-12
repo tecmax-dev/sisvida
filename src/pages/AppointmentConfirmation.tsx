@@ -44,35 +44,32 @@ export default function AppointmentConfirmation() {
       }
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from("appointments")
-          .select(`
-            id,
-            appointment_date,
-            start_time,
-            status,
-            patient:patients (name),
-            professional:professionals (name),
-            clinic:clinics (name, address, phone)
-          `)
-          .eq("confirmation_token", token)
-          .maybeSingle();
+        const { data, error: fetchError } = await supabase.rpc(
+          "get_appointment_by_confirmation_token" as any,
+          { _token: token }
+        );
 
         if (fetchError) throw fetchError;
 
-        if (!data) {
+        const row: any = Array.isArray(data) ? data[0] : data;
+
+        if (!row) {
           setError("Consulta não encontrada ou link expirado");
           return;
         }
 
         setAppointment({
-          id: data.id,
-          appointment_date: data.appointment_date,
-          start_time: data.start_time,
-          status: data.status,
-          patient: data.patient as any,
-          professional: data.professional as any,
-          clinic: data.clinic as any,
+          id: row.id,
+          appointment_date: row.appointment_date,
+          start_time: row.start_time,
+          status: row.status,
+          patient: { name: row.patient_name } as any,
+          professional: { name: row.professional_name } as any,
+          clinic: {
+            name: row.clinic_name,
+            address: row.clinic_address,
+            phone: row.clinic_phone,
+          } as any,
         });
       } catch (err: any) {
         console.error("Error fetching appointment:", err);
@@ -90,15 +87,14 @@ export default function AppointmentConfirmation() {
 
     setActionLoading(true);
     try {
-      const { error: updateError } = await supabase
-        .from("appointments")
-        .update({ 
-          status: "confirmed",
-          confirmed_at: new Date().toISOString()
-        })
-        .eq("confirmation_token", token);
+      const { data: result, error: updateError } = await supabase.rpc(
+        "act_on_appointment_by_token" as any,
+        { _token: token, _action: "confirm" }
+      );
 
       if (updateError) throw updateError;
+      if (result !== "OK") throw new Error(String(result));
+
 
       setActionComplete("confirmed");
       setAppointment({ ...appointment, status: "confirmed" });
@@ -115,16 +111,14 @@ export default function AppointmentConfirmation() {
 
     setActionLoading(true);
     try {
-      const { error: updateError } = await supabase
-        .from("appointments")
-        .update({ 
-          status: "cancelled",
-          cancelled_at: new Date().toISOString(),
-          cancellation_reason: cancelReason || "Cancelado pelo paciente via link"
-        })
-        .eq("confirmation_token", token);
+      const { data: result, error: updateError } = await supabase.rpc(
+        "act_on_appointment_by_token" as any,
+        { _token: token, _action: "cancel", _reason: cancelReason || null }
+      );
 
       if (updateError) throw updateError;
+      if (result !== "OK") throw new Error(String(result));
+
 
       setActionComplete("cancelled");
       setAppointment({ ...appointment, status: "cancelled" });
