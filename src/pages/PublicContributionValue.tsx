@@ -255,6 +255,8 @@ export default function PublicContributionValue() {
     );
   }
 
+  const hasValue = Number(contribution.value) > 0;
+
   return (
     <div className="min-h-screen bg-background p-4 flex items-center justify-center">
       <Card className="w-full max-w-lg shadow-xl">
