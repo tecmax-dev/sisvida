@@ -6,7 +6,13 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const VERIFY_TOKEN = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") || "sindexa-status-2026";
+// Token fixo e determinístico: NÃO depende de variável de ambiente.
+// Uma variável META_WEBHOOK_VERIFY_TOKEN divergente já configurada no
+// projeto fazia o handshake da Meta falhar com 403 sempre que tentávamos
+// registrar o callback oficial para este número — a Meta caía de volta
+// para o webhook de terceiro (ChatGoo) como único caminho de entrada, e
+// uma instabilidade no servidor deles derrubava o atendimento inteiro.
+const VERIFY_TOKEN = "sindexa-status-2026";
 const WABA_ID = "2063797207822998";
 
 async function ensureMetaWebhookSubscription(admin: ReturnType<typeof createClient>) {

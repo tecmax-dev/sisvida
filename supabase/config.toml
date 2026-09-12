@@ -13,3 +13,12 @@ verify_jwt = false
 [functions.chatgoo-probe]
 verify_jwt = false
 
+# Este é o webhook oficial cadastrado diretamente no número da Meta (GET de
+# handshake e POST de eventos). A Meta NUNCA envia JWT do Supabase nessas
+# chamadas. Sem verify_jwt = false, toda tentativa de handshake/registro do
+# callback oficial falha com 403 antes de chegar ao código — forçando a Meta
+# a manter apenas o webhook de terceiro (ChatGoo) como único canal de entrada,
+# e uma queda no servidor deles derrubava o atendimento inteiro.
+[functions.meta-status-webhook]
+verify_jwt = false
+
