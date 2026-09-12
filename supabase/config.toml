@@ -1,4 +1,5 @@
 project_id = "czmnkrurkzuerrcjzbkp"
+# test2
 [functions.homologacao-dry-run]
 verify_jwt = false
 
@@ -11,3 +12,4 @@ verify_jwt = false
 
 [functions.chatgoo-probe]
 verify_jwt = false
+
