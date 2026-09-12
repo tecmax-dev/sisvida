@@ -186,6 +186,36 @@ export default function PublicContributionValue() {
 
     setSubmitting(true);
     try {
+      // Contribuição que já possui valor (vencida): apenas nova data → 2ª via
+      if (Number(contribution.value) > 0) {
+        if (!newDueDate) {
+          toast.error("Informe a nova data de vencimento");
+          return;
+        }
+
+        const { data: reissue, error: reissueError } = await supabase.functions.invoke(
+          "generate-boleto-reissue",
+          {
+            body: {
+              contribution_id: contribution.id,
+              new_due_date: newDueDate,
+              portal_type: "public_token",
+              portal_id: contribution.employer_id || contribution.id,
+            },
+          }
+        );
+
+        if (reissueError || reissue?.error) {
+          toast.error(reissue?.error || "Erro ao gerar boleto");
+          return;
+        }
+
+        setSuccess(true);
+        setInvoiceUrl(reissue.lytex_invoice_url || contribution.lytex_invoice_url);
+        toast.success(reissue.message || "Boleto gerado com sucesso!");
+        return;
+      }
+
       // Tipo de contribuição escolhido no link seguro
       if (typeId && typeId !== contribution.contribution_type_id) {
         const { data: typeOk } = await supabase.rpc("set_contribution_type_by_public_token", {
