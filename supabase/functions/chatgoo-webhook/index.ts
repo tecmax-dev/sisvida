@@ -1162,6 +1162,31 @@ serve(async (req) => {
   if (awaitCnpj) {
     const digits = text.replace(/\D/g, "");
     if (digits.length === 14) {
+      if (awaitCnpj === "EMPRESA_IDENT") {
+        // Identificação da empresa: o CNPJ precisa existir no sindicato.
+        const { data: empresas } = await supabase
+          .from("employers")
+          .select("id,name,trade_name,cnpj")
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .limit(2000);
+        const empresa = (empresas ?? []).find(
+          (e: any) => String(e.cnpj ?? "").replace(/\D/g, "") === digits,
+        );
+        if (!empresa) {
+          nextAwaitCnpj = "EMPRESA_IDENT";
+          return await answer(
+            "Não localizei empresa com este CNPJ no sindicato. Confira os 14 números ou responda \"atendente\".",
+            "ANSWERED",
+            "CNPJ_NOT_FOUND",
+            null,
+          );
+        }
+        empresaCnpj = digits;
+        intent = "MENU_EMPRESA";
+        profile = "EMPRESA";
+        const nome = (empresa as any).trade_name || (empresa as any).name;
+        return await answerMenu("EMPRESA", `${nome}, escolha uma opção:`, null);
+      }
       intent = awaitCnpj === "CONTABILIDADE" ? "CTB_ATUALIZAR" : "EMP_ATUALIZAR";
       return await sendUpdateLinks(digits, awaitCnpj);
     }
@@ -1186,14 +1211,28 @@ serve(async (req) => {
     );
   }
 
-  // A escolha do perfil apenas abre o submenu. A identificação pelo telefone
-  // acontece depois, quando o contato solicita dados protegidos.
+  // Empresa: antes de abrir o submenu, pedimos o CNPJ para identificar o contato.
   if (intent === "MENU_EMPRESA") {
+    if (!empresaCnpj) {
+      nextAwaitCnpj = "EMPRESA_IDENT";
+      return await answer(
+        [
+          "Atendimento à empresa.",
+          "Para continuar, me informe o CNPJ da empresa (somente números).",
+          "",
+          "Exemplo: 12345678000199",
+        ].join("\n"),
+        "ANSWERED",
+        "ASK_CNPJ_IDENT",
+        null,
+      );
+    }
     return await answerMenu("EMPRESA", "Atendimento à empresa. Escolha uma opção:", null);
   }
   if (intent === "MENU_CONTABILIDADE") {
     return await answerMenu("CONTABILIDADE", "Atendimento à contabilidade. Escolha uma opção:", null);
   }
+
 
   // ===================== PERFIL: EMPRESA =====================
   if (
