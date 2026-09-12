@@ -763,14 +763,42 @@ serve(async (req) => {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9 ]/g, "")
       .trim();
-    const saidNo =
-      selectedId === "CONSENT_NAO" || tConsent === "nao autorizo";
 
-    // Aceita "sim" digitado APENAS como resposta ao botão (selectedId) ou frase
-    // explícita de autorização — nunca um "sim" solto de outro contexto.
+    // Quando o convite de consentimento foi enviado recentemente e ainda não há
+    // opt-in registrado, a próxima resposta da pessoa é lida como resposta ao
+    // convite — inclusive um "sim" simples, caso o toque no botão não chegue.
+    let awaitingConsent = false;
+    if (e164) {
+      const { data: optinNow } = await supabase
+        .from("whatsapp_opt_ins")
+        .select("id")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .eq("phone", e164)
+        .limit(1);
+      if (!optinNow || optinNow.length === 0) {
+        const { data: promptRecent } = await supabase
+          .from("chatgoo_events")
+          .select("id")
+          .eq("event", "consent_prompt")
+          .eq("phone", e164)
+          .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .limit(1);
+        awaitingConsent = Array.isArray(promptRecent) && promptRecent.length > 0;
+      }
+    }
+
+    const saidNo =
+      selectedId === "CONSENT_NAO" ||
+      tConsent === "nao autorizo" ||
+      (awaitingConsent && /^(nao|n|nao quero|recuso|2)$/.test(tConsent));
+
+    // Aceita "sim" digitado APENAS como resposta ao botão (selectedId), frase
+    // explícita de autorização, ou resposta ao convite enviado há pouco.
     const explicitYes =
       selectedId === "CONSENT_SIM" ||
-      /^(sim autorizo|autorizo|eu autorizo|autorizo sim)$/.test(tConsent);
+      /^(sim autorizo|autorizo|eu autorizo|autorizo sim)$/.test(tConsent) ||
+      (awaitingConsent && /^(sim|s|ok|aceito|concordo|1)$/.test(tConsent));
+
 
     if (explicitYes || saidNo) {
       if (explicitYes) {
@@ -828,7 +856,9 @@ serve(async (req) => {
             "Antes de continuarmos: você autoriza o recebimento de mensagens",
             "informativas e operacionais do sindicato neste número?",
             "",
+            "Responda SIM para autorizar ou NÃO para recusar.",
             "Você pode cancelar a qualquer momento enviando SAIR.",
+
           ].join("\n");
           const consentResult = await chatgooSendButtonsViaMeta(supabase, e164, {
             body: consentBody,
