@@ -576,6 +576,8 @@ serve(async (req) => {
         reply,
         profile,
         await_cnpj: nextAwaitCnpj,
+        empresa_cnpj: empresaCnpj,
+
         meta_message_id: metaMessageId,
       },
     });
