@@ -1007,20 +1007,32 @@ serve(async (req) => {
     );
   };
 
+  // Busca a empresa diretamente no banco (o filtro em memória falhava quando o
+  // sindicato tem mais empresas do que o limite de linhas retornadas).
+  const findEmpresaByCnpj = async (
+    cnpjDigits: string,
+    columns = "id,name,trade_name,cnpj",
+  ) => {
+    const d = cnpjDigits.replace(/\D/g, "");
+    if (d.length !== 14) return null;
+    const formatted = `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+    const { data } = await supabase
+      .from("employers")
+      .select(columns)
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .or(`cnpj.eq.${d},cnpj.eq.${formatted}`)
+      .limit(1);
+    return (data ?? [])[0] ?? null;
+  };
+
   const sendUpdateLinks = async (
     cnpjDigits: string,
     scope: "EMPRESA" | "CONTABILIDADE",
   ) => {
     // Autorização: o CNPJ precisa pertencer ao tenant do sindicato e, no caso da
     // contabilidade, estar vinculado ao escritório identificado pelo telefone.
-    const { data: empresas } = await supabase
-      .from("employers")
-      .select("id,name,trade_name,cnpj")
-      .eq("clinic_id", SINDICATO_CLINIC_ID)
-      .limit(2000);
-    const empresa = (empresas ?? []).find(
-      (e: any) => String(e.cnpj ?? "").replace(/\D/g, "") === cnpjDigits,
-    );
+    const empresa = await findEmpresaByCnpj(cnpjDigits);
+
 
     if (!empresa) {
       return await answer(
