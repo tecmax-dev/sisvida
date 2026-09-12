@@ -551,7 +551,7 @@ serve(async (req) => {
   else if (intent === "MENU") profile = null;
 
   // Quando o bot pergunta o CNPJ, o próximo evento registrado guarda esse estado.
-  let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | null = null;
+  let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
 
   const log = async (
     decision: string,
