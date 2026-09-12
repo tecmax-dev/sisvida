@@ -213,8 +213,9 @@ serve(async (req) => {
       const dueDate = new Date(contribution.due_date);
       const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       
-      // Verificar se boleto está vencido há mais de 90 dias - apenas gestor pode alterar
-      if (daysDiff > 90) {
+      // O link público seguro enviado no WhatsApp pode reemitir contribuições de 2026
+      // mesmo após 90 dias. A trava continua valendo nos portais tradicionais.
+      if (portal_type !== "public_token" && daysDiff > 90) {
         console.log(`[Reissue] Boleto vencido há ${daysDiff} dias - bloqueado para portal`);
         return new Response(
           JSON.stringify({ 
@@ -238,7 +239,14 @@ serve(async (req) => {
     }
 
     // Verificar se a contribuição pertence ao portal que está solicitando
-    if (portal_type === "employer" && portal_id) {
+    if (portal_type === "public_token" && portal_id) {
+      if (contribution.public_access_token !== portal_id) {
+        return new Response(
+          JSON.stringify({ error: "Link inválido ou sem permissão para esta contribuição" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (portal_type === "employer" && portal_id) {
       if (contribution.employer_id !== portal_id) {
         return new Response(
           JSON.stringify({ error: "Você não tem permissão para acessar esta contribuição" }),
@@ -351,7 +359,7 @@ serve(async (req) => {
         : "employer_portal_logs";
       const logData = portal_type === "accounting_office"
         ? { accounting_office_id: portal_id, action: "generate_reissue" }
-        : { employer_id: portal_id, action: "generate_reissue" };
+        : { employer_id: contribution.employer_id, action: "generate_reissue" };
 
       if (portal_id) {
         await supabase.from(logTable).insert({
