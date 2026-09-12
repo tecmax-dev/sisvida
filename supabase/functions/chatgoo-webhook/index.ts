@@ -518,8 +518,34 @@ serve(async (req) => {
     ? ASSOC_NUMBER_MAP
     : ROOT_NUMBER_MAP;
 
+  // Título da linha tocada na lista (quando o provedor não devolve o id).
+  const norm = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const rowsForProfile = profile === "EMPRESA"
+    ? EMP_LIST_ROWS
+    : profile === "CONTABILIDADE"
+    ? CTB_LIST_ROWS
+    : profile === "ASSOCIADO"
+    ? ASSOC_LIST_ROWS
+    : ROOT_LIST_ROWS;
+  const titleMatch = rowsForProfile.find((r) => norm(r.title) === norm(text));
+
   let intent: Intent =
-    OPTION_ID_MAP[selectedId] ?? numberMap[text] ?? detectIntent(text);
+    OPTION_ID_MAP[selectedId] ??
+    (titleMatch ? OPTION_ID_MAP[titleMatch.id] : undefined) ??
+    numberMap[text] ??
+    detectIntent(text);
+
+  // Dentro de um perfil empresarial, termos genéricos nunca caem no fluxo
+  // pessoal do associado.
+  if (profile === "EMPRESA") {
+    if (intent === "FINANCEIRO") intent = "EMP_BOLETOS";
+    else if (intent === "HOMOLOGACAO") intent = "EMP_HOMOLOGACAO";
+    else if (intent === "CADASTRO") intent = "EMP_DADOS";
+  } else if (profile === "CONTABILIDADE") {
+    if (intent === "FINANCEIRO") intent = "CTB_BOLETOS";
+  }
+
 
   // Alinha o perfil ativo com a escolha atual do contato.
   if (intent === "MENU_ASSOCIADO") profile = "ASSOCIADO";
