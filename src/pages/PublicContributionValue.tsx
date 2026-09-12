@@ -149,7 +149,13 @@ export default function PublicContributionValue() {
       const todayStr = new Date().toISOString().slice(0, 10);
       setNewDueDate(currentDue && currentDue >= todayStr ? currentDue : todayStr);
 
-      if (contributionData.status !== "awaiting_value" && contributionData.lytex_invoice_url) {
+      // Boleto vencido pode ter nova data de vencimento informada
+      const isOverdue = !!currentDue && currentDue < todayStr && contributionData.status !== "paid";
+      if (isOverdue) {
+        setNewDueDate(todayStr);
+      }
+
+      if (!isOverdue && contributionData.status !== "awaiting_value" && contributionData.lytex_invoice_url) {
         setSuccess(true);
         setInvoiceUrl(contributionData.lytex_invoice_url);
       }
