@@ -332,13 +332,17 @@ serve(async (req) => {
     });
   }
 
-  // O mesmo evento pode ser reenviado pelo ChatGoo; processa cada mensagem apenas uma vez.
+  // O mesmo evento pode ser reenviado pelo provedor; processa apenas respostas
+  // que já chegaram a uma decisão final. Tentativas interrompidas não bloqueiam
+  // o clique legítimo seguinte.
   if (messageId) {
+    const duplicateSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: duplicate } = await supabase
       .from("chatgoo_events")
       .select("id")
       .eq("event", "message")
-      .neq("decision", "SEND_FAILED")
+      .in("decision", ["ANSWERED", "HANDOFF", "OPT_IN", "OPT_OUT", "SILENCED"])
+      .gte("created_at", duplicateSince)
       .contains("payload", { message_id: messageId })
       .limit(1)
       .maybeSingle();
@@ -765,8 +769,8 @@ serve(async (req) => {
       .trim();
 
     // Quando o convite de consentimento foi enviado recentemente e ainda não há
-    // opt-in registrado, a próxima resposta da pessoa é lida como resposta ao
-    // convite — inclusive um "sim" simples, caso o toque no botão não chegue.
+    // opt-in registrado, aceitamos palavras inequívocas. Números nunca significam
+    // consentimento, pois também são opções dos menus e causavam o fluxo travado.
     let awaitingConsent = false;
     if (e164) {
       const { data: optinNow } = await supabase
@@ -790,14 +794,14 @@ serve(async (req) => {
     const saidNo =
       selectedId === "CONSENT_NAO" ||
       tConsent === "nao autorizo" ||
-      (awaitingConsent && /^(nao|n|nao quero|recuso|2)$/.test(tConsent));
+      (awaitingConsent && /^(nao|n|nao quero|recuso)$/.test(tConsent));
 
     // Aceita "sim" digitado APENAS como resposta ao botão (selectedId), frase
     // explícita de autorização, ou resposta ao convite enviado há pouco.
     const explicitYes =
       selectedId === "CONSENT_SIM" ||
       /^(sim autorizo|autorizo|eu autorizo|autorizo sim)$/.test(tConsent) ||
-      (awaitingConsent && /^(sim|s|ok|aceito|concordo|1)$/.test(tConsent));
+      (awaitingConsent && /^(sim|s|ok|aceito|concordo)$/.test(tConsent));
 
 
     if (explicitYes || saidNo) {
