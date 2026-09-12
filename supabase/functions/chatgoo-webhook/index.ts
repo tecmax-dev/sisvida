@@ -312,8 +312,13 @@ serve(async (req) => {
     body?.rawMsg?.key?.fromMe,
     body?.data?.fromMe,
     body?.data?.key?.fromMe,
+    body?.data?.message?.fromMe,
+    body?.data?.message?.key?.fromMe,
   ].some(isTrue);
-  const outboundEvent = /(message\.ack|message_ack|message\.update|message_update|sent|delivered|read|outbound)/.test(eventName);
+  // O ChatGoo entrega respostas de listas/botões como message.update. Esse nome
+  // não significa saída: a direção é definida por fromMe. Ignorar todo update
+  // descartava justamente o toque em "Sou empresa" e impedia o submenu.
+  const outboundEvent = /(message\.ack|message_ack|message\.sent|message_sent|message\.delivered|message_delivered|message\.read|message_read|outbound)/.test(eventName);
   if (fromMe || outboundEvent) {
     await supabase.from("chatgoo_events").insert({
       direction: "outbound",
@@ -397,10 +402,18 @@ serve(async (req) => {
     body?.message?.body,
     body?.message?.conversation,
     body?.message?.text,
+    body?.message?.listResponse?.title,
+    body?.message?.buttonReply?.title,
     body?.rawMsg?.message?.conversation,
     body?.rawMsg?.message?.extendedTextMessage?.text,
+    body?.rawMsg?.message?.listResponseMessage?.title,
+    body?.rawMsg?.message?.listResponseMessage?.singleSelectReply?.title,
+    body?.rawMsg?.message?.buttonsResponseMessage?.selectedDisplayText,
     body?.data?.message?.conversation,
     body?.data?.message?.extendedTextMessage?.text,
+    body?.data?.message?.listResponseMessage?.title,
+    body?.data?.message?.listResponseMessage?.singleSelectReply?.title,
+    body?.data?.message?.buttonsResponseMessage?.selectedDisplayText,
     body?.data?.message?.body,
     body?.data?.body,
     body?.data?.content,
