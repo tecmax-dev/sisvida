@@ -468,7 +468,9 @@ serve(async (req) => {
   // Estado "aguardando CNPJ" (válido por 30 minutos) para o fluxo de atualização
   // de boleto. Nenhum dado sensível é coletado no chat: apenas o CNPJ para
   // localizar os boletos e devolver o link seguro de atualização.
-  let awaitCnpj: "EMPRESA" | "CONTABILIDADE" | null = null;
+  let awaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
+  // CNPJ já informado pela empresa nesta conversa (válido por 6 horas).
+  let empresaCnpj: string | null = null;
   if (e164) {
     const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
     const { data: last } = await supabase
@@ -487,14 +489,25 @@ serve(async (req) => {
         break;
       }
     }
+    for (const row of rows) {
+      const c = (row as any)?.payload?.empresa_cnpj;
+      if (typeof c === "string" && c.replace(/\D/g, "").length === 14) {
+        empresaCnpj = c.replace(/\D/g, "");
+        break;
+      }
+    }
     const lastRow = rows[0] as any;
     const pending = lastRow?.payload?.await_cnpj;
     const recent = lastRow?.created_at &&
       Date.now() - new Date(lastRow.created_at).getTime() < 30 * 60 * 1000;
-    if (recent && (pending === "EMPRESA" || pending === "CONTABILIDADE")) {
+    if (
+      recent &&
+      (pending === "EMPRESA" || pending === "CONTABILIDADE" || pending === "EMPRESA_IDENT")
+    ) {
       awaitCnpj = pending;
     }
   }
+
 
 
   const numberMap = profile === "EMPRESA"
@@ -538,7 +551,7 @@ serve(async (req) => {
   else if (intent === "MENU") profile = null;
 
   // Quando o bot pergunta o CNPJ, o próximo evento registrado guarda esse estado.
-  let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | null = null;
+  let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
 
   const log = async (
     decision: string,
@@ -563,6 +576,8 @@ serve(async (req) => {
         reply,
         profile,
         await_cnpj: nextAwaitCnpj,
+        empresa_cnpj: empresaCnpj,
+
         meta_message_id: metaMessageId,
       },
     });
@@ -1147,6 +1162,31 @@ serve(async (req) => {
   if (awaitCnpj) {
     const digits = text.replace(/\D/g, "");
     if (digits.length === 14) {
+      if (awaitCnpj === "EMPRESA_IDENT") {
+        // Identificação da empresa: o CNPJ precisa existir no sindicato.
+        const { data: empresas } = await supabase
+          .from("employers")
+          .select("id,name,trade_name,cnpj")
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .limit(2000);
+        const empresa = (empresas ?? []).find(
+          (e: any) => String(e.cnpj ?? "").replace(/\D/g, "") === digits,
+        );
+        if (!empresa) {
+          nextAwaitCnpj = "EMPRESA_IDENT";
+          return await answer(
+            "Não localizei empresa com este CNPJ no sindicato. Confira os 14 números ou responda \"atendente\".",
+            "ANSWERED",
+            "CNPJ_NOT_FOUND",
+            null,
+          );
+        }
+        empresaCnpj = digits;
+        intent = "MENU_EMPRESA";
+        profile = "EMPRESA";
+        const nome = (empresa as any).trade_name || (empresa as any).name;
+        return await answerMenu("EMPRESA", `${nome}, escolha uma opção:`, null);
+      }
       intent = awaitCnpj === "CONTABILIDADE" ? "CTB_ATUALIZAR" : "EMP_ATUALIZAR";
       return await sendUpdateLinks(digits, awaitCnpj);
     }
@@ -1171,14 +1211,28 @@ serve(async (req) => {
     );
   }
 
-  // A escolha do perfil apenas abre o submenu. A identificação pelo telefone
-  // acontece depois, quando o contato solicita dados protegidos.
+  // Empresa: antes de abrir o submenu, pedimos o CNPJ para identificar o contato.
   if (intent === "MENU_EMPRESA") {
+    if (!empresaCnpj) {
+      nextAwaitCnpj = "EMPRESA_IDENT";
+      return await answer(
+        [
+          "Atendimento à empresa.",
+          "Para continuar, me informe o CNPJ da empresa (somente números).",
+          "",
+          "Exemplo: 12345678000199",
+        ].join("\n"),
+        "ANSWERED",
+        "ASK_CNPJ_IDENT",
+        null,
+      );
+    }
     return await answerMenu("EMPRESA", "Atendimento à empresa. Escolha uma opção:", null);
   }
   if (intent === "MENU_CONTABILIDADE") {
     return await answerMenu("CONTABILIDADE", "Atendimento à contabilidade. Escolha uma opção:", null);
   }
+
 
   // ===================== PERFIL: EMPRESA =====================
   if (
