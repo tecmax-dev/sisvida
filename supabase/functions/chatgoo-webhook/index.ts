@@ -1211,23 +1211,22 @@ serve(async (req) => {
     );
   }
 
-  // Empresa: antes de abrir o submenu, pedimos o CNPJ para identificar o contato.
+  // Empresa: ao escolher "Sou empresa" sempre pedimos o CNPJ para identificar
+  // o contato, mesmo que exista um CNPJ guardado de uma conversa anterior.
   if (intent === "MENU_EMPRESA") {
-    if (!empresaCnpj) {
-      nextAwaitCnpj = "EMPRESA_IDENT";
-      return await answer(
-        [
-          "Atendimento à empresa.",
-          "Para continuar, me informe o CNPJ da empresa (somente números).",
-          "",
-          "Exemplo: 12345678000199",
-        ].join("\n"),
-        "ANSWERED",
-        "ASK_CNPJ_IDENT",
-        null,
-      );
-    }
-    return await answerMenu("EMPRESA", "Atendimento à empresa. Escolha uma opção:", null);
+    empresaCnpj = null;
+    nextAwaitCnpj = "EMPRESA_IDENT";
+    return await answer(
+      [
+        "Atendimento à empresa.",
+        "Para continuar, me informe o CNPJ da empresa (somente números).",
+        "",
+        "Exemplo: 12345678000199",
+      ].join("\n"),
+      "ANSWERED",
+      "ASK_CNPJ_IDENT",
+      null,
+    );
   }
   if (intent === "MENU_CONTABILIDADE") {
     return await answerMenu("CONTABILIDADE", "Atendimento à contabilidade. Escolha uma opção:", null);
