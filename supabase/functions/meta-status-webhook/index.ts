@@ -26,9 +26,9 @@ serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const rawBody = await req.text();
-  const body = JSON.parse(rawBody || "{}");
 
   try {
+    const body = JSON.parse(rawBody || "{}");
     const rows: any[] = [];
     for (const entry of body?.entry ?? []) {
       for (const change of entry?.changes ?? []) {
@@ -70,17 +70,29 @@ serve(async (req) => {
         body: rawBody,
       });
 
+      const automationBody = await automationResponse.text();
       if (!automationResponse.ok) {
         await admin.from("chatgoo_events").insert({
           direction: "inbound",
           event: "meta_relay",
           decision: "SEND_FAILED",
           reason: `AUTOMATION_HTTP_${automationResponse.status}`,
-          payload: {},
+          payload: { response: automationBody.slice(0, 1000) },
         });
       }
     }
-  } catch (_e) { /* never break the webhook */ }
+  } catch (error) {
+    await admin.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "meta_relay",
+      decision: "BLOCKED",
+      reason: "INVALID_META_PAYLOAD",
+      payload: {
+        error: error instanceof Error ? error.message : String(error),
+        raw: rawBody.slice(0, 1000),
+      },
+    });
+  }
 
   return new Response(JSON.stringify({ received: true }), {
     headers: { ...cors, "Content-Type": "application/json" },

@@ -536,7 +536,13 @@ serve(async (req) => {
   // Quando o bot pergunta o CNPJ, o próximo evento registrado guarda esse estado.
   let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | null = null;
 
-  const log = async (decision: string, reason: string | null, patientId: string | null, reply: string) => {
+  const log = async (
+    decision: string,
+    reason: string | null,
+    patientId: string | null,
+    reply: string,
+    metaMessageId: string | null = null,
+  ) => {
     await supabase.from("chatgoo_events").insert({
       direction: "inbound",
       event: "message",
@@ -553,6 +559,7 @@ serve(async (req) => {
         reply,
         profile,
         await_cnpj: nextAwaitCnpj,
+        meta_message_id: metaMessageId,
       },
     });
   };
@@ -571,6 +578,7 @@ serve(async (req) => {
       delivered ? reason : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
       patientId,
       reply,
+      result.message_id ?? null,
     );
     return new Response(
       JSON.stringify({
@@ -578,6 +586,7 @@ serve(async (req) => {
         intent,
         dry_run: result.dry_run,
         delivered: result.sent,
+        meta_message_id: result.message_id ?? null,
         reply,
       }),
       {
@@ -626,6 +635,7 @@ serve(async (req) => {
       delivered ? null : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
       patientId,
       bodyText,
+      finalResult.message_id ?? null,
     );
     return new Response(
       JSON.stringify({
@@ -633,6 +643,7 @@ serve(async (req) => {
         intent,
         dry_run: finalResult.dry_run,
         delivered: finalResult.sent,
+        meta_message_id: finalResult.message_id ?? null,
         reply: bodyText,
       }),
       {
@@ -1160,10 +1171,6 @@ serve(async (req) => {
     const empresa = empresas[0];
     const nomeEmpresa = empresa.trade_name || empresa.name || "Empresa";
 
-    if (intent === "MENU_EMPRESA") {
-      return await answerMenu("EMPRESA", `Olá, ${nomeEmpresa}! Escolha uma opção:`, null);
-    }
-
     if (intent === "EMP_DADOS") {
       return await answer(
         [
@@ -1314,10 +1321,6 @@ serve(async (req) => {
     }
     const escritorio = escritorios[0];
     const nomeEscritorio = escritorio.trade_name || escritorio.name || "Escritório";
-
-    if (intent === "MENU_CONTABILIDADE") {
-      return await answerMenu("CONTABILIDADE", `Olá, ${nomeEscritorio}! Escolha uma opção:`, null);
-    }
 
     const { data: vinculos } = await supabase
       .from("accounting_office_employers")
