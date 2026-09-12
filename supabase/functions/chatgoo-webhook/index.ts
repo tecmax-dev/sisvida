@@ -468,7 +468,9 @@ serve(async (req) => {
   // Estado "aguardando CNPJ" (válido por 30 minutos) para o fluxo de atualização
   // de boleto. Nenhum dado sensível é coletado no chat: apenas o CNPJ para
   // localizar os boletos e devolver o link seguro de atualização.
-  let awaitCnpj: "EMPRESA" | "CONTABILIDADE" | null = null;
+  let awaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
+  // CNPJ já informado pela empresa nesta conversa (válido por 6 horas).
+  let empresaCnpj: string | null = null;
   if (e164) {
     const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
     const { data: last } = await supabase
@@ -487,14 +489,25 @@ serve(async (req) => {
         break;
       }
     }
+    for (const row of rows) {
+      const c = (row as any)?.payload?.empresa_cnpj;
+      if (typeof c === "string" && c.replace(/\D/g, "").length === 14) {
+        empresaCnpj = c.replace(/\D/g, "");
+        break;
+      }
+    }
     const lastRow = rows[0] as any;
     const pending = lastRow?.payload?.await_cnpj;
     const recent = lastRow?.created_at &&
       Date.now() - new Date(lastRow.created_at).getTime() < 30 * 60 * 1000;
-    if (recent && (pending === "EMPRESA" || pending === "CONTABILIDADE")) {
+    if (
+      recent &&
+      (pending === "EMPRESA" || pending === "CONTABILIDADE" || pending === "EMPRESA_IDENT")
+    ) {
       awaitCnpj = pending;
     }
   }
+
 
 
   const numberMap = profile === "EMPRESA"
