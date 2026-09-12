@@ -7,6 +7,30 @@ const cors = {
 };
 
 const VERIFY_TOKEN = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") || "sindexa-status-2026";
+const WABA_ID = "2063797207822998";
+
+async function ensureMetaWebhookSubscription(admin: ReturnType<typeof createClient>) {
+  try {
+    const { data: secret } = await admin.rpc("get_meta_vault_secret", {
+      _secret_name: "META_WHATSAPP_TOKEN_V2",
+    });
+    const token = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
+    if (!token) return;
+
+    const response = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}/subscribed_apps`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result?.success !== true) {
+      console.error("META_WEBHOOK_SUBSCRIPTION_FAILED", response.status, result?.error?.code ?? "UNKNOWN");
+      return;
+    }
+    console.log("META_WEBHOOK_SUBSCRIPTION_OK");
+  } catch (error) {
+    console.error("META_WEBHOOK_SUBSCRIPTION_ERROR", error instanceof Error ? error.message : String(error));
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -26,6 +50,10 @@ serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const rawBody = await req.text();
+
+  // Reinscrição idempotente: corrige automaticamente quando a Meta perde ou
+  // remove a assinatura do aplicativo responsável pelo número oficial.
+  await ensureMetaWebhookSubscription(admin);
 
   try {
     const body = JSON.parse(rawBody || "{}");
@@ -59,6 +87,27 @@ serve(async (req) => {
     );
 
     if (hasInboundMessage) {
+      const inboundRows = (body?.entry ?? []).flatMap((entry: any) =>
+        (entry?.changes ?? []).flatMap((change: any) =>
+          (change?.value?.messages ?? []).map((message: any) => ({
+            direction: "inbound",
+            event: "meta_inbound_received",
+            phone: String(message?.from ?? "").replace(/\D/g, "") || null,
+            decision: "ACCEPTED",
+            reason: message?.type ? `META_${String(message.type).toUpperCase()}` : "META_MESSAGE",
+            payload: {
+              message_id: message?.id ?? null,
+              type: message?.type ?? null,
+              selected_id: message?.interactive?.list_reply?.id ??
+                message?.interactive?.button_reply?.id ?? null,
+              selected_title: message?.interactive?.list_reply?.title ??
+                message?.interactive?.button_reply?.title ?? null,
+            },
+          }))
+        )
+      );
+      if (inboundRows.length) await admin.from("chatgoo_events").insert(inboundRows);
+
       const automationResponse = await fetch(`${supabaseUrl}/functions/v1/chatgoo-webhook`, {
         method: "POST",
         headers: {
