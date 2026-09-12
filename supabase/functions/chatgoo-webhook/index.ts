@@ -1239,24 +1239,33 @@ serve(async (req) => {
     intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" ||
     intent === "EMP_DADOS" || intent === "EMP_2VIA"
   ) {
-    const empresas = await employerLookup();
-    if (empresas.length === 0) {
-      return await answer(
-        "Não localizei uma empresa cadastrada com este número. Vou encaminhar para um atendente confirmar os dados.",
-        "HANDOFF",
-        "EMPLOYER_NOT_FOUND",
-        null,
-      );
+    // Prioriza o CNPJ informado pela empresa nesta conversa. O telefone é apenas
+    // fallback quando nenhum CNPJ foi identificado.
+    let empresa: any = null;
+    if (empresaCnpj) {
+      const { data: todas } = await supabase
+        .from("employers")
+        .select("id,name,trade_name,cnpj,phone,email,city,state,is_active")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .limit(2000);
+      empresa = (todas ?? []).find(
+        (e: any) => String(e.cnpj ?? "").replace(/\D/g, "") === empresaCnpj,
+      ) ?? null;
     }
-    if (empresas.length > 1) {
-      return await answer(
-        "Encontrei mais de uma empresa com este número. Por segurança, vou encaminhar para um atendente.",
-        "HANDOFF",
-        "AMBIGUOUS_EMPLOYER_MATCH",
-        null,
-      );
+    if (!empresa) {
+      const empresas = await employerLookup();
+      if (empresas.length !== 1) {
+        nextAwaitCnpj = "EMPRESA_IDENT";
+        return await answer(
+          "Para continuar, me informe o CNPJ da empresa (somente números).",
+          "ANSWERED",
+          "ASK_CNPJ_IDENT",
+          null,
+        );
+      }
+      empresa = empresas[0];
     }
-    const empresa = empresas[0];
+
     const nomeEmpresa = empresa.trade_name || empresa.name || "Empresa";
 
     if (intent === "EMP_DADOS") {
