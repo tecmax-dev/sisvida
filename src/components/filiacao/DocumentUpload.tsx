@@ -12,6 +12,7 @@ interface DocumentUploadProps {
   documentUrl: string | null;
   onUpload: (url: string) => void;
   onClear?: () => void;
+  onUploadingChange?: (uploading: boolean) => void;
   label: string;
   description?: string;
   accept?: string;
@@ -24,6 +25,7 @@ export function DocumentUpload({
   documentUrl,
   onUpload,
   onClear,
+  onUploadingChange,
   label,
   description,
   accept = "image/*,application/pdf",
@@ -61,6 +63,7 @@ export function DocumentUpload({
     }
 
     setUploading(true);
+    onUploadingChange?.(true);
     setProgress(0);
     setProgressMessage("Preparando arquivo...");
     setCameraActive(false);
@@ -124,8 +127,9 @@ export function DocumentUpload({
       if (mountedRef.current) {
         setUploading(false);
       }
+      onUploadingChange?.(false);
     }
-  }, [sindicatoId, type, onUpload, toast]);
+  }, [sindicatoId, type, onUpload, onUploadingChange, toast]);
 
   const handleClear = useCallback(() => {
     onClear?.();

@@ -155,6 +155,10 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
   const [docFrenteUrl, setDocFrenteUrl] = useState<string | null>(null);
   const [docVersoUrl, setDocVersoUrl] = useState<string | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+  const [uploadingFrente, setUploadingFrente] = useState(false);
+  const [uploadingVerso, setUploadingVerso] = useState(false);
+  const anyDocumentUploading = uploadingFoto || uploadingFrente || uploadingVerso;
 
   const form = useForm<FiliacaoFormData>({
     resolver: zodResolver(filiacaoSchema),
@@ -336,6 +340,15 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       toast({
         title: "Assinatura obrigatória",
         description: "Por favor, assine digitalmente para autorizar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (anyDocumentUploading) {
+      toast({
+        title: "Aguarde o envio dos documentos",
+        description: "Ainda há um documento sendo enviado. Aguarde a conclusão antes de enviar a filiação.",
         variant: "destructive",
       });
       return;
@@ -969,6 +982,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                       photoUrl={fotoUrl}
                       onUpload={setFotoUrl}
                       onClear={() => setFotoUrl(null)}
+                      onUploadingChange={setUploadingFoto}
                     />
                   </div>
 
@@ -981,6 +995,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                       documentUrl={docFrenteUrl}
                       onUpload={setDocFrenteUrl}
                       onClear={() => setDocFrenteUrl(null)}
+                      onUploadingChange={setUploadingFrente}
                     />
                   </div>
 
@@ -993,6 +1008,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                       documentUrl={docVersoUrl}
                       onUpload={setDocVersoUrl}
                       onClear={() => setDocVersoUrl(null)}
+                      onUploadingChange={setUploadingVerso}
                     />
                   </div>
                 </div>
@@ -1067,13 +1083,18 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
 
               <Button
                 type="submit"
-                disabled={submitting || cpfChecking || cpfExists}
+                disabled={submitting || anyDocumentUploading || cpfChecking || cpfExists}
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Enviando...
+                  </>
+                ) : anyDocumentUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Aguardando envio dos documentos...
                   </>
                 ) : (
                   "Enviar Filiação"

@@ -12,6 +12,7 @@ interface PhotoUploadWithCameraProps {
   photoUrl: string | null;
   onUpload: (url: string) => void;
   onClear?: () => void;
+  onUploadingChange?: (uploading: boolean) => void;
   label?: string;
   aspectRatio?: "portrait" | "square";
   className?: string;
@@ -22,6 +23,7 @@ export function PhotoUploadWithCamera({
   photoUrl,
   onUpload,
   onClear,
+  onUploadingChange,
   label = "Foto (3x4)",
   aspectRatio = "portrait",
   className,
@@ -67,6 +69,7 @@ export function PhotoUploadWithCamera({
     }
 
     setUploading(true);
+    onUploadingChange?.(true);
     setProgress(0);
     setProgressMessage("Preparando foto...");
     setCameraActive(false);
@@ -129,8 +132,9 @@ export function PhotoUploadWithCamera({
       if (mountedRef.current) {
         setUploading(false);
       }
+      onUploadingChange?.(false);
     }
-  }, [sindicatoId, onUpload, toast]);
+  }, [sindicatoId, onUpload, onUploadingChange, toast]);
 
   const handleClear = useCallback(() => {
     onClear?.();

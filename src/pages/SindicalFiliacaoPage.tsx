@@ -260,6 +260,10 @@ export default function SindicalFiliacaoPage() {
   const [docFrenteUrl, setDocFrenteUrl] = useState<string | null>(null);
   const [docVersoUrl, setDocVersoUrl] = useState<string | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+  const [uploadingFrente, setUploadingFrente] = useState(false);
+  const [uploadingVerso, setUploadingVerso] = useState(false);
+  const anyDocumentUploading = uploadingFoto || uploadingFrente || uploadingVerso;
 
   // ===== EDIT MODE STATE =====
   const [editMode, setEditMode] = useState(false);
@@ -572,7 +576,12 @@ export default function SindicalFiliacaoPage() {
 
       setSubmitting(true);
       try {
-        const updatePayload = {
+        if (anyDocumentUploading) {
+        toast({ title: "Aguarde o envio dos documentos", description: "Ainda há um documento sendo enviado. Aguarde a conclusão antes de salvar.", variant: "destructive" });
+        return;
+      }
+
+      const updatePayload = {
           nome: data.nome,
           rg: data.rg || null,
           data_nascimento: data.data_nascimento,
@@ -654,6 +663,11 @@ export default function SindicalFiliacaoPage() {
 
     if (!signatureUrl) {
       toast({ title: "Assinatura obrigatória", description: "Por favor, assine digitalmente para autorizar o desconto.", variant: "destructive" });
+      return;
+    }
+
+    if (anyDocumentUploading) {
+      toast({ title: "Aguarde o envio dos documentos", description: "Ainda há um documento sendo enviado. Aguarde a conclusão antes de enviar a filiação.", variant: "destructive" });
       return;
     }
 
@@ -1530,6 +1544,7 @@ export default function SindicalFiliacaoPage() {
                         photoUrl={fotoUrl}
                         onUpload={setFotoUrl}
                         onClear={() => setFotoUrl(null)}
+                        onUploadingChange={setUploadingFoto}
                       />
                     </div>
 
@@ -1544,6 +1559,7 @@ export default function SindicalFiliacaoPage() {
                         documentUrl={docFrenteUrl}
                         onUpload={setDocFrenteUrl}
                         onClear={() => setDocFrenteUrl(null)}
+                        onUploadingChange={setUploadingFrente}
                         label="Documento (Frente)"
                         type="rg_frente"
                       />
@@ -1560,6 +1576,7 @@ export default function SindicalFiliacaoPage() {
                         documentUrl={docVersoUrl}
                         onUpload={setDocVersoUrl}
                         onClear={() => setDocVersoUrl(null)}
+                        onUploadingChange={setUploadingVerso}
                         label="Documento (Verso)"
                         type="rg_verso"
                       />
@@ -1736,13 +1753,18 @@ export default function SindicalFiliacaoPage() {
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-lg md:static md:p-0 md:bg-transparent md:border-0 md:shadow-none">
               <Button
                 type="submit"
-                disabled={submitting || (!editMode && (cpfChecking || cpfExists))}
+                disabled={submitting || anyDocumentUploading || (!editMode && (cpfChecking || cpfExists))}
                 className="w-full h-14 text-lg font-semibold rounded-xl bg-primary hover:bg-primary-dark text-primary-foreground shadow-lg transition-all duration-300"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                     {editMode ? "Salvando alterações..." : "Enviando solicitação..."}
+                  </>
+                ) : anyDocumentUploading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Aguardando envio dos documentos...
                   </>
                 ) : (
                   <>
