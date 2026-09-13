@@ -574,14 +574,23 @@ export default function SindicalFiliacaoPage() {
         return;
       }
 
-      setSubmitting(true);
-      try {
-        if (anyDocumentUploading) {
+      if (anyDocumentUploading) {
         toast({ title: "Aguarde o envio dos documentos", description: "Ainda há um documento sendo enviado. Aguarde a conclusão antes de salvar.", variant: "destructive" });
         return;
       }
 
-      const updatePayload = {
+      if (!fotoUrl || !docFrenteUrl) {
+        toast({
+          title: "Documentos obrigatórios",
+          description: "Envie a foto 3x4 e o documento (frente) antes de salvar as alterações.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const updatePayload = {
           nome: data.nome,
           rg: data.rg || null,
           data_nascimento: data.data_nascimento,
@@ -668,6 +677,15 @@ export default function SindicalFiliacaoPage() {
 
     if (anyDocumentUploading) {
       toast({ title: "Aguarde o envio dos documentos", description: "Ainda há um documento sendo enviado. Aguarde a conclusão antes de enviar a filiação.", variant: "destructive" });
+      return;
+    }
+
+    if (!fotoUrl || !docFrenteUrl) {
+      toast({
+        title: "Documentos obrigatórios",
+        description: "Envie a foto 3x4 e o documento (frente) antes de enviar a filiação. Se você já tentou enviar e não funcionou, tente novamente.",
+        variant: "destructive",
+      });
       return;
     }
 

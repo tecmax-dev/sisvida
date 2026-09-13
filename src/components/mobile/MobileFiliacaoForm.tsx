@@ -354,6 +354,15 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       return;
     }
 
+    if (!fotoUrl || !docFrenteUrl) {
+      toast({
+        title: "Documentos obrigatórios",
+        description: "Envie a foto 3x4 e o documento (frente) antes de enviar a filiação. Se o envio falhou, tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
 
     try {
