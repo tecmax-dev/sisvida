@@ -65,6 +65,7 @@ interface Associado {
   forma_pagamento: string | null;
   documento_foto_url: string | null;
   documento_rg_url: string | null;
+  documento_rg_verso_url: string | null;
   documento_comprovante_url: string | null;
   status: string;
   observacoes: string | null;
@@ -527,27 +528,25 @@ export default function UnionAssociadosPage() {
                 </div>
 
                 {/* Documentos */}
-                {(selectedAssociado.documento_foto_url || selectedAssociado.documento_rg_url || selectedAssociado.documento_comprovante_url) && (
+                {(selectedAssociado.documento_foto_url || selectedAssociado.documento_rg_url || selectedAssociado.documento_rg_verso_url || selectedAssociado.documento_comprovante_url) && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="font-semibold">Documentos Anexados</h4>
-                      {selectedAssociado.status === "ativo" && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => syncDocsMutation.mutate(selectedAssociado)}
-                          disabled={syncDocsMutation.isPending || !clinicId}
-                          className="h-7 text-xs"
-                        >
-                          {syncDocsMutation.isPending ? (
-                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Sincronizar com cadastro do sócio
-                        </Button>
-                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => syncDocsMutation.mutate(selectedAssociado)}
+                        disabled={syncDocsMutation.isPending || !clinicId}
+                        className="h-7 text-xs"
+                      >
+                        {syncDocsMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        Sincronizar com cadastro do sócio
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Se os anexos não aparecerem na ficha do sócio, clique em sincronizar.
@@ -563,7 +562,14 @@ export default function UnionAssociadosPage() {
                       {selectedAssociado.documento_rg_url && (
                         <a href={selectedAssociado.documento_rg_url} target="_blank" rel="noopener noreferrer">
                           <Button variant="outline" size="sm">
-                            <FileText className="h-4 w-4 mr-1" /> RG
+                            <FileText className="h-4 w-4 mr-1" /> RG (Frente)
+                          </Button>
+                        </a>
+                      )}
+                      {selectedAssociado.documento_rg_verso_url && (
+                        <a href={selectedAssociado.documento_rg_verso_url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            <FileText className="h-4 w-4 mr-1" /> RG (Verso)
                           </Button>
                         </a>
                       )}
