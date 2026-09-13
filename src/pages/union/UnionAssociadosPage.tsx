@@ -31,14 +31,13 @@ import {
   Building2,
   Loader2,
   Plus,
-  Share2
+  Share2,
+  RefreshCw
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { UnionCreateMemberDialog } from "@/components/union/members/UnionCreateMemberDialog";
 import { UnionShareFiliacaoDialog } from "@/components/union/members/UnionShareFiliacaoDialog";
-import { syncAssociadoToPatient } from "@/lib/sync-associado-to-patient";
-import { RefreshCw } from "lucide-react";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface Associado {
