@@ -180,7 +180,11 @@ async function attachFiliacaoDocuments(
     const toInsert = docEntries
       .filter(doc => !existingPaths.has(doc.url))
       .map(doc => {
-        const ext = doc.url.split(".").pop()?.split("?")[0] || "jpg";
+        // Remove query string (ex.: ?token=JWT) ANTES de extrair a extensão.
+        // O token assinado contém pontos internos que quebravam split(".").pop().
+        const urlWithoutQuery = doc.url.split("?")[0];
+        const rawExt = urlWithoutQuery.split(".").pop()?.toLowerCase() || "jpg";
+        const ext = /^[a-z0-9]{2,5}$/.test(rawExt) ? rawExt : "jpg";
         const fileType = ext === "pdf" ? "application/pdf" : `image/${ext}`;
         return {
           clinic_id: clinicId,
