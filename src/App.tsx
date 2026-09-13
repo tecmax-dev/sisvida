@@ -221,6 +221,7 @@ import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
 import UnionReportsPage from "./pages/union/UnionReportsPage";
 import UnionOverdueReportPage from "./pages/union/UnionOverdueReportPage";
 import UnionBoletosGeneratedPage from "./pages/union/UnionBoletosGeneratedPage";
+import UnionBoletosReportPage from "./pages/union/UnionBoletosReportPage";
 import UnionDependentsMissingGenderPage from "./pages/union/UnionDependentsMissingGenderPage";
 import UnionLytexReportsPage from "./pages/union/UnionLytexReportsPage";
 import UnionAppointmentReportsPage from "./pages/union/UnionAppointmentReportsPage";
@@ -681,6 +682,7 @@ function App() {
                   <Route path="financeiro/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro/relatorios-lytex" element={<UnionLytexReportsPage />} />
                   <Route path="financeiro/boletos-gerados" element={<UnionBoletosGeneratedPage />} />
+                  <Route path="financeiro/relatorio-boletos" element={<UnionBoletosReportPage />} />
                   <Route path="financeiro/orcamento" element={<UnionBudgetPage />} />
                   <Route path="financeiro/orcamento/:id" element={<UnionBudgetDetailPage />} />
                   <Route path="negociacoes" element={<UnionNegotiationsPage />} />

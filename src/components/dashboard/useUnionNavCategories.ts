@@ -119,6 +119,7 @@ export const unionNavCategories: UnionNavCategory[] = [
       { href: "/union/financeiro/conciliacao", icon: FileBarChart, label: "Conciliação Lytex", permission: "union_view_financials" },
       { href: "/union/financeiro/conciliacao-bancaria", icon: FileCheck2, label: "Conciliação Bancária", permission: "union_view_financials" },
       { href: "/union/financeiro/relatorios-lytex", icon: FileBarChart, label: "Relatórios Lytex", permission: "union_generate_reports" },
+      { href: "/union/financeiro/relatorio-boletos", icon: FileBarChart, label: "Relatório de Boletos", permission: "union_generate_reports" },
       { href: "/union/financeiro/relatorios", icon: FileBarChart, label: "Relatórios", permission: "union_generate_reports" },
     ],
   },
