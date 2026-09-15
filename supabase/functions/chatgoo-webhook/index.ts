@@ -1385,7 +1385,9 @@ serve(async (req) => {
     }
 
     const delivered = finalResult.sent || finalResult.dry_run;
+    logExtra = { contrib_options: opcoes };
     if (delivered) await mirrorBot(mirroredReply);
+
     await log(
       delivered ? "ANSWERED" : "SEND_FAILED",
       delivered ? "UPDATE_OPTIONS_SENT" : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
