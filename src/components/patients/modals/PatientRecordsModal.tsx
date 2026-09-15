@@ -47,7 +47,7 @@ export function PatientRecordsModal({
   patientId,
   patientName,
 }: PatientRecordsModalProps) {
-  const { currentClinic, user } = useAuth();
+  const { currentClinic, user, userRoles } = useAuth();
   const { toast } = useToast();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,9 +97,24 @@ export function PatientRecordsModal({
 
     setSaving(true);
     try {
+      let professionalId: string | null =
+        userRoles.find((r) => r.clinic_id === currentClinic.id && r.professional_id)
+          ?.professional_id ?? null;
+
+      if (!professionalId && user?.id) {
+        const { data: prof } = await supabase
+          .from("professionals")
+          .select("id")
+          .eq("clinic_id", currentClinic.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        professionalId = prof?.id ?? null;
+      }
+
       const { error } = await supabase.from("medical_records").insert({
         patient_id: patientId,
         clinic_id: currentClinic.id,
+        professional_id: professionalId,
         chief_complaint: formData.chiefComplaint || null,
         diagnosis: formData.diagnosis || null,
         treatment_plan: formData.treatmentPlan || null,
