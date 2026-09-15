@@ -92,19 +92,21 @@ serve(async (req) => {
     }
 
     if (!rawMatch && !sigMatch) {
+      // Fallback autenticado: confirmamos o evento direto na API do Chatwoot
+      // (com o token de administrador guardado em segredo). Só seguimos adiante
+      // se a mensagem existir mesmo lá — payload forjado não passa.
+      authFallbackNeeded = true;
       await supabase.from("chatgoo_events").insert({
         direction: "inbound",
         event: "chatwoot_webhook",
-        decision: "BLOCKED",
-        reason: "INVALID_KEY",
+        decision: "PENDING",
+        reason: "SECRET_MISMATCH_CHECKING_API",
         payload: {
           query_keys: [...url.searchParams.keys()],
-          header_keys: [...req.headers.keys()],
           sig_header_present: Boolean(sigHeader),
           timestamp_present: Boolean(signatureTimestamp),
         },
       });
-      return ok("BLOCKED", "INVALID_KEY");
     }
   }
 
