@@ -387,6 +387,78 @@ export async function chatgooSendButtonsViaMeta(
   }
 }
 
+export interface ChatgooCtaUrlPayload {
+  body: string;
+  buttonLabel: string;
+  url: string;
+  footer?: string;
+}
+
+/**
+ * Envia um botão nativo que abre uma URL segura. É uma mensagem de sessão e,
+ * portanto, mantém a mesma trava fail-closed da janela de 24 horas.
+ */
+export async function chatgooSendCtaUrlViaMeta(
+  supabaseAdmin: SupabaseLike,
+  phoneE164: string,
+  payload: ChatgooCtaUrlPayload,
+  opts?: { inboundNow?: boolean },
+): Promise<ChatgooSendResult> {
+  if (!chatgooSendEnabled()) {
+    return { sent: false, dry_run: true, status: null, body: null, error: null };
+  }
+
+  const windowOpen = opts?.inboundNow === true ||
+    await isWithinSessionWindow(supabaseAdmin, phoneE164);
+  if (!windowOpen) {
+    try {
+      await supabaseAdmin.from("chatgoo_events").insert({
+        direction: "outbound",
+        event: "meta_send_cta_url",
+        phone: phoneE164,
+        decision: "BLOCKED",
+        reason: "OUTSIDE_24H_WINDOW",
+        payload: { preview: payload.body.slice(0, 200) },
+      });
+    } catch { /* auditoria best-effort */ }
+    return { sent: false, dry_run: false, status: null, body: null, error: "OUTSIDE_24H_WINDOW" };
+  }
+
+  try {
+    const { data: secret } = await supabaseAdmin.rpc("get_meta_vault_secret", {
+      _secret_name: "META_WHATSAPP_TOKEN_V2",
+    });
+    const token = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
+    if (!token) {
+      return { sent: false, dry_run: false, status: null, body: null, error: "META_TOKEN_MISSING" };
+    }
+
+    const interactive: Record<string, unknown> = {
+      type: "cta_url",
+      body: { text: payload.body.slice(0, 1024) },
+      action: {
+        name: "cta_url",
+        parameters: {
+          display_text: payload.buttonLabel.slice(0, 20),
+          url: payload.url,
+        },
+      },
+    };
+    if (payload.footer) interactive.footer = { text: payload.footer.slice(0, 60) };
+
+    return await postMetaMessage(token, {
+      messaging_product: "whatsapp",
+      to: phoneE164,
+      type: "interactive",
+      interactive,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[chatgoo/meta] erro de rede (botão URL): ${msg}`);
+    return { sent: false, dry_run: false, status: null, body: null, error: msg };
+  }
+}
+
 /** Transfere o atendimento para uma fila humana no ChatGoo. */
 export async function chatgooTransferToQueue(
   ticketId: string | number,
