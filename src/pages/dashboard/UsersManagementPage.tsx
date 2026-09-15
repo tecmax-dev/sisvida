@@ -540,6 +540,14 @@ export default function UsersManagementPage() {
                               <Send className="h-4 w-4 mr-2" />
                               Enviar Boas-Vindas
                             </DropdownMenuItem>
+                            {isAdmin && (
+                              <DropdownMenuItem
+                                onClick={() => handleEditEmail(clinicUser)}
+                              >
+                                <Mail className="h-4 w-4 mr-2" />
+                                Editar E-mail
+                              </DropdownMenuItem>
+                            )}
                             {canChangePassword && clinicUser.user_id !== user?.id && (
                               <DropdownMenuItem
                                 onClick={() => handleChangePassword(clinicUser)}
