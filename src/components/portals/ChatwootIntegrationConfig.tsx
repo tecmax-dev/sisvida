@@ -234,6 +234,32 @@ export const ChatwootIntegrationConfig = ({ clinicId }: { clinicId: string }) =>
             </div>
           )}
 
+          {config?.webhook_secret && (
+            <div className="space-y-2 p-4 border rounded-md bg-muted/40">
+              <Label className="text-sm font-bold">ENDEREÇO DO WEBHOOK (cole no ZAPRESPONDE/Chatwoot)</Label>
+              <div className="flex gap-2">
+                <Input readOnly value={webhookUrl} className="h-11 text-xs" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11"
+                  onClick={() => {
+                    navigator.clipboard.writeText(webhookUrl);
+                    toast.success("Endereço copiado.");
+                  }}
+                >
+                  Copiar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Em Configurações {"\u2192"} Integrações {"\u2192"} Webhooks, com o evento "Message created".
+                As respostas dos atendentes saem pela conexão oficial da Meta, dentro da janela de 24 horas.
+              </p>
+            </div>
+          )}
+
+
+
           {inboxes.length > 0 && (
             <div className="space-y-3 p-4 bg-slate-50 border rounded-md dark:bg-slate-900/50">
               <Label className="text-sm font-bold">SELECIONE A INBOX WHATSAPP REAL:</Label>
