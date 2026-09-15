@@ -2073,6 +2073,7 @@ export type Database = {
           last_test_at: string | null
           last_test_status: string | null
           updated_at: string
+          webhook_secret: string
         }
         Insert: {
           chatwoot_account_id: string
@@ -2087,6 +2088,7 @@ export type Database = {
           last_test_at?: string | null
           last_test_status?: string | null
           updated_at?: string
+          webhook_secret?: string
         }
         Update: {
           chatwoot_account_id?: string
@@ -2101,6 +2103,7 @@ export type Database = {
           last_test_at?: string | null
           last_test_status?: string | null
           updated_at?: string
+          webhook_secret?: string
         }
         Relationships: [
           {
