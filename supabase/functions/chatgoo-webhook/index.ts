@@ -587,6 +587,37 @@ serve(async (req) => {
   // Quando o bot pergunta o CNPJ, o próximo evento registrado guarda esse estado.
   let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
 
+  // ===== CAMADA DE ATENDIMENTO HUMANO: CHATWOOT =====
+  // O Chatwoot só espelha a conversa (o envio real continua pela Meta oficial,
+  // com janela de 24h, opt-out e kill switch). Falhas aqui são best-effort.
+  const contactName = firstString([
+    body?.contactName,
+    body?.contact?.name,
+    body?.pushName,
+    body?.data?.pushName,
+    body?.data?.contact?.name,
+  ]) || null;
+  const cwCfg = e164 ? await getChatwootConfig(supabase, SINDICATO_CLINIC_ID) : null;
+  let cwConversationId: number | null = null;
+  if (cwCfg && e164) {
+    try {
+      cwConversationId = await chatwootEnsureConversation(cwCfg, e164, contactName);
+      if (cwConversationId && text) {
+        await chatwootMirrorIncoming(cwCfg, cwConversationId, text);
+      }
+    } catch (_e) {
+      cwConversationId = null;
+    }
+  }
+  const mirrorBot = async (reply: string) => {
+    if (cwCfg && cwConversationId) {
+      try {
+        await chatwootMirrorBotReply(cwCfg, cwConversationId, reply);
+      } catch { /* best-effort */ }
+    }
+  };
+
+
   const log = async (
     decision: string,
     reason: string | null,
