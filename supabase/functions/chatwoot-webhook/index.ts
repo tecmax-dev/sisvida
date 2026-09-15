@@ -66,6 +66,8 @@ serve(async (req) => {
     .trim()
     .toLowerCase();
   const signatureTimestamp = (req.headers.get("x-chatwoot-timestamp") ?? "").trim();
+  let authFallbackNeeded = false;
+
 
   if (accepted.size > 0) {
     const rawCandidates: string[] = [];
