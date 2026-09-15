@@ -608,9 +608,10 @@ serve(async (req) => {
     body?.data?.pushName,
     body?.data?.contact?.name,
   ]) || null;
-  // Reserva adicional para provedores que alteram ou omitem o id ao retransmitir
-  // a mesma mensagem. Também é atômica: não existe mais a corrida SELECT/INSERT.
-  if (e164 && (text || "").trim()) {
+  // Reserva adicional SOMENTE quando a mensagem não tem id próprio. Com wamid a
+  // reserva por `message:` já garante unicidade; bloquear por conteúdo aqui
+  // silenciava respostas legítimas repetidas (ex.: o mesmo CNPJ digitado 2x).
+  if (e164 && !messageId && (text || "").trim()) {
     const contentKey = (text || "")
       .toLowerCase()
       .normalize("NFD")
