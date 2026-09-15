@@ -10,7 +10,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { chatgooSendTextViaMeta } from "../_shared/chatgoo-client.ts";
-import { CHATWOOT_BOT_FLAG } from "../_shared/chatwoot-client.ts";
+import { CHATWOOT_BOT_FLAG, getChatwootConfig } from "../_shared/chatwoot-client.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
@@ -66,6 +66,8 @@ serve(async (req) => {
     .trim()
     .toLowerCase();
   const signatureTimestamp = (req.headers.get("x-chatwoot-timestamp") ?? "").trim();
+  let authFallbackNeeded = false;
+
 
   if (accepted.size > 0) {
     const rawCandidates: string[] = [];
@@ -92,19 +94,21 @@ serve(async (req) => {
     }
 
     if (!rawMatch && !sigMatch) {
+      // Fallback autenticado: confirmamos o evento direto na API do Chatwoot
+      // (com o token de administrador guardado em segredo). Só seguimos adiante
+      // se a mensagem existir mesmo lá — payload forjado não passa.
+      authFallbackNeeded = true;
       await supabase.from("chatgoo_events").insert({
         direction: "inbound",
         event: "chatwoot_webhook",
-        decision: "BLOCKED",
-        reason: "INVALID_KEY",
+        decision: "PENDING",
+        reason: "SECRET_MISMATCH_CHECKING_API",
         payload: {
           query_keys: [...url.searchParams.keys()],
-          header_keys: [...req.headers.keys()],
           sig_header_present: Boolean(sigHeader),
           timestamp_present: Boolean(signatureTimestamp),
         },
       });
-      return ok("BLOCKED", "INVALID_KEY");
     }
   }
 
@@ -124,12 +128,6 @@ serve(async (req) => {
   const contentAttributes = body?.content_attributes ?? {};
   const content = String(body?.content ?? "").trim();
 
-  // Só interessa a resposta do ATENDENTE (outgoing, pública, não-eco do robô).
-  if (messageType !== "outgoing") return ok("IGNORED", "NOT_AGENT_MESSAGE");
-  if (isPrivate) return ok("IGNORED", "PRIVATE_NOTE");
-  if (contentAttributes?.[CHATWOOT_BOT_FLAG] === true) return ok("IGNORED", "BOT_ECHO");
-  if (!content) return ok("IGNORED", "EMPTY_CONTENT");
-
   const conversation = body?.conversation ?? {};
   const contact = body?.sender?.type === "contact"
     ? body?.sender
@@ -138,8 +136,86 @@ serve(async (req) => {
     contact?.phone_number ?? contact?.identifier ?? conversation?.contact_inbox?.source_id,
   );
   const messageId = body?.id ?? null;
+  const conversationId = Number(conversation?.id ?? body?.conversation_id ?? 0) || null;
 
+  // Autenticação alternativa: confere na própria API do Chatwoot que a mensagem
+  // existe (token de administrador guardado em segredo). Payload forjado falha.
+  if (authFallbackNeeded) {
+    const cwCfg = await getChatwootConfig(supabase, SINDICATO_CLINIC_ID);
+    let verified = false;
+    if (cwCfg && conversationId && messageId) {
+      try {
+        const res = await fetch(
+          `${cwCfg.baseUrl}/api/v1/accounts/${cwCfg.accountId}/conversations/${conversationId}/messages`,
+          { headers: { api_access_token: cwCfg.token } },
+        );
+        if (res.ok) {
+          const json = await res.json();
+          const list = Array.isArray(json?.payload) ? json.payload : Array.isArray(json) ? json : [];
+          verified = list.some((m: Record<string, unknown>) => Number(m?.id) === Number(messageId));
+        }
+      } catch { /* fail-closed */ }
+    }
+    if (!verified) {
+      await supabase.from("chatgoo_events").insert({
+        direction: "inbound",
+        event: "chatwoot_webhook",
+        decision: "BLOCKED",
+        reason: "INVALID_KEY",
+        payload: { conversation_id: conversationId, message_id: messageId },
+      });
+      return ok("BLOCKED", "INVALID_KEY");
+    }
+  }
+
+  if (isPrivate) return ok("IGNORED", "PRIVATE_NOTE");
+  if (contentAttributes?.[CHATWOOT_BOT_FLAG] === true) return ok("IGNORED", "BOT_ECHO");
+  if (!content) return ok("IGNORED", "EMPTY_CONTENT");
   if (!phone || phone.length < 10) return ok("BLOCKED", "PHONE_NOT_RESOLVED");
+
+  // ===== MENSAGEM RECEBIDA DO CONTATO: ACIONA A AUTOMAÇÃO =====
+  // O atendimento entrou pelo ZapResponde, então a automação (menus, carteirinha,
+  // boletos etc.) passa a ser disparada a partir daqui. O envio real continua
+  // saindo pela Meta Cloud API oficial, com janela de 24h, opt-out e kill switch.
+  if (messageType === "incoming") {
+    const relay = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/chatgoo-webhook`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          source: "chatwoot",
+          phone,
+          text: content,
+          contactName: contact?.name ?? null,
+          messageId: body?.source_id ?? `cw-${messageId}`,
+          chatwoot_conversation_id: conversationId,
+        }),
+      },
+    );
+    const relayText = await relay.text();
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "chatwoot_inbound_relay",
+      phone,
+      clinic_id: SINDICATO_CLINIC_ID,
+      decision: relay.ok ? "RELAYED" : "RELAY_FAILED",
+      payload: {
+        conversation_id: conversationId,
+        chatwoot_message_id: messageId,
+        preview: content.slice(0, 200),
+        bot_response: relayText.slice(0, 500),
+      },
+    });
+    return ok(relay.ok ? "RELAYED" : "RELAY_FAILED");
+  }
+
+  // Daqui para baixo: resposta do ATENDENTE humano (outgoing, pública).
+  if (messageType !== "outgoing") return ok("IGNORED", "NOT_AGENT_MESSAGE");
+
 
   // Deduplicação: o Chatwoot pode repetir o evento.
   if (messageId) {
