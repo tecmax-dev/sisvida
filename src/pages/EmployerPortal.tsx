@@ -42,6 +42,7 @@ import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
 import { SindicatoWhatsappBanner } from "@/components/portals/SindicatoWhatsappBanner";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
+import { isOverdueContribution } from "@/lib/overdue-contribution";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
@@ -343,8 +344,8 @@ const [showTutorial, setShowTutorial] = useState(false);
         setContributions(data.contributions);
         
         // Só exibe alerta de vencidos se for a partir de Dez/2025
-        const overdueFromDec2025 = data.contributions.filter((c: Contribution) => 
-          c.status === "overdue" && 
+        const overdueFromDec2025 = data.contributions.filter((c: Contribution) =>
+          isOverdueContribution(c) &&
           (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))
         );
         
@@ -643,7 +644,7 @@ const [showTutorial, setShowTutorial] = useState(false);
       // Include both pending and awaiting_value in "A Vencer" tab
       filtered = contributions.filter(c => c.status === "pending" || c.status === "awaiting_value");
     } else if (activeTab === "overdue") {
-      filtered = contributions.filter(c => c.status === "overdue");
+      filtered = contributions.filter(c => isOverdueContribution(c));
     } else if (activeTab === "paid") {
       filtered = contributions.filter(c => c.status === "paid");
     }
@@ -674,7 +675,7 @@ const [showTutorial, setShowTutorial] = useState(false);
 
   const stats = useMemo(() => ({
     pending: contributions.filter(c => c.status === "pending").length,
-    overdue: contributions.filter(c => c.status === "overdue").length,
+    overdue: contributions.filter(c => isOverdueContribution(c)).length,
     paid: contributions.filter(c => c.status === "paid").length,
   }), [contributions]);
 
@@ -683,7 +684,7 @@ const [showTutorial, setShowTutorial] = useState(false);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return contributions
-      .filter((c) => c.status === "overdue")
+      .filter((c) => isOverdueContribution(c))
       .map((c) => {
         const dueDate = parseDateOnlyToLocalNoon(c.due_date);
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
