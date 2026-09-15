@@ -598,8 +598,11 @@ serve(async (req) => {
     body?.data?.contact?.name,
   ]) || null;
   const cwCfg = e164 ? await getChatwootConfig(supabase, SINDICATO_CLINIC_ID) : null;
-  let cwConversationId: number | null = null;
-  if (cwCfg && e164) {
+  // Quando a mensagem já veio DO Chatwoot (ZapResponde), a conversa existe e a
+  // mensagem já está lá: não recriar nem espelhar de novo (evita duplicidade).
+  const fromChatwoot = String(body?.source ?? "") === "chatwoot";
+  let cwConversationId: number | null = Number(body?.chatwoot_conversation_id ?? 0) || null;
+  if (cwCfg && e164 && !fromChatwoot) {
     try {
       cwConversationId = await chatwootEnsureConversation(cwCfg, e164, contactName);
       if (cwConversationId && text) {
