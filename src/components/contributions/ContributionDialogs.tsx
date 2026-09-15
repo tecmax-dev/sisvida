@@ -345,6 +345,16 @@ export default function ContributionDialogs({
     toast.success(`${label} copiado!`);
   };
 
+  // Link direto do boleto na Lytex (checkout-pay.lytex.com.br/boleto/<id>),
+  // derivado da URL da fatura (checkout-pay.lytex.com.br/fatura/<id>).
+  const getBoletoDirectUrl = (contribution: Contribution): string | null => {
+    const url = contribution.lytex_invoice_url;
+    if (!url) return null;
+    const match = url.match(/^https:\/\/checkout-pay\.lytex\.com\.br\/fatura\/(.+)$/);
+    if (match) return `https://checkout-pay.lytex.com.br/boleto/${match[1]}`;
+    return url;
+  };
+
   const handleCancelContribution = async () => {
     if (!selectedContribution) return;
 
