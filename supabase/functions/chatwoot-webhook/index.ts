@@ -65,6 +65,7 @@ serve(async (req) => {
     .replace(/^sha256=/i, "")
     .trim()
     .toLowerCase();
+  const signatureTimestamp = (req.headers.get("x-chatwoot-timestamp") ?? "").trim();
 
   if (accepted.size > 0) {
     const rawCandidates: string[] = [];
@@ -75,7 +76,15 @@ serve(async (req) => {
     let sigMatch = false;
     if (sigHeader) {
       for (const s of accepted) {
-        if ((await hmacHex(s, rawBody)) === sigHeader) {
+        // Chatwoot signs "{timestamp}.{raw body}". Keep support for legacy
+        // installations that signed only the raw body.
+        const signedPayload = signatureTimestamp
+          ? `${signatureTimestamp}.${rawBody}`
+          : rawBody;
+        if (
+          (await hmacHex(s, signedPayload)) === sigHeader ||
+          (signatureTimestamp && (await hmacHex(s, rawBody)) === sigHeader)
+        ) {
           sigMatch = true;
           break;
         }
@@ -92,8 +101,7 @@ serve(async (req) => {
           query_keys: [...url.searchParams.keys()],
           header_keys: [...req.headers.keys()],
           sig_header_present: Boolean(sigHeader),
-          sig_header: sigHeader,
-          body_full: rawBody,
+          timestamp_present: Boolean(signatureTimestamp),
         },
       });
       return ok("BLOCKED", "INVALID_KEY");
