@@ -342,22 +342,28 @@ serve(async (req) => {
     });
   }
 
-  // O mesmo evento pode ser reenviado pelo provedor; processa apenas respostas
-  // que já chegaram a uma decisão final. Tentativas interrompidas não bloqueiam
-  // o clique legítimo seguinte.
+  // Reserva atômica antes de qualquer envio. A chave única no banco garante que
+  // duas instâncias concorrentes (Meta direta + relé Chatwoot, ou retry) nunca
+  // processem o mesmo wamid ao mesmo tempo.
   if (messageId) {
-    const duplicateSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: duplicate } = await supabase
-      .from("chatgoo_events")
-      .select("id")
-      .eq("event", "message")
-      .in("decision", ["ANSWERED", "HANDOFF", "OPT_IN", "OPT_OUT", "SILENCED"])
-      .gte("created_at", duplicateSince)
-      .contains("payload", { message_id: messageId })
-      .limit(1)
-      .maybeSingle();
-    if (duplicate) {
+    const { error: claimError } = await supabase
+      .from("whatsapp_webhook_dedup")
+      .insert({ dedup_key: `message:${messageId}`, source: String(body?.source ?? "meta") });
+    if (claimError?.code === "23505") {
       return new Response(JSON.stringify({ status: "ignored_duplicate" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (claimError) {
+      await supabase.from("chatgoo_events").insert({
+        direction: "inbound",
+        event: "webhook",
+        decision: "BLOCKED",
+        reason: "DEDUP_UNAVAILABLE",
+        payload: { message_id: messageId, error_code: claimError.code ?? null },
+      });
+      return new Response(JSON.stringify({ status: "blocked", reason: "DEDUP_UNAVAILABLE" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -602,11 +608,8 @@ serve(async (req) => {
     body?.data?.pushName,
     body?.data?.contact?.name,
   ]) || null;
-  // ANTI-DUPLICIDADE POR CONTEÚDO (proteção Meta contra envio repetido):
-  // a MESMA mensagem chega por dois caminhos (webhook oficial da Meta e relé do
-  // Chatwoot/ZapResponde) com ids diferentes, o que gerava duas respostas iguais
-  // seguidas. Aqui reconhecemos telefone + conteúdo idêntico em janela curta e
-  // processamos apenas a primeira ocorrência.
+  // Reserva adicional para provedores que alteram ou omitem o id ao retransmitir
+  // a mesma mensagem. Também é atômica: não existe mais a corrida SELECT/INSERT.
   if (e164 && (text || "").trim()) {
     const contentKey = (text || "")
       .toLowerCase()
@@ -615,17 +618,15 @@ serve(async (req) => {
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 160);
-    const claimSince = new Date(Date.now() - 120 * 1000).toISOString();
-    const { data: claimed } = await supabase
-      .from("chatgoo_events")
-      .select("id")
-      .eq("event", "message_claim")
-      .eq("phone", e164)
-      .gte("created_at", claimSince)
-      .contains("payload", { content_key: contentKey })
-      .limit(1)
-      .maybeSingle();
-    if (claimed) {
+    const timeWindow = Math.floor(Date.now() / 120000);
+    const contentBytes = new TextEncoder().encode(`${e164}:${contentKey}:${timeWindow}`);
+    const contentHash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", contentBytes))]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    const { error: contentClaimError } = await supabase
+      .from("whatsapp_webhook_dedup")
+      .insert({ dedup_key: `content:${contentHash}`, source: String(body?.source ?? "meta") });
+    if (contentClaimError?.code === "23505") {
       await supabase.from("chatgoo_events").insert({
         direction: "inbound",
         event: "webhook_echo",
@@ -639,14 +640,12 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    await supabase.from("chatgoo_events").insert({
-      direction: "inbound",
-      event: "message_claim",
-      phone: e164,
-      clinic_id: SINDICATO_CLINIC_ID,
-      decision: "CLAIMED",
-      payload: { content_key: contentKey, message_id: messageId || null },
-    });
+    if (contentClaimError) {
+      return new Response(JSON.stringify({ status: "blocked", reason: "DEDUP_UNAVAILABLE" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
   const cwCfg = e164 ? await getChatwootConfig(supabase, SINDICATO_CLINIC_ID) : null;
