@@ -163,6 +163,10 @@ export const ChatwootIntegrationConfig = ({ clinicId }: { clinicId: string }) =>
     }
   };
 
+  const webhookUrl = config?.webhook_secret
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatwoot-webhook?key=${config.webhook_secret}`
+    : "";
+
   if (loading && !config) return <Loader2 className="animate-spin m-8" />;
 
   return (
