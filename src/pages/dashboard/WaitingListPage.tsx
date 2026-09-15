@@ -108,7 +108,8 @@ interface WaitingListEntry {
 }
 
 function WaitingListContent() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles } = useAuth();
+  const isAdmin = userRoles.some((r) => r.role === "admin" || r.role === "owner");
   const { toast } = useToast();
   const [entries, setEntries] = useState<WaitingListEntry[]>([]);
   const [lastAppointments, setLastAppointments] = useState<Record<string, LastAppointmentInfo>>({});
@@ -1186,15 +1187,17 @@ function WaitingListContent() {
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Confirmar
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6.5 w-6.5 text-destructive"
-                      title="Remover"
-                      onClick={() => setDeleteId(entry.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6.5 w-6.5 text-destructive"
+                        title="Remover"
+                        onClick={() => setDeleteId(entry.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
