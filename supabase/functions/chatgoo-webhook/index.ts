@@ -838,6 +838,37 @@ serve(async (req) => {
     }
   }
 
+  // ===== ATENDIMENTO HUMANO EM ANDAMENTO (MODO MANUAL CONSERVADOR) =====
+  // Se a conversa está aberta e atribuída a um atendente no Chatwoot, o robô
+  // fica em silêncio para não atropelar o humano. O opt-out acima continua
+  // valendo sempre. "MENU" devolve o contato ao fluxo automático.
+  if (cwCfg && cwConversationId) {
+    const wantsBot = /^\s*(menu|inicio|in[ií]cio|voltar)\s*$/i.test(String(text ?? ""));
+    if (!wantsBot) {
+      let humanActive = false;
+      try {
+        humanActive = await chatwootHasHumanInControl(cwCfg, cwConversationId);
+      } catch { /* best-effort */ }
+      if (humanActive) {
+        await supabase.from("chatgoo_events").insert({
+          direction: "inbound",
+          event: "message",
+          phone: e164,
+          clinic_id: SINDICATO_CLINIC_ID,
+          decision: "SILENCED",
+          reason: "HUMAN_IN_CONTROL",
+          payload: { text, chatwoot_conversation_id: cwConversationId },
+        });
+        return new Response(
+          JSON.stringify({ status: "SILENCED", reason: "HUMAN_IN_CONTROL" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+  }
+
+
+
   // ===== CONSENTIMENTO (OPT-IN) COM BOTÕES — BOAS PRÁTICAS META =====
   // No primeiro contato, perguntamos uma única vez se a pessoa autoriza receber
   // mensagens. A resposta do botão ("Sim, autorizo" / "Não autorizo") fica
