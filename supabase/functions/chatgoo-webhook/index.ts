@@ -19,6 +19,14 @@ import {
   chatgooTransferToQueue,
   verifyChatgooSignature,
 } from "../_shared/chatgoo-client.ts";
+import {
+  chatwootEnsureConversation,
+  chatwootHandoff,
+  chatwootHasHumanInControl,
+  chatwootMirrorBotReply,
+  chatwootMirrorIncoming,
+  getChatwootConfig,
+} from "../_shared/chatwoot-client.ts";
 import { normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
@@ -579,6 +587,37 @@ serve(async (req) => {
   // Quando o bot pergunta o CNPJ, o próximo evento registrado guarda esse estado.
   let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
 
+  // ===== CAMADA DE ATENDIMENTO HUMANO: CHATWOOT =====
+  // O Chatwoot só espelha a conversa (o envio real continua pela Meta oficial,
+  // com janela de 24h, opt-out e kill switch). Falhas aqui são best-effort.
+  const contactName = firstString([
+    body?.contactName,
+    body?.contact?.name,
+    body?.pushName,
+    body?.data?.pushName,
+    body?.data?.contact?.name,
+  ]) || null;
+  const cwCfg = e164 ? await getChatwootConfig(supabase, SINDICATO_CLINIC_ID) : null;
+  let cwConversationId: number | null = null;
+  if (cwCfg && e164) {
+    try {
+      cwConversationId = await chatwootEnsureConversation(cwCfg, e164, contactName);
+      if (cwConversationId && text) {
+        await chatwootMirrorIncoming(cwCfg, cwConversationId, text);
+      }
+    } catch (_e) {
+      cwConversationId = null;
+    }
+  }
+  const mirrorBot = async (reply: string) => {
+    if (cwCfg && cwConversationId) {
+      try {
+        await chatwootMirrorBotReply(cwCfg, cwConversationId, reply);
+      } catch { /* best-effort */ }
+    }
+  };
+
+
   const log = async (
     decision: string,
     reason: string | null,
@@ -618,6 +657,7 @@ serve(async (req) => {
     // Resposta sai pela Meta Cloud API oficial (conexão 3223-Oficial é Meta oficial).
     const result = await chatgooSendTextViaMeta(supabase, e164 ?? "", reply, { inboundNow: true });
     const delivered = result.sent || result.dry_run;
+    if (delivered) await mirrorBot(reply);
     await log(
       delivered ? decision : "SEND_FAILED",
       delivered ? reason : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
@@ -675,6 +715,7 @@ serve(async (req) => {
       );
     }
     const delivered = finalResult.sent || finalResult.dry_run;
+    if (delivered) await mirrorBot(bodyText);
     await log(
       delivered ? "ANSWERED" : "SEND_FAILED",
       delivered ? null : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
@@ -796,6 +837,37 @@ serve(async (req) => {
       );
     }
   }
+
+  // ===== ATENDIMENTO HUMANO EM ANDAMENTO (MODO MANUAL CONSERVADOR) =====
+  // Se a conversa está aberta e atribuída a um atendente no Chatwoot, o robô
+  // fica em silêncio para não atropelar o humano. O opt-out acima continua
+  // valendo sempre. "MENU" devolve o contato ao fluxo automático.
+  if (cwCfg && cwConversationId) {
+    const wantsBot = /^\s*(menu|inicio|in[ií]cio|voltar)\s*$/i.test(String(text ?? ""));
+    if (!wantsBot) {
+      let humanActive = false;
+      try {
+        humanActive = await chatwootHasHumanInControl(cwCfg, cwConversationId);
+      } catch { /* best-effort */ }
+      if (humanActive) {
+        await supabase.from("chatgoo_events").insert({
+          direction: "inbound",
+          event: "message",
+          phone: e164,
+          clinic_id: SINDICATO_CLINIC_ID,
+          decision: "SILENCED",
+          reason: "HUMAN_IN_CONTROL",
+          payload: { text, chatwoot_conversation_id: cwConversationId },
+        });
+        return new Response(
+          JSON.stringify({ status: "SILENCED", reason: "HUMAN_IN_CONTROL" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+  }
+
+
 
   // ===== CONSENTIMENTO (OPT-IN) COM BOTÕES — BOAS PRÁTICAS META =====
   // No primeiro contato, perguntamos uma única vez se a pessoa autoriza receber
@@ -1183,8 +1255,20 @@ serve(async (req) => {
   };
 
   if (intent === "HUMANO") {
+    // Handoff no Chatwoot (painel de atendimento). Fallback: fila do ChatGoo.
+    let handedOff = false;
+    if (cwCfg && cwConversationId) {
+      try {
+        await chatwootHandoff(
+          cwCfg,
+          cwConversationId,
+          "Transferência solicitada pelo contato no WhatsApp. Responda por aqui — o envio sai pela conexão oficial da Meta, dentro da janela de 24h.",
+        );
+        handedOff = true;
+      } catch { /* best-effort */ }
+    }
     const queueId = Deno.env.get("CHATGOO_HUMAN_QUEUE_ID");
-    if (ticketId && queueId) await chatgooTransferToQueue(ticketId, queueId);
+    if (!handedOff && ticketId && queueId) await chatgooTransferToQueue(ticketId, queueId);
     return await answer(
       "Certo! Estou transferindo você para um atendente do sindicato. Aguarde um momento.",
       "HANDOFF",
