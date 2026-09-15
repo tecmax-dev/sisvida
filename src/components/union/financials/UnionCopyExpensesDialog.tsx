@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -134,7 +133,7 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
 
   return (
     <Dialog open={open} onOpenChange={(value) => value ? onOpenChange(true) : handleClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] grid grid-rows-[auto_auto_auto_auto_minmax(0,1fr)_auto] overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Copy className="h-5 w-5" />Cópia de Cheque</DialogTitle>
           <DialogDescription>Busque um cheque pelo número e imprima o comprovante com as despesas lançadas.</DialogDescription>
@@ -150,16 +149,14 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
 
         <div className="flex items-center justify-between border-y py-2 text-sm"><label className="flex items-center gap-2"><Checkbox checked={filteredExpenses.length > 0 && filteredExpenses.every((expense) => selectedIds.includes(expense.id))} onCheckedChange={toggleSelectAll} disabled={!filteredExpenses.length} />Selecionar todas</label><span className="text-muted-foreground">Total selecionado: {formatCurrency(selectedTotal)}</span></div>
 
-        <div className="min-h-0 overflow-hidden">
-          <ScrollArea className="min-h-0 h-full overflow-y-auto border rounded-md">
-            <div className="p-2 space-y-2">
-              {isLoading && <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Buscando despesas...</div>}
-              {isError && <div className="p-8 text-center text-destructive">Não foi possível carregar as despesas.</div>}
-              {!isLoading && !isError && !checkNumber && <div className="p-8 text-center text-muted-foreground">Digite o número do cheque para iniciar a busca.</div>}
-              {!isLoading && !isError && checkNumber && !filteredExpenses.length && <div className="p-8 text-center text-muted-foreground">Nenhuma despesa encontrada para este cheque.</div>}
-              {filteredExpenses.map((expense) => <label key={expense.id} className="flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted"><Checkbox checked={selectedIds.includes(expense.id)} onCheckedChange={() => toggleSelect(expense.id)} /><span className="min-w-0 flex-1"><span className="block font-medium">{expense.description || "Despesa sem descrição"}</span><span className="block text-sm text-muted-foreground">{expense.category?.name ?? "Sem categoria"} · {expense.supplier?.name ?? "Sem fornecedor"}</span></span><span className="whitespace-nowrap font-medium">{formatCurrency(expense.amount ?? expense.net_value)}</span></label>)}
-            </div>
-          </ScrollArea>
+        <div className="min-h-0 max-h-[min(42vh,420px)] overflow-y-scroll overscroll-contain rounded-md border">
+          <div className="p-2 space-y-2">
+            {isLoading && <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Buscando despesas...</div>}
+            {isError && <div className="p-8 text-center text-destructive">Não foi possível carregar as despesas.</div>}
+            {!isLoading && !isError && !checkNumber && <div className="p-8 text-center text-muted-foreground">Digite o número do cheque para iniciar a busca.</div>}
+            {!isLoading && !isError && checkNumber && !filteredExpenses.length && <div className="p-8 text-center text-muted-foreground">Nenhuma despesa encontrada para este cheque.</div>}
+            {filteredExpenses.map((expense) => <label key={expense.id} className="flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted"><Checkbox checked={selectedIds.includes(expense.id)} onCheckedChange={() => toggleSelect(expense.id)} /><span className="min-w-0 flex-1"><span className="block font-medium">{expense.description || "Despesa sem descrição"}</span><span className="block text-sm text-muted-foreground">{expense.category?.name ?? "Sem categoria"} · {expense.supplier?.name ?? "Sem fornecedor"}</span></span><span className="whitespace-nowrap font-medium">{formatCurrency(expense.amount ?? expense.net_value)}</span></label>)}
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0"><Button variant="outline" onClick={handleClose}>Cancelar</Button><Button variant="outline" onClick={printReceipt} disabled={!checkNumber.trim() || !selectedExpenses.length}><Printer className="mr-1.5 h-4 w-4" />Imprimir comprovante</Button><Button onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending || !checkNumber.trim() || !selectedIds.length || !newDueDate}>{copyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}<Copy className="mr-1.5 h-4 w-4" />Copiar {selectedExpenses.length} despesa(s)</Button></DialogFooter>
