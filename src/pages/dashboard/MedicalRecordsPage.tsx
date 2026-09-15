@@ -340,17 +340,49 @@ export default function MedicalRecordsPage() {
     setPendingAppointments(data as Appointment[] || []);
   };
 
+  const resolveProfessionalId = async (): Promise<string | null> => {
+    if (!currentClinic) return null;
+
+    // 1) Vínculo direto do usuário logado com um profissional (user_roles)
+    const roleProfId = userRoles.find(
+      (r) => r.clinic_id === currentClinic.id && r.professional_id
+    )?.professional_id;
+    if (roleProfId) return roleProfId;
+
+    // 2) Profissional cadastrado com o mesmo usuário
+    if (user?.id) {
+      const { data: prof } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('clinic_id', currentClinic.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (prof?.id) return prof.id;
+    }
+
+    // 3) Profissional do agendamento vinculado, quando houver
+    if (selectedAppointment) {
+      const apt = pendingAppointments.find((a) => a.id === selectedAppointment);
+      if (apt?.professional?.id) return apt.professional.id;
+    }
+
+    return null;
+  };
+
   const handleCreateRecord = async () => {
     if (!currentClinic || !selectedPatient) return;
 
     setSaving(true);
     try {
+      const professionalId = await resolveProfessionalId();
+
       const { error } = await supabase
         .from('medical_records')
         .insert({
           clinic_id: currentClinic.id,
           patient_id: selectedPatient.id,
           appointment_id: selectedAppointment || null,
+          professional_id: professionalId,
           ...formData,
         });
 
