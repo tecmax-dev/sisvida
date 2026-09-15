@@ -626,6 +626,10 @@ serve(async (req) => {
   };
 
 
+  // Dados extras que algumas respostas precisam registrar (ex.: as opções de
+  // contribuição enviadas, para reconhecer a escolha quando ela volta como texto).
+  let logExtra: Record<string, unknown> = {};
+
   const log = async (
     decision: string,
     reason: string | null,
@@ -652,9 +656,11 @@ serve(async (req) => {
         empresa_cnpj: empresaCnpj,
 
         meta_message_id: metaMessageId,
+        ...logExtra,
       },
     });
   };
+
 
   const answer = async (
     reply: string,
