@@ -26,6 +26,7 @@ import {
   Send,
   Key,
   RotateCcw,
+  Mail,
 } from "lucide-react";
 import { UserDialog } from "@/components/users/UserDialog";
 import { UserAvatar } from "@/components/users/UserAvatar";
