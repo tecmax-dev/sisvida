@@ -191,7 +191,42 @@ export async function chatwootMirrorBotReply(
   });
 }
 
-/** Abre a conversa para atendimento humano e deixa uma nota interna. */
+/** Label usada para pausar o robô numa conversa específica. */
+export const CHATWOOT_PAUSE_LABEL = "robo-pausado";
+
+async function getLabels(cfg: ChatwootConfig, conversationId: number): Promise<string[]> {
+  try {
+    const res = await cw(cfg, `/conversations/${conversationId}/labels`);
+    // deno-lint-ignore no-explicit-any
+    const payload = (res as any)?.payload ?? res;
+    return Array.isArray(payload) ? payload.map((l: unknown) => String(l)) : [];
+  } catch (_e) {
+    return [];
+  }
+}
+
+export async function chatwootSetPause(
+  cfg: ChatwootConfig,
+  conversationId: number,
+  paused: boolean,
+): Promise<void> {
+  const current = await getLabels(cfg, conversationId);
+  const has = current.includes(CHATWOOT_PAUSE_LABEL);
+  if (paused === has) return;
+  const next = paused
+    ? [...current, CHATWOOT_PAUSE_LABEL]
+    : current.filter((l) => l !== CHATWOOT_PAUSE_LABEL);
+  try {
+    await cw(cfg, `/conversations/${conversationId}/labels`, {
+      method: "POST",
+      body: { labels: next },
+    });
+  } catch (_e) {
+    // não bloqueia o fluxo
+  }
+}
+
+/** Abre a conversa para atendimento humano, pausa o robô e deixa uma nota interna. */
 export async function chatwootHandoff(
   cfg: ChatwootConfig,
   conversationId: number,
@@ -201,21 +236,22 @@ export async function chatwootHandoff(
     method: "POST",
     body: { status: "open" },
   });
+  await chatwootSetPause(cfg, conversationId, true);
   await cw(cfg, `/conversations/${conversationId}/messages`, {
     method: "POST",
     body: { content: note, message_type: "outgoing", private: true },
   });
 }
 
-/** True quando há atendente humano cuidando da conversa (robô fica em silêncio). */
+/**
+ * True apenas quando o robô foi explicitamente pausado nessa conversa
+ * (label `robo-pausado`, aplicada no handoff ou quando um atendente responde).
+ * Conversa aberta/atribuída por si só NÃO silencia o robô.
+ */
 export async function chatwootHasHumanInControl(
   cfg: ChatwootConfig,
   conversationId: number,
 ): Promise<boolean> {
-  const conv = await cw(cfg, `/conversations/${conversationId}`);
-  // deno-lint-ignore no-explicit-any
-  const c = conv as any;
-  if (!c) return false;
-  const assigned = c?.meta?.assignee?.id ?? c?.assignee_id ?? null;
-  return c?.status === "open" && !!assigned;
+  const labels = await getLabels(cfg, conversationId);
+  return labels.includes(CHATWOOT_PAUSE_LABEL);
 }

@@ -10,7 +10,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { chatgooSendTextViaMeta } from "../_shared/chatgoo-client.ts";
-import { CHATWOOT_BOT_FLAG, getChatwootConfig } from "../_shared/chatwoot-client.ts";
+import { CHATWOOT_BOT_FLAG, getChatwootConfig, chatwootSetPause } from "../_shared/chatwoot-client.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
@@ -248,6 +248,13 @@ serve(async (req) => {
     });
     return ok("BLOCKED", "OPT_OUT");
   }
+
+  // Atendente respondeu: pausa o robô nessa conversa até a pessoa digitar MENU.
+  try {
+    const cfg = await getChatwootConfig(supabase, SINDICATO_CLINIC_ID);
+    const convId = Number(conversation?.id ?? 0);
+    if (cfg && convId) await chatwootSetPause(cfg, convId, true);
+  } catch { /* best-effort */ }
 
   // Envio real: Meta Cloud API oficial, com trava de janela de 24h fail-closed.
   const result = await chatgooSendTextViaMeta(supabase, phone, content);

@@ -23,6 +23,7 @@ import {
   chatwootEnsureConversation,
   chatwootHandoff,
   chatwootHasHumanInControl,
+  chatwootSetPause,
   chatwootMirrorBotReply,
   chatwootMirrorIncoming,
   getChatwootConfig,
@@ -847,6 +848,9 @@ serve(async (req) => {
   // valendo sempre. "MENU" devolve o contato ao fluxo automático.
   if (cwCfg && cwConversationId) {
     const wantsBot = /^\s*(menu|inicio|in[ií]cio|voltar)\s*$/i.test(String(text ?? ""));
+    if (wantsBot) {
+      try { await chatwootSetPause(cwCfg, cwConversationId, false); } catch { /* best-effort */ }
+    }
     if (!wantsBot) {
       let humanActive = false;
       try {
