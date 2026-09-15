@@ -1255,8 +1255,20 @@ serve(async (req) => {
   };
 
   if (intent === "HUMANO") {
+    // Handoff no Chatwoot (painel de atendimento). Fallback: fila do ChatGoo.
+    let handedOff = false;
+    if (cwCfg && cwConversationId) {
+      try {
+        await chatwootHandoff(
+          cwCfg,
+          cwConversationId,
+          "Transferência solicitada pelo contato no WhatsApp. Responda por aqui — o envio sai pela conexão oficial da Meta, dentro da janela de 24h.",
+        );
+        handedOff = true;
+      } catch { /* best-effort */ }
+    }
     const queueId = Deno.env.get("CHATGOO_HUMAN_QUEUE_ID");
-    if (ticketId && queueId) await chatgooTransferToQueue(ticketId, queueId);
+    if (!handedOff && ticketId && queueId) await chatgooTransferToQueue(ticketId, queueId);
     return await answer(
       "Certo! Estou transferindo você para um atendente do sindicato. Aguarde um momento.",
       "HANDOFF",
