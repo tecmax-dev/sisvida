@@ -174,7 +174,13 @@ export async function chatwootMirrorIncoming(
   });
 }
 
-/** Espelha no Chatwoot a resposta que o robô já enviou pela Meta. */
+/**
+ * Registra no Chatwoot a resposta que o robô já enviou pela Meta.
+ *
+ * Precisa ser uma nota privada. Uma mensagem pública `outgoing` é entregue
+ * novamente pelo próprio canal oficial conectado ao Chatwoot, duplicando a
+ * mensagem que já saiu pela Meta Cloud API.
+ */
 export async function chatwootMirrorBotReply(
   cfg: ChatwootConfig,
   conversationId: number,
@@ -183,9 +189,9 @@ export async function chatwootMirrorBotReply(
   await cw(cfg, `/conversations/${conversationId}/messages`, {
     method: "POST",
     body: {
-      content,
+      content: `[Automação] ${content}`,
       message_type: "outgoing",
-      private: false,
+      private: true,
       content_attributes: { [CHATWOOT_BOT_FLAG]: true },
     },
   });

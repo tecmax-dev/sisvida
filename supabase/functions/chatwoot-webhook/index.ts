@@ -217,16 +217,13 @@ serve(async (req) => {
   if (messageType !== "outgoing") return ok("IGNORED", "NOT_AGENT_MESSAGE");
 
 
-  // Deduplicação: o Chatwoot pode repetir o evento.
+  // Reserva atômica: retries simultâneos do Chatwoot nunca enviam duas vezes.
   if (messageId) {
-    const { data: dup } = await supabase
-      .from("chatgoo_events")
-      .select("id")
-      .eq("event", "chatwoot_agent_reply")
-      .eq("phone", phone)
-      .contains("payload", { chatwoot_message_id: messageId })
-      .limit(1);
-    if (Array.isArray(dup) && dup.length > 0) return ok("IGNORED", "DUPLICATE");
+    const { error: claimError } = await supabase
+      .from("whatsapp_webhook_dedup")
+      .insert({ dedup_key: `chatwoot-agent:${messageId}`, source: "chatwoot_agent" });
+    if (claimError?.code === "23505") return ok("IGNORED", "DUPLICATE");
+    if (claimError) return ok("BLOCKED", "DEDUP_UNAVAILABLE");
   }
 
   // Opt-out: contato descadastrado nunca recebe mensagem.
