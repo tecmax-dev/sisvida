@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.medical_records_unique_import;
