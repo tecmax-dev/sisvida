@@ -925,7 +925,10 @@ export default function ContributionDialogs({
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => handleCopyToClipboard(selectedContribution.lytex_invoice_url!, "Link do boleto")}
+                      onClick={() => {
+                        const directUrl = getBoletoDirectUrl(selectedContribution);
+                        if (directUrl) handleCopyToClipboard(directUrl, "Link do boleto");
+                      }}
                     >
                       <Copy className="h-4 w-4 mr-2" />
                       Copiar Link
