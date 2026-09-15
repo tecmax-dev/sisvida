@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_waiting_list_admin_removal() FROM PUBLIC, anon, authenticated;
