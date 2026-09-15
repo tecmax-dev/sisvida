@@ -92,7 +92,8 @@ serve(async (req) => {
           query_keys: [...url.searchParams.keys()],
           header_keys: [...req.headers.keys()],
           sig_header_present: Boolean(sigHeader),
-          body_preview: rawBody.slice(0, 500),
+          sig_header: sigHeader,
+          body_full: rawBody,
         },
       });
       return ok("BLOCKED", "INVALID_KEY");
