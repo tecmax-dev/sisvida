@@ -1478,7 +1478,13 @@ serve(async (req) => {
     );
   }
 
-  if (intent === "EMP_ATUALIZAR") return await askCnpj("EMPRESA");
+  if (intent === "EMP_ATUALIZAR") {
+    // A empresa já se identificou pelo CNPJ no início do fluxo: não pedimos de novo.
+    if (empresaCnpj && empresaCnpj.length === 14) {
+      return await sendUpdateLinks(empresaCnpj, "EMPRESA");
+    }
+    return await askCnpj("EMPRESA");
+  }
   if (intent === "CTB_ATUALIZAR") return await askCnpj("CONTABILIDADE");
 
   // Resposta com o CNPJ solicitado no passo anterior
