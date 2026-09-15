@@ -115,7 +115,7 @@ interface MedicalDocument {
 }
 
 export default function MedicalRecordsPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, user, userRoles } = useAuth();
   const { toast } = useToast();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
