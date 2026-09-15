@@ -249,6 +249,13 @@ serve(async (req) => {
     return ok("BLOCKED", "OPT_OUT");
   }
 
+  // Atendente respondeu: pausa o robô nessa conversa até a pessoa digitar MENU.
+  try {
+    const cfg = await getChatwootConfig(supabase, SINDICATO_CLINIC_ID);
+    const convId = Number(conversation?.id ?? 0);
+    if (cfg && convId) await chatwootSetPause(cfg, convId, true);
+  } catch { /* best-effort */ }
+
   // Envio real: Meta Cloud API oficial, com trava de janela de 24h fail-closed.
   const result = await chatgooSendTextViaMeta(supabase, phone, content);
 
