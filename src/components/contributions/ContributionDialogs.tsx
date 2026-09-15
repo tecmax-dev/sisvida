@@ -904,13 +904,23 @@ export default function ContributionDialogs({
                     </div>
                   )}
 
-                  <Button
-                    className="w-full"
-                    onClick={() => window.open(selectedContribution.lytex_invoice_url!, "_blank")}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Abrir Boleto / Fatura
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      className="flex-1"
+                      onClick={() => window.open(selectedContribution.lytex_invoice_url!, "_blank")}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Abrir Boleto / Fatura
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleCopyToClipboard(selectedContribution.lytex_invoice_url!, "Link do boleto")}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copiar Link
+                    </Button>
+                  </div>
                 </div>
               )}
 
