@@ -32,7 +32,23 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  // Segredo compartilhado na URL do webhook (o Chatwoot não assina o payload).
+  // Segredo compartilhado: aceita chave na URL, valor cru em header OU
+  // assinatura HMAC-SHA256 (x-chatwoot-signature) — como o Chatwoot/ZapResponde envia.
+  const rawBody = await req.text();
+
+  const hmacHex = async (secret: string, bodyText: string): Promise<string> => {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, enc.encode(bodyText));
+    return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  };
+
   const { data: cfgRow } = await supabase
     .from("chatwoot_configs")
     .select("webhook_secret, enabled")
@@ -44,13 +60,29 @@ serve(async (req) => {
   const expected = String(cfgRow.webhook_secret ?? "");
   const altSecret = String(Deno.env.get("CHATWOOT_HOOK_SECRET") ?? "");
   const accepted = new Set([expected, altSecret].filter(Boolean));
+  const url = new URL(req.url);
+  const sigHeader = (req.headers.get("x-chatwoot-signature") ?? "")
+    .replace(/^sha256=/i, "")
+    .trim()
+    .toLowerCase();
+
   if (accepted.size > 0) {
-    const url = new URL(req.url);
-    const candidates: string[] = [];
-    for (const [, v] of url.searchParams) candidates.push(v);
-    for (const [, v] of req.headers) candidates.push(String(v));
-    const authorized = candidates.some((v) => accepted.has(v.trim()));
-    if (!authorized) {
+    const rawCandidates: string[] = [];
+    for (const [, v] of url.searchParams) rawCandidates.push(String(v).trim());
+    for (const [, v] of req.headers) rawCandidates.push(String(v).trim());
+    const rawMatch = rawCandidates.some((v) => accepted.has(v));
+
+    let sigMatch = false;
+    if (sigHeader) {
+      for (const s of accepted) {
+        if ((await hmacHex(s, rawBody)) === sigHeader) {
+          sigMatch = true;
+          break;
+        }
+      }
+    }
+
+    if (!rawMatch && !sigMatch) {
       await supabase.from("chatgoo_events").insert({
         direction: "inbound",
         event: "chatwoot_webhook",
@@ -59,17 +91,18 @@ serve(async (req) => {
         payload: {
           query_keys: [...url.searchParams.keys()],
           header_keys: [...req.headers.keys()],
+          sig_header_present: Boolean(sigHeader),
+          body_preview: rawBody.slice(0, 500),
         },
       });
       return ok("BLOCKED", "INVALID_KEY");
     }
   }
 
-
   // deno-lint-ignore no-explicit-any
   let body: any = {};
   try {
-    body = JSON.parse(await req.text() || "{}");
+    body = JSON.parse(rawBody || "{}");
   } catch {
     return ok("BLOCKED", "INVALID_JSON");
   }
