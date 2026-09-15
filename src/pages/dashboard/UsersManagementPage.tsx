@@ -622,6 +622,20 @@ export default function UsersManagementPage() {
         onSuccess={() => {}}
       />
 
+      <EditUserEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={(open) => {
+          setEmailDialogOpen(open);
+          if (!open) setEmailUser(null);
+        }}
+        user={emailUser ? {
+          user_id: emailUser.user_id,
+          name: emailUser.profile?.name || 'Usuário',
+          email: emailUser.email || '',
+        } : null}
+        onSuccess={() => fetchUsers()}
+      />
+
       <SendPasswordResetDialog
         open={resetDialogOpen}
         onOpenChange={(open) => {
