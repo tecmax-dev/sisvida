@@ -657,6 +657,7 @@ serve(async (req) => {
     // Resposta sai pela Meta Cloud API oficial (conexão 3223-Oficial é Meta oficial).
     const result = await chatgooSendTextViaMeta(supabase, e164 ?? "", reply, { inboundNow: true });
     const delivered = result.sent || result.dry_run;
+    if (delivered) await mirrorBot(reply);
     await log(
       delivered ? decision : "SEND_FAILED",
       delivered ? reason : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
