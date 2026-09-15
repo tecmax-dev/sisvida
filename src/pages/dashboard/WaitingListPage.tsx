@@ -335,6 +335,11 @@ function WaitingListContent() {
 
   const handleRemoveEntry = async () => {
     if (!deleteId) return;
+    if (!isAdmin) {
+      toast({ title: "Somente administradores podem remover da lista de espera", variant: "destructive" });
+      setDeleteId(null);
+      return;
+    }
 
     try {
       const { error } = await supabase
