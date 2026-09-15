@@ -215,6 +215,11 @@ export default function UsersManagementPage() {
     setResetDialogOpen(true);
   };
 
+  const handleEditEmail = (clinicUser: ClinicUserWithStatus) => {
+    setEmailUser(clinicUser);
+    setEmailDialogOpen(true);
+  };
+
   const filteredUsers = users.filter(u => 
     u.profile?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.profile?.phone?.includes(searchTerm) ||
