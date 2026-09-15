@@ -140,7 +140,7 @@ export function UnionCopyExpensesDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
@@ -198,12 +198,12 @@ export function UnionCopyExpensesDialog({
             <span className="text-muted-foreground">Selecionar todas</span>
           </div>
           <Badge variant="secondary">
-            {selectedIds.length} selecionada(s)
+            {selectedIds.length} selecionada(s) de {filteredExpenses.length}
           </Badge>
         </div>
 
         {/* List */}
-        <ScrollArea className="flex-1 min-h-0 max-h-[350px] border rounded-md">
+        <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-330px)] overflow-y-auto border rounded-md">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
