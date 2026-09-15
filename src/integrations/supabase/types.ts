@@ -19209,6 +19209,24 @@ export type Database = {
           },
         ]
       }
+      whatsapp_webhook_dedup: {
+        Row: {
+          created_at: string
+          dedup_key: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          dedup_key: string
+          source: string
+        }
+        Update: {
+          created_at?: string
+          dedup_key?: string
+          source?: string
+        }
+        Relationships: []
+      }
       whazing_messages: {
         Row: {
           body: string | null
