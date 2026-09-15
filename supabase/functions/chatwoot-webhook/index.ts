@@ -33,7 +33,15 @@ serve(async (req) => {
     });
 
   // Segredo compartilhado na URL do webhook (o Chatwoot não assina o payload).
-  const expected = Deno.env.get("CHATWOOT_WEBHOOK_SECRET") ?? "";
+  const { data: cfgRow } = await supabase
+    .from("chatwoot_configs")
+    .select("webhook_secret, enabled")
+    .eq("clinic_id", SINDICATO_CLINIC_ID)
+    .maybeSingle();
+
+  if (!cfgRow || cfgRow.enabled === false) return ok("BLOCKED", "CHATWOOT_DISABLED");
+
+  const expected = String(cfgRow.webhook_secret ?? "");
   if (expected) {
     const url = new URL(req.url);
     const provided = url.searchParams.get("key") ?? req.headers.get("x-chatwoot-key") ?? "";
