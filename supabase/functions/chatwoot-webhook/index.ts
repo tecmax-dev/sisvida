@@ -42,19 +42,29 @@ serve(async (req) => {
   if (!cfgRow || cfgRow.enabled === false) return ok("BLOCKED", "CHATWOOT_DISABLED");
 
   const expected = String(cfgRow.webhook_secret ?? "");
-  if (expected) {
+  const altSecret = String(Deno.env.get("CHATWOOT_HOOK_SECRET") ?? "");
+  const accepted = new Set([expected, altSecret].filter(Boolean));
+  if (accepted.size > 0) {
     const url = new URL(req.url);
-    const provided = url.searchParams.get("key") ?? req.headers.get("x-chatwoot-key") ?? "";
-    if (provided !== expected) {
+    const candidates: string[] = [];
+    for (const [, v] of url.searchParams) candidates.push(v);
+    for (const [, v] of req.headers) candidates.push(String(v));
+    const authorized = candidates.some((v) => accepted.has(v.trim()));
+    if (!authorized) {
       await supabase.from("chatgoo_events").insert({
         direction: "inbound",
         event: "chatwoot_webhook",
         decision: "BLOCKED",
         reason: "INVALID_KEY",
+        payload: {
+          query_keys: [...url.searchParams.keys()],
+          header_keys: [...req.headers.keys()],
+        },
       });
       return ok("BLOCKED", "INVALID_KEY");
     }
   }
+
 
   // deno-lint-ignore no-explicit-any
   let body: any = {};
