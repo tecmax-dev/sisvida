@@ -715,6 +715,7 @@ serve(async (req) => {
       );
     }
     const delivered = finalResult.sent || finalResult.dry_run;
+    if (delivered) await mirrorBot(bodyText);
     await log(
       delivered ? "ANSWERED" : "SEND_FAILED",
       delivered ? null : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
