@@ -26,11 +26,13 @@ import {
   Send,
   Key,
   RotateCcw,
+  Mail,
 } from "lucide-react";
 import { UserDialog } from "@/components/users/UserDialog";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { SendUserWelcomeDialog } from "@/components/users/SendUserWelcomeDialog";
 import { EditUserPasswordDialog } from "@/components/admin/EditUserPasswordDialog";
+import { EditUserEmailDialog } from "@/components/admin/EditUserEmailDialog";
 import { SendPasswordResetDialog } from "@/components/users/SendPasswordResetDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { format } from "date-fns";
@@ -103,6 +105,8 @@ export default function UsersManagementPage() {
   const [passwordUser, setPasswordUser] = useState<ClinicUserWithStatus | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetUser, setResetUser] = useState<ClinicUserWithStatus | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailUser, setEmailUser] = useState<ClinicUserWithStatus | null>(null);
 
   // Check if current user is admin of the clinic OR has manage_users permission
   const currentUserRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
@@ -210,6 +214,11 @@ export default function UsersManagementPage() {
   const handleSendReset = (clinicUser: ClinicUserWithStatus) => {
     setResetUser(clinicUser);
     setResetDialogOpen(true);
+  };
+
+  const handleEditEmail = (clinicUser: ClinicUserWithStatus) => {
+    setEmailUser(clinicUser);
+    setEmailDialogOpen(true);
   };
 
   const filteredUsers = users.filter(u => 
@@ -532,6 +541,14 @@ export default function UsersManagementPage() {
                               <Send className="h-4 w-4 mr-2" />
                               Enviar Boas-Vindas
                             </DropdownMenuItem>
+                            {isAdmin && (
+                              <DropdownMenuItem
+                                onClick={() => handleEditEmail(clinicUser)}
+                              >
+                                <Mail className="h-4 w-4 mr-2" />
+                                Editar E-mail
+                              </DropdownMenuItem>
+                            )}
                             {canChangePassword && clinicUser.user_id !== user?.id && (
                               <DropdownMenuItem
                                 onClick={() => handleChangePassword(clinicUser)}
@@ -603,6 +620,20 @@ export default function UsersManagementPage() {
           email: passwordUser.email || '',
         } : null}
         onSuccess={() => {}}
+      />
+
+      <EditUserEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={(open) => {
+          setEmailDialogOpen(open);
+          if (!open) setEmailUser(null);
+        }}
+        user={emailUser ? {
+          user_id: emailUser.user_id,
+          name: emailUser.profile?.name || 'Usuário',
+          email: emailUser.email || '',
+        } : null}
+        onSuccess={() => fetchUsers()}
       />
 
       <SendPasswordResetDialog
