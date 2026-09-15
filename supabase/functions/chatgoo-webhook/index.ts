@@ -626,6 +626,10 @@ serve(async (req) => {
   };
 
 
+  // Dados extras que algumas respostas precisam registrar (ex.: as opções de
+  // contribuição enviadas, para reconhecer a escolha quando ela volta como texto).
+  let logExtra: Record<string, unknown> = {};
+
   const log = async (
     decision: string,
     reason: string | null,
@@ -652,9 +656,11 @@ serve(async (req) => {
         empresa_cnpj: empresaCnpj,
 
         meta_message_id: metaMessageId,
+        ...logExtra,
       },
     });
   };
+
 
   const answer = async (
     reply: string,
@@ -763,6 +769,41 @@ serve(async (req) => {
   if (selectedContributionToken) {
     return await answerContributionButton(selectedContributionToken);
   }
+
+  // Quando a escolha da lista chega como TEXTO (ZapResponde/Chatwoot não
+  // repassa o id da opção), reconhecemos pelo título/descrição enviados há
+  // pouco. Sem isso, a escolha caía no menu inicial.
+  if (e164 && text) {
+    const norm = (v: string) =>
+      v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+    const alvo = norm(text);
+    if (alvo.length > 3) {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: recent } = await supabase
+        .from("chatgoo_events")
+        .select("payload")
+        .eq("event", "message")
+        .eq("phone", e164)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      for (const row of recent ?? []) {
+        // deno-lint-ignore no-explicit-any
+        const opts = (row as any)?.payload?.contrib_options;
+        if (!Array.isArray(opts)) continue;
+        const hit = opts.find((o: { id: string; title: string; description?: string }) => {
+          const t = norm(String(o.title ?? ""));
+          const d = norm(String(o.description ?? ""));
+          return t && (alvo === t || alvo.startsWith(t) || alvo.includes(t) || (d && alvo.includes(d)));
+        });
+        if (hit?.id?.startsWith?.("OPEN_CONTRIB:")) {
+          return await answerContributionButton(String(hit.id).slice("OPEN_CONTRIB:".length));
+        }
+        break;
+      }
+    }
+  }
+
 
   // Menu com botões (lista interativa Meta). Se o envio da lista falhar por
   // erro da Meta, cai no menu numerado em texto como reserva.
@@ -1344,7 +1385,9 @@ serve(async (req) => {
     }
 
     const delivered = finalResult.sent || finalResult.dry_run;
+    logExtra = { contrib_options: opcoes };
     if (delivered) await mirrorBot(mirroredReply);
+
     await log(
       delivered ? "ANSWERED" : "SEND_FAILED",
       delivered ? "UPDATE_OPTIONS_SENT" : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
