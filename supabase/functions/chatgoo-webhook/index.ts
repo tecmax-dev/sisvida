@@ -23,6 +23,7 @@ import {
   chatwootEnsureConversation,
   chatwootHandoff,
   chatwootHasHumanInControl,
+  chatwootSetPause,
   chatwootMirrorBotReply,
   chatwootMirrorIncoming,
   getChatwootConfig,
