@@ -47,7 +47,7 @@ export function PatientRecordsModal({
   patientId,
   patientName,
 }: PatientRecordsModalProps) {
-  const { currentClinic, user } = useAuth();
+  const { currentClinic, user, userRoles } = useAuth();
   const { toast } = useToast();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
