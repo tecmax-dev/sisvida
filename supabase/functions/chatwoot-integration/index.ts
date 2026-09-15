@@ -61,6 +61,58 @@ serve(async (req) => {
         }), { headers: corsHeaders });
     }
 
+    // Teste de conexão: lista as caixas de entrada da conta no Chatwoot.
+    if (action === "test-connection") {
+      const clinicId = body.clinicId || body.clinic_id || "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { data: cfg } = await supabase
+        .from("chatwoot_configs")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .maybeSingle();
+
+      if (!cfg) {
+        return new Response(JSON.stringify({ ok: false, message: "Configuração não encontrada." }), { headers: corsHeaders });
+      }
+
+      const secretName = cfg.chatwoot_api_token_secret_name ||
+        `CHATWOOT_TOKEN_${clinicId.replace(/-/g, "_")}`;
+      const token = Deno.env.get(secretName) ?? "";
+      const baseUrl = String(cfg.chatwoot_base_url ?? "").replace(/\/+$/, "");
+      if (!token || !baseUrl) {
+        return new Response(JSON.stringify({ ok: false, message: "Endereço ou token ausente." }), { headers: corsHeaders });
+      }
+
+      const res = await fetch(`${baseUrl}/api/v1/accounts/${cfg.chatwoot_account_id}/inboxes`, {
+        headers: { api_access_token: token, "Content-Type": "application/json" },
+      });
+      const text = await res.text();
+      let parsed: any = null;
+      try { parsed = JSON.parse(text); } catch { /* resposta não-JSON */ }
+
+      const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.payload) ? parsed.payload : [];
+      const okConn = res.ok && Array.isArray(list);
+
+      await supabase.from("chatwoot_configs").update({
+        connection_status: okConn ? "CONNECTED" : "ERROR",
+        last_test_at: new Date().toISOString(),
+        last_test_status: okConn ? `OK (${list.length} caixas)` : `HTTP ${res.status}`,
+      }).eq("clinic_id", clinicId);
+
+      if (!okConn) {
+        return new Response(JSON.stringify({ ok: false, message: `Falha na conexão (HTTP ${res.status}).` }), { headers: corsHeaders });
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        inboxes: list.map((i: any) => ({ id: i.id, name: i.name, channel_type: i.channel_type })),
+        webhook_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/chatwoot-webhook?key=${cfg.webhook_secret ?? ""}`,
+      }), { headers: corsHeaders });
+    }
+
     return new Response(JSON.stringify({ error: `Action ${action} unknown`, probe: PROBE_ID }), { status: 400, headers: corsHeaders });
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
