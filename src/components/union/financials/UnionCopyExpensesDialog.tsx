@@ -56,8 +56,8 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
   }, [expenses, checkNumber]);
 
   const selectedExpenses = useMemo(
-    () => (expenses ?? []).filter((expense) => selectedIds.includes(expense.id)),
-    [expenses, selectedIds]
+    () => filteredExpenses.filter((expense) => selectedIds.includes(expense.id)),
+    [filteredExpenses, selectedIds]
   );
 
   const formatCurrency = (value: number | null) =>
@@ -71,7 +71,9 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
   };
 
   const toggleSelectAll = () => {
-    setSelectedIds(selectedIds.length === filteredExpenses.length ? [] : filteredExpenses.map((expense) => expense.id));
+    const filteredIds = filteredExpenses.map((expense) => expense.id);
+    const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id));
+    setSelectedIds(allFilteredSelected ? selectedIds.filter((id) => !filteredIds.includes(id)) : Array.from(new Set([...selectedIds, ...filteredIds])));
   };
 
   const handleClose = () => {
@@ -112,7 +114,7 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
-      toast.success(`${selectedIds.length} despesa(s) copiada(s) com sucesso!`);
+      toast.success(`${selectedExpenses.length} despesa(s) copiada(s) com sucesso!`);
       handleClose();
     },
     onError: (error: Error) => toast.error(error.message || "Erro ao copiar despesas"),
@@ -132,7 +134,7 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
 
   return (
     <Dialog open={open} onOpenChange={(value) => value ? onOpenChange(true) : handleClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] h-[90vh] min-h-0 flex flex-col overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] grid grid-rows-[auto_auto_auto_auto_minmax(0,1fr)_auto] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Copy className="h-5 w-5" />Cópia de Cheque</DialogTitle>
           <DialogDescription>Busque um cheque pelo número e imprima o comprovante com as despesas lançadas.</DialogDescription>
@@ -144,12 +146,12 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
           <div className="space-y-1.5"><Label>Novo cheque (opcional)</Label><Input placeholder="Manter o original" value={newCheckNumber} onChange={(event) => setNewCheckNumber(event.target.value)} /></div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 text-sm"><span className="text-muted-foreground">{checkNumber ? `Cheque pesquisado: ${checkNumber}` : "Informe um número para buscar"}</span><Badge variant="secondary">{selectedIds.length} selecionada(s) · {filteredExpenses.length} despesa(s) · {formatCurrency(totalValue)}</Badge></div>
+        <div className="flex items-center justify-between gap-3 text-sm"><span className="text-muted-foreground">{checkNumber ? `Cheque pesquisado: ${checkNumber}` : "Informe um número para buscar"}</span><Badge variant="secondary">{selectedExpenses.length} selecionada(s) · {filteredExpenses.length} despesa(s) · {formatCurrency(totalValue)}</Badge></div>
 
-        <div className="flex items-center justify-between border-y py-2 text-sm"><label className="flex items-center gap-2"><Checkbox checked={filteredExpenses.length > 0 && selectedIds.length === filteredExpenses.length} onCheckedChange={toggleSelectAll} disabled={!filteredExpenses.length} />Selecionar todas</label><span className="text-muted-foreground">Total selecionado: {formatCurrency(selectedTotal)}</span></div>
+        <div className="flex items-center justify-between border-y py-2 text-sm"><label className="flex items-center gap-2"><Checkbox checked={filteredExpenses.length > 0 && filteredExpenses.every((expense) => selectedIds.includes(expense.id))} onCheckedChange={toggleSelectAll} disabled={!filteredExpenses.length} />Selecionar todas</label><span className="text-muted-foreground">Total selecionado: {formatCurrency(selectedTotal)}</span></div>
 
-        <div className="h-0 min-h-0 flex-1 overflow-hidden">
-          <ScrollArea className="h-full border rounded-md">
+        <div className="min-h-0 overflow-hidden">
+          <ScrollArea className="min-h-0 h-full overflow-y-auto border rounded-md">
             <div className="p-2 space-y-2">
               {isLoading && <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Buscando despesas...</div>}
               {isError && <div className="p-8 text-center text-destructive">Não foi possível carregar as despesas.</div>}
@@ -160,7 +162,7 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
           </ScrollArea>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0"><Button variant="outline" onClick={handleClose}>Cancelar</Button><Button variant="outline" onClick={printReceipt} disabled={!checkNumber.trim() || !selectedExpenses.length}><Printer className="mr-1.5 h-4 w-4" />Imprimir comprovante</Button><Button onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending || !checkNumber.trim() || !selectedIds.length || !newDueDate}>{copyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}<Copy className="mr-1.5 h-4 w-4" />Copiar {selectedIds.length} despesa(s)</Button></DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0"><Button variant="outline" onClick={handleClose}>Cancelar</Button><Button variant="outline" onClick={printReceipt} disabled={!checkNumber.trim() || !selectedExpenses.length}><Printer className="mr-1.5 h-4 w-4" />Imprimir comprovante</Button><Button onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending || !checkNumber.trim() || !selectedIds.length || !newDueDate}>{copyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}<Copy className="mr-1.5 h-4 w-4" />Copiar {selectedExpenses.length} despesa(s)</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
