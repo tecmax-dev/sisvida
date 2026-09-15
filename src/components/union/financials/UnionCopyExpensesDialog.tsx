@@ -140,7 +140,7 @@ export function UnionCopyExpensesDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] h-[90vh] min-h-0 flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
@@ -203,8 +203,9 @@ export function UnionCopyExpensesDialog({
         </div>
 
         {/* List */}
-        <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-330px)] overflow-y-auto border rounded-md">
-          {isLoading ? (
+        <div className="h-0 min-h-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full min-h-0 overflow-y-auto border rounded-md">
+            {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
@@ -263,8 +264,9 @@ export function UnionCopyExpensesDialog({
                 </label>
               ))}
             </div>
-          )}
-        </ScrollArea>
+            )}
+          </ScrollArea>
+        </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={handleClose}>
