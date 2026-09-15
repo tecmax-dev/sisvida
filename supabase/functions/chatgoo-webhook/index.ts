@@ -14,6 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   chatgooSendButtonsViaMeta,
+  chatgooSendCtaUrlViaMeta,
   chatgooSendListViaMeta,
   chatgooSendTextViaMeta,
   chatgooTransferToQueue,
@@ -470,6 +471,9 @@ serve(async (req) => {
       metaMessage?.interactive?.button_reply?.id ??
       "",
   ).trim();
+  const selectedContributionToken = selectedId.startsWith("OPEN_CONTRIB:")
+    ? selectedId.slice("OPEN_CONTRIB:".length).trim()
+    : null;
 
   // Perfil escolhido anteriormente (válido por 6 horas), para interpretar números
   // no submenu correto sem perguntar de novo a cada mensagem.
@@ -687,6 +691,78 @@ serve(async (req) => {
       },
     );
   };
+
+  const answerContributionButton = async (token: string) => {
+    const { data: contribution } = await supabase
+      .from("employer_contributions")
+      .select("competence_month,competence_year,due_date,value")
+      .eq("public_access_token", token)
+      .maybeSingle();
+
+    if (!contribution) {
+      return await answer(
+        "Não consegui localizar essa contribuição. Escolha a opção novamente ou digite ATENDENTE.",
+        "ANSWERED",
+        "CONTRIBUTION_LINK_NOT_FOUND",
+        null,
+      );
+    }
+
+    const comp = contribution.competence_month && contribution.competence_year
+      ? `${String(contribution.competence_month).padStart(2, "0")}/${contribution.competence_year}`
+      : "-";
+    const bodyText = [
+      `Competência ${comp}`,
+      `Vencimento: ${fmtDate(contribution.due_date)}`,
+      `Valor atual: ${fmtMoney(contribution.value)}`,
+      "",
+      "Toque no botão abaixo para informar os dados e gerar o boleto.",
+    ].join("\n");
+    const url = `${APP_BASE_URL}/contribuicao/${encodeURIComponent(token)}`;
+    const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
+      body: bodyText,
+      buttonLabel: "Atualizar boleto",
+      url,
+      footer: "Link pessoal e seguro",
+    }, { inboundNow: true });
+
+    let finalResult = result;
+    let mirroredReply = bodyText;
+    if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
+      mirroredReply = `${bodyText}\n\nAcessar: ${url}`;
+      finalResult = await chatgooSendTextViaMeta(
+        supabase,
+        e164 ?? "",
+        mirroredReply,
+        { inboundNow: true },
+      );
+    }
+
+    const delivered = finalResult.sent || finalResult.dry_run;
+    if (delivered) await mirrorBot(mirroredReply);
+    await log(
+      delivered ? "ANSWERED" : "SEND_FAILED",
+      delivered ? "CONTRIBUTION_CTA_SENT" : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
+      null,
+      mirroredReply,
+      finalResult.message_id ?? null,
+    );
+    return new Response(JSON.stringify({
+      status: delivered ? "ANSWERED" : "SEND_FAILED",
+      intent: "ATUALIZAR_BOLETO",
+      dry_run: finalResult.dry_run,
+      delivered: finalResult.sent,
+      meta_message_id: finalResult.message_id ?? null,
+      reply: mirroredReply,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  };
+
+  if (selectedContributionToken) {
+    return await answerContributionButton(selectedContributionToken);
+  }
 
   // Menu com botões (lista interativa Meta). Se o envio da lista falhar por
   // erro da Meta, cai no menu numerado em texto como reserva.
@@ -1204,7 +1280,7 @@ serve(async (req) => {
       );
     }
 
-    const blocos: string[] = [];
+    const opcoes: { id: string; title: string; description: string }[] = [];
     for (const c of elegiveis) {
       let token = (c.public_access_token as string | null) || null;
       if (!token) {
@@ -1229,15 +1305,14 @@ serve(async (req) => {
       const comp = c.competence_month && c.competence_year
         ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
         : "-";
-      blocos.push(
-        [
-          `• Competência ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}`,
-          `  Atualizar: ${APP_BASE_URL}/contribuicao/${encodeURIComponent(token)}`,
-        ].join("\n"),
-      );
+      opcoes.push({
+        id: `OPEN_CONTRIB:${token}`,
+        title: `Competência ${comp}`,
+        description: `Venc. ${fmtDate(c.due_date)} • ${fmtMoney(c.value)}`,
+      });
     }
 
-    if (blocos.length === 0) {
+    if (opcoes.length === 0) {
       return await answer(
         `${nomeEmpresa}: não consegui gerar o link seguro agora. Vou encaminhar para um atendente.`,
         "HANDOFF",
@@ -1246,19 +1321,48 @@ serve(async (req) => {
       );
     }
 
-    return await answer(
-      [
-        `${nomeEmpresa} — CNPJ ${cnpjDigits}`,
-        "Nos links abaixo você informa o valor, o tipo de contribuição e, para boletos vencidos, a nova data de vencimento. O boleto é gerado na hora.",
-        "",
-        ...blocos,
-        "",
-        "Os links são pessoais e de uso exclusivo desta solicitação.",
-      ].join("\n"),
-      "ANSWERED",
-      "UPDATE_LINKS_SENT",
+    const intro = [
+      `${nomeEmpresa} — CNPJ ${cnpjDigits}`,
+      "Escolha uma contribuição para informar os dados e gerar o boleto:",
+    ].join("\n");
+    const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
+      body: intro,
+      buttonLabel: "Escolher contribuição",
+      footer: "Os links são pessoais e seguros",
+      sections: [{ title: "Contribuições", rows: opcoes }],
+    }, { inboundNow: true });
+
+    let finalResult = result;
+    let mirroredReply = intro;
+    if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
+      const fallback = opcoes.map((opcao) => {
+        const token = opcao.id.slice("OPEN_CONTRIB:".length);
+        return `• ${opcao.title} — ${opcao.description}\n  Acessar: ${APP_BASE_URL}/contribuicao/${encodeURIComponent(token)}`;
+      });
+      mirroredReply = [intro, "", ...fallback].join("\n");
+      finalResult = await chatgooSendTextViaMeta(supabase, e164 ?? "", mirroredReply, { inboundNow: true });
+    }
+
+    const delivered = finalResult.sent || finalResult.dry_run;
+    if (delivered) await mirrorBot(mirroredReply);
+    await log(
+      delivered ? "ANSWERED" : "SEND_FAILED",
+      delivered ? "UPDATE_OPTIONS_SENT" : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
       null,
+      mirroredReply,
+      finalResult.message_id ?? null,
     );
+    return new Response(JSON.stringify({
+      status: delivered ? "ANSWERED" : "SEND_FAILED",
+      intent,
+      dry_run: finalResult.dry_run,
+      delivered: finalResult.sent,
+      meta_message_id: finalResult.message_id ?? null,
+      reply: mirroredReply,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   };
 
   if (intent === "HUMANO") {
