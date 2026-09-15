@@ -602,6 +602,53 @@ serve(async (req) => {
     body?.data?.pushName,
     body?.data?.contact?.name,
   ]) || null;
+  // ANTI-DUPLICIDADE POR CONTEÚDO (proteção Meta contra envio repetido):
+  // a MESMA mensagem chega por dois caminhos (webhook oficial da Meta e relé do
+  // Chatwoot/ZapResponde) com ids diferentes, o que gerava duas respostas iguais
+  // seguidas. Aqui reconhecemos telefone + conteúdo idêntico em janela curta e
+  // processamos apenas a primeira ocorrência.
+  if (e164 && (text || "").trim()) {
+    const contentKey = (text || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 160);
+    const claimSince = new Date(Date.now() - 120 * 1000).toISOString();
+    const { data: claimed } = await supabase
+      .from("chatgoo_events")
+      .select("id")
+      .eq("event", "message_claim")
+      .eq("phone", e164)
+      .gte("created_at", claimSince)
+      .contains("payload", { content_key: contentKey })
+      .limit(1)
+      .maybeSingle();
+    if (claimed) {
+      await supabase.from("chatgoo_events").insert({
+        direction: "inbound",
+        event: "webhook_echo",
+        phone: e164,
+        clinic_id: SINDICATO_CLINIC_ID,
+        decision: "IGNORED",
+        reason: "DUPLICATE_CONTENT",
+        payload: { message_id: messageId || null, content_key: contentKey },
+      });
+      return new Response(JSON.stringify({ status: "ignored_duplicate_content" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    await supabase.from("chatgoo_events").insert({
+      direction: "inbound",
+      event: "message_claim",
+      phone: e164,
+      clinic_id: SINDICATO_CLINIC_ID,
+      decision: "CLAIMED",
+      payload: { content_key: contentKey, message_id: messageId || null },
+    });
+  }
+
   const cwCfg = e164 ? await getChatwootConfig(supabase, SINDICATO_CLINIC_ID) : null;
   // Quando a mensagem já veio DO Chatwoot (ZapResponde), a conversa existe e a
   // mensagem já está lá: não recriar nem espelhar de novo (evita duplicidade).
