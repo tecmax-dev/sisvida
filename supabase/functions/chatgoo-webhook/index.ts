@@ -33,6 +33,8 @@ import { normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
+// Ano em curso: todas as listagens de contribuições ficam restritas a ele.
+const ANO_CORRENTE = new Date().getFullYear();
 
 type Intent =
   | "CADASTRO"
