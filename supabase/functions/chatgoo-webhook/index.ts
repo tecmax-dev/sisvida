@@ -863,18 +863,6 @@ serve(async (req) => {
       );
     }
 
-    let safeUrl: URL;
-    try {
-      safeUrl = new URL(selected.url);
-    } catch {
-      return await answer("Não consegui abrir esse boleto. Digite ATENDENTE.", "HANDOFF", "INVALID_INVOICE_URL", null);
-    }
-    const allowedHost = safeUrl.protocol === "https:" &&
-      (safeUrl.hostname === "lytex.com.br" || safeUrl.hostname.endsWith(".lytex.com.br"));
-    if (!allowedHost) {
-      return await answer("Não consegui abrir esse boleto. Digite ATENDENTE.", "HANDOFF", "INVALID_INVOICE_URL", null);
-    }
-
     // Boleto vencido: em vez de abrir o link antigo, oferece definir nova
     // data de vencimento pela página segura (gera boleto atualizado).
     const updateToken = String((selected as any).updateToken ?? "");
