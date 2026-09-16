@@ -846,7 +846,6 @@ serve(async (req) => {
         if (!Array.isArray(opts)) continue;
         const hit = opts.find((o: { id: string; title: string; description?: string }) => {
           const t = norm(String(o.title ?? ""));
-          const d = norm(String(o.description ?? ""));
           return t && (alvo === t || alvo.startsWith(t) || alvo.includes(t) || (d && alvo.includes(d)));
         });
         if (hit?.id?.startsWith?.("OPEN_CONTRIB:")) {
