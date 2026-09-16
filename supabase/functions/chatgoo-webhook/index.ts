@@ -33,6 +33,8 @@ import { normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
+// Ano em curso: todas as listagens de contribuições ficam restritas a ele.
+const ANO_CORRENTE = new Date().getFullYear();
 
 type Intent =
   | "CADASTRO"
@@ -1346,12 +1348,13 @@ serve(async (req) => {
       .select("id,competence_month,competence_year,due_date,value,status,public_access_token,contribution_type_id")
       .eq("employer_id", empresa.id)
       .in("status", ["awaiting_value", "pending", "overdue"])
-      .gte("due_date", "2026-01-01")
+      .eq("competence_year", ANO_CORRENTE)
+      .gte("due_date", `${ANO_CORRENTE}-01-01`)
       .order("due_date", { ascending: true })
       .limit(50);
 
     // Elegíveis: boletos zerados (a vencer ou vencidos) e boletos vencidos,
-    // a partir de 2026 e somente dos tipos 124/125/126.
+    // do ano em curso e somente dos tipos 124/125/126.
     const elegiveis = (contribs ?? []).filter((c: any) => {
       if (!tiposPermitidos.has(String(c.contribution_type_id ?? ""))) return false;
       const zerado = !c.value || Number(c.value) === 0 || c.status === "awaiting_value";
@@ -1615,6 +1618,7 @@ serve(async (req) => {
         .from("employer_contributions")
         .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url,lytex_boleto_digitable_line")
         .eq("employer_id", empresa.id)
+        .eq("competence_year", ANO_CORRENTE)
         .in("status", ["pending", "overdue"])
         .not("lytex_invoice_url", "is", null)
         .order("due_date", { ascending: true })
@@ -1659,6 +1663,7 @@ serve(async (req) => {
         .from("employer_contributions")
         .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url")
         .eq("employer_id", empresa.id)
+        .eq("competence_year", ANO_CORRENTE)
         .in("status", ["pending", "overdue", "awaiting_value"])
         .order("due_date", { ascending: true })
         .limit(5);
@@ -1788,6 +1793,7 @@ serve(async (req) => {
         .from("employer_contributions")
         .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,lytex_boleto_digitable_line")
         .in("employer_id", employerIds)
+        .eq("competence_year", ANO_CORRENTE)
         .in("status", ["pending", "overdue"])
         .not("lytex_invoice_url", "is", null)
         .order("due_date", { ascending: true })
@@ -1832,6 +1838,7 @@ serve(async (req) => {
       .from("employer_contributions")
       .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
       .in("employer_id", employerIds)
+      .eq("competence_year", ANO_CORRENTE)
       .in("status", ["pending", "overdue", "awaiting_value"])
       .order("due_date", { ascending: true })
       .limit(10);
@@ -2012,6 +2019,7 @@ serve(async (req) => {
       .from("member_contributions")
       .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url")
       .eq("member_id", patient.id)
+      .eq("competence_year", ANO_CORRENTE)
       .in("status", ["pending", "overdue", "awaiting_value"])
       .order("due_date", { ascending: true })
       .limit(5);
