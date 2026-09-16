@@ -1348,12 +1348,13 @@ serve(async (req) => {
       .select("id,competence_month,competence_year,due_date,value,status,public_access_token,contribution_type_id")
       .eq("employer_id", empresa.id)
       .in("status", ["awaiting_value", "pending", "overdue"])
-      .gte("due_date", "2026-01-01")
+      .eq("competence_year", ANO_CORRENTE)
+      .gte("due_date", `${ANO_CORRENTE}-01-01`)
       .order("due_date", { ascending: true })
       .limit(50);
 
     // Elegíveis: boletos zerados (a vencer ou vencidos) e boletos vencidos,
-    // a partir de 2026 e somente dos tipos 124/125/126.
+    // do ano em curso e somente dos tipos 124/125/126.
     const elegiveis = (contribs ?? []).filter((c: any) => {
       if (!tiposPermitidos.has(String(c.contribution_type_id ?? ""))) return false;
       const zerado = !c.value || Number(c.value) === 0 || c.status === "awaiting_value";
