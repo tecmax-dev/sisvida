@@ -1732,7 +1732,7 @@ serve(async (req) => {
       }
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
+        .select("id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,contribution_types(name)")
         .eq("employer_id", empresa.id)
         .eq("competence_year", ANO_CORRENTE)
         .lte("competence_month", MES_LIMITE_COMPETENCIA)
@@ -1754,10 +1754,11 @@ serve(async (req) => {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
+        const tipoNome = String(c.contribution_types?.name ?? "Contribuição").slice(0, 30);
         return {
           id: `OPEN_INVOICE:${c.id}`,
           title: `${index + 1}. ${comp}`,
-          description: `${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`,
+          description: `${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`.slice(0, 72),
           url: String(c.lytex_invoice_url),
         };
       });
@@ -1927,7 +1928,7 @@ serve(async (req) => {
       const nomes = new Map((empresasVinculadas ?? []).map((e: any) => [e.id, e.trade_name || e.name]));
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("id,employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
+        .select("id,employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,contribution_types(name)")
         .in("employer_id", employerIds)
         .eq("competence_year", ANO_CORRENTE)
         .lte("competence_month", MES_LIMITE_COMPETENCIA)
@@ -1949,10 +1950,12 @@ serve(async (req) => {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
+        const empresaNome = String(nomes.get(c.employer_id) ?? "Empresa").slice(0, 24);
+        const tipoNome = String(c.contribution_types?.name ?? "Contribuição").slice(0, 30);
         return {
           id: `OPEN_INVOICE:${c.id}`,
           title: `${index + 1}. ${comp}`,
-          description: `${nomes.get(c.employer_id) ?? "Empresa"} • Venc. ${fmtDate(c.due_date)}`,
+          description: `${empresaNome} • ${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`.slice(0, 72),
           company: String(nomes.get(c.employer_id) ?? "Empresa"),
           url: String(c.lytex_invoice_url),
         };
