@@ -286,6 +286,8 @@ export default function PublicContributionValue() {
   }
 
   const hasValue = Number(contribution.value) > 0;
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const isOverdue = contribution.due_date.slice(0, 10) < todayDate && contribution.status !== "paid";
 
   return (
     <div className="min-h-screen bg-background p-4 flex items-center justify-center">
@@ -304,7 +306,9 @@ export default function PublicContributionValue() {
           )}
           <CardTitle className="text-xl">{contribution.clinic?.name || "Contribuição"}</CardTitle>
           <CardDescription>
-            Informe o valor e gere o boleto para pagamento
+            {hasValue
+              ? "Escolha uma nova data de vencimento para gerar o boleto"
+              : "Informe o valor e gere o boleto para pagamento"}
           </CardDescription>
         </CardHeader>
         
@@ -432,20 +436,24 @@ export default function PublicContributionValue() {
               )}
 
 
-              <div className="space-y-2">
-                <Label htmlFor="due_date">Nova Data de Vencimento *</Label>
-                <Input
-                  id="due_date"
-                  type="date"
-                  value={newDueDate}
-                  min={new Date().toISOString().slice(0, 10)}
-                  onChange={(e) => setNewDueDate(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Você pode manter o vencimento atual ou escolher uma nova data futura.
-                </p>
-              </div>
+              {(!hasValue || isOverdue) && (
+                <div className="space-y-2">
+                  <Label htmlFor="due_date">{hasValue ? "Nova Data de Vencimento *" : "Data de Vencimento *"}</Label>
+                  <Input
+                    id="due_date"
+                    type="date"
+                    value={newDueDate}
+                    min={todayDate}
+                    onChange={(e) => setNewDueDate(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {hasValue
+                      ? "O valor atual será mantido; somente o vencimento será alterado."
+                      : "Você pode manter o vencimento atual ou escolher uma nova data futura."}
+                  </p>
+                </div>
+              )}
 
               <Button
                 type="submit"
