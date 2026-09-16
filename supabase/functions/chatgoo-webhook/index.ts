@@ -1793,6 +1793,7 @@ serve(async (req) => {
         .from("employer_contributions")
         .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,lytex_boleto_digitable_line")
         .in("employer_id", employerIds)
+        .eq("competence_year", ANO_CORRENTE)
         .in("status", ["pending", "overdue"])
         .not("lytex_invoice_url", "is", null)
         .order("due_date", { ascending: true })
@@ -1837,6 +1838,7 @@ serve(async (req) => {
       .from("employer_contributions")
       .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
       .in("employer_id", employerIds)
+      .eq("competence_year", ANO_CORRENTE)
       .in("status", ["pending", "overdue", "awaiting_value"])
       .order("due_date", { ascending: true })
       .limit(10);
@@ -2017,6 +2019,7 @@ serve(async (req) => {
       .from("member_contributions")
       .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url")
       .eq("member_id", patient.id)
+      .eq("competence_year", ANO_CORRENTE)
       .in("status", ["pending", "overdue", "awaiting_value"])
       .order("due_date", { ascending: true })
       .limit(5);
