@@ -875,6 +875,53 @@ serve(async (req) => {
       return await answer("Não consegui abrir esse boleto. Digite ATENDENTE.", "HANDOFF", "INVALID_INVOICE_URL", null);
     }
 
+    // Boleto vencido: em vez de abrir o link antigo, oferece definir nova
+    // data de vencimento pela página segura (gera boleto atualizado).
+    const updateToken = String((selected as any).updateToken ?? "");
+    if ((selected as any).overdue && updateToken) {
+      const updateUrl = `${APP_BASE_URL}/contribuicao/${encodeURIComponent(updateToken)}`;
+      const bodyText = [
+        selected.company || null,
+        selected.title,
+        selected.description || null,
+        "",
+        "Este boleto está vencido. Toque no botão abaixo para definir uma nova data de vencimento e gerar o boleto atualizado.",
+      ].filter(Boolean).join("\n");
+      const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
+        body: bodyText,
+        buttonLabel: "Alterar vencimento",
+        url: updateUrl,
+        footer: "Link pessoal e seguro",
+      }, { inboundNow: true });
+
+      let finalResult = result;
+      let mirroredReply = bodyText;
+      if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
+        mirroredReply = `${bodyText}\n\nAcessar: ${updateUrl}`;
+        finalResult = await chatgooSendTextViaMeta(supabase, e164 ?? "", mirroredReply, { inboundNow: true });
+      }
+      const delivered = finalResult.sent || finalResult.dry_run;
+      if (delivered) await mirrorBot(mirroredReply);
+      await log(
+        delivered ? "ANSWERED" : "SEND_FAILED",
+        delivered ? "OVERDUE_REISSUE_CTA_SENT" : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
+        null,
+        mirroredReply,
+        finalResult.message_id ?? null,
+      );
+      return new Response(JSON.stringify({
+        status: delivered ? "ANSWERED" : "SEND_FAILED",
+        intent: "SEGUNDA_VIA",
+        dry_run: finalResult.dry_run,
+        delivered: finalResult.sent,
+        meta_message_id: finalResult.message_id ?? null,
+        reply: mirroredReply,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const bodyText = [
       selected.company || null,
       selected.title,
