@@ -70,7 +70,7 @@ function detectIntent(text: string): Intent {
   if (/(carteirinha|carteira|validade)/.test(t)) return "CARTEIRINHA";
   if (/(consulta|agendamento|marcac|horario|medic)/.test(t)) return "AGENDAMENTOS";
   if (/(homologa|rescis)/.test(t)) return "HOMOLOGACAO";
-  if (/(informar valor|atualizar boleto|boleto zerado|valor zerado|novo vencimento|alterar vencimento|mudar vencimento)/.test(t)) return "ATUALIZAR_BOLETO";
+  if (/(informar valor|atualizar boleto|boleto zerado|valor zerado|novo vencimento|alterar vencimento|mudar vencimento|competencia)/.test(t)) return "ATUALIZAR_BOLETO";
   if (/(2a via|2 via|segunda via|reemitir|reemissao|reenviar boleto)/.test(t)) return "SEGUNDA_VIA";
   if (/(boleto|contribui|mensalidade|pagamento|debito)/.test(t)) return "FINANCEIRO";
   if (/(cadastro|meus dados|situacao)/.test(t)) return "CADASTRO";
@@ -846,12 +846,12 @@ serve(async (req) => {
         if (!Array.isArray(opts)) continue;
         const hit = opts.find((o: { id: string; title: string; description?: string }) => {
           const t = norm(String(o.title ?? ""));
+          const d = norm(String(o.description ?? ""));
           return t && (alvo === t || alvo.startsWith(t) || alvo.includes(t) || (d && alvo.includes(d)));
         });
         if (hit?.id?.startsWith?.("OPEN_CONTRIB:")) {
           return await answerContributionButton(String(hit.id).slice("OPEN_CONTRIB:".length));
         }
-        break;
       }
     }
   }
