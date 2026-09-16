@@ -108,10 +108,16 @@ function fmtMoney(v: unknown): string {
 }
 
 // Menu inicial: separa o atendimento pelo perfil de quem está falando.
-const ROOT_MENU = [
-  "Olá! Sou o atendimento automático do sindicato.",
+const ROOT_GREETING = [
+  "Olá! Seja muito bem-vindo(a)! 😊",
+  "Sou o assistente virtual do sindicato e estou aqui para te ajudar com carteirinha, boletos, agendamentos e muito mais.",
   "",
   "Para começar, me diga quem é você:",
+].join("\n");
+
+const ROOT_MENU = [
+  ROOT_GREETING,
+  "",
   "1 - Sou associado",
   "2 - Sou empresa",
   "3 - Sou contabilidade",
@@ -1276,7 +1282,7 @@ serve(async (req) => {
         // que a pessoa digite "MENU".
         return await answerMenu(
           "ROOT",
-          "Obrigado! Seu consentimento foi registrado.\n\nPara começar, me diga quem é você:",
+          `Obrigado! Seu consentimento foi registrado. 😊\n\n${ROOT_GREETING}`,
           null,
         );
       }
@@ -1764,11 +1770,7 @@ serve(async (req) => {
 
   // MENU INICIAL: separa o atendimento por perfil (associado, empresa, contabilidade)
   if (intent === "MENU") {
-    return await answerMenu(
-      "ROOT",
-      "Olá! Sou o atendimento automático do sindicato. Para começar, me diga quem é você:",
-      null,
-    );
+    return await answerMenu("ROOT", ROOT_GREETING, null);
   }
 
   // Empresa: ao escolher "Sou empresa" sempre pedimos o CNPJ para identificar
