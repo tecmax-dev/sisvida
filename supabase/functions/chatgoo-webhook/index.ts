@@ -1261,10 +1261,11 @@ serve(async (req) => {
           },
           { onConflict: "clinic_id,phone" },
         );
-        return await answer(
-          "Obrigado! Seu consentimento foi registrado. Envie \"MENU\" para começar.",
-          "OPT_IN",
-          "CONSENT_GRANTED_BUTTON",
+        // Consentimento registrado: já apresentamos o menu inicial, sem exigir
+        // que a pessoa digite "MENU".
+        return await answerMenu(
+          "ROOT",
+          "Obrigado! Seu consentimento foi registrado.\n\nPara começar, me diga quem é você:",
           null,
         );
       }
