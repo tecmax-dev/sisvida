@@ -32,6 +32,7 @@ import {
 import { normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
 
 type Intent =
   | "CADASTRO"
@@ -136,7 +137,7 @@ const EMP_MENU = [
   "1 - Boletos e contribuições da empresa",
   "2 - Homologações da empresa",
   "3 - Segunda via de boleto",
-  "4 - Informar valor / atualizar vencimento",
+  "4 - Atualizar boleto",
   "5 - Dados cadastrais da empresa",
   "6 - Falar com um atendente",
 ].join("\n");
@@ -145,7 +146,7 @@ const EMP_LIST_ROWS = [
   { id: "OPT_EMP_BOLETOS", title: "Boletos", description: "Contribuições em aberto da empresa" },
   { id: "OPT_EMP_HOMOLOGACAO", title: "Homologações", description: "Agendamentos de rescisão" },
   { id: "OPT_EMP_2VIA", title: "2ª via de boleto", description: "Reenviar link e código do boleto" },
-  { id: "OPT_EMP_ATUALIZAR", title: "Informar valor", description: "Valor, tipo e novo vencimento" },
+  { id: "OPT_EMP_ATUALIZAR", title: "Atualizar boleto", description: "Valor para zeradas ou vencimento para vencidas" },
   { id: "OPT_EMP_DADOS", title: "Dados cadastrais", description: "Dados da empresa no sindicato" },
   { id: "OPT_EMP_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
@@ -155,7 +156,7 @@ const CTB_MENU = [
   "1 - Empresas do escritório",
   "2 - Boletos em aberto das empresas",
   "3 - Segunda via de boleto",
-  "4 - Informar valor / atualizar vencimento",
+  "4 - Atualizar boleto",
   "5 - Falar com um atendente",
 ].join("\n");
 
@@ -163,7 +164,7 @@ const CTB_LIST_ROWS = [
   { id: "OPT_CTB_EMPRESAS", title: "Empresas", description: "Empresas vinculadas ao escritório" },
   { id: "OPT_CTB_BOLETOS", title: "Boletos", description: "Contribuições em aberto das empresas" },
   { id: "OPT_CTB_2VIA", title: "2ª via de boleto", description: "Reenviar link e código do boleto" },
-  { id: "OPT_CTB_ATUALIZAR", title: "Informar valor", description: "Valor, tipo e novo vencimento" },
+  { id: "OPT_CTB_ATUALIZAR", title: "Atualizar boleto", description: "Valor para zeradas ou vencimento para vencidas" },
   { id: "OPT_CTB_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
 
@@ -748,7 +749,7 @@ serve(async (req) => {
   const answerContributionButton = async (token: string) => {
     const { data: contribution } = await supabase
       .from("employer_contributions")
-      .select("competence_month,competence_year,due_date,value")
+      .select("competence_month,competence_year,due_date,value,status")
       .eq("public_access_token", token)
       .maybeSingle();
 
@@ -764,17 +765,22 @@ serve(async (req) => {
     const comp = contribution.competence_month && contribution.competence_year
       ? `${String(contribution.competence_month).padStart(2, "0")}/${contribution.competence_year}`
       : "-";
+    const hasValue = Number(contribution.value ?? 0) > 0;
+    const actionText = hasValue
+      ? "Toque no botão abaixo para informar somente a nova data de vencimento."
+      : "Toque no botão abaixo para informar o valor, o tipo e a data de vencimento.";
+    const buttonLabel = hasValue ? "Alterar vencimento" : "Informar valor";
     const bodyText = [
       `Competência ${comp}`,
       `Vencimento: ${fmtDate(contribution.due_date)}`,
       `Valor atual: ${fmtMoney(contribution.value)}`,
       "",
-      "Toque no botão abaixo para informar os dados e gerar o boleto.",
+      actionText,
     ].join("\n");
     const url = `${APP_BASE_URL}/contribuicao/${encodeURIComponent(token)}`;
     const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
       body: bodyText,
-      buttonLabel: "Atualizar boleto",
+      buttonLabel,
       url,
       footer: "Link pessoal e seguro",
     }, { inboundNow: true });
@@ -1229,17 +1235,15 @@ serve(async (req) => {
     return (data ?? []).filter((a) => phoneMatches(a.phone));
   };
 
-  // ===== ATUALIZAÇÃO DE BOLETO (valor / tipo / novo vencimento) =====
+  // ===== ATUALIZAÇÃO DE BOLETO (valor para zeradas / vencimento para vencidas) =====
   // Compliance Meta: nenhum dado financeiro é coletado por texto livre no
   // WhatsApp. O contato informa apenas o CNPJ e recebe um link seguro, com
   // token por boleto, onde preenche valor, tipo de contribuição e vencimento.
-  const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
-
   const askCnpj = async (scope: "EMPRESA" | "CONTABILIDADE") => {
     nextAwaitCnpj = scope;
     return await answer(
       [
-        "Para atualizar boleto (valor, tipo de contribuição ou novo vencimento),",
+        "Para atualizar boleto (valor nas contribuições zeradas ou novo vencimento nas vencidas),",
         "me informe o CNPJ da empresa (somente números).",
         "",
         "Exemplo: 12345678000199",
@@ -1411,7 +1415,7 @@ serve(async (req) => {
 
     const intro = [
       `${nomeEmpresa} — CNPJ ${cnpjDigits}`,
-      "Escolha uma contribuição para informar os dados e gerar o boleto:",
+       "Escolha uma contribuição para atualizar o boleto:",
     ].join("\n");
     const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
       body: intro,
