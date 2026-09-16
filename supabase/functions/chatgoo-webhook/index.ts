@@ -1779,7 +1779,7 @@ serve(async (req) => {
       }
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,contribution_types(name)")
+        .select("id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,public_access_token,contribution_types(name)")
         .eq("employer_id", empresa.id)
         .eq("competence_year", ANO_CORRENTE)
         .lte("competence_month", MES_LIMITE_COMPETENCIA)
