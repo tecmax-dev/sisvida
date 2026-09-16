@@ -1999,7 +1999,7 @@ serve(async (req) => {
       const nomes = new Map((empresasVinculadas ?? []).map((e: any) => [e.id, e.trade_name || e.name]));
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("id,employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,contribution_types(name)")
+        .select("id,employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,public_access_token,contribution_types(name)")
         .in("employer_id", employerIds)
         .eq("competence_year", ANO_CORRENTE)
         .lte("competence_month", MES_LIMITE_COMPETENCIA)
@@ -2017,20 +2017,43 @@ serve(async (req) => {
         );
       }
 
-      const invoiceOptions = docs.map((c: any, index: number) => {
+      const hoje2viaCtb = new Date().toISOString().slice(0, 10);
+      const invoiceOptions = [];
+      for (const [index, c] of (docs as any[]).entries()) {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
         const empresaNome = String(nomes.get(c.employer_id) ?? "Empresa").slice(0, 24);
         const tipoNome = String(c.contribution_types?.name ?? "Contribuição").slice(0, 30);
-        return {
+        const overdue = c.status === "overdue" || String(c.due_date ?? "").slice(0, 10) < hoje2viaCtb;
+        let updateToken: string | null = null;
+        if (overdue) {
+          updateToken = (c.public_access_token as string | null) || null;
+          if (!updateToken) {
+            const bytes = new Uint8Array(24);
+            crypto.getRandomValues(bytes);
+            const candidato = btoa(String.fromCharCode(...bytes))
+              .replace(/\+/g, "-")
+              .replace(/\//g, "_")
+              .replace(/=+$/, "");
+            const { error: updErr } = await supabase
+              .from("employer_contributions")
+              .update({ public_access_token: candidato })
+              .eq("id", c.id);
+            if (updErr) console.error("token_persist_failed", c.id, updErr.message);
+            else updateToken = candidato;
+          }
+        }
+        invoiceOptions.push({
           id: `OPEN_INVOICE:${c.id}`,
           title: `${index + 1}. ${comp}`,
-          description: `${empresaNome} • ${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`.slice(0, 72),
+          description: `${empresaNome} • ${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}${overdue ? " • VENCIDO" : ""}`.slice(0, 72),
           company: String(nomes.get(c.employer_id) ?? "Empresa"),
           url: String(c.lytex_invoice_url),
-        };
-      });
+          overdue,
+          updateToken,
+        });
+      }
 
       const intro = `${nomeEscritorio}, escolha a empresa e a competência:`;
       const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
