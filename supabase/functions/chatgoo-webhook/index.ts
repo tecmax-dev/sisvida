@@ -501,9 +501,11 @@ serve(async (req) => {
   // Estado "aguardando CNPJ" (válido por 30 minutos) para o fluxo de atualização
   // de boleto. Nenhum dado sensível é coletado no chat: apenas o CNPJ para
   // localizar os boletos e devolver o link seguro de atualização.
-  let awaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
+  let awaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | "ASSOCIADO_CPF" | null = null;
   // CNPJ já informado pela empresa nesta conversa (válido por 6 horas).
   let empresaCnpj: string | null = null;
+  // CPF já informado pelo associado nesta conversa (válido por 6 horas).
+  let associadoCpf: string | null = null;
   if (e164) {
     const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
     const { data: last } = await supabase
@@ -523,6 +525,13 @@ serve(async (req) => {
       }
     }
     for (const row of rows) {
+      const cpf = (row as any)?.payload?.associado_cpf;
+      if (typeof cpf === "string" && cpf.replace(/\D/g, "").length === 11) {
+        associadoCpf = cpf.replace(/\D/g, "");
+        break;
+      }
+    }
+    for (const row of rows) {
       const c = (row as any)?.payload?.empresa_cnpj;
       if (typeof c === "string" && c.replace(/\D/g, "").length === 14) {
         empresaCnpj = c.replace(/\D/g, "");
@@ -535,7 +544,8 @@ serve(async (req) => {
       Date.now() - new Date(lastRow.created_at).getTime() < 30 * 60 * 1000;
     if (
       recent &&
-      (pending === "EMPRESA" || pending === "CONTABILIDADE" || pending === "EMPRESA_IDENT")
+      (pending === "EMPRESA" || pending === "CONTABILIDADE" || pending === "EMPRESA_IDENT" ||
+        pending === "ASSOCIADO_CPF")
     ) {
       awaitCnpj = pending;
     }
@@ -610,7 +620,7 @@ serve(async (req) => {
   else if (intent === "MENU") profile = null;
 
   // Quando o bot pergunta o CNPJ, o próximo evento registrado guarda esse estado.
-  let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | null = null;
+  let nextAwaitCnpj: "EMPRESA" | "CONTABILIDADE" | "EMPRESA_IDENT" | "ASSOCIADO_CPF" | null = null;
 
   // ===== CAMADA DE ATENDIMENTO HUMANO: CHATWOOT =====
   // O Chatwoot só espelha a conversa (o envio real continua pela Meta oficial,
@@ -715,6 +725,7 @@ serve(async (req) => {
         profile,
         await_cnpj: nextAwaitCnpj,
         empresa_cnpj: empresaCnpj,
+        associado_cpf: associadoCpf,
 
         meta_message_id: metaMessageId,
         ...logExtra,
@@ -1411,6 +1422,38 @@ serve(async (req) => {
     );
   };
 
+  // Identificação do associado por CPF quando o telefone não está cadastrado.
+  // Nenhum dado pessoal é devolvido antes da identificação (política Meta/LGPD).
+  const askCpf = async (reason: string) => {
+    nextAwaitCnpj = "ASSOCIADO_CPF";
+    profile = "ASSOCIADO";
+    return await answer(
+      [
+        "Para continuar, me informe o seu CPF (somente números).",
+        "",
+        "Exemplo: 12345678900",
+      ].join("\n"),
+      "ANSWERED",
+      reason,
+      null,
+    );
+  };
+
+  const findAssociadoByCpf = async (cpfDigits: string) => {
+    const d = cpfDigits.replace(/\D/g, "");
+    if (d.length !== 11) return null;
+    const formatted = `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+    const { data } = await supabase
+      .from("patients")
+      .select("id,name,cpf,phone,is_active,union_member_status,employer_name,employer_cnpj")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .or(`cpf.eq.${d},cpf.eq.${formatted}`)
+      .limit(2);
+    const list = data ?? [];
+    if (list.length !== 1) return null;
+    return list[0] as any;
+  };
+
   // Busca a empresa diretamente no banco (o filtro em memória falhava quando o
   // sindicato tem mais empresas do que o limite de linhas retornadas).
   const findEmpresaByCnpj = async (
@@ -1650,6 +1693,38 @@ serve(async (req) => {
   if (intent === "CTB_ATUALIZAR") return await askCnpj("CONTABILIDADE");
 
   // Resposta com o CNPJ solicitado no passo anterior
+  if (awaitCnpj === "ASSOCIADO_CPF") {
+    const cpfDigits = text.replace(/\D/g, "");
+    if (cpfDigits.length === 11) {
+      const found = await findAssociadoByCpf(cpfDigits);
+      if (!found) {
+        nextAwaitCnpj = "ASSOCIADO_CPF";
+        profile = "ASSOCIADO";
+        return await answer(
+          "Não localizei cadastro de associado com este CPF. Confira os 11 números ou responda \"atendente\".",
+          "ANSWERED",
+          "CPF_NOT_FOUND",
+          null,
+        );
+      }
+      associadoCpf = cpfDigits;
+      profile = "ASSOCIADO";
+      intent = "MENU_ASSOCIADO";
+      const primeiro = String(found.name ?? "").split(" ")[0];
+      return await answerMenu("ASSOCIADO", `Olá, ${primeiro}! Escolha uma opção:`, found.id);
+    }
+    if (cpfDigits.length > 0 && cpfDigits.length < 11 && !selectedId) {
+      nextAwaitCnpj = "ASSOCIADO_CPF";
+      profile = "ASSOCIADO";
+      return await answer(
+        "CPF inválido. Envie os 11 números do CPF, sem pontos ou traço.",
+        "ANSWERED",
+        "INVALID_CPF",
+        null,
+      );
+    }
+  }
+
   if (awaitCnpj) {
     const digits = text.replace(/\D/g, "");
     if (digits.length === 14) {
@@ -2121,20 +2196,21 @@ serve(async (req) => {
 
   // ===================== PERFIL: ASSOCIADO =====================
   // Identificação escopada ao tenant do sindicato
-  const { data: candidates } = await supabase
-    .from("patients")
-    .select("id,name,cpf,phone,is_active,union_member_status,employer_name,employer_cnpj")
-    .eq("clinic_id", SINDICATO_CLINIC_ID)
-    .in("phone", phoneVariants(e164))
-    .limit(5);
+  // Identificação: 1) CPF já informado nesta conversa; 2) telefone cadastrado;
+  // 3) pedimos o CPF (não é todo contato que tem o telefone no cadastro).
+  const byCpf = associadoCpf ? await findAssociadoByCpf(associadoCpf) : null;
+
+  const { data: candidates } = byCpf
+    ? { data: [byCpf] }
+    : await supabase
+      .from("patients")
+      .select("id,name,cpf,phone,is_active,union_member_status,employer_name,employer_cnpj")
+      .eq("clinic_id", SINDICATO_CLINIC_ID)
+      .in("phone", phoneVariants(e164))
+      .limit(5);
 
   if (!candidates || candidates.length === 0) {
-    return await answer(
-      "Não localizei um cadastro com este número. Vou encaminhar para um atendente confirmar seus dados.",
-      "HANDOFF",
-      "CONTACT_NOT_FOUND",
-      null,
-    );
+    return await askCpf("CONTACT_NOT_FOUND");
   }
   // Desambiguação: ignora cadastros de teste/inativos quando há um sócio ativo
   const ativos = candidates.filter(
@@ -2144,12 +2220,7 @@ serve(async (req) => {
   const effective = pool.length > 0 ? pool : candidates;
 
   if (effective.length > 1) {
-    return await answer(
-      "Encontrei mais de um cadastro com este número. Por segurança, vou encaminhar para um atendente.",
-      "HANDOFF",
-      "AMBIGUOUS_PHONE_MATCH",
-      null,
-    );
+    return await askCpf("AMBIGUOUS_PHONE_MATCH");
   }
 
   const patient = effective[0];
