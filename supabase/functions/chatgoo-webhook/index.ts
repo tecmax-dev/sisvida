@@ -33,8 +33,16 @@ import { normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
-// Ano em curso: todas as listagens de contribuições ficam restritas a ele.
-const ANO_CORRENTE = new Date().getFullYear();
+// Ano/mês corrente no horário local do sindicato. As listagens financeiras
+// exibem somente competências encerradas: do ano atual até o mês anterior.
+const agoraSaoPaulo = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Sao_Paulo",
+  year: "numeric",
+  month: "numeric",
+}).formatToParts(new Date());
+const ANO_CORRENTE = Number(agoraSaoPaulo.find((p) => p.type === "year")?.value ?? new Date().getUTCFullYear());
+const MES_CORRENTE = Number(agoraSaoPaulo.find((p) => p.type === "month")?.value ?? new Date().getUTCMonth() + 1);
+const MES_LIMITE_COMPETENCIA = MES_CORRENTE - 1;
 
 type Intent =
   | "CADASTRO"
@@ -483,6 +491,9 @@ serve(async (req) => {
   const selectedContributionToken = selectedId.startsWith("OPEN_CONTRIB:")
     ? selectedId.slice("OPEN_CONTRIB:".length).trim()
     : null;
+  const selectedInvoiceId = selectedId.startsWith("OPEN_INVOICE:")
+    ? selectedId
+    : null;
 
   // Perfil escolhido anteriormente (válido por 6 horas), para interpretar números
   // no submenu correto sem perguntar de novo a cada mensagem.
@@ -821,8 +832,93 @@ serve(async (req) => {
     });
   };
 
+  const answerSecondCopyButton = async (optionId: string) => {
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recent } = await supabase
+      .from("chatgoo_events")
+      .select("payload")
+      .eq("event", "message")
+      .eq("phone", e164)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    let selected: { id: string; title: string; description?: string; url: string; company?: string } | null = null;
+    for (const row of recent ?? []) {
+      const options = (row as any)?.payload?.invoice_options;
+      if (!Array.isArray(options)) continue;
+      const hit = options.find((option: { id?: string }) => option?.id === optionId);
+      if (hit) {
+        selected = hit;
+        break;
+      }
+    }
+
+    if (!selected) {
+      return await answer(
+        "Essa opção expirou. Escolha novamente a 2ª via de boleto.",
+        "ANSWERED",
+        "INVOICE_OPTION_EXPIRED",
+        null,
+      );
+    }
+
+    let safeUrl: URL;
+    try {
+      safeUrl = new URL(selected.url);
+    } catch {
+      return await answer("Não consegui abrir esse boleto. Digite ATENDENTE.", "HANDOFF", "INVALID_INVOICE_URL", null);
+    }
+    const allowedHost = safeUrl.protocol === "https:" &&
+      (safeUrl.hostname === "lytex.com.br" || safeUrl.hostname.endsWith(".lytex.com.br"));
+    if (!allowedHost) {
+      return await answer("Não consegui abrir esse boleto. Digite ATENDENTE.", "HANDOFF", "INVALID_INVOICE_URL", null);
+    }
+
+    const bodyText = [
+      selected.company || null,
+      selected.title,
+      selected.description || null,
+      "",
+      "Toque no botão abaixo para abrir a 2ª via.",
+    ].filter(Boolean).join("\n");
+    const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
+      body: bodyText,
+      buttonLabel: "Abrir boleto",
+      url: safeUrl.toString(),
+      footer: "Acesso direto e seguro",
+    }, { inboundNow: true });
+
+    const delivered = result.sent || result.dry_run;
+    const reply = delivered
+      ? bodyText
+      : "Não consegui abrir esse boleto agora. Tente novamente ou digite ATENDENTE.";
+    if (delivered) await mirrorBot(reply);
+    await log(
+      delivered ? "ANSWERED" : "SEND_FAILED",
+      delivered ? "SECOND_COPY_CTA_SENT" : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
+      null,
+      reply,
+      result.message_id ?? null,
+    );
+    return new Response(JSON.stringify({
+      status: delivered ? "ANSWERED" : "SEND_FAILED",
+      intent: "SEGUNDA_VIA",
+      dry_run: result.dry_run,
+      delivered: result.sent,
+      meta_message_id: result.message_id ?? null,
+      reply,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  };
+
   if (selectedContributionToken) {
     return await answerContributionButton(selectedContributionToken);
+  }
+  if (selectedInvoiceId) {
+    return await answerSecondCopyButton(selectedInvoiceId);
   }
 
   // Quando a escolha da lista chega como TEXTO (ZapResponde/Chatwoot não
@@ -853,6 +949,17 @@ serve(async (req) => {
         });
         if (hit?.id?.startsWith?.("OPEN_CONTRIB:")) {
           return await answerContributionButton(String(hit.id).slice("OPEN_CONTRIB:".length));
+        }
+
+        const invoiceOptions = (row as any)?.payload?.invoice_options;
+        if (!Array.isArray(invoiceOptions)) continue;
+        const invoiceHit = invoiceOptions.find((o: { id: string; title: string; description?: string }) => {
+          const t = norm(String(o.title ?? ""));
+          const d = norm(String(o.description ?? ""));
+          return t && (alvo === t || alvo.startsWith(t) || alvo.includes(t) || (d && alvo.includes(d)));
+        });
+        if (invoiceHit?.id?.startsWith?.("OPEN_INVOICE:")) {
+          return await answerSecondCopyButton(String(invoiceHit.id));
         }
       }
     }
@@ -1614,15 +1721,24 @@ serve(async (req) => {
     // Conteúdo transacional, enviado apenas dentro da janela de 24h da Meta
     // (o guard fail-closed do envio bloqueia fora da janela).
     if (intent === "EMP_2VIA") {
+      if (MES_LIMITE_COMPETENCIA < 1) {
+        return await answer(
+          `${nomeEmpresa}, ainda não há competência encerrada em ${ANO_CORRENTE} para segunda via.`,
+          "ANSWERED",
+          "NO_CLOSED_COMPETENCE",
+          null,
+        );
+      }
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("competence_month,competence_year,due_date,value,status,lytex_invoice_url,lytex_boleto_digitable_line")
+        .select("id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
         .eq("employer_id", empresa.id)
         .eq("competence_year", ANO_CORRENTE)
+        .lte("competence_month", MES_LIMITE_COMPETENCIA)
         .in("status", ["pending", "overdue"])
         .not("lytex_invoice_url", "is", null)
-        .order("due_date", { ascending: true })
-        .limit(3);
+        .order("competence_month", { ascending: false })
+        .limit(10);
 
       if (!docs || docs.length === 0) {
         return await answer(
@@ -1633,29 +1749,40 @@ serve(async (req) => {
         );
       }
 
-      const blocos = docs.map((c: any) => {
+      const invoiceOptions = docs.map((c: any) => {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
-        return [
-          `• Competência ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}`,
-          `  Boleto: ${c.lytex_invoice_url}`,
-          c.lytex_boleto_digitable_line ? `  Linha digitável: ${c.lytex_boleto_digitable_line}` : null,
-        ].filter(Boolean).join("\n");
+        return {
+          id: `OPEN_INVOICE:${c.id}`,
+          title: `${comp} • ${fmtMoney(c.value)}`,
+          description: `Vencimento ${fmtDate(c.due_date)}`,
+          url: String(c.lytex_invoice_url),
+        };
       });
 
-      return await answer(
-        [
-          `${nomeEmpresa}, segue a 2ª via dos boletos em aberto:`,
-          ...blocos,
-          "",
-          "Boletos vencidos podem ter juros recalculados no pagamento.",
-          "Precisa de outra competência? Responda \"atendente\".",
-        ].join("\n"),
-        "ANSWERED",
-        "SECOND_COPY_SENT",
+      const intro = `${nomeEmpresa}, escolha a competência do boleto:`;
+      const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
+        body: intro,
+        buttonLabel: "Escolher boleto",
+        footer: `Competências até ${String(MES_LIMITE_COMPETENCIA).padStart(2, "0")}/${ANO_CORRENTE}`,
+        sections: [{ title: "2ª via de boleto", rows: invoiceOptions }],
+      }, { inboundNow: true });
+      const delivered = result.sent || result.dry_run;
+      const reply = delivered ? intro : "Não consegui mostrar os boletos agora. Tente novamente ou digite ATENDENTE.";
+      logExtra = { invoice_options: invoiceOptions };
+      if (delivered) await mirrorBot(reply);
+      await log(
+        delivered ? "ANSWERED" : "SEND_FAILED",
+        delivered ? "SECOND_COPY_OPTIONS_SENT" : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
         null,
+        reply,
+        result.message_id ?? null,
       );
+      return new Response(JSON.stringify({ status: delivered ? "ANSWERED" : "SEND_FAILED", reply }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (intent === "EMP_BOLETOS") {
@@ -1788,16 +1915,25 @@ serve(async (req) => {
 
     // SEGUNDA VIA DE BOLETO (contabilidade)
     if (intent === "CTB_2VIA") {
+      if (MES_LIMITE_COMPETENCIA < 1) {
+        return await answer(
+          `${nomeEscritorio}, ainda não há competência encerrada em ${ANO_CORRENTE} para segunda via.`,
+          "ANSWERED",
+          "NO_CLOSED_COMPETENCE",
+          null,
+        );
+      }
       const nomes = new Map((empresasVinculadas ?? []).map((e: any) => [e.id, e.trade_name || e.name]));
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,lytex_boleto_digitable_line")
+        .select("id,employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url")
         .in("employer_id", employerIds)
         .eq("competence_year", ANO_CORRENTE)
+        .lte("competence_month", MES_LIMITE_COMPETENCIA)
         .in("status", ["pending", "overdue"])
         .not("lytex_invoice_url", "is", null)
-        .order("due_date", { ascending: true })
-        .limit(5);
+        .order("competence_month", { ascending: false })
+        .limit(10);
 
       if (!docs || docs.length === 0) {
         return await answer(
@@ -1808,28 +1944,41 @@ serve(async (req) => {
         );
       }
 
-      const blocos = docs.map((c: any) => {
+      const invoiceOptions = docs.map((c: any) => {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
-        return [
-          `• ${nomes.get(c.employer_id) ?? "Empresa"} — ${comp} — venc. ${fmtDate(c.due_date)} — ${fmtMoney(c.value)}`,
-          `  Boleto: ${c.lytex_invoice_url}`,
-          c.lytex_boleto_digitable_line ? `  Linha digitável: ${c.lytex_boleto_digitable_line}` : null,
-        ].filter(Boolean).join("\n");
+        return {
+          id: `OPEN_INVOICE:${c.id}`,
+          title: `${comp} • ${fmtMoney(c.value)}`,
+          description: `${nomes.get(c.employer_id) ?? "Empresa"} • Venc. ${fmtDate(c.due_date)}`,
+          company: String(nomes.get(c.employer_id) ?? "Empresa"),
+          url: String(c.lytex_invoice_url),
+        };
       });
 
-      return await answer(
-        [
-          `${nomeEscritorio}, segue a 2ª via dos boletos em aberto (até 5):`,
-          ...blocos,
-          "",
-          "Para outras competências ou empresas, use o portal da contabilidade ou responda \"atendente\".",
-        ].join("\n"),
-        "ANSWERED",
-        "SECOND_COPY_SENT",
+      const intro = `${nomeEscritorio}, escolha a empresa e a competência:`;
+      const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
+        body: intro,
+        buttonLabel: "Escolher boleto",
+        footer: `Competências até ${String(MES_LIMITE_COMPETENCIA).padStart(2, "0")}/${ANO_CORRENTE}`,
+        sections: [{ title: "2ª via de boleto", rows: invoiceOptions }],
+      }, { inboundNow: true });
+      const delivered = result.sent || result.dry_run;
+      const reply = delivered ? intro : "Não consegui mostrar os boletos agora. Tente novamente ou digite ATENDENTE.";
+      logExtra = { invoice_options: invoiceOptions };
+      if (delivered) await mirrorBot(reply);
+      await log(
+        delivered ? "ANSWERED" : "SEND_FAILED",
+        delivered ? "SECOND_COPY_OPTIONS_SENT" : result.error ?? `META_HTTP_${result.status ?? "NETWORK"}`,
         null,
+        reply,
+        result.message_id ?? null,
       );
+      return new Response(JSON.stringify({ status: delivered ? "ANSWERED" : "SEND_FAILED", reply }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // CTB_BOLETOS
