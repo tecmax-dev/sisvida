@@ -1797,18 +1797,42 @@ serve(async (req) => {
         );
       }
 
-      const invoiceOptions = docs.map((c: any, index: number) => {
+      const hoje2via = new Date().toISOString().slice(0, 10);
+      const ensureToken = async (c: any): Promise<string | null> => {
+        let token = (c.public_access_token as string | null) || null;
+        if (token) return token;
+        const bytes = new Uint8Array(24);
+        crypto.getRandomValues(bytes);
+        const candidato = btoa(String.fromCharCode(...bytes))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+        const { error: updErr } = await supabase
+          .from("employer_contributions")
+          .update({ public_access_token: candidato })
+          .eq("id", c.id);
+        if (updErr) {
+          console.error("token_persist_failed", c.id, updErr.message);
+          return null;
+        }
+        return candidato;
+      };
+      const invoiceOptions = [];
+      for (const [index, c] of (docs as any[]).entries()) {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
         const tipoNome = String(c.contribution_types?.name ?? "Contribuição").slice(0, 30);
-        return {
+        const overdue = c.status === "overdue" || String(c.due_date ?? "").slice(0, 10) < hoje2via;
+        invoiceOptions.push({
           id: `OPEN_INVOICE:${c.id}`,
           title: `${index + 1}. ${comp}`,
-          description: `${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`.slice(0, 72),
+          description: `${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}${overdue ? " • VENCIDO" : ""}`.slice(0, 72),
           url: String(c.lytex_invoice_url),
-        };
-      });
+          overdue,
+          updateToken: overdue ? await ensureToken(c) : null,
+        });
+      }
 
       const intro = `${nomeEmpresa}, escolha a competência do boleto:`;
       const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
