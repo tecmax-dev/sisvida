@@ -941,14 +941,15 @@ serve(async (req) => {
       for (const row of recent ?? []) {
         // deno-lint-ignore no-explicit-any
         const opts = (row as any)?.payload?.contrib_options;
-        if (!Array.isArray(opts)) continue;
-        const hit = opts.find((o: { id: string; title: string; description?: string }) => {
-          const t = norm(String(o.title ?? ""));
-          const d = norm(String(o.description ?? ""));
-          return t && (alvo === t || alvo.startsWith(t) || alvo.includes(t) || (d && alvo.includes(d)));
-        });
-        if (hit?.id?.startsWith?.("OPEN_CONTRIB:")) {
-          return await answerContributionButton(String(hit.id).slice("OPEN_CONTRIB:".length));
+        if (Array.isArray(opts)) {
+          const hit = opts.find((o: { id: string; title: string; description?: string }) => {
+            const t = norm(String(o.title ?? ""));
+            const d = norm(String(o.description ?? ""));
+            return t && (alvo === t || alvo.startsWith(t) || alvo.includes(t) || (d && alvo.includes(d)));
+          });
+          if (hit?.id?.startsWith?.("OPEN_CONTRIB:")) {
+            return await answerContributionButton(String(hit.id).slice("OPEN_CONTRIB:".length));
+          }
         }
 
         const invoiceOptions = (row as any)?.payload?.invoice_options;
@@ -1749,14 +1750,14 @@ serve(async (req) => {
         );
       }
 
-      const invoiceOptions = docs.map((c: any) => {
+      const invoiceOptions = docs.map((c: any, index: number) => {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
         return {
           id: `OPEN_INVOICE:${c.id}`,
-          title: `${comp} • ${fmtMoney(c.value)}`,
-          description: `Vencimento ${fmtDate(c.due_date)}`,
+          title: `${index + 1}. ${comp}`,
+          description: `${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`,
           url: String(c.lytex_invoice_url),
         };
       });
@@ -1944,13 +1945,13 @@ serve(async (req) => {
         );
       }
 
-      const invoiceOptions = docs.map((c: any) => {
+      const invoiceOptions = docs.map((c: any, index: number) => {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
         return {
           id: `OPEN_INVOICE:${c.id}`,
-          title: `${comp} • ${fmtMoney(c.value)}`,
+          title: `${index + 1}. ${comp}`,
           description: `${nomes.get(c.employer_id) ?? "Empresa"} • Venc. ${fmtDate(c.due_date)}`,
           company: String(nomes.get(c.employer_id) ?? "Empresa"),
           url: String(c.lytex_invoice_url),
