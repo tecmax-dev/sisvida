@@ -863,6 +863,53 @@ serve(async (req) => {
       );
     }
 
+    // Boleto vencido: em vez de abrir o link antigo, oferece definir nova
+    // data de vencimento pela página segura (gera boleto atualizado).
+    const updateToken = String((selected as any).updateToken ?? "");
+    if ((selected as any).overdue && updateToken) {
+      const updateUrl = `${APP_BASE_URL}/contribuicao/${encodeURIComponent(updateToken)}`;
+      const bodyText = [
+        selected.company || null,
+        selected.title,
+        selected.description || null,
+        "",
+        "Este boleto está vencido. Toque no botão abaixo para definir uma nova data de vencimento e gerar o boleto atualizado.",
+      ].filter(Boolean).join("\n");
+      const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
+        body: bodyText,
+        buttonLabel: "Alterar vencimento",
+        url: updateUrl,
+        footer: "Link pessoal e seguro",
+      }, { inboundNow: true });
+
+      let finalResult = result;
+      let mirroredReply = bodyText;
+      if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
+        mirroredReply = `${bodyText}\n\nAcessar: ${updateUrl}`;
+        finalResult = await chatgooSendTextViaMeta(supabase, e164 ?? "", mirroredReply, { inboundNow: true });
+      }
+      const delivered = finalResult.sent || finalResult.dry_run;
+      if (delivered) await mirrorBot(mirroredReply);
+      await log(
+        delivered ? "ANSWERED" : "SEND_FAILED",
+        delivered ? "OVERDUE_REISSUE_CTA_SENT" : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
+        null,
+        mirroredReply,
+        finalResult.message_id ?? null,
+      );
+      return new Response(JSON.stringify({
+        status: delivered ? "ANSWERED" : "SEND_FAILED",
+        intent: "SEGUNDA_VIA",
+        dry_run: finalResult.dry_run,
+        delivered: finalResult.sent,
+        meta_message_id: finalResult.message_id ?? null,
+        reply: mirroredReply,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let safeUrl: URL;
     try {
       safeUrl = new URL(selected.url);
@@ -1732,7 +1779,7 @@ serve(async (req) => {
       }
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,contribution_types(name)")
+        .select("id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,public_access_token,contribution_types(name)")
         .eq("employer_id", empresa.id)
         .eq("competence_year", ANO_CORRENTE)
         .lte("competence_month", MES_LIMITE_COMPETENCIA)
@@ -1750,18 +1797,42 @@ serve(async (req) => {
         );
       }
 
-      const invoiceOptions = docs.map((c: any, index: number) => {
+      const hoje2via = new Date().toISOString().slice(0, 10);
+      const ensureToken = async (c: any): Promise<string | null> => {
+        let token = (c.public_access_token as string | null) || null;
+        if (token) return token;
+        const bytes = new Uint8Array(24);
+        crypto.getRandomValues(bytes);
+        const candidato = btoa(String.fromCharCode(...bytes))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+        const { error: updErr } = await supabase
+          .from("employer_contributions")
+          .update({ public_access_token: candidato })
+          .eq("id", c.id);
+        if (updErr) {
+          console.error("token_persist_failed", c.id, updErr.message);
+          return null;
+        }
+        return candidato;
+      };
+      const invoiceOptions = [];
+      for (const [index, c] of (docs as any[]).entries()) {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
         const tipoNome = String(c.contribution_types?.name ?? "Contribuição").slice(0, 30);
-        return {
+        const overdue = c.status === "overdue" || String(c.due_date ?? "").slice(0, 10) < hoje2via;
+        invoiceOptions.push({
           id: `OPEN_INVOICE:${c.id}`,
           title: `${index + 1}. ${comp}`,
-          description: `${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`.slice(0, 72),
+          description: `${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}${overdue ? " • VENCIDO" : ""}`.slice(0, 72),
           url: String(c.lytex_invoice_url),
-        };
-      });
+          overdue,
+          updateToken: overdue ? await ensureToken(c) : null,
+        });
+      }
 
       const intro = `${nomeEmpresa}, escolha a competência do boleto:`;
       const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
@@ -1928,7 +1999,7 @@ serve(async (req) => {
       const nomes = new Map((empresasVinculadas ?? []).map((e: any) => [e.id, e.trade_name || e.name]));
       const { data: docs } = await supabase
         .from("employer_contributions")
-        .select("id,employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,contribution_types(name)")
+        .select("id,employer_id,competence_month,competence_year,due_date,value,status,lytex_invoice_url,contribution_type_id,public_access_token,contribution_types(name)")
         .in("employer_id", employerIds)
         .eq("competence_year", ANO_CORRENTE)
         .lte("competence_month", MES_LIMITE_COMPETENCIA)
@@ -1946,20 +2017,43 @@ serve(async (req) => {
         );
       }
 
-      const invoiceOptions = docs.map((c: any, index: number) => {
+      const hoje2viaCtb = new Date().toISOString().slice(0, 10);
+      const invoiceOptions = [];
+      for (const [index, c] of (docs as any[]).entries()) {
         const comp = c.competence_month && c.competence_year
           ? `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`
           : "-";
         const empresaNome = String(nomes.get(c.employer_id) ?? "Empresa").slice(0, 24);
         const tipoNome = String(c.contribution_types?.name ?? "Contribuição").slice(0, 30);
-        return {
+        const overdue = c.status === "overdue" || String(c.due_date ?? "").slice(0, 10) < hoje2viaCtb;
+        let updateToken: string | null = null;
+        if (overdue) {
+          updateToken = (c.public_access_token as string | null) || null;
+          if (!updateToken) {
+            const bytes = new Uint8Array(24);
+            crypto.getRandomValues(bytes);
+            const candidato = btoa(String.fromCharCode(...bytes))
+              .replace(/\+/g, "-")
+              .replace(/\//g, "_")
+              .replace(/=+$/, "");
+            const { error: updErr } = await supabase
+              .from("employer_contributions")
+              .update({ public_access_token: candidato })
+              .eq("id", c.id);
+            if (updErr) console.error("token_persist_failed", c.id, updErr.message);
+            else updateToken = candidato;
+          }
+        }
+        invoiceOptions.push({
           id: `OPEN_INVOICE:${c.id}`,
           title: `${index + 1}. ${comp}`,
-          description: `${empresaNome} • ${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}`.slice(0, 72),
+          description: `${empresaNome} • ${tipoNome} • ${fmtMoney(c.value)} • Venc. ${fmtDate(c.due_date)}${overdue ? " • VENCIDO" : ""}`.slice(0, 72),
           company: String(nomes.get(c.employer_id) ?? "Empresa"),
           url: String(c.lytex_invoice_url),
-        };
-      });
+          overdue,
+          updateToken,
+        });
+      }
 
       const intro = `${nomeEscritorio}, escolha a empresa e a competência:`;
       const result = await chatgooSendListViaMeta(supabase, e164 ?? "", {
