@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2, Save, Globe, Wifi, CheckCircle, XCircle, Scale, MessageSquare, Copy, Rocket, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UnionPlanProfessionalsConfig } from "@/components/admin/UnionPlanProfessionalsConfig";
+import { FocusIntegrationPanel } from "@/components/settings/FocusIntegrationPanel";
 
 interface GlobalConfig {
   id?: string;
@@ -190,6 +191,7 @@ export default function GlobalConfigPage() {
         </TabsList>
 
         <TabsContent value="integrations">
+          <FocusIntegrationPanel />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

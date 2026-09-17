@@ -1,0 +1,3 @@
+-- Diagnóstico Focus usa secrets server-side e não altera credenciais.
+-- Configure FOCUS_NFE_BASE_URL nos secrets da Edge Function.
+-- A função valida o tenant e atualiza apenas o status da credencial Focus existente.
