@@ -214,7 +214,8 @@ export default function UnionExpensesPage() {
         normalize(t.supplier?.name).includes(searchTerm) ||
         normalize(t.supplier?.trade_name).includes(searchTerm) ||
         (searchDigits.length >= 3 &&
-          String(t.supplier?.cnpj ?? "").replace(/\D/g, "").includes(searchDigits)) ||
+          (String(t.supplier?.cnpj ?? "").replace(/\D/g, "").includes(searchDigits) ||
+            String(t.supplier?.cpf ?? "").replace(/\D/g, "").includes(searchDigits))) ||
         normalize(t.category?.name).includes(searchTerm) ||
         normalize(t.check_number).includes(searchTerm) ||
         normalize(t.document_number).includes(searchTerm);
