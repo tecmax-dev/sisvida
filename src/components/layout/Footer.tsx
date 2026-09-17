@@ -75,7 +75,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://wa.me/5571982786864"
+                  href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20entrar%20em%20contato%20com%20a%20Prosinge."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"

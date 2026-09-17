@@ -30,7 +30,7 @@ export function CTASection() {
                 asChild
                 className="h-14 rounded-xl bg-prosinge-gold px-8 font-bold text-prosinge-emerald shadow-xl hover:bg-prosinge-gold/90"
               >
-                <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20solicitar%20um%20or%C3%A7amento%20do%20Prosinge." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   Solicitar Orçamento
                   <ArrowRight className="h-5 w-5" />
                 </a>
