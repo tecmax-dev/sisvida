@@ -450,7 +450,16 @@ export function PrintDialog({
             .min-h-\\[200px\\] { min-height: 200px; }
             .w-64 { width: 16rem; }
             .h-16 { height: 4rem; }
+            .h-12 { height: 3rem; }
+            .w-auto { width: auto; }
             .object-contain { object-fit: contain; }
+            img {
+              max-height: 4rem;
+              max-width: 240px;
+              width: auto;
+              height: auto;
+              object-fit: contain;
+            }
             strong { font-weight: bold; }
             h3 { font-size: 1.125rem; font-weight: 600; }
           </style>
