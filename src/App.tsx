@@ -18,6 +18,16 @@ import { MobileAppLayout } from "@/components/mobile/MobileAppLayout";
 import { DomainRedirect } from "@/components/routing/DomainRedirect";
 import { PWAUpdateListener } from "@/components/pwa/PWAUpdateListener";
 
+/** /app/instalar redireciona para a página de filiação do sindicato */
+function AppInstalarRedirect() {
+  useEffect(() => {
+    window.location.replace(
+      "https://prosinge.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28"
+    );
+  }, []);
+  return null;
+}
+
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -743,8 +753,8 @@ function App() {
                   <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
                   <Route path="primeiro-acesso" element={<MobileFirstAccessPage />} />
                   <Route path="home-publico" element={<MobilePublicHomePage />} />
-                  {/* Página de instalação do PWA */}
-                  <Route path="instalar" element={<InstallPage />} />
+                  {/* /app/instalar agora redireciona para a filiação do sindicato */}
+                  <Route path="instalar" element={<AppInstalarRedirect />} />
                   <Route path="baixar-app" element={<MobileInstallPage />} />
                   <Route path="faq" element={<MobileFAQPage />} />
                   <Route path="sobre" element={<MobileAboutPage />} />
