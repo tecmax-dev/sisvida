@@ -18,6 +18,16 @@ import { MobileAppLayout } from "@/components/mobile/MobileAppLayout";
 import { DomainRedirect } from "@/components/routing/DomainRedirect";
 import { PWAUpdateListener } from "@/components/pwa/PWAUpdateListener";
 
+/** /app/instalar redireciona para a página de filiação do sindicato */
+function AppInstalarRedirect() {
+  useEffect(() => {
+    window.location.replace(
+      "https://prosinge.com.br/sindical/filiacao/74f74e75-6b09-43d5-bf75-41225e085e28"
+    );
+  }, []);
+  return null;
+}
+
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
