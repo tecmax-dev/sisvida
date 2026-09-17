@@ -738,11 +738,23 @@ export default function UnionExpensesPage() {
                      </div>
 
                      {/* Fornecedor */}
-                     <div className="col-span-2 flex items-center gap-1.5 min-w-0">
-                       <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                       <span className="text-muted-foreground truncate text-xs" title={transaction.supplier?.name}>
-                         {transaction.supplier?.name || "—"}
-                       </span>
+                     <div className="col-span-2 flex items-start gap-1.5 min-w-0">
+                       <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+                       <div className="min-w-0">
+                         <span className="text-muted-foreground truncate text-xs block" title={transaction.supplier?.name}>
+                           {transaction.supplier?.name || "—"}
+                         </span>
+                         {(() => {
+                           const doc = String(transaction.supplier?.cnpj || transaction.supplier?.cpf || "").replace(/\D/g, "");
+                           if (doc.length === 14) {
+                             return <span className="text-[10px] text-muted-foreground/80 font-mono block truncate">{doc.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}</span>;
+                           }
+                           if (doc.length === 11) {
+                             return <span className="text-[10px] text-muted-foreground/80 font-mono block truncate">{doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</span>;
+                           }
+                           return null;
+                         })()}
+                       </div>
                      </div>
 
                      {/* Nº Documento */}
