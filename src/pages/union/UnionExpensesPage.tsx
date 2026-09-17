@@ -114,7 +114,7 @@ export default function UnionExpensesPage() {
           .select(`
             *,
             category:union_financial_categories(id, name, color),
-            supplier:union_suppliers(id, name),
+            supplier:union_suppliers(id, name, trade_name, cnpj),
             cash_register:union_cash_registers(id, name)
           `)
           .eq("clinic_id", clinicId!)
@@ -201,6 +201,7 @@ export default function UnionExpensesPage() {
   const filteredTransactions = useMemo(() => {
     const normalize = (value: unknown) => String(value ?? "").toLowerCase();
     const searchTerm = normalize(search);
+    const searchDigits = String(search ?? "").replace(/\D/g, "");
 
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -211,6 +212,9 @@ export default function UnionExpensesPage() {
       const matchesSearch =
         normalize(t.description).includes(searchTerm) ||
         normalize(t.supplier?.name).includes(searchTerm) ||
+        normalize(t.supplier?.trade_name).includes(searchTerm) ||
+        (searchDigits.length >= 3 &&
+          String(t.supplier?.cnpj ?? "").replace(/\D/g, "").includes(searchDigits)) ||
         normalize(t.category?.name).includes(searchTerm) ||
         normalize(t.check_number).includes(searchTerm) ||
         normalize(t.document_number).includes(searchTerm);
