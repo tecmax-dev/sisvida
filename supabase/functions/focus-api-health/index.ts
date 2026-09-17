@@ -1,45 +1,69 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const CASA_DAS_ANTENAS_TENANT_ID = "9d98a593-4a03-428a-b7a3-f7c7c653158a";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const response = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+async function requireStaff(req: Request, supabase: ReturnType<typeof createClient>) {
+  const authorization = req.headers.get("Authorization");
+  if (!authorization?.startsWith("Bearer ")) throw new Error("Não autenticado");
+  const { data, error } = await supabase.auth.getUser(authorization.slice(7));
+  if (error || !data.user) throw new Error("Sessão inválida");
+  const role = data.user.app_metadata?.role ?? data.user.user_metadata?.role;
+  if (!(["admin", "staff", "employee"] as string[]).includes(role)) throw new Error("Acesso restrito à equipe");
+  return data.user;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const started = performance.now();
   const correlationId = crypto.randomUUID();
+  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
   try {
-    const body = await req.json().catch(() => ({}));
-    const tenantId = typeof body.tenant_id === "string" ? body.tenant_id : "";
-    if (!tenantId) throw new Error("tenant_id obrigatório");
+    await requireStaff(req, supabase);
+    if (req.method !== "POST") return response({ ok: false, status: "invalid_method", correlation_id: correlationId }, 405);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
-    const { data: tenant } = await supabase.from("tenants").select("id,trade_name").eq("id", tenantId).maybeSingle();
-    if (!tenant) throw new Error("Tenant não encontrado");
+    const { data: tenant, error: tenantError } = await supabase.from("tenants").select("id,trade_name").eq("id", CASA_DAS_ANTENAS_TENANT_ID).maybeSingle();
+    if (tenantError) throw new Error("Não foi possível consultar o tenant");
+    if (!tenant) return response({ ok: false, status: "tenant_not_found", correlation_id: correlationId }, 404);
 
-    const { data: fiscal, error } = await supabase
+    const { data: fiscal, error: fiscalError } = await supabase
       .from("pdv_fiscal_company_settings")
       .select("focus_nfe_environment, active_provider, focus_nfe_token")
-      .eq("tenant_id", tenantId)
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
       .maybeSingle();
-    if (error) throw error;
+    if (fiscalError) throw new Error("Não foi possível consultar a configuração fiscal");
 
-    const token = fiscal?.focus_nfe_token;
+    const token = fiscal?.active_provider === "focus_nfe" ? fiscal.focus_nfe_token : null;
     const baseUrl = Deno.env.get("FOCUS_NFE_BASE_URL")?.replace(/\/$/, "");
-    if (!token || !baseUrl) {
-      return new Response(JSON.stringify({ ok: false, status: "misconfigured", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId, reason: !baseUrl ? "URL base não configurada no servidor" : "Credencial não configurada" }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+    if (!token || !baseUrl) return response({ ok: false, status: "misconfigured", reason: !baseUrl ? "URL base não configurada no servidor" : "Credencial Focus não configurada", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
+
+    let httpStatus: number;
+    let statusText: string;
+    try {
+      const result = await fetch(`${baseUrl}/`, { headers: { Authorization: `Basic ${btoa(`${token}:`)}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+      httpStatus = result.status;
+      statusText = result.statusText;
+    } catch (error) {
+      const timeout = error instanceof DOMException && error.name === "TimeoutError";
+      return response({ ok: false, status: timeout ? "timeout" : "network_error", reason: timeout ? "A Focus API excedeu o tempo limite" : "Não foi possível alcançar a Focus API", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
     }
 
-    const response = await fetch(`${baseUrl}/`, { headers: { Authorization: `Basic ${btoa(`${token}:`)}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) });
-    const result = { ok: response.ok, status: response.status, status_text: response.statusText, latency_ms: Math.round(performance.now() - started), correlation_id: correlationId, environment: fiscal?.focus_nfe_environment ?? "unknown" };
-    await supabase.from("integration_credentials").update({ status: response.ok ? "connected" : "error", last_connection_test: new Date().toISOString(), last_error: response.ok ? null : `HTTP ${response.status}`, needs_reconfiguration: !response.ok }).eq("tenant_id", tenantId).eq("provider", "focus_nfe");
-    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+    const ok = httpStatus >= 200 && httpStatus < 300;
+    const result = { ok, status: httpStatus, status_text: statusText, status_type: ok ? "success" : "http_error", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId, environment: fiscal.focus_nfe_environment ?? "unknown" };
+    const update = await supabase.from("integration_credentials").update({ status: ok ? "connected" : "error", last_connection_test: new Date().toISOString(), last_error: ok ? null : `HTTP ${httpStatus}`, needs_reconfiguration: !ok }).eq("tenant_id", tenant.id).eq("provider", "focus_nfe");
+    if (update.error) console.error("Falha ao atualizar status da credencial", correlationId, update.error.message);
+    return response(result);
   } catch (error) {
-    return new Response(JSON.stringify({ ok: false, status: "error", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId, reason: error instanceof Error ? error.message : "Erro desconhecido" }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    const status = message.includes("autenticado") || message.includes("Sessão") ? 401 : message.includes("restrito") ? 403 : 500;
+    return response({ ok: false, status: status === 401 ? "unauthorized" : status === 403 ? "forbidden" : "server_error", reason: message, latency_ms: Math.round(performance.now() - started), correlation_id: correlationId }, status);
   }
 });

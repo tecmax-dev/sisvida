@@ -6,8 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Activity, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const CASA_DAS_ANTENAS_TENANT_ID = "9d98a593-4a03-428a-b7a3-f7c7c653158a";
-
 export function FocusIntegrationPanel() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -17,12 +15,11 @@ export function FocusIntegrationPanel() {
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("focus-api-health", {
-        body: { tenant_id: CASA_DAS_ANTENAS_TENANT_ID },
       });
       if (error) throw error;
       setResult(data);
       if (data?.ok) toast.success("Focus API respondeu com sucesso.");
-      else toast.error(data?.reason || `Focus API respondeu HTTP ${data?.status ?? "desconhecido"}.`);
+      else toast.error(data?.reason || (data?.status === "timeout" ? "A Focus API excedeu o tempo limite." : data?.status === "misconfigured" ? "A integração Focus não está configurada." : `Focus API respondeu HTTP ${data?.status ?? "desconhecido"}.`));
     } catch (error: any) {
       setResult({ ok: false, reason: error.message || "Falha no teste" });
       toast.error("Não foi possível testar a Focus API.");
@@ -42,7 +39,7 @@ export function FocusIntegrationPanel() {
           <div className="flex items-start gap-3 rounded-lg border p-4">
             {result.ok ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <XCircle className="h-5 w-5 text-destructive" />}
             <div className="space-y-1 text-sm">
-              <div className="flex items-center gap-2"><Badge variant={result.ok ? "default" : "destructive"}>{result.ok ? "Conectada" : "Falha"}</Badge>{result.status && <span>HTTP {result.status}</span>}</div>
+              <div className="flex items-center gap-2"><Badge variant={result.ok ? "default" : "destructive"}>{result.ok ? "Conectada" : result.status === "timeout" ? "Tempo esgotado" : result.status === "misconfigured" ? "Não configurada" : "Falha"}</Badge>{typeof result.status === "number" && <span>HTTP {result.status}</span>}</div>
               <p className="text-muted-foreground">Latência: {result.latency_ms ?? "—"} ms · ID: {result.correlation_id ?? "—"}</p>
               {result.reason && <p className="text-destructive">{result.reason}</p>}
             </div>
