@@ -743,8 +743,8 @@ function App() {
                   <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
                   <Route path="primeiro-acesso" element={<MobileFirstAccessPage />} />
                   <Route path="home-publico" element={<MobilePublicHomePage />} />
-                  {/* Página de instalação do PWA */}
-                  <Route path="instalar" element={<InstallPage />} />
+                  {/* /app/instalar agora redireciona para a filiação do sindicato */}
+                  <Route path="instalar" element={<AppInstalarRedirect />} />
                   <Route path="baixar-app" element={<MobileInstallPage />} />
                   <Route path="faq" element={<MobileFAQPage />} />
                   <Route path="sobre" element={<MobileAboutPage />} />
