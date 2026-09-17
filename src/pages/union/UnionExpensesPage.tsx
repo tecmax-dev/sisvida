@@ -114,7 +114,7 @@ export default function UnionExpensesPage() {
           .select(`
             *,
             category:union_financial_categories(id, name, color),
-            supplier:union_suppliers(id, name, trade_name, cnpj),
+            supplier:union_suppliers(id, name, trade_name, cnpj, cpf),
             cash_register:union_cash_registers(id, name)
           `)
           .eq("clinic_id", clinicId!)
