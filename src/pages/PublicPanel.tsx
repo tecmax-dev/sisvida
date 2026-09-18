@@ -251,43 +251,43 @@ export default function PublicPanel() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-foreground flex items-center justify-center">
-        <div className="text-white text-xl">Carregando painel...</div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-slate-600 text-xl">Carregando painel...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-foreground flex flex-col items-center justify-center gap-4">
-        <Monitor className="h-16 w-16 text-slate-500" />
-        <div className="text-white text-2xl">{error}</div>
-        <p className="text-slate-400">Verifique se o link está correto</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
+        <Monitor className="h-16 w-16 text-slate-400" />
+        <div className="text-slate-800 text-2xl font-medium">{error}</div>
+        <p className="text-slate-500">Verifique se o link está correto</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-foreground flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <div className="p-6 flex items-center justify-between border-b border-slate-700">
+      <div className="px-8 py-5 flex items-center justify-between bg-white border-b border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
           {clinic?.logo_url ? (
             <img src={clinic.logo_url} alt={clinic.name} className="h-12 object-contain" />
           ) : (
             <Logo size="md" />
           )}
-          <div className="text-white text-xl font-medium">{clinic?.name || "Painel de Chamadas"}</div>
+          <div className="text-slate-800 text-xl font-semibold">{clinic?.name || "Painel de Chamadas"}</div>
         </div>
         <div className="flex items-center gap-6">
           <button
             onClick={() => { unlockAudio(); setSoundEnabled(!soundEnabled); }}
-            className="text-slate-400 hover:text-white transition-colors p-2"
+            className="text-slate-400 hover:text-slate-700 transition-colors p-2 rounded-full hover:bg-slate-100"
             title={soundEnabled ? "Desativar som" : "Ativar som"}
           >
             {soundEnabled ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
           </button>
-          <div className="text-white text-3xl font-mono">
+          <div className="text-slate-800 text-3xl font-semibold tabular-nums">
             {currentTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
@@ -299,42 +299,46 @@ export default function PublicPanel() {
         <div className="flex-1 flex flex-col items-center justify-center p-12 relative">
           {currentCall ? (
             <>
-              <div className="text-slate-400 text-2xl mb-4">Chamando agora</div>
-              <div className="text-white text-[12rem] font-bold leading-none animate-pulse">
-                {formatDisplayName(currentCall)}
-              </div>
-              {currentCall.queue?.display_mode !== "name" && (
-                <div className="text-slate-300 text-4xl mt-6">{currentCall.patient_name}</div>
-              )}
-              <div className="text-primary text-3xl mt-4 font-medium">
-                {currentCall.queue?.name || "Atendimento"}
+              <div className="text-primary text-2xl font-semibold tracking-wide uppercase mb-4">Chamando agora</div>
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 px-16 py-12 flex flex-col items-center">
+                <div className="text-slate-900 text-[11rem] font-bold leading-none animate-pulse">
+                  {formatDisplayName(currentCall)}
+                </div>
+                {currentCall.queue?.display_mode !== "name" && (
+                  <div className="text-slate-600 text-4xl mt-6">{currentCall.patient_name}</div>
+                )}
+                <div className="mt-8 bg-primary/10 text-primary text-3xl font-semibold px-8 py-3 rounded-full">
+                  {currentCall.queue?.name || "Atendimento"}
+                </div>
               </div>
             </>
           ) : banners.length > 0 ? (
             <PanelBannerCarousel banners={banners} className="absolute inset-0" />
           ) : (
             <div className="text-center">
-              <Monitor className="h-24 w-24 text-slate-600 mx-auto mb-6" />
-              <div className="text-slate-400 text-3xl">Aguardando chamadas...</div>
+              <div className="bg-white rounded-full p-8 shadow-md border border-slate-200 inline-block mb-6">
+                <Monitor className="h-20 w-20 text-primary/60" />
+              </div>
+              <div className="text-slate-500 text-3xl">Aguardando chamadas...</div>
             </div>
           )}
         </div>
 
         {/* Recent Calls - Sidebar */}
         {recentCalls.length > 0 && (
-          <div className="w-96 border-l border-slate-700 bg-slate-800/50 p-6">
-            <div className="text-slate-400 text-lg mb-4">Chamadas anteriores</div>
+          <div className="w-96 border-l border-slate-200 bg-white p-6">
+            <div className="text-slate-500 text-lg font-medium mb-4">Chamadas anteriores</div>
             <div className="space-y-3">
               {recentCalls.map((call) => (
                 <div
                   key={call.id}
-                  className="bg-slate-700/50 rounded-lg p-4 flex items-center justify-between"
+                  className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between"
                 >
                   <div>
-                    <div className="text-white text-xl font-bold">{formatDisplayName(call)}</div>
-                    <div className="text-slate-400 text-sm">{call.queue?.name}</div>
+                    <div className="text-slate-800 text-xl font-bold">{formatDisplayName(call)}</div>
+                    <div className="text-slate-500 text-sm">{call.queue?.name}</div>
                   </div>
-                  <div className="text-slate-500 text-sm">
+                  <div className="text-slate-400 text-sm tabular-nums">
                     {new Date(call.called_at).toLocaleTimeString("pt-BR", {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -348,7 +352,7 @@ export default function PublicPanel() {
       </div>
 
       {/* Footer */}
-      <div className="p-4 text-center text-slate-500 text-sm border-t border-slate-700">
+      <div className="p-4 text-center text-slate-400 text-sm bg-white border-t border-slate-200 capitalize">
         {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
       </div>
     </div>
