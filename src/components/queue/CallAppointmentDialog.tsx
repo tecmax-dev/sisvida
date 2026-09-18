@@ -27,6 +27,7 @@ export interface CallAppointmentTarget {
   patient_id: string | null;
   professional_id: string | null;
   patientName: string;
+  professionalName?: string | null;
   startTime?: string | null;
 }
 
