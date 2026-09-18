@@ -292,7 +292,16 @@ function QueueManagementContent() {
               <Bell className="h-4 w-4" />
               Chamadas
             </TabsTrigger>
+            <TabsTrigger value="agenda" className="gap-2">
+              <CalendarClock className="h-4 w-4" />
+              Agenda do Dia
+            </TabsTrigger>
           </TabsList>
+
+          {/* Agenda do dia */}
+          <TabsContent value="agenda">
+            {currentClinic && <AgendaCallsTab clinicId={currentClinic.id} />}
+          </TabsContent>
 
           {/* Filas */}
           <TabsContent value="queues">
