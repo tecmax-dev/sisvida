@@ -64,8 +64,13 @@ export function MobileQueueCallCard() {
           </div>
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">
-              {isCalled ? "Você foi chamado!" : "Sua senha de atendimento"}
+              {isCalled ? "Chamando agora" : "Senha de atendimento"}
             </p>
+            {call.person_name && (
+              <p className="text-base font-semibold text-foreground leading-tight">
+                {call.person_name}
+              </p>
+            )}
             <p className="text-2xl font-bold text-foreground leading-tight">{ticket}</p>
             <p className="text-sm text-muted-foreground">
               {[call.room_name, call.professional_name].filter(Boolean).join(" • ") ||
