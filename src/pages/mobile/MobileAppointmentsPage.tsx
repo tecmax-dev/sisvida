@@ -658,6 +658,8 @@ function MobileAppointmentsPageContent() {
         </div>
       </div>
 
+      <MobileQueueCallCard />
+
       {/* Stats Cards */}
       <div className="px-4 -mt-2">
         <div className="grid grid-cols-2 gap-3">
