@@ -27,6 +27,7 @@ export interface CallAppointmentTarget {
   patient_id: string | null;
   professional_id: string | null;
   patientName: string;
+  professionalName?: string | null;
   startTime?: string | null;
 }
 
@@ -38,6 +39,31 @@ interface CallAppointmentDialogProps {
 }
 
 const ROOM_STORAGE_KEY = "queue:last-room-name";
+
+// Sala padrão por profissional (nome normalizado -> sala)
+const PROFESSIONAL_ROOMS: { match: string; room: string }[] = [
+  { match: "jose alcides", room: "Consultório 01" },
+  { match: "juliane leite", room: "Consultório 02" },
+  { match: "uiara tiuba", room: "Consultório 01" },
+  { match: "karen freire", room: "Consultório 01" },
+  { match: "elinei silva", room: "Consultório 03" },
+];
+
+const normalizeName = (name: string) =>
+  name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(dr|dra|drª|sr|sra)\.?\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+export const getRoomForProfessional = (name?: string | null) => {
+  if (!name) return null;
+  const normalized = normalizeName(name);
+  const found = PROFESSIONAL_ROOMS.find((r) => normalized.includes(r.match));
+  return found?.room || null;
+};
 
 export function CallAppointmentDialog({
   open,
@@ -65,10 +91,25 @@ export function CallAppointmentDialog({
     enabled: !!clinicId && open,
   });
 
+  const { data: professionalName } = useQuery({
+    queryKey: ["professional-name", appointment?.professional_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("name")
+        .eq("id", appointment!.professional_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.name || null;
+    },
+    enabled: open && !!appointment?.professional_id && !appointment?.professionalName,
+  });
+
   useEffect(() => {
     if (!open) return;
-    setRoomName(localStorage.getItem(ROOM_STORAGE_KEY) || "");
-  }, [open]);
+    const autoRoom = getRoomForProfessional(appointment?.professionalName || professionalName);
+    setRoomName(autoRoom || localStorage.getItem(ROOM_STORAGE_KEY) || "");
+  }, [open, appointment?.professionalName, professionalName]);
 
   useEffect(() => {
     if (open && queues.length > 0 && !queueId) setQueueId(queues[0].id);

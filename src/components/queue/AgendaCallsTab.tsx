@@ -141,6 +141,7 @@ export function AgendaCallsTab({ clinicId }: AgendaCallsTabProps) {
                             patient_id: apt.patient_id,
                             professional_id: apt.professional_id,
                             patientName: apt.patient?.name || "Paciente",
+                            professionalName: apt.professional?.name || null,
                             startTime: apt.start_time,
                           })
                         }

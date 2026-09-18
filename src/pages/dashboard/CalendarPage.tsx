@@ -4021,6 +4021,7 @@ const updateData: Record<string, any> = {
                     patient_id: appointment.patient_id,
                     professional_id: appointment.professional_id,
                     patientName: getAppointmentDisplayName(appointment) || appointment.patient?.name || "Paciente",
+                    professionalName: appointment.professional?.name || null,
                     startTime: appointment.start_time,
                   });
                 }}>
