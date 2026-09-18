@@ -33,8 +33,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, Monitor, Smartphone, Users, Bell, Copy } from "lucide-react";
+import { Plus, Edit2, Trash2, Monitor, Smartphone, Users, Bell, Copy, CalendarClock } from "lucide-react";
 import { CallsPanel } from "@/components/queue/CallsPanel";
+import { AgendaCallsTab } from "@/components/queue/AgendaCallsTab";
 
 interface Queue {
   id: string;
@@ -292,7 +293,16 @@ function QueueManagementContent() {
               <Bell className="h-4 w-4" />
               Chamadas
             </TabsTrigger>
+            <TabsTrigger value="agenda" className="gap-2">
+              <CalendarClock className="h-4 w-4" />
+              Agenda do Dia
+            </TabsTrigger>
           </TabsList>
+
+          {/* Agenda do dia */}
+          <TabsContent value="agenda">
+            {currentClinic && <AgendaCallsTab clinicId={currentClinic.id} />}
+          </TabsContent>
 
           {/* Filas */}
           <TabsContent value="queues">
