@@ -20371,6 +20371,7 @@ export type Database = {
           appointment_id: string
           called_at: string
           id: string
+          person_name: string
           professional_name: string
           queue_name: string
           room_name: string

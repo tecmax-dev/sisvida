@@ -3841,6 +3841,29 @@ const updateData: Record<string, any> = {
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {/* Chamar no painel de atendimento */}
+            {(appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived" || appointment.status === "in_progress") && (
+              <Badge
+                role="button"
+                tabIndex={0}
+                className="h-5 flex-shrink-0 cursor-pointer gap-1 px-2 py-0 text-[10px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+                title="Chamar no painel de atendimento"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCallTarget({
+                    id: appointment.id,
+                    patient_id: appointment.patient_id,
+                    professional_id: appointment.professional_id,
+                    patientName: getAppointmentDisplayName(appointment) || appointment.patient?.name || "Paciente",
+                    professionalName: appointment.professional?.name || null,
+                    startTime: appointment.start_time,
+                  });
+                }}
+              >
+                <Bell className="h-3 w-3" />
+                Chamar
+              </Badge>
+            )}
             {/* Idade do paciente/dependente para lei de prioridade */}
             {(() => {
               // Se é dependente, usar a idade do dependente; senão, do titular
