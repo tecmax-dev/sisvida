@@ -99,6 +99,7 @@ export function CallAppointmentDialog({
             called_at: nowIso,
             queue_id: queue.id,
             room_name: roomName || null,
+            professional_id: appointment.professional_id,
           })
           .eq("id", existing.id);
         if (error) throw error;
@@ -127,6 +128,13 @@ export function CallAppointmentDialog({
         called_at: nowIso,
       });
       if (insertError) throw insertError;
+
+      const { error: appointmentError } = await supabase
+        .from("appointments")
+        .update({ status: "arrived" })
+        .eq("id", appointment.id)
+        .in("status", ["scheduled", "confirmed"]);
+      if (appointmentError) throw appointmentError;
 
       return `${queue.ticket_prefix || ""}${nextTicket}`;
     },

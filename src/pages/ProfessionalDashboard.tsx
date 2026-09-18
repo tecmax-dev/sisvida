@@ -8,6 +8,7 @@ import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
+import { CallAppointmentDialog } from "@/components/queue/CallAppointmentDialog";
 import { 
   Loader2, 
   LogOut, 
@@ -112,6 +113,8 @@ export default function ProfessionalDashboard() {
   // Appointment Panel state
   const [appointmentPanelOpen, setAppointmentPanelOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [callDialogOpen, setCallDialogOpen] = useState(false);
+  const [callAppointment, setCallAppointment] = useState<Appointment | null>(null);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -297,8 +300,12 @@ export default function ProfessionalDashboard() {
   };
 
   const openAppointmentPanel = (appointment: Appointment) => {
-    // Navigate to the new appointment page
     navigate(`/profissional/atendimento/${appointment.id}`);
+  };
+
+  const openCallDialog = (appointment: Appointment) => {
+    setCallAppointment(appointment);
+    setCallDialogOpen(true);
   };
 
   const handleAppointmentUpdate = async () => {
@@ -665,6 +672,13 @@ export default function ProfessionalDashboard() {
                           </div>
                           
                           {!isCompleted && (
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                            {['scheduled', 'confirmed', 'arrived'].includes(appointment.status) && (
+                              <Button size="sm" variant="outline" onClick={() => openCallDialog(appointment)}>
+                                <Phone className="h-4 w-4 mr-1" />
+                                Chamar no painel
+                              </Button>
+                            )}
                             <Button 
                               size="sm"
                               variant={isInProgress ? "default" : "outline"}
@@ -687,6 +701,7 @@ export default function ProfessionalDashboard() {
                                 </>
                               )}
                             </Button>
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -760,6 +775,19 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
       </main>
+
+      <CallAppointmentDialog
+        open={callDialogOpen}
+        onOpenChange={setCallDialogOpen}
+        clinicId={professional.clinic_id}
+        appointment={callAppointment ? {
+          id: callAppointment.id,
+          patient_id: callAppointment.patient_id,
+          professional_id: professional.id,
+          patientName: getDisplayName(callAppointment),
+          startTime: callAppointment.start_time,
+        } : null}
+      />
 
       {/* Appointment Panel */}
       {selectedAppointment && professional && (
