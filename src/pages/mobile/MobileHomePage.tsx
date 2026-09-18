@@ -131,6 +131,8 @@ export default function MobileHomePage() {
     <MobileLayout>
       {patient?.id && <DependentGenderPopup patientId={patient.id} />}
 
+      <MobileQueueCallCard />
+
       {/* Welcome Card */}
       <div className="mx-4 mt-4">
         <div className="bg-blue-50 rounded-2xl p-4 flex items-center gap-4">
