@@ -47,14 +47,14 @@ Deno.serve(async (req) => {
     const fiscal = fiscalRows[0];
     if (!fiscal.focus_nfe_token || !fiscal.cnpj || !fiscal.company_name) return response({ ok: false, status: "misconfigured", reason: "Dados fiscais obrigatórios ausentes", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
 
-    const token = fiscal.focus_nfe_token;
-    const baseUrl = Deno.env.get("FOCUS_NFE_BASE_URL")?.replace(/\/$/, "");
-    if (!token || !baseUrl) return response({ ok: false, status: "misconfigured", reason: !baseUrl ? "URL base não configurada no servidor" : "Credencial Focus não configurada", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
+    const token = Deno.env.get("FOCUS_NFE_TOKEN");
+    const endpoint = "https://api.focusnfe.com.br/v2/nfce/59b99b5e-0900-4c04-a95f-4bd24514a1dc";
+    if (!token) return response({ ok: false, status: "misconfigured", reason: "Credencial Focus não configurada no servidor", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
 
     let httpStatus: number;
     let statusText: string;
     try {
-      const result = await fetch(`${baseUrl}/`, { headers: { Authorization: `Basic ${btoa(`${token}:`)}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+      const result = await fetch(endpoint, { method: "GET", headers: { Authorization: `Basic ${btoa(`${token}:`)}`, Accept: "application/json" }, signal: AbortSignal.timeout(8000) });
       httpStatus = result.status;
       statusText = result.statusText;
     } catch (error) {
@@ -63,7 +63,8 @@ Deno.serve(async (req) => {
     }
 
     const ok = httpStatus >= 200 && httpStatus < 300;
-    const result = { ok, status: httpStatus, status_text: statusText, status_type: ok ? "success" : "http_error", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId, environment: fiscal.focus_nfe_environment ?? "unknown" };
+    const statusType = httpStatus === 401 || httpStatus === 403 ? "authorization_error" : httpStatus === 404 ? "not_found" : ok ? "success" : "http_error";
+    const result = { ok, status: httpStatus, status_text: statusText, status_type: statusType, latency_ms: Math.round(performance.now() - started), correlation_id: correlationId, environment: fiscal.focus_nfe_environment ?? "unknown" };
     const update = await supabase.from("integration_credentials").update({ status: ok ? "connected" : "error", last_connection_test: new Date().toISOString(), last_error: ok ? null : `HTTP ${httpStatus}`, needs_reconfiguration: !ok }).eq("tenant_id", tenant.id).eq("provider", "focus_nfe");
     if (update.error) console.error("Falha ao atualizar status da credencial", correlationId, update.error.message);
     return response(result);
