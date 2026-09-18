@@ -4010,7 +4010,24 @@ const updateData: Record<string, any> = {
               )}
 
               <DropdownMenuSeparator />
-              
+
+              {/* Chamar no painel de atendimento */}
+              {(appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived" || appointment.status === "in_progress") && (
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  setCallTarget({
+                    id: appointment.id,
+                    patient_id: appointment.patient_id,
+                    professional_id: appointment.professional_id,
+                    patientName: getAppointmentDisplayName(appointment) || appointment.patient?.name || "Paciente",
+                    startTime: appointment.start_time,
+                  });
+                }}>
+                  <Bell className="h-4 w-4 mr-2 text-primary" />
+                  Chamar no Painel
+                </DropdownMenuItem>
+              )}
+
               {/* Pré-atendimento - disponível para todos agendamentos não cancelados/concluídos */}
               {(appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived") && (
                 <DropdownMenuItem onClick={() => {
