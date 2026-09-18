@@ -39,6 +39,31 @@ interface CallAppointmentDialogProps {
 
 const ROOM_STORAGE_KEY = "queue:last-room-name";
 
+// Sala padrão por profissional (nome normalizado -> sala)
+const PROFESSIONAL_ROOMS: { match: string; room: string }[] = [
+  { match: "jose alcides", room: "Consultório 01" },
+  { match: "juliane leite", room: "Consultório 02" },
+  { match: "uiara tiuba", room: "Consultório 01" },
+  { match: "karen freire", room: "Consultório 01" },
+  { match: "elinei silva", room: "Consultório 03" },
+];
+
+const normalizeName = (name: string) =>
+  name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(dr|dra|drª|sr|sra)\.?\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+export const getRoomForProfessional = (name?: string | null) => {
+  if (!name) return null;
+  const normalized = normalizeName(name);
+  const found = PROFESSIONAL_ROOMS.find((r) => normalized.includes(r.match));
+  return found?.room || null;
+};
+
 export function CallAppointmentDialog({
   open,
   onOpenChange,
