@@ -33,8 +33,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, Monitor, Smartphone, Users, Bell, Copy } from "lucide-react";
+import { Plus, Edit2, Trash2, Monitor, Smartphone, Users, Bell, Copy, CalendarClock } from "lucide-react";
 import { CallsPanel } from "@/components/queue/CallsPanel";
+import { AgendaCallsTab } from "@/components/queue/AgendaCallsTab";
 
 interface Queue {
   id: string;
