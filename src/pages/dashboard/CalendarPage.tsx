@@ -564,6 +564,7 @@ export default function CalendarPage() {
     patientName: string;
     queueCount: number;
   } | null>(null);
+  const [callTarget, setCallTarget] = useState<CallAppointmentTarget | null>(null);
   
   // View mode - also persisted
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
