@@ -91,10 +91,25 @@ export function CallAppointmentDialog({
     enabled: !!clinicId && open,
   });
 
+  const { data: professionalName } = useQuery({
+    queryKey: ["professional-name", appointment?.professional_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("name")
+        .eq("id", appointment!.professional_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.name || null;
+    },
+    enabled: open && !!appointment?.professional_id && !appointment?.professionalName,
+  });
+
   useEffect(() => {
     if (!open) return;
-    setRoomName(localStorage.getItem(ROOM_STORAGE_KEY) || "");
-  }, [open]);
+    const autoRoom = getRoomForProfessional(appointment?.professionalName || professionalName);
+    setRoomName(autoRoom || localStorage.getItem(ROOM_STORAGE_KEY) || "");
+  }, [open, appointment?.professionalName, professionalName]);
 
   useEffect(() => {
     if (open && queues.length > 0 && !queueId) setQueueId(queues[0].id);
