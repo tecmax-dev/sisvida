@@ -5936,6 +5936,13 @@ const updateData: Record<string, any> = {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CallAppointmentDialog
+        open={!!callTarget}
+        onOpenChange={(open) => { if (!open) setCallTarget(null); }}
+        clinicId={currentClinic?.id}
+        appointment={callTarget}
+      />
     </div>
     </DndContext>
   );
