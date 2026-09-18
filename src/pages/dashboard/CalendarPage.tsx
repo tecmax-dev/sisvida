@@ -8,6 +8,7 @@ import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { PreAttendanceDialog } from "@/components/appointments/PreAttendanceDialog";
 import { AppointmentAuditDialog } from "@/components/appointments/AppointmentAuditDialog";
 import { DraggableAppointment } from "@/components/appointments/DraggableAppointment";
+import { CallAppointmentDialog, CallAppointmentTarget } from "@/components/queue/CallAppointmentDialog";
 import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
 import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
 import { DragInstructions } from "@/components/appointments/DragInstructions";
