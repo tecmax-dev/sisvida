@@ -10,6 +10,7 @@ import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
 import { Loader2 } from "lucide-react";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
+import MobileQueueCallCard from "@/components/mobile/MobileQueueCallCard";
 import { DependentGenderPopup } from "@/components/mobile/DependentGenderPopup";
 
 interface PatientData {
@@ -130,6 +131,8 @@ export default function MobileHomePage() {
   return (
     <MobileLayout>
       {patient?.id && <DependentGenderPopup patientId={patient.id} />}
+
+      <MobileQueueCallCard />
 
       {/* Welcome Card */}
       <div className="mx-4 mt-4">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import MobileQueueCallCard from "@/components/mobile/MobileQueueCallCard";
 import { eachDayOfInterval, endOfMonth, getDay, isSameDay, isBefore as isBeforeDate } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -657,6 +658,8 @@ function MobileAppointmentsPageContent() {
           </button>
         </div>
       </div>
+
+      <MobileQueueCallCard />
 
       {/* Stats Cards */}
       <div className="px-4 -mt-2">
