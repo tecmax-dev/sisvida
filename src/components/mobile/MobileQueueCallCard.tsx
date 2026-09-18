@@ -12,6 +12,7 @@ interface QueueCallRow {
   appointment_id: string | null;
   professional_name: string | null;
   queue_name: string | null;
+  person_name: string | null;
 }
 
 /**
