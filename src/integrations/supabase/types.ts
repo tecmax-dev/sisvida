@@ -20365,6 +20365,20 @@ export type Database = {
           type: Database["public"]["Enums"]["appointment_type"]
         }[]
       }
+      get_my_queue_calls: {
+        Args: never
+        Returns: {
+          appointment_id: string
+          called_at: string
+          id: string
+          professional_name: string
+          queue_name: string
+          room_name: string
+          status: string
+          ticket_number: number
+          ticket_prefix: string
+        }[]
+      }
       get_negotiation_preview_by_token: {
         Args: { p_token: string }
         Returns: {
