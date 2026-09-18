@@ -15,7 +15,7 @@ async function requireStaff(req: Request, supabase: ReturnType<typeof createClie
   const { data, error } = await supabase.auth.getUser(authorization.slice(7));
   if (error || !data.user) throw new Error("Sessão inválida");
   const role = data.user.app_metadata?.role ?? data.user.user_metadata?.role;
-  if (!(["admin", "staff", "employee"] as string[]).includes(role)) throw new Error("Acesso restrito à equipe");
+  if (!( ["admin", "staff", "employee"] as string[]).includes(role)) throw new Error("Acesso restrito à equipe");
   return data.user;
 }
 
@@ -33,15 +33,21 @@ Deno.serve(async (req) => {
     if (tenantError) throw new Error("Não foi possível consultar o tenant");
     if (!tenant) return response({ ok: false, status: "tenant_not_found", correlation_id: correlationId }, 404);
 
-    const { data: fiscal, error: fiscalError } = await supabase
+    const { data: fiscalRows, error: fiscalError } = await supabase
       .from("pdv_fiscal_company_settings")
-      .select("focus_nfe_environment, active_provider, focus_nfe_token")
+      .select("focus_nfe_environment, environment, active_provider, focus_nfe_token, updated_at, cnpj, company_name")
       .eq("tenant_id", tenant.id)
       .eq("is_active", true)
-      .maybeSingle();
+      .eq("active_provider", "focus_nfe")
+      .or("focus_nfe_environment.eq.production,environment.eq.production")
+      .order("updated_at", { ascending: false })
+      .limit(2);
     if (fiscalError) throw new Error("Não foi possível consultar a configuração fiscal");
+    if (!fiscalRows || fiscalRows.length !== 1) return response({ ok: false, status: "misconfigured", reason: fiscalRows?.length ? "Mais de uma configuração fiscal de produção está ativa" : "Configuração fiscal de produção não encontrada", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
+    const fiscal = fiscalRows[0];
+    if (!fiscal.focus_nfe_token || !fiscal.cnpj || !fiscal.company_name) return response({ ok: false, status: "misconfigured", reason: "Dados fiscais obrigatórios ausentes", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
 
-    const token = fiscal?.active_provider === "focus_nfe" ? fiscal.focus_nfe_token : null;
+    const token = fiscal.focus_nfe_token;
     const baseUrl = Deno.env.get("FOCUS_NFE_BASE_URL")?.replace(/\/$/, "");
     if (!token || !baseUrl) return response({ ok: false, status: "misconfigured", reason: !baseUrl ? "URL base não configurada no servidor" : "Credencial Focus não configurada", latency_ms: Math.round(performance.now() - started), correlation_id: correlationId });
 

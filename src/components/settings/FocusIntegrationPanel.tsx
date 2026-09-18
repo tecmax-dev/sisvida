@@ -8,7 +8,9 @@ import { toast } from "sonner";
 
 export function FocusIntegrationPanel() {
   const [loading, setLoading] = useState(false);
+  const [emitting, setEmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [emitResult, setEmitResult] = useState<any>(null);
 
   const testConnection = async () => {
     setLoading(true);
@@ -28,6 +30,18 @@ export function FocusIntegrationPanel() {
     }
   };
 
+  const testEmissionHomologation = async () => {
+    setEmitting(true);
+    setEmitResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("focus-nfe-emit", { body: { reference: `diagnostic-${crypto.randomUUID()}`, customer: { name: "Cliente de homologação", document: "00000000000" }, items: [{ description: "Teste de integração Focus", quantity: 1, unit_price: 0 }] } });
+      if (error) throw error;
+      setEmitResult(data);
+      if (data?.ok) toast.success("Solicitação de homologação aceita pela Focus."); else toast.error(data?.reason || "A emissão de homologação não foi aceita.");
+    } catch (error: any) { setEmitResult({ ok: false, reason: error.message || "Falha no teste de emissão" }); toast.error("Não foi possível testar a emissão."); }
+    finally { setEmitting(false); }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -45,10 +59,11 @@ export function FocusIntegrationPanel() {
             </div>
           </div>
         )}
-        <Button onClick={testConnection} disabled={loading} className="focus-visible:ring-2 focus-visible:ring-ring">
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
-          {loading ? "Testando…" : "Testar conexão"}
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={testConnection} disabled={loading || emitting} className="focus-visible:ring-2 focus-visible:ring-ring">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}{loading ? "Testando…" : "Testar conexão"}</Button>
+          <Button variant="outline" onClick={testEmissionHomologation} disabled={loading || emitting}>{emitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{emitting ? "Enviando…" : "Testar emissão em homologação"}</Button>
+        </div>
+        {emitResult && <p className="text-sm text-muted-foreground">Resultado da emissão: {emitResult.ok ? "aceita" : emitResult.reason || emitResult.status} · ID: {emitResult.correlation_id ?? "—"}</p>}
       </CardContent>
     </Card>
   );
