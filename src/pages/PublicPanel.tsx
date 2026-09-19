@@ -313,8 +313,21 @@ export default function PublicPanel() {
                   </div>
                 )}
                 {currentCall.professional_name && (
-                  <div className="text-slate-500 text-3xl mt-3 text-center">
-                    {currentCall.professional_name}
+                  <div className="mt-5 flex items-center justify-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl px-8 py-4">
+                    {(() => {
+                      const Icon = getSpecialtyIcon(currentCall.professional_specialty);
+                      return <Icon className="h-10 w-10 text-primary shrink-0" />;
+                    })()}
+                    <div className="text-left">
+                      <div className="text-primary text-4xl font-bold leading-tight">
+                        {currentCall.professional_name}
+                      </div>
+                      {currentCall.professional_specialty && (
+                        <div className="text-slate-500 text-xl font-medium">
+                          {currentCall.professional_specialty}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
