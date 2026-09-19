@@ -306,11 +306,25 @@ export default function PublicPanel() {
                 <div className="text-slate-900 text-[11rem] font-bold leading-none animate-pulse">
                   {formatDisplayName(currentCall)}
                 </div>
-                {currentCall.queue?.display_mode !== "name" && (
-                  <div className="text-slate-600 text-4xl mt-6">{currentCall.patient_name}</div>
+                {currentCall.queue?.display_mode !== "name" && currentCall.patient_name && (
+                  <div className="text-slate-700 text-5xl font-semibold mt-6 text-center">
+                    {currentCall.patient_name}
+                  </div>
                 )}
-                <div className="mt-8 bg-primary/10 text-primary text-3xl font-semibold px-8 py-3 rounded-full">
-                  {currentCall.queue?.name || "Atendimento"}
+                {currentCall.professional_name && (
+                  <div className="text-slate-500 text-3xl mt-3 text-center">
+                    {currentCall.professional_name}
+                  </div>
+                )}
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+                  {currentCall.room_name && (
+                    <div className="bg-emerald-100 text-emerald-700 text-3xl font-bold px-8 py-3 rounded-full">
+                      {currentCall.room_name}
+                    </div>
+                  )}
+                  <div className="bg-primary/10 text-primary text-3xl font-semibold px-8 py-3 rounded-full">
+                    {currentCall.queue?.name || "Atendimento"}
+                  </div>
                 </div>
               </div>
             </>
