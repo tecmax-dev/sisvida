@@ -47,6 +47,8 @@ interface QueueCallRow {
  */
 export function MobileQueueCallCard() {
   const [call, setCall] = useState<QueueCallRow | null>(null);
+  const lastCalledAt = useRef<string | null>(null);
+  const firstLoad = useRef(true);
 
   useEffect(() => {
     let active = true;
@@ -55,7 +57,23 @@ export function MobileQueueCallCard() {
       const { data, error } = await supabase.rpc("get_my_queue_calls" as never);
       if (!active || error) return;
       const rows = (data || []) as unknown as QueueCallRow[];
-      setCall(rows[0] || null);
+      const current = rows[0] || null;
+
+      // Somente alerta quando chega uma NOVA chamada (status "called" com called_at diferente)
+      if (
+        current &&
+        current.status === "called" &&
+        current.called_at &&
+        current.called_at !== lastCalledAt.current &&
+        !firstLoad.current
+      ) {
+        playCallSound();
+        if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+      }
+      if (current?.called_at) lastCalledAt.current = current.called_at;
+      firstLoad.current = false;
+
+      setCall(current);
     };
 
     load();
