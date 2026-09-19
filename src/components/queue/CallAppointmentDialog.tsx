@@ -112,8 +112,22 @@ export function CallAppointmentDialog({
   }, [open, appointment?.professionalName, professionalName]);
 
   useEffect(() => {
-    if (open && queues.length > 0 && !queueId) setQueueId(queues[0].id);
-  }, [open, queues, queueId]);
+    if (!open || queues.length === 0) return;
+
+    const name = appointment?.professionalName || professionalName;
+    const normalizedProfessional = name ? normalizeName(name) : "";
+    const professionalQueue = normalizedProfessional
+      ? queues.find((queue) => {
+          const normalizedQueue = normalizeName(queue.name);
+          return (
+            normalizedQueue.includes(normalizedProfessional) ||
+            normalizedProfessional.includes(normalizedQueue)
+          );
+        })
+      : undefined;
+
+    setQueueId(professionalQueue?.id || queues[0].id);
+  }, [open, queues, appointment?.id, appointment?.professionalName, professionalName]);
 
   const callMutation = useMutation({
     mutationFn: async () => {
