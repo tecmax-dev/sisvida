@@ -42,11 +42,11 @@ const ROOM_STORAGE_KEY = "queue:last-room-name";
 
 // Sala padrão por profissional (nome normalizado -> sala)
 const PROFESSIONAL_ROOMS: { match: string; room: string }[] = [
-  { match: "jose alcides", room: "Consultório 01" },
-  { match: "juliane leite", room: "Consultório 02" },
-  { match: "uiara tiuba", room: "Consultório 01" },
-  { match: "karen freire", room: "Consultório 01" },
-  { match: "elinei silva", room: "Consultório 03" },
+  { match: "elinei silva", room: "Consultório 01" },
+  { match: "jose alcides", room: "Consultório 02" },
+  { match: "karen freire", room: "Consultório 02" },
+  { match: "uiara tiuba", room: "Consultório 02" },
+  { match: "juliane leite", room: "Consultório 03" },
 ];
 
 const normalizeName = (name: string) =>
