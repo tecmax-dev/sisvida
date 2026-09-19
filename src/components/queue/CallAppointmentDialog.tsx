@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -74,6 +74,8 @@ export function CallAppointmentDialog({
   const queryClient = useQueryClient();
   const [queueId, setQueueId] = useState<string>("");
   const [roomName, setRoomName] = useState<string>("");
+  const userChangedQueue = useRef(false);
+  const userChangedRoom = useRef(false);
 
   const { data: queues = [], isLoading } = useQuery({
     queryKey: ["queues-active", clinicId],
@@ -107,6 +109,8 @@ export function CallAppointmentDialog({
 
   useEffect(() => {
     if (!open) return;
+    userChangedQueue.current = false;
+    userChangedRoom.current = false;
     const autoRoom = getRoomForProfessional(appointment?.professionalName || professionalName);
     setRoomName(autoRoom || localStorage.getItem(ROOM_STORAGE_KEY) || "");
   }, [open, appointment?.professionalName, professionalName]);
