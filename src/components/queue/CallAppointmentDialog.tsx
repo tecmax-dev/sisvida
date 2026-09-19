@@ -186,7 +186,7 @@ export function CallAppointmentDialog({
             status: "called",
             called_at: nowIso,
             queue_id: queue.id,
-            room_name: roomName || null,
+            room_name: effectiveRoom || null,
             professional_id: appointment.professional_id,
           })
           .eq("id", existing.id);
