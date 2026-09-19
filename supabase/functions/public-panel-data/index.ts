@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         ? supabase.from("appointments").select("id, dependent_id, professional_id").in("id", appointmentIds)
         : Promise.resolve({ data: [] as any[] }),
       professionalIds.length
-        ? supabase.from("professionals").select("id, name").in("id", professionalIds)
+        ? supabase.from("professionals").select("id, name, specialty").in("id", professionalIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
@@ -106,13 +106,13 @@ Deno.serve(async (req) => {
     ] as string[];
 
     const { data: extraProfs } = missingProfIds.length
-      ? await supabase.from("professionals").select("id, name").in("id", missingProfIds)
+      ? await supabase.from("professionals").select("id, name, specialty").in("id", missingProfIds)
       : { data: [] as any[] };
 
     const patientMap = new Map((patients || []).map((p) => [p.id, p.name]));
     const dependentMap = new Map((dependents || []).map((d) => [d.id, d.name]));
     const professionalMap = new Map(
-      [...(professionals || []), ...(extraProfs || [])].map((p) => [p.id, p.name]),
+      [...(professionals || []), ...(extraProfs || [])].map((p) => [p.id, p]),
     );
 
     const mapped = calls.map((c) => {
@@ -127,7 +127,8 @@ Deno.serve(async (req) => {
         id: c.id,
         queue_id: c.queue_id,
         patient_name: patientName,
-        professional_name: profId ? professionalMap.get(profId) || null : null,
+        professional_name: profId ? professionalMap.get(profId)?.name || null : null,
+        professional_specialty: profId ? professionalMap.get(profId)?.specialty || null : null,
         room_name: c.room_name || null,
         ticket_number: `${c.ticket_prefix || ""}${c.ticket_number}`,
         called_at: c.called_at,
