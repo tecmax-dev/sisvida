@@ -6,6 +6,21 @@ import { Logo } from "@/components/layout/Logo";
 import { PanelBannerCarousel } from "@/components/panel/PanelBannerCarousel";
 import { PanelBanner } from "@/hooks/usePanelBanners";
 
+const ToothIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 5.6C10.4 4 8.2 3.4 6.4 4.1 4.3 4.9 3 6.9 3 9.3c0 4.1 2.1 5.6 2.6 9.2.3 2 1.4 3.1 2.4 3.1 1.2 0 1.6-1.1 2-3 .3-1.3.8-2.1 2-2.1s1.7.8 2 2.1c.4 1.9.8 3 2 3 1 0 2.1-1.1 2.4-3.1.5-3.6 2.6-5.1 2.6-9.2 0-2.4-1.3-4.4-3.4-5.2-1.8-.7-4-.1-5.6 1.5z" />
+  </svg>
+);
+
 const getSpecialtyIcon = (specialty?: string | null) => {
   const s = (specialty || "").toLowerCase();
   if (s.includes("cardio")) return Heart;
@@ -13,7 +28,7 @@ const getSpecialtyIcon = (specialty?: string | null) => {
   if (s.includes("neuro") || s.includes("psic")) return Brain;
   if (s.includes("oftalmo")) return Eye;
   if (s.includes("ortoped") || s.includes("reumato")) return Bone;
-  if (s.includes("odonto") || s.includes("dent")) return Smile;
+  if (s.includes("odonto") || s.includes("dent")) return ToothIcon;
   if (s.includes("fisio") || s.includes("nutri")) return Activity;
   return Stethoscope;
 };
