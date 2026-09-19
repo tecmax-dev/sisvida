@@ -143,11 +143,12 @@ export default function PublicPanel() {
     if (!soundEnabled) return;
     
     const displayMode = call.queue?.display_mode || "ticket";
+    const destination = call.room_name || call.professional_name || call.queue?.name || "atendimento";
     let announcement = "";
     
     switch (displayMode) {
       case "name":
-        announcement = `Chamando ${call.patient_name}. Por favor, dirija-se ao ${call.queue?.name || "atendimento"}.`;
+        announcement = `Chamando ${call.patient_name}. Por favor, dirija-se ao ${destination}.`;
         break;
       case "initials":
         const initials = call.patient_name
@@ -156,11 +157,11 @@ export default function PublicPanel() {
           .join(" ")
           .toUpperCase()
           .slice(0, 5);
-        announcement = `Chamando ${initials}. Por favor, dirija-se ao ${call.queue?.name || "atendimento"}.`;
+        announcement = `Chamando ${initials}. Por favor, dirija-se ao ${destination}.`;
         break;
       case "ticket":
       default:
-        announcement = `Senha ${call.ticket_number}. Por favor, dirija-se ao ${call.queue?.name || "atendimento"}.`;
+        announcement = `Senha ${call.ticket_number}. Por favor, dirija-se ao ${destination}.`;
         break;
     }
     
@@ -322,9 +323,11 @@ export default function PublicPanel() {
                       {currentCall.room_name}
                     </div>
                   )}
-                  <div className="bg-primary/10 text-primary text-3xl font-semibold px-8 py-3 rounded-full">
-                    {currentCall.queue?.name || "Atendimento"}
-                  </div>
+                  {!currentCall.professional_name && !currentCall.room_name && (
+                    <div className="bg-primary/10 text-primary text-3xl font-semibold px-8 py-3 rounded-full">
+                      {currentCall.queue?.name || "Atendimento"}
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -352,7 +355,9 @@ export default function PublicPanel() {
                 >
                   <div>
                     <div className="text-slate-800 text-xl font-bold">{formatDisplayName(call)}</div>
-                    <div className="text-slate-500 text-sm">{call.queue?.name}</div>
+                    <div className="text-slate-500 text-sm">
+                      {call.professional_name || call.room_name || call.queue?.name}
+                    </div>
                   </div>
                   <div className="text-slate-400 text-sm tabular-nums">
                     {new Date(call.called_at).toLocaleTimeString("pt-BR", {
