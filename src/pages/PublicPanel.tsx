@@ -1,10 +1,22 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Monitor, Volume2, VolumeX } from "lucide-react";
+import { Monitor, Volume2, VolumeX, Stethoscope, Heart, Baby, Brain, Eye, Bone, Smile, Activity } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { PanelBannerCarousel } from "@/components/panel/PanelBannerCarousel";
 import { PanelBanner } from "@/hooks/usePanelBanners";
+
+const getSpecialtyIcon = (specialty?: string | null) => {
+  const s = (specialty || "").toLowerCase();
+  if (s.includes("cardio")) return Heart;
+  if (s.includes("pediat")) return Baby;
+  if (s.includes("neuro") || s.includes("psic")) return Brain;
+  if (s.includes("oftalmo")) return Eye;
+  if (s.includes("ortoped") || s.includes("reumato")) return Bone;
+  if (s.includes("odonto") || s.includes("dent")) return Smile;
+  if (s.includes("fisio") || s.includes("nutri")) return Activity;
+  return Stethoscope;
+};
 
 // Play a notification chime using Web Audio API
 const playNotificationChime = (): Promise<void> => {
@@ -85,6 +97,7 @@ interface QueueCall {
   queue_id: string;
   patient_name: string;
   professional_name?: string | null;
+  professional_specialty?: string | null;
   room_name?: string | null;
   ticket_number: string;
   called_at: string;
