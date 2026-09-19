@@ -1,10 +1,22 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Monitor, Volume2, VolumeX } from "lucide-react";
+import { Monitor, Volume2, VolumeX, Stethoscope, Heart, Baby, Brain, Eye, Bone, Smile, Activity } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { PanelBannerCarousel } from "@/components/panel/PanelBannerCarousel";
 import { PanelBanner } from "@/hooks/usePanelBanners";
+
+const getSpecialtyIcon = (specialty?: string | null) => {
+  const s = (specialty || "").toLowerCase();
+  if (s.includes("cardio")) return Heart;
+  if (s.includes("pediat")) return Baby;
+  if (s.includes("neuro") || s.includes("psic")) return Brain;
+  if (s.includes("oftalmo")) return Eye;
+  if (s.includes("ortoped") || s.includes("reumato")) return Bone;
+  if (s.includes("odonto") || s.includes("dent")) return Smile;
+  if (s.includes("fisio") || s.includes("nutri")) return Activity;
+  return Stethoscope;
+};
 
 // Play a notification chime using Web Audio API
 const playNotificationChime = (): Promise<void> => {
@@ -85,6 +97,7 @@ interface QueueCall {
   queue_id: string;
   patient_name: string;
   professional_name?: string | null;
+  professional_specialty?: string | null;
   room_name?: string | null;
   ticket_number: string;
   called_at: string;
@@ -313,8 +326,21 @@ export default function PublicPanel() {
                   </div>
                 )}
                 {currentCall.professional_name && (
-                  <div className="text-slate-500 text-3xl mt-3 text-center">
-                    {currentCall.professional_name}
+                  <div className="mt-5 flex items-center justify-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl px-8 py-4">
+                    {(() => {
+                      const Icon = getSpecialtyIcon(currentCall.professional_specialty);
+                      return <Icon className="h-10 w-10 text-primary shrink-0" />;
+                    })()}
+                    <div className="text-left">
+                      <div className="text-primary text-4xl font-bold leading-tight">
+                        {currentCall.professional_name}
+                      </div>
+                      {currentCall.professional_specialty && (
+                        <div className="text-slate-500 text-xl font-medium">
+                          {currentCall.professional_specialty}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
