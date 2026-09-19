@@ -20284,6 +20284,20 @@ export type Database = {
           used: number
         }[]
       }
+      get_clinic_queue_panel: {
+        Args: { p_clinic_id: string }
+        Returns: {
+          called_at: string
+          id: string
+          patient_name: string
+          professional_name: string
+          professional_specialty: string
+          queue_name: string
+          room_name: string
+          status: string
+          ticket: string
+        }[]
+      }
       get_contribution_by_public_token: {
         Args: { p_token: string }
         Returns: Json
