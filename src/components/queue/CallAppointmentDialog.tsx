@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -74,6 +74,8 @@ export function CallAppointmentDialog({
   const queryClient = useQueryClient();
   const [queueId, setQueueId] = useState<string>("");
   const [roomName, setRoomName] = useState<string>("");
+  const userChangedQueue = useRef(false);
+  const userChangedRoom = useRef(false);
 
   const { data: queues = [], isLoading } = useQuery({
     queryKey: ["queues-active", clinicId],
@@ -107,6 +109,8 @@ export function CallAppointmentDialog({
 
   useEffect(() => {
     if (!open) return;
+    userChangedQueue.current = false;
+    userChangedRoom.current = false;
     const autoRoom = getRoomForProfessional(appointment?.professionalName || professionalName);
     setRoomName(autoRoom || localStorage.getItem(ROOM_STORAGE_KEY) || "");
   }, [open, appointment?.professionalName, professionalName]);
@@ -132,7 +136,37 @@ export function CallAppointmentDialog({
   const callMutation = useMutation({
     mutationFn: async () => {
       if (!clinicId || !appointment) throw new Error("Dados incompletos");
-      const queue = queues.find((q) => q.id === queueId);
+
+      // Resolve o nome do profissional no momento da chamada (não depende do carregamento prévio)
+      let profName = appointment.professionalName || professionalName || null;
+      if (!profName && appointment.professional_id) {
+        const { data: profRow } = await supabase
+          .from("professionals")
+          .select("name")
+          .eq("id", appointment.professional_id)
+          .maybeSingle();
+        profName = profRow?.name || null;
+      }
+      const autoRoom = getRoomForProfessional(profName);
+      const normalizedProfessional = profName ? normalizeName(profName) : "";
+      const professionalQueue = normalizedProfessional
+        ? queues.find((queue) => {
+            const normalizedQueue = normalizeName(queue.name);
+            return (
+              normalizedQueue.includes(normalizedProfessional) ||
+              normalizedProfessional.includes(normalizedQueue)
+            );
+          })
+        : undefined;
+
+      const effectiveQueueId =
+        !userChangedQueue.current && professionalQueue ? professionalQueue.id : queueId;
+      const effectiveRoom = !userChangedRoom.current && autoRoom ? autoRoom : roomName;
+      setQueueId(effectiveQueueId);
+      setRoomName(effectiveRoom);
+      localStorage.setItem(ROOM_STORAGE_KEY, effectiveRoom);
+
+      const queue = queues.find((q) => q.id === effectiveQueueId);
       if (!queue) throw new Error("Selecione uma fila");
 
       const nowIso = new Date().toISOString();
@@ -153,7 +187,7 @@ export function CallAppointmentDialog({
             status: "called",
             called_at: nowIso,
             queue_id: queue.id,
-            room_name: roomName || null,
+            room_name: effectiveRoom || null,
             professional_id: appointment.professional_id,
           })
           .eq("id", existing.id);
@@ -177,7 +211,7 @@ export function CallAppointmentDialog({
         professional_id: appointment.professional_id,
         ticket_number: nextTicket,
         ticket_prefix: queue.ticket_prefix,
-        room_name: roomName || null,
+        room_name: effectiveRoom || null,
         status: "called",
         checked_in_at: nowIso,
         called_at: nowIso,
@@ -194,7 +228,6 @@ export function CallAppointmentDialog({
       return `${queue.ticket_prefix || ""}${nextTicket}`;
     },
     onSuccess: (ticket) => {
-      localStorage.setItem(ROOM_STORAGE_KEY, roomName);
       toast.success(`Chamando ${appointment?.patientName} (${ticket})`);
       queryClient.invalidateQueries({ queryKey: ["queue-calls"] });
       queryClient.invalidateQueries({ queryKey: ["queues"] });
@@ -218,7 +251,7 @@ export function CallAppointmentDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Fila / Painel</Label>
-            <Select value={queueId} onValueChange={setQueueId} disabled={isLoading}>
+            <Select value={queueId} onValueChange={(v) => { userChangedQueue.current = true; setQueueId(v); }} disabled={isLoading}>
               <SelectTrigger>
                 <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione a fila"} />
               </SelectTrigger>
@@ -241,7 +274,7 @@ export function CallAppointmentDialog({
             <Label>Sala / Consultório</Label>
             <Input
               value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
+              onChange={(e) => { userChangedRoom.current = true; setRoomName(e.target.value); }}
               placeholder="Ex.: Consultório 2"
             />
           </div>
