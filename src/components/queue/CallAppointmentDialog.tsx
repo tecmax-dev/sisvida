@@ -251,7 +251,7 @@ export function CallAppointmentDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Fila / Painel</Label>
-            <Select value={queueId} onValueChange={setQueueId} disabled={isLoading}>
+            <Select value={queueId} onValueChange={(v) => { userChangedQueue.current = true; setQueueId(v); }} disabled={isLoading}>
               <SelectTrigger>
                 <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione a fila"} />
               </SelectTrigger>
@@ -274,7 +274,7 @@ export function CallAppointmentDialog({
             <Label>Sala / Consultório</Label>
             <Input
               value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
+              onChange={(e) => { userChangedRoom.current = true; setRoomName(e.target.value); }}
               placeholder="Ex.: Consultório 2"
             />
           </div>
