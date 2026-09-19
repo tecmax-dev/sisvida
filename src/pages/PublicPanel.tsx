@@ -299,73 +299,84 @@ export default function PublicPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div
+      className="h-screen flex flex-col bg-slate-50 overflow-hidden"
+      style={{ height: "100dvh" }}
+    >
       {/* Header */}
-      <div className="px-8 py-5 flex items-center justify-between bg-white border-b border-slate-200 shadow-sm">
-        <div className="flex items-center gap-4">
+      <div className="shrink-0 px-4 sm:px-8 py-2 sm:py-5 flex items-center justify-between bg-white border-b border-slate-200 shadow-sm">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           {clinic?.logo_url ? (
-            <img src={clinic.logo_url} alt={clinic.name} className="h-12 object-contain" />
+            <img
+              src={clinic.logo_url}
+              alt={clinic.name}
+              className="h-8 sm:h-12 object-contain max-w-[40vw]"
+            />
           ) : (
             <Logo size="md" />
           )}
-          <div className="text-slate-800 text-xl font-semibold">{clinic?.name || "Painel de Chamadas"}</div>
+          <div className="text-slate-800 text-base sm:text-xl font-semibold truncate">
+            {clinic?.name || "Painel de Chamadas"}
+          </div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6 shrink-0">
           <button
             onClick={() => { unlockAudio(); setSoundEnabled(!soundEnabled); }}
-            className="text-slate-400 hover:text-slate-700 transition-colors p-2 rounded-full hover:bg-slate-100"
+            className="text-slate-400 hover:text-slate-700 transition-colors p-1.5 sm:p-2 rounded-full hover:bg-slate-100"
             title={soundEnabled ? "Desativar som" : "Ativar som"}
           >
-            {soundEnabled ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+            {soundEnabled ? <Volume2 className="h-5 w-5 sm:h-6 sm:w-6" /> : <VolumeX className="h-5 w-5 sm:h-6 sm:w-6" />}
           </button>
-          <div className="text-slate-800 text-3xl font-semibold tabular-nums">
+          <div className="text-slate-800 text-2xl sm:text-3xl font-semibold tabular-nums">
             {currentTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 min-h-0 flex flex-col xl:flex-row">
         {/* Current Call or Banner Carousel - Main Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-12 relative">
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-4 sm:p-8 xl:p-12 relative overflow-hidden">
           {currentCall ? (
             <>
-              <div className="text-primary text-2xl font-semibold tracking-wide uppercase mb-4">Chamando agora</div>
-              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 px-16 py-12 flex flex-col items-center">
-                <div className="text-slate-900 text-[11rem] font-bold leading-none animate-pulse">
+              <div className="text-primary text-base sm:text-2xl font-semibold tracking-wide uppercase mb-2 sm:mb-4 shrink-0">
+                Chamando agora
+              </div>
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200 px-5 sm:px-16 py-5 sm:py-10 flex flex-col items-center max-w-full min-h-0">
+                <div className="text-slate-900 font-bold leading-none animate-pulse text-[clamp(2.5rem,16vmin,11rem)]">
                   {formatDisplayName(currentCall)}
                 </div>
                 {currentCall.queue?.display_mode !== "name" && currentCall.patient_name && (
-                  <div className="text-slate-700 text-5xl font-semibold mt-6 text-center">
+                  <div className="text-slate-700 text-xl sm:text-3xl xl:text-5xl font-semibold mt-3 sm:mt-6 text-center break-words max-w-full">
                     {currentCall.patient_name}
                   </div>
                 )}
                 {currentCall.professional_name && (
-                  <div className="mt-5 flex items-center justify-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl px-8 py-4">
+                  <div className="mt-3 sm:mt-6 flex items-center justify-center gap-2 sm:gap-3 bg-primary/10 border border-primary/20 rounded-xl sm:rounded-2xl px-4 sm:px-8 py-2 sm:py-4 max-w-full">
                     {(() => {
                       const Icon = getSpecialtyIcon(currentCall.professional_specialty);
-                      return <Icon className="h-10 w-10 text-primary shrink-0" />;
+                      return <Icon className="h-6 w-6 sm:h-10 sm:w-10 text-primary shrink-0" />;
                     })()}
-                    <div className="text-left">
-                      <div className="text-primary text-4xl font-bold leading-tight">
+                    <div className="text-left min-w-0">
+                      <div className="text-primary text-lg sm:text-3xl xl:text-4xl font-bold leading-tight truncate max-w-full">
                         {currentCall.professional_name}
                       </div>
                       {currentCall.professional_specialty && (
-                        <div className="text-slate-500 text-xl font-medium">
+                        <div className="text-slate-500 text-xs sm:text-lg xl:text-xl font-medium truncate max-w-full">
                           {currentCall.professional_specialty}
                         </div>
                       )}
                     </div>
                   </div>
                 )}
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+                <div className="mt-4 sm:mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-4">
                   {currentCall.room_name && (
-                    <div className="bg-emerald-100 text-emerald-700 text-3xl font-bold px-8 py-3 rounded-full">
+                    <div className="bg-emerald-100 text-emerald-700 text-lg sm:text-2xl xl:text-3xl font-bold px-4 sm:px-8 py-1.5 sm:py-3 rounded-full">
                       {currentCall.room_name}
                     </div>
                   )}
                   {!currentCall.professional_name && !currentCall.room_name && (
-                    <div className="bg-primary/10 text-primary text-3xl font-semibold px-8 py-3 rounded-full">
+                    <div className="bg-primary/10 text-primary text-lg sm:text-2xl xl:text-3xl font-semibold px-4 sm:px-8 py-1.5 sm:py-3 rounded-full">
                       {currentCall.queue?.name || "Atendimento"}
                     </div>
                   )}
@@ -376,31 +387,31 @@ export default function PublicPanel() {
             <PanelBannerCarousel banners={banners} className="absolute inset-0" />
           ) : (
             <div className="text-center">
-              <div className="bg-white rounded-full p-8 shadow-md border border-slate-200 inline-block mb-6">
-                <Monitor className="h-20 w-20 text-primary/60" />
+              <div className="bg-white rounded-full p-4 sm:p-8 shadow-md border border-slate-200 inline-block mb-4 sm:mb-6">
+                <Monitor className="h-10 w-10 sm:h-20 sm:w-20 text-primary/60" />
               </div>
-              <div className="text-slate-500 text-3xl">Aguardando chamadas...</div>
+              <div className="text-slate-500 text-xl sm:text-3xl">Aguardando chamadas...</div>
             </div>
           )}
         </div>
 
         {/* Recent Calls - Sidebar */}
         {recentCalls.length > 0 && (
-          <div className="w-96 border-l border-slate-200 bg-white p-6">
-            <div className="text-slate-500 text-lg font-medium mb-4">Chamadas anteriores</div>
-            <div className="space-y-3">
+          <div className="w-full xl:w-96 shrink-0 max-h-[32vh] xl:max-h-none border-t xl:border-t-0 xl:border-l border-slate-200 bg-white p-4 sm:p-6 overflow-y-auto">
+            <div className="text-slate-500 text-base sm:text-lg font-medium mb-3 sm:mb-4">Chamadas anteriores</div>
+            <div className="space-y-2 sm:space-y-3">
               {recentCalls.map((call) => (
                 <div
                   key={call.id}
-                  className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between"
+                  className="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3"
                 >
-                  <div>
-                    <div className="text-slate-800 text-xl font-bold">{formatDisplayName(call)}</div>
-                    <div className="text-slate-500 text-sm">
+                  <div className="min-w-0">
+                    <div className="text-slate-800 text-lg sm:text-xl font-bold truncate">{formatDisplayName(call)}</div>
+                    <div className="text-slate-500 text-xs sm:text-sm truncate">
                       {call.professional_name || call.room_name || call.queue?.name}
                     </div>
                   </div>
-                  <div className="text-slate-400 text-sm tabular-nums">
+                  <div className="text-slate-400 text-xs sm:text-sm tabular-nums shrink-0">
                     {new Date(call.called_at).toLocaleTimeString("pt-BR", {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -414,8 +425,8 @@ export default function PublicPanel() {
       </div>
 
       {/* Footer */}
-      <div className="p-4 text-center text-slate-400 text-sm bg-white border-t border-slate-200 capitalize">
-        {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+      <div className="shrink-0 px-4 py-1.5 sm:py-3 text-center text-slate-400 text-xs sm:text-sm bg-white border-t border-slate-200 capitalize">
+        {currentTime.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
       </div>
     </div>
   );
