@@ -99,6 +99,9 @@ interface Panel {
   name: string;
   token: string;
   is_active: boolean;
+  display_config?: {
+    show_name_and_ticket?: boolean;
+  };
 }
 
 interface Clinic {
@@ -262,6 +265,9 @@ export default function PublicPanel() {
   }, [token, announceCall]);
 
   const formatDisplayName = (call: QueueCall) => {
+    if (panel?.display_config?.show_name_and_ticket) {
+      return call.ticket_number;
+    }
     const displayMode = call.queue?.display_mode || "ticket";
     
     switch (displayMode) {
@@ -346,7 +352,7 @@ export default function PublicPanel() {
                 <div className="text-slate-900 font-bold leading-none animate-pulse text-[clamp(2.5rem,16vmin,11rem)]">
                   {formatDisplayName(currentCall)}
                 </div>
-                {currentCall.queue?.display_mode !== "name" && currentCall.patient_name && (
+                {(panel?.display_config?.show_name_and_ticket || currentCall.queue?.display_mode !== "name") && currentCall.patient_name && (
                   <div className="text-slate-700 text-xl sm:text-3xl xl:text-5xl font-semibold mt-3 sm:mt-6 text-center break-words max-w-full">
                     {currentCall.patient_name}
                   </div>
@@ -407,6 +413,9 @@ export default function PublicPanel() {
                 >
                   <div className="min-w-0">
                     <div className="text-slate-800 text-lg sm:text-xl font-bold truncate">{formatDisplayName(call)}</div>
+                    {panel?.display_config?.show_name_and_ticket && call.patient_name && (
+                      <div className="text-slate-600 text-sm sm:text-base font-medium truncate">{call.patient_name}</div>
+                    )}
                     <div className="text-slate-500 text-xs sm:text-sm truncate">
                       {call.professional_name || call.room_name || call.queue?.name}
                     </div>

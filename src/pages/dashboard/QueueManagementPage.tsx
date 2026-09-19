@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, Monitor, Smartphone, Users, Bell, Copy, CalendarClock } from "lucide-react";
+import { Plus, Edit2, Trash2, Monitor, Smartphone, Users, Bell, Copy, CalendarClock, Settings } from "lucide-react";
 import { CallsPanel } from "@/components/queue/CallsPanel";
 import { AgendaCallsTab } from "@/components/queue/AgendaCallsTab";
 
@@ -54,6 +54,9 @@ interface Panel {
   name: string;
   token: string;
   is_active: boolean;
+  display_config: {
+    show_name_and_ticket?: boolean;
+  } | null;
 }
 
 interface Totem {
@@ -83,6 +86,9 @@ function QueueManagementContent() {
   const queryClient = useQueryClient();
   const [queueDialogOpen, setQueueDialogOpen] = useState(false);
   const [editingQueue, setEditingQueue] = useState<Queue | null>(null);
+  const [panelDialogOpen, setPanelDialogOpen] = useState(false);
+  const [editingPanel, setEditingPanel] = useState<Panel | null>(null);
+  const [showNameAndTicket, setShowNameAndTicket] = useState(false);
 
   const [queueForm, setQueueForm] = useState({
     name: "",
@@ -206,6 +212,30 @@ function QueueManagementContent() {
     onError: () => toast.error("Erro ao criar painel"),
   });
 
+  const updatePanelDisplayMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingPanel) throw new Error("Painel não selecionado");
+      const currentConfig = editingPanel.display_config || {};
+      const { error } = await supabase
+        .from("panels")
+        .update({
+          display_config: {
+            ...currentConfig,
+            show_name_and_ticket: showNameAndTicket,
+          },
+        })
+        .eq("id", editingPanel.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["panels"] });
+      toast.success("Configuração do painel salva");
+      setPanelDialogOpen(false);
+      setEditingPanel(null);
+    },
+    onError: () => toast.error("Erro ao salvar configuração do painel"),
+  });
+
   // Totem mutations
   const createTotemMutation = useMutation({
     mutationFn: async () => {
@@ -259,6 +289,12 @@ function QueueManagementContent() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Link copiado!");
+  };
+
+  const handleConfigurePanel = (panel: Panel) => {
+    setEditingPanel(panel);
+    setShowNameAndTicket(panel.display_config?.show_name_and_ticket === true);
+    setPanelDialogOpen(true);
   };
 
   if (!currentClinic) return null;
@@ -404,6 +440,14 @@ function QueueManagementContent() {
                           </p>
                         </div>
                         <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleConfigurePanel(panel)}
+                          >
+                            <Settings className="h-4 w-4 mr-1" />
+                            Configurar
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -571,6 +615,45 @@ function QueueManagementContent() {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={panelDialogOpen}
+          onOpenChange={(open) => {
+            setPanelDialogOpen(open);
+            if (!open) setEditingPanel(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Configurar exibição do painel</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-between gap-4 rounded-md border p-4">
+              <div className="space-y-1">
+                <Label htmlFor="show_name_and_ticket">Mostrar nome e senha simultaneamente</Label>
+                <p className="text-sm text-muted-foreground">
+                  Exibe o nome da pessoa e a senha na mesma chamada.
+                </p>
+              </div>
+              <Switch
+                id="show_name_and_ticket"
+                checked={showNameAndTicket}
+                onCheckedChange={setShowNameAndTicket}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setPanelDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => updatePanelDisplayMutation.mutate()}
+                disabled={updatePanelDisplayMutation.isPending}
+              >
+                Salvar
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

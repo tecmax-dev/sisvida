@@ -151,6 +151,7 @@ Deno.serve(async (req) => {
         name: panel.name,
         token: panel.token,
         is_active: panel.is_active,
+        display_config: panel.display_config || {},
       },
       clinic: clinic || null,
       currentCall: mapped[0] || null,
