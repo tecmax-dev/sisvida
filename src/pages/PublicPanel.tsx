@@ -84,6 +84,8 @@ interface QueueCall {
   id: string;
   queue_id: string;
   patient_name: string;
+  professional_name?: string | null;
+  room_name?: string | null;
   ticket_number: string;
   called_at: string;
   status: string;
