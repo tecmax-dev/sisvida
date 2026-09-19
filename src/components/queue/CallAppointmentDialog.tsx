@@ -164,6 +164,7 @@ export function CallAppointmentDialog({
       const effectiveRoom = !userChangedRoom.current && autoRoom ? autoRoom : roomName;
       setQueueId(effectiveQueueId);
       setRoomName(effectiveRoom);
+      localStorage.setItem(ROOM_STORAGE_KEY, effectiveRoom);
 
       const queue = queues.find((q) => q.id === effectiveQueueId);
       if (!queue) throw new Error("Selecione uma fila");
@@ -227,7 +228,6 @@ export function CallAppointmentDialog({
       return `${queue.ticket_prefix || ""}${nextTicket}`;
     },
     onSuccess: (ticket) => {
-      localStorage.setItem(ROOM_STORAGE_KEY, effectiveRoom);
       toast.success(`Chamando ${appointment?.patientName} (${ticket})`);
       queryClient.invalidateQueries({ queryKey: ["queue-calls"] });
       queryClient.invalidateQueries({ queryKey: ["queues"] });
