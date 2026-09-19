@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Monitor, Volume2, VolumeX, Stethoscope, Heart, Baby, Brain, Eye, Bone, Smile, Activity } from "lucide-react";
+import { Monitor, Volume2, VolumeX, Stethoscope, Heart, Baby, Brain, Eye, Bone, Activity } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { PanelBannerCarousel } from "@/components/panel/PanelBannerCarousel";
 import { PanelBanner } from "@/hooks/usePanelBanners";
