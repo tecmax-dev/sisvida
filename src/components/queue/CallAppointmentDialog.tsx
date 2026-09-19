@@ -136,7 +136,36 @@ export function CallAppointmentDialog({
   const callMutation = useMutation({
     mutationFn: async () => {
       if (!clinicId || !appointment) throw new Error("Dados incompletos");
-      const queue = queues.find((q) => q.id === queueId);
+
+      // Resolve o nome do profissional no momento da chamada (não depende do carregamento prévio)
+      let profName = appointment.professionalName || professionalName || null;
+      if (!profName && appointment.professional_id) {
+        const { data: profRow } = await supabase
+          .from("professionals")
+          .select("name")
+          .eq("id", appointment.professional_id)
+          .maybeSingle();
+        profName = profRow?.name || null;
+      }
+      const autoRoom = getRoomForProfessional(profName);
+      const normalizedProfessional = profName ? normalizeName(profName) : "";
+      const professionalQueue = normalizedProfessional
+        ? queues.find((queue) => {
+            const normalizedQueue = normalizeName(queue.name);
+            return (
+              normalizedQueue.includes(normalizedProfessional) ||
+              normalizedProfessional.includes(normalizedQueue)
+            );
+          })
+        : undefined;
+
+      const effectiveQueueId =
+        !userChangedQueue.current && professionalQueue ? professionalQueue.id : queueId;
+      const effectiveRoom = !userChangedRoom.current && autoRoom ? autoRoom : roomName;
+      setQueueId(effectiveQueueId);
+      setRoomName(effectiveRoom);
+
+      const queue = queues.find((q) => q.id === effectiveQueueId);
       if (!queue) throw new Error("Selecione uma fila");
 
       const nowIso = new Date().toISOString();
