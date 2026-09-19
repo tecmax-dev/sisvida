@@ -210,7 +210,7 @@ export function CallAppointmentDialog({
         professional_id: appointment.professional_id,
         ticket_number: nextTicket,
         ticket_prefix: queue.ticket_prefix,
-        room_name: roomName || null,
+        room_name: effectiveRoom || null,
         status: "called",
         checked_in_at: nowIso,
         called_at: nowIso,
@@ -227,7 +227,7 @@ export function CallAppointmentDialog({
       return `${queue.ticket_prefix || ""}${nextTicket}`;
     },
     onSuccess: (ticket) => {
-      localStorage.setItem(ROOM_STORAGE_KEY, roomName);
+      localStorage.setItem(ROOM_STORAGE_KEY, effectiveRoom);
       toast.success(`Chamando ${appointment?.patientName} (${ticket})`);
       queryClient.invalidateQueries({ queryKey: ["queue-calls"] });
       queryClient.invalidateQueries({ queryKey: ["queues"] });
