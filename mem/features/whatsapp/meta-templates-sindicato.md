@@ -69,6 +69,11 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
   - Body vars profissional: `{{1}}` profissional, `{{2}}` funcionário, `{{3}}` empresa, `{{4}}` data, `{{5}}` hora.
   - Quando v3 aprovar, atualizar `homologacaoUtils.ts`/`send-homologacao-reminders` para usar v3 (e parar de gerar variável de "tipo serviço"). v2 fica como fallback até deprecação.
 
+## Lembrete de consulta — versões atuais
+
+- `lembrete_consulta_v4` APROVADO na Meta (RC2). Botão URL: "Gerenciar atendimento" → `https://sindexa.com.br/consulta/{{token}}`. 4 vars body: primeiro nome, data por extenso, hora, profissional.
+- `lembrete_consulta_v5` — registrado em 2026-09-20 (PENDING). Mesmas 4 vars e mesmo botão URL, mas texto direto ("CONFIRMAR sua presença, REAGENDAR ou CANCELAR a consulta") e botão renomeado para "Confirmar presença" — usuário achou "Gerenciar atendimento" confuso. `send-appointment-reminder` resolve dinamicamente: usa v5 quando APPROVED, senão v4; nunca envia template PENDING/REJECTED. `appointment-reminder-template` (action create/status) cria a v5.
+
 ## Quando atualizar
 
 Ao alterar texto ou variáveis de qualquer template, sempre incrementar versão (`_v3`, `_v4`) — Meta bloqueia o nome por dias após delete.
