@@ -87,6 +87,7 @@ const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal
 const HomologacaoPublicBooking = lazy(() => import("./pages/HomologacaoPublicBooking"));
 const HomologacaoClinicBooking = lazy(() => import("./pages/HomologacaoClinicBooking"));
 const HomologacaoProtocolValidation = lazy(() => import("./pages/HomologacaoProtocolValidation"));
+const HomologacaoConfirmation = lazy(() => import("./pages/HomologacaoConfirmation"));
 const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
 const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
 const PresentationPage = lazy(() => import("./pages/public/PresentationPage"));
