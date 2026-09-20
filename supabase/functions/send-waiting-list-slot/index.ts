@@ -141,5 +141,18 @@ serve(async (req) => {
     })
     .eq("id", entry.id);
 
+  // Espelha no Chatwoot (nota privada) para o atendente ver o histórico.
+  await chatwootMirrorTemplateSent(
+    admin as any,
+    String(entry.clinic_id),
+    e164,
+    displayName,
+    `[Aviso de vaga enviado pelo WhatsApp oficial]\n` +
+      `Paciente: ${displayName}\n` +
+      `Vaga: ${formatDatePt(appointmentDate)} às ${startTime.slice(0, 5)}\n` +
+      `Profissional: ${professionalName}\n` +
+      `Template: ${TEMPLATE_NAME}`,
+  );
+
   return json({ ok: true, patientName: displayName, template: TEMPLATE_NAME, result, build: BUILD });
 });
