@@ -413,31 +413,19 @@ export default function HomologacaoAgendaPage() {
     }
   };
 
-  // Lembrete oficial (Meta Cloud API + template aprovado, consentimento e opt-out)
+  // Envia pelo mesmo canal operacional usado pelo diálogo e pela confirmação.
+  // O endpoint legado send-homologacao-reminder não está disponível neste ambiente
+  // e fazia o botão parecer funcionar, mas nenhum WhatsApp era enviado.
   const sendOfficialReminder = async (
     apt: HomologacaoAppointment,
-    force: boolean,
+    _force: boolean,
   ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const { data, error } = await supabase.functions.invoke("send-homologacao-reminder", {
-        body: { appointmentId: apt.id, force },
-      });
-      if (error) return { success: false, error: error.message };
-      if (data?.ok) return { success: true };
-      const reasonMap: Record<string, string> = {
-        REMINDER_ALREADY_SENT: "Lembrete já enviado para este agendamento",
-        NO_CONSENT: "Sem consentimento de WhatsApp para este número",
-        OPT_OUT: "Número descadastrado (opt-out)",
-        INVALID_PHONE: "Telefone inválido",
-        TEMPLATE_NOT_APPROVED: "Modelo de mensagem ainda não aprovado pela Meta",
-        APPOINTMENT_NOT_ELIGIBLE: "Agendamento não elegível para lembrete",
-        SEND_NOT_CONFIRMED: "Envio não confirmado pela Meta",
-      };
-      const reason = String(data?.reason || data?.error || "");
-      return { success: false, error: reasonMap[reason] || reason || "Erro ao enviar lembrete" };
-    } catch (err: any) {
-      return { success: false, error: err?.message || "Erro ao enviar lembrete" };
+    if (!apt.company_phone?.trim()) {
+      return { success: false, error: "A empresa não possui telefone cadastrado" };
     }
+
+    const message = formatReminderMessage(apt);
+    return sendWhatsAppViaEvolution(currentClinic?.id || "", apt.company_phone, message);
   };
 
   const handleSendReminder = async (apt: HomologacaoAppointment) => {

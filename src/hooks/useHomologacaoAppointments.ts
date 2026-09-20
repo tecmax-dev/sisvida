@@ -10,6 +10,7 @@ export interface HomologacaoAppointment {
   clinic_id: string;
   employee_name: string;
   employee_cpf?: string | null;
+  employee_phone?: string | null;
   company_name: string;
   company_cnpj?: string | null;
   company_phone: string;

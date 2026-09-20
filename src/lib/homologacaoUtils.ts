@@ -185,9 +185,10 @@ export async function sendWhatsAppViaEvolution(
       return { success: false, error: errMsg };
     }
 
-    if (data && !data.success) {
-      console.error('[sendWhatsAppViaEvolution] Function returned error:', data.error);
-      return { success: false, error: data.error || 'Erro ao enviar mensagem' };
+      if (!data || data.success !== true) {
+      const detail = data?.error || data?.message || 'O serviço de WhatsApp não confirmou o envio';
+      console.error('[sendWhatsAppViaEvolution] Function returned error:', detail);
+      return { success: false, error: detail };
     }
 
     console.log('[sendWhatsAppViaEvolution] Mensagem enviada com sucesso');
