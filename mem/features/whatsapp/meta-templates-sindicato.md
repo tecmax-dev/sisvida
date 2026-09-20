@@ -71,8 +71,8 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 
 ## Lembrete de consulta — versões atuais
 
-- `lembrete_consulta_v4` APROVADO na Meta (RC2). Botão URL: "Gerenciar atendimento" → `https://sindexa.com.br/consulta/{{token}}`. 4 vars body: primeiro nome, data por extenso, hora, profissional.
-- `lembrete_consulta_v5` — registrado em 2026-09-20 (PENDING). Mesmas 4 vars e mesmo botão URL, mas texto direto ("CONFIRMAR sua presença, REAGENDAR ou CANCELAR a consulta") e botão renomeado para "Confirmar presença" — usuário achou "Gerenciar atendimento" confuso. `send-appointment-reminder` resolve dinamicamente: usa v5 quando APPROVED, senão v4; nunca envia template PENDING/REJECTED. `appointment-reminder-template` (action create/status) cria a v5.
+- `lembrete_consulta_v4` APROVADO na Meta (RC2). Botão URL: "Gerenciar atendimento" → `https://sindexa.com.br/consulta/{{token}}`. 4 vars body: primeiro nome, data por extenso, hora, profissional. Fallback.
+- `lembrete_consulta_v5` **APROVADO na Meta em 2026-09-20** (confirmado via Graph API). Mesmas 4 vars e mesmo botão URL, texto direto ("CONFIRMAR sua presença, REAGENDAR ou CANCELAR a consulta") e botão "Confirmar presença". `send-appointment-reminder` resolve dinamicamente: v5 preferido (APPROVED), v4 fallback; nunca envia PENDING/REJECTED. Template ativo em produção.
 
 ## Quando atualizar
 
