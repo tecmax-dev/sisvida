@@ -197,6 +197,38 @@ export async function chatwootMirrorBotReply(
   });
 }
 
+/**
+ * Espelha no Chatwoot um template proativo já enviado pela Meta (lembrete de
+ * consulta, vaga da lista de espera). Best-effort e sempre como nota privada:
+ * o envio real já saiu pela Meta Cloud API; uma mensagem pública seria
+ * reentregue pelo canal e duplicaria a mensagem (risco de bloqueio Meta).
+ */
+export async function chatwootMirrorTemplateSent(
+  supabaseAdmin: SupabaseLike,
+  clinicId: string,
+  phoneE164: string,
+  contactName: string | null,
+  content: string,
+): Promise<void> {
+  try {
+    const cfg = await getChatwootConfig(supabaseAdmin, clinicId);
+    if (!cfg || !cfg.enabled || !cfg.inboxId) return;
+    const conversationId = await chatwootEnsureConversation(cfg, phoneE164, contactName);
+    if (!conversationId) return;
+    await cw(cfg, `/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: {
+        content,
+        message_type: "outgoing",
+        private: true,
+        content_attributes: { [CHATWOOT_BOT_FLAG]: true },
+      },
+    });
+  } catch (e) {
+    console.error(`[chatwoot] mirror de template falhou: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 /** Label usada para pausar o robô numa conversa específica. */
 export const CHATWOOT_PAUSE_LABEL = "robo-pausado";
 
