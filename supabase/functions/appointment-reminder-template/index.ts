@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const WABA_ID = "2063797207822998";
-const TEMPLATE_NAME = "lembrete_consulta_v5";
+const TEMPLATE_NAME = "lembrete_consulta_v6";
 const LANGUAGE = "pt_BR";
 const PUBLIC_BASE_URL = Deno.env.get("PUBLIC_APP_BASE_URL") || "https://sindexa.com.br";
 const SECURE_ROUTE = "/consulta";
@@ -25,6 +25,7 @@ const BODY_TEXT =
   "Horário: {{3}}\n" +
   "Profissional: {{4}}\n\n" +
   "Toque no botão abaixo para CONFIRMAR sua presença, REAGENDAR ou CANCELAR a consulta.\n" +
+  "Atenção: faltas sem cancelamento prévio bloqueiam novos agendamentos por 30 dias.\n" +
   "Esta é uma comunicação automática referente a um serviço previamente agendado.";
 
 const TEMPLATE_COMPONENTS = [

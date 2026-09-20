@@ -13,9 +13,9 @@ const cors = {
 const BUILD = "APPT-REMINDER-URL-2026-09-11-A";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
-// v5 = texto direto (confirmar presença / reagendar / cancelar). Só envia template APROVADO.
-const TEMPLATE_PREFERRED = "lembrete_consulta_v5";
-const TEMPLATE_FALLBACK = "lembrete_consulta_v4";
+// v6 = texto direto + aviso de bloqueio de 30 dias por falta sem cancelamento. Só envia template APROVADO.
+const TEMPLATE_PREFERRED = "lembrete_consulta_v6";
+const TEMPLATE_FALLBACK = "lembrete_consulta_v5";
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
@@ -160,7 +160,7 @@ serve(async (req) => {
   // Usa a v5 (texto direto) quando a Meta já a aprovou; enquanto isso, continua a v4.
   // Nenhum envio acontece com template PENDING/REJECTED (fail-closed).
   const resolveApprovedTemplate = async (): Promise<string | null> => {
-    for (const name of [TEMPLATE_PREFERRED, TEMPLATE_FALLBACK]) {
+    for (const name of [TEMPLATE_PREFERRED, TEMPLATE_FALLBACK, "lembrete_consulta_v4"]) {
       try {
         const r = await fetch(
           `${GRAPH}/${WABA_ID}/message_templates?name=${name}&limit=5`,
