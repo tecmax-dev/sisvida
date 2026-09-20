@@ -519,16 +519,16 @@ export default function HomologacaoAgendaPage() {
     let errorCount = 0;
 
     for (const apt of eligibleAppointments) {
-      const message = formatReminderMessage(apt);
-      const result = await sendWhatsAppViaEvolution(currentClinic.id, apt.company_phone, message);
-      
+      // Um lembrete por agendamento (sem force) — evita duplicidade junto à Meta
+      const result = await sendOfficialReminder(apt, false);
+
       if (result.success) {
         successCount++;
       } else {
         errorCount++;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await new Promise(resolve => setTimeout(resolve, 800));
     }
 
     setSendingBulkReminder(null);
