@@ -104,7 +104,10 @@ serve(async (req) => {
     return json({ ok: false, blocked: true, reason: "OPT_OUT", build: BUILD });
   }
 
-  const gate = await validateConsentForCurrentPhone(admin, e164, { personId: patient?.id ?? null });
+  const gate = await validateConsentForCurrentPhone(admin, e164, {
+    personId: patient?.id ?? null,
+    tenantId: String(appt.clinic_id),
+  });
   if (!gate.allow) {
     await admin.from("whatsapp_compliance_logs").insert({
       intent: "APPOINTMENT_REMINDER",

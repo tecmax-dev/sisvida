@@ -118,7 +118,10 @@ export async function createHomologacaoAppointment(input: CreateHomologacaoAppoi
     }
     
     if (consents.length > 0) {
-      await supabase.from("whatsapp_consents").insert(consents);
+      const { error: consentError } = await supabase.from("whatsapp_consents").insert(consents);
+      if (consentError) {
+        throw new Error(`Não foi possível registrar o consentimento do WhatsApp: ${consentError.message}`);
+      }
     }
   }
 

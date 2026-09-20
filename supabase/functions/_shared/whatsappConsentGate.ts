@@ -69,10 +69,12 @@ export async function validateConsentForCurrentPhone(
   const variants = phoneVariants(e164);
 
   // 1) Consentimento ativo gravado para o telefone ATUAL
-  const { data: rows } = await supabase
+  let consentQuery = supabase
     .from("whatsapp_consents")
-    .select("id,phone,consent_status,revoked_at,term_version,source,person_id,created_at")
-    .in("phone", variants)
+    .select("id,phone,consent_status,revoked_at,term_version,source,person_id,tenant_id,created_at")
+    .in("phone", variants);
+  if (opts.tenantId) consentQuery = consentQuery.eq("tenant_id", opts.tenantId);
+  const { data: rows } = await consentQuery
     .is("revoked_at", null)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -92,10 +94,12 @@ export async function validateConsentForCurrentPhone(
   } else {
     // Existe consentimento da pessoa, mas para outro número? -> mismatch explícito
     if (opts.personId) {
-      const { data: other } = await supabase
+      let otherQuery = supabase
         .from("whatsapp_consents")
         .select("id,phone")
-        .eq("person_id", opts.personId)
+        .eq("person_id", opts.personId);
+      if (opts.tenantId) otherQuery = otherQuery.eq("tenant_id", opts.tenantId);
+      const { data: other } = await otherQuery
         .is("revoked_at", null)
         .order("created_at", { ascending: false })
         .limit(1);
@@ -108,10 +112,12 @@ export async function validateConsentForCurrentPhone(
   }
 
   // 2) Opt-out do telefone atual
-  const { data: outs } = await supabase
+  let optOutQuery = supabase
     .from("whatsapp_opt_outs")
     .select("id")
-    .in("phone", variants)
+    .in("phone", variants);
+  if (opts.tenantId) optOutQuery = optOutQuery.eq("clinic_id", opts.tenantId);
+  const { data: outs } = await optOutQuery
     .is("reactivated_at", null)
     .limit(1);
   if (outs?.length) {

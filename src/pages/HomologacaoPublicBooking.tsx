@@ -418,19 +418,26 @@ export default function HomologacaoPublicBooking() {
       setCreatedAppointment(data);
       setStep('confirmation');
       toast.success("Agendamento realizado com sucesso!");
-      
-      // Trigger WhatsApp notifications (fire-and-forget)
-      supabase.functions.invoke("send-homologacao-notifications", {
-        body: { appointment_id: data.id }
-      }).then(result => {
-        if (result.error) {
-          console.error("Notification error:", result.error);
-        } else {
-          console.log("Notifications sent:", result.data);
+
+      const notificationPayload = { appointmentId: data.id, force: false };
+      console.log("Homologação WhatsApp payload:", notificationPayload);
+      try {
+        const { data: notificationResult, error: notificationError } = await supabase.functions.invoke(
+          "send-homologacao-reminder",
+          { body: notificationPayload },
+        );
+        console.log("Homologação WhatsApp response:", notificationResult);
+        if (notificationError) {
+          console.error("Homologação WhatsApp error:", notificationError);
+          toast.warning("Agendamento confirmado, mas o lembrete não foi enviado.");
+        } else if (notificationResult?.ok !== true) {
+          const reason = notificationResult?.reason || notificationResult?.error || "motivo não informado";
+          toast.warning(`Agendamento confirmado. WhatsApp não enviado: ${reason}.`);
         }
-      }).catch(err => {
-        console.error("Failed to send notifications:", err);
-      });
+      } catch (notificationError) {
+        console.error("Homologação WhatsApp exception:", notificationError);
+        toast.warning("Agendamento confirmado, mas o lembrete não foi enviado.");
+      }
     },
     onError: (error) => {
       console.error("Error creating appointment:", error);

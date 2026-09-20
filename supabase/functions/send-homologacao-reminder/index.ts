@@ -95,7 +95,7 @@ serve(async (req) => {
     return json({ ok: false, blocked: true, reason: "OPT_OUT", build: BUILD });
   }
 
-  const gate = await validateConsentForCurrentPhone(admin, e164, {});
+  const gate = await validateConsentForCurrentPhone(admin, e164, { tenantId: String(appt.clinic_id) });
   if (!gate.allow) {
     await admin.from("whatsapp_compliance_logs").insert({
       intent: "HOMOLOGACAO_REMINDER",
