@@ -12,8 +12,10 @@ const cors = {
 
 const BUILD = "APPT-REMINDER-URL-2026-09-11-A";
 const PHONE_ID = "1213495528515111";
-const TEMPLATE_NAME = "lembrete_consulta_v4";
-// Sem fallback: apenas o template oficial acima é usado.
+const WABA_ID = "2063797207822998";
+// v5 = texto direto (confirmar presença / reagendar / cancelar). Só envia template APROVADO.
+const TEMPLATE_PREFERRED = "lembrete_consulta_v5";
+const TEMPLATE_FALLBACK = "lembrete_consulta_v4";
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
@@ -155,9 +157,35 @@ serve(async (req) => {
     return { res, result };
   };
 
-  // Uso exclusivo do template oficial criado (lembrete_consulta_v4).
-  // Enquanto não estiver aprovado pela Meta, o envio é bloqueado (fail-closed), sem fallback.
-  const templateUsed = TEMPLATE_NAME;
+  // Usa a v5 (texto direto) quando a Meta já a aprovou; enquanto isso, continua a v4.
+  // Nenhum envio acontece com template PENDING/REJECTED (fail-closed).
+  const resolveApprovedTemplate = async (): Promise<string | null> => {
+    for (const name of [TEMPLATE_PREFERRED, TEMPLATE_FALLBACK]) {
+      try {
+        const r = await fetch(
+          `${GRAPH}/${WABA_ID}/message_templates?name=${name}&limit=5`,
+          { headers: { Authorization: `Bearer ${metaToken}` } },
+        );
+        const b = await r.json().catch(() => ({} as any));
+        const tpl = (b?.data ?? []).find((t: any) => t.name === name);
+        if (tpl && String(tpl.status).toUpperCase() === "APPROVED") return name;
+      } catch {
+        // segue para a próxima versão
+      }
+    }
+    return null;
+  };
+
+  const templateUsed = await resolveApprovedTemplate();
+  if (!templateUsed) {
+    await admin.from("whatsapp_compliance_logs").insert({
+      intent: "APPOINTMENT_REMINDER",
+      decision: "TEMPLATE_NOT_AVAILABLE",
+      metadata: { build: BUILD, appointment_id: appt.id, preferred: TEMPLATE_PREFERRED, fallback: TEMPLATE_FALLBACK },
+    });
+    return json({ ok: false, blocked: true, reason: "TEMPLATE_NOT_APPROVED", build: BUILD });
+  }
+
   const MAX_ATTEMPTS = 3;
   let res: Response | null = null;
   let result: any = {};
@@ -165,7 +193,7 @@ serve(async (req) => {
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     attemptsUsed = attempt;
-    const outcome = await sendOnce(TEMPLATE_NAME, true);
+    const outcome = await sendOnce(templateUsed, true);
     res = outcome.res;
     result = outcome.result;
 
