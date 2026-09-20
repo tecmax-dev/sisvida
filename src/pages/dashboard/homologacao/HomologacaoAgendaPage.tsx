@@ -413,16 +413,41 @@ export default function HomologacaoAgendaPage() {
     }
   };
 
-  // Quick WhatsApp send via Evolution API
+  // Lembrete oficial (Meta Cloud API + template aprovado, consentimento e opt-out)
+  const sendOfficialReminder = async (
+    apt: HomologacaoAppointment,
+    force: boolean,
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-homologacao-reminder", {
+        body: { appointmentId: apt.id, force },
+      });
+      if (error) return { success: false, error: error.message };
+      if (data?.ok) return { success: true };
+      const reasonMap: Record<string, string> = {
+        REMINDER_ALREADY_SENT: "Lembrete já enviado para este agendamento",
+        NO_CONSENT: "Sem consentimento de WhatsApp para este número",
+        OPT_OUT: "Número descadastrado (opt-out)",
+        INVALID_PHONE: "Telefone inválido",
+        TEMPLATE_NOT_APPROVED: "Modelo de mensagem ainda não aprovado pela Meta",
+        APPOINTMENT_NOT_ELIGIBLE: "Agendamento não elegível para lembrete",
+        SEND_NOT_CONFIRMED: "Envio não confirmado pela Meta",
+      };
+      const reason = String(data?.reason || data?.error || "");
+      return { success: false, error: reasonMap[reason] || reason || "Erro ao enviar lembrete" };
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Erro ao enviar lembrete" };
+    }
+  };
+
   const handleSendReminder = async (apt: HomologacaoAppointment) => {
     if (!currentClinic?.id) {
       toast.error("Clínica não encontrada");
       return;
     }
-    
-    const message = formatReminderMessage(apt);
-    const result = await sendWhatsAppViaEvolution(currentClinic.id, apt.company_phone, message);
-    
+
+    const result = await sendOfficialReminder(apt, true);
+
     await logHomologacaoNotification(
       apt.id,
       currentClinic.id,
@@ -430,11 +455,11 @@ export default function HomologacaoAgendaPage() {
       result.success ? "sent" : "failed",
       apt.company_phone,
       undefined,
-      message,
+      "Lembrete oficial (template Meta)",
       result.error,
       false
     );
-    
+
     if (result.success) {
       toast.success("Lembrete enviado via WhatsApp");
     } else {
@@ -494,16 +519,16 @@ export default function HomologacaoAgendaPage() {
     let errorCount = 0;
 
     for (const apt of eligibleAppointments) {
-      const message = formatReminderMessage(apt);
-      const result = await sendWhatsAppViaEvolution(currentClinic.id, apt.company_phone, message);
-      
+      // Um lembrete por agendamento (sem force) — evita duplicidade junto à Meta
+      const result = await sendOfficialReminder(apt, false);
+
       if (result.success) {
         successCount++;
       } else {
         errorCount++;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await new Promise(resolve => setTimeout(resolve, 800));
     }
 
     setSendingBulkReminder(null);

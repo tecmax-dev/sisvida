@@ -20050,6 +20050,10 @@ export type Database = {
         Args: { _action: string; _reason?: string; _token: string }
         Returns: string
       }
+      act_on_homologacao_by_token: {
+        Args: { _action: string; _reason?: string; _token: string }
+        Returns: string
+      }
       authenticate_patient_hybrid: {
         Args: { p_cpf: string; p_password: string }
         Returns: Json
@@ -20361,6 +20365,21 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_homologacao_by_confirmation_token: {
+        Args: { _token: string }
+        Returns: {
+          appointment_date: string
+          clinic_address: string
+          clinic_name: string
+          clinic_phone: string
+          company_name: string
+          employee_name: string
+          id: string
+          professional_name: string
+          start_time: string
+          status: string
+        }[]
       }
       get_meta_vault_secret: { Args: { _secret_name: string }; Returns: string }
       get_my_mobile_appointments: {

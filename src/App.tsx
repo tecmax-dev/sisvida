@@ -87,6 +87,7 @@ const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal
 const HomologacaoPublicBooking = lazy(() => import("./pages/HomologacaoPublicBooking"));
 const HomologacaoClinicBooking = lazy(() => import("./pages/HomologacaoClinicBooking"));
 const HomologacaoProtocolValidation = lazy(() => import("./pages/HomologacaoProtocolValidation"));
+const HomologacaoConfirmation = lazy(() => import("./pages/HomologacaoConfirmation"));
 const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
 const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
 const PresentationPage = lazy(() => import("./pages/public/PresentationPage"));
@@ -539,6 +540,7 @@ function App() {
                 <Route path="/agendamento/profissional/:slug" element={<HomologacaoPublicBooking />} />
                 <Route path="/homologacao/:slug" element={<HomologacaoClinicBooking />} />
                 <Route path="/protocolo/:token" element={<HomologacaoProtocolValidation />} />
+                <Route path="/homologacao/confirmacao/:token" element={<HomologacaoConfirmation />} />
                 {/* Authorization Validation - Public */}
                 <Route path="/autorizacao/:slug/:hash" element={<AuthorizationValidationPage />} />
                 <Route
