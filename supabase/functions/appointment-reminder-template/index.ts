@@ -10,20 +10,21 @@ const corsHeaders = {
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const WABA_ID = "2063797207822998";
-const TEMPLATE_NAME = "lembrete_consulta_v4";
+const TEMPLATE_NAME = "lembrete_consulta_v5";
 const LANGUAGE = "pt_BR";
 const PUBLIC_BASE_URL = Deno.env.get("PUBLIC_APP_BASE_URL") || "https://sindexa.com.br";
 const SECURE_ROUTE = "/consulta";
 
 // UTILITY, informativo. Sem Quick Reply, sem "responda SIM/NÃO".
 // Único botão é URL (não induz resposta no WhatsApp) e leva ao canal oficial.
+// Texto direto: deixa claro que o botão serve para CONFIRMAR, REAGENDAR ou CANCELAR.
 const BODY_TEXT =
   "Olá, {{1}}.\n" +
-  "Lembramos que você possui um atendimento agendado para:\n" +
+  "Lembramos que você possui uma consulta agendada para:\n" +
   "Data: {{2}}\n" +
   "Horário: {{3}}\n" +
   "Profissional: {{4}}\n\n" +
-  "Para gerenciar seu atendimento, utilize o botão abaixo (canal oficial).\n" +
+  "Toque no botão abaixo para CONFIRMAR sua presença, REAGENDAR ou CANCELAR a consulta.\n" +
   "Esta é uma comunicação automática referente a um serviço previamente agendado.";
 
 const TEMPLATE_COMPONENTS = [
@@ -38,7 +39,7 @@ const TEMPLATE_COMPONENTS = [
     buttons: [
       {
         type: "URL",
-        text: "Gerenciar atendimento",
+        text: "Confirmar presença",
         url: `${PUBLIC_BASE_URL}${SECURE_ROUTE}/{{1}}`,
         example: [`${PUBLIC_BASE_URL}${SECURE_ROUTE}/exemplotoken00000000000000000000`],
       },
