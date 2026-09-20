@@ -540,6 +540,7 @@ function App() {
                 <Route path="/agendamento/profissional/:slug" element={<HomologacaoPublicBooking />} />
                 <Route path="/homologacao/:slug" element={<HomologacaoClinicBooking />} />
                 <Route path="/protocolo/:token" element={<HomologacaoProtocolValidation />} />
+                <Route path="/homologacao/confirmacao/:token" element={<HomologacaoConfirmation />} />
                 {/* Authorization Validation - Public */}
                 <Route path="/autorizacao/:slug/:hash" element={<AuthorizationValidationPage />} />
                 <Route
