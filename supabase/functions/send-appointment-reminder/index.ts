@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { validateConsentForCurrentPhone, normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts";
+import { chatwootMirrorTemplateSent } from "../_shared/chatwoot-client.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -214,6 +215,19 @@ serve(async (req) => {
   });
 
   await admin.from("appointments").update({ reminder_sent: true }).eq("id", appt.id);
+
+  // Espelha no Chatwoot (nota privada) para o atendente ver o histórico.
+  await chatwootMirrorTemplateSent(
+    admin as any,
+    String(appt.clinic_id),
+    e164,
+    patient?.name ?? displayName,
+    `[Lembrete de consulta enviado pelo WhatsApp oficial]\n` +
+      `Paciente: ${displayName}\n` +
+      `Data: ${formatDatePt(String(appt.appointment_date))} às ${String(appt.start_time).slice(0, 5)}\n` +
+      `Profissional: ${String(professional?.name || "Profissional")}\n` +
+      `Template: ${templateUsed}`,
+  );
 
   return json({ ok: true, http: res.status, template: templateUsed, result, message_id: metaMessageId, attempts: attemptsUsed, build: BUILD });
 });
