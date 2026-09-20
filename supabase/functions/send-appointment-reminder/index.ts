@@ -157,8 +157,9 @@ serve(async (req) => {
     return { res, result };
   };
 
-  // Usa a v5 (texto direto) quando a Meta já a aprovou; enquanto isso, continua a v4.
-  // Nenhum envio acontece com template PENDING/REJECTED (fail-closed).
+  // Usa a v6 (texto direto + aviso de bloqueio) quando a Meta já a aprovou;
+  // enquanto isso, cai para a v5 e depois a v4. Nenhum envio acontece com
+  // template PENDING/REJECTED (fail-closed).
   const resolveApprovedTemplate = async (): Promise<string | null> => {
     for (const name of [TEMPLATE_PREFERRED, TEMPLATE_FALLBACK, "lembrete_consulta_v4"]) {
       try {
