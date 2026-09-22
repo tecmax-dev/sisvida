@@ -414,7 +414,7 @@ export default function HomologacaoPublicBooking() {
         service_type: matchedService || null,
       };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setCreatedAppointment(data);
       setStep('confirmation');
       toast.success("Agendamento realizado com sucesso!");
