@@ -12,6 +12,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { pdfToImageBase64 } from "@/utils/pdfToImage";
 import { canSubmitCardExpiryChange, isCardExpirySubmitEnabled } from "@/lib/cardExpiryPermissions";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
+import { notifyCardRenewal } from "@/lib/notifyCardRenewal";
 
 interface CardExpiryWithPayslipDialogProps {
   open: boolean;
