@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { Link } from "react-router-dom";
 
 export function CTASection() {
   return (
