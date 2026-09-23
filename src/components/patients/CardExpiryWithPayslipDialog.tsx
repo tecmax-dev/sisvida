@@ -313,6 +313,8 @@ export function CardExpiryWithPayslipDialog({
           .eq("patient_id", entityId)
           .eq("is_active", true);
         dependentsUpdated = count || 0;
+
+        await notifyCardRenewal({ patientId: entityId, newExpiresAt: newDate, clinicId: currentClinic.id });
       } else {
         const { error } = await supabase
           .from("patient_dependents")
