@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Refinar base visual, acessibilidade e movimento
-- [ ] Padronizar componentes compartilhados
-- [ ] Melhorar estruturas Clínica, Sindicato e Administração
-- [ ] Harmonizar o app do associado
-- [ ] Validar páginas públicas e responsividade
-- [ ] Conferir compilação e telas representativas
+- [x] Refinar base visual, acessibilidade e movimento
+- [x] Padronizar componentes compartilhados
+- [x] Melhorar estruturas Clínica, Sindicato e Administração
+- [x] Harmonizar o app do associado
+- [x] Validar páginas públicas e responsividade
+- [x] Conferir compilação e telas representativas
