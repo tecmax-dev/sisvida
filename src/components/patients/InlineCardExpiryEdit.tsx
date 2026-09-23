@@ -175,6 +175,8 @@ export function InlineCardExpiryEdit({
             dependentsUpdated = count || 0;
           }
         }
+
+        await notifyCardRenewal({ patientId: entityId, newExpiresAt: newDate });
       } else {
         const { error } = await supabase
           .from("patient_dependents")
