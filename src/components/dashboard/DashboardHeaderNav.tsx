@@ -12,6 +12,7 @@ import {
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface NavItem {
   href: string;
@@ -70,21 +71,24 @@ export function DashboardHeaderNav({ categories, showUnionLink, unionCategories 
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
   return (
-    <nav className="hidden md:flex items-center gap-1 flex-nowrap overflow-x-auto no-scrollbar">
+    <nav aria-label="Navegação principal" className="flex max-w-full items-center gap-1 flex-nowrap overflow-x-auto no-scrollbar py-1">
       {showUnionLink && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Abrir Módulo Sindical"
               className={cn(
-                "inline-flex items-center gap-2 h-9 px-3 rounded-md text-sm font-medium transition-colors border",
+                "gap-2 border",
                 "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30",
                 pathname.startsWith("/union") && "bg-amber-500/25"
               )}
             >
               <Building2 className="h-4 w-4" />
-              <span>Módulo Sindical</span>
+              <span className="hidden xl:inline">Módulo Sindical</span>
               <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
             <DropdownMenuLabel className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
@@ -147,10 +151,12 @@ export function DashboardHeaderNav({ categories, showUnionLink, unionCategories 
         return (
           <DropdownMenu key={category.id}>
             <DropdownMenuTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={`Abrir ${category.label}`}
                 className={cn(
-                  "inline-flex items-center gap-2 h-9 pl-1.5 pr-3 rounded-md text-sm font-medium transition-colors",
-                  "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "gap-2 pl-1.5 pr-2 xl:pr-3",
                   active && "bg-accent"
                 )}
               >
@@ -162,9 +168,9 @@ export function DashboardHeaderNav({ categories, showUnionLink, unionCategories 
                 >
                   <Icon className={cn("h-4 w-4", accent)} />
                 </span>
-                <span>{category.label}</span>
+                <span className="hidden 2xl:inline">{category.label}</span>
                 <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
               <DropdownMenuLabel className={cn("flex items-center gap-2", accent)}>

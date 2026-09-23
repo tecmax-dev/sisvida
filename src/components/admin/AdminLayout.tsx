@@ -33,8 +33,17 @@ import {
   Sparkles,
   ClipboardList,
   Activity,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const SYSTEM_VERSION = "2026.01.2";
 
@@ -162,14 +171,11 @@ export function AdminLayout() {
     : null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="flex flex-1">
+    <div className="min-h-screen h-[100dvh] flex flex-col bg-background overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
         <aside 
-          className="w-64 border-r border-white/15 flex flex-col"
-          style={{
-            background: 'hsl(220 75% 30%)'
-          }}
+          className="hidden lg:flex w-64 border-r border-sidebar-border bg-sidebar flex-col shadow-lg"
         >
           <div className="p-4 border-b border-sidebar-border">
             <Logo size="sm" />
@@ -243,26 +249,53 @@ export function AdminLayout() {
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-auto">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {/* Top bar with theme toggle */}
-          <header className="sticky top-0 z-30 flex items-center justify-end gap-4 px-6 h-14 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 border-b border-border/50">
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 px-3 sm:px-5 lg:px-6 min-h-14 bg-card/95 backdrop-blur-md supports-[backdrop-filter]:bg-card/85 border-b border-border/80 shadow-sm">
+            <div className="flex items-center gap-2 lg:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" aria-label="Abrir navegação administrativa">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-72">
+                  <DropdownMenuLabel className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    Administração
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {adminNavItems.map((item) => (
+                    <DropdownMenuItem key={item.path} asChild>
+                      <Link to={item.path} className={cn("flex items-center gap-3", location.pathname === item.path && "bg-accent font-semibold")}>
+                        <item.icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Logo size="sm" />
+            </div>
             <ThemeToggle />
           </header>
           
-          <main className="flex-1 p-6">
+          <main className="flex-1 overflow-y-auto px-3 py-4 sm:p-5 lg:p-6">
             <Suspense fallback={
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             }>
-              <Outlet />
+              <div className="mx-auto w-full max-w-[1600px] animate-enter">
+                <Outlet />
+              </div>
             </Suspense>
           </main>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="h-10 bg-muted/50 border-t border-border flex items-center justify-between px-4 text-xs shrink-0">
+      <footer className="min-h-10 bg-card border-t border-border/80 flex items-center justify-between px-3 sm:px-4 text-xs shrink-0">
         <div className="flex items-center gap-4">
           <Logo size="sm" />
           {formattedClinicId && (
@@ -270,12 +303,12 @@ export function AdminLayout() {
               ID <span className="font-semibold text-foreground">{formattedClinicId}</span>
             </span>
           )}
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground hidden md:inline">
             © 2026 Prosinge - Todos os Direitos Reservados | VERSÃO <span className="font-semibold text-primary">{SYSTEM_VERSION}</span>
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-4">
           <a 
             href="https://wa.me/557331982161" 
             target="_blank" 

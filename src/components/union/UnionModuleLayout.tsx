@@ -45,25 +45,27 @@ export function UnionModuleLayout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 sticky top-0 z-30 gap-3">
+    <div className="min-h-screen h-[100dvh] flex flex-col bg-background overflow-hidden">
+      <header className="min-h-14 border-b border-border/80 bg-card/95 backdrop-blur-md flex items-center justify-between px-3 sm:px-4 sticky top-0 z-30 gap-2 shadow-sm">
         <div className="flex items-center gap-2 shrink-0">
           <img src={prosingeLogo} alt="Prosinge" className="h-7 object-contain" />
-          <h1 className="text-lg font-semibold text-foreground hidden sm:block">Prosinge</h1>
+          <h1 className="text-base font-semibold text-foreground hidden lg:block">Prosinge</h1>
         </div>
-        <div className="flex-1 min-w-0 flex justify-center px-2">
+        <div className="flex-1 min-w-0 flex justify-center overflow-hidden px-1 sm:px-2">
           <DashboardHeaderNav
             categories={mainCategories}
             showUnionLink
             unionCategories={unionCategories}
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <UserMenu />
         </div>
       </header>
-      <main className="flex-1 overflow-auto p-2 sm:p-4 lg:p-6">
-        <Outlet />
+      <main className="flex-1 min-h-0 overflow-auto px-3 py-4 sm:p-5 lg:p-6">
+        <div className="mx-auto w-full max-w-[1600px] animate-enter">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

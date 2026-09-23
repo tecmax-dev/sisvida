@@ -44,11 +44,11 @@ export function Header() {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-card/95 backdrop-blur-lg shadow-sm border-b border-border/40"
+          ? "bg-card/95 backdrop-blur-lg shadow-sm border-b border-border/80"
           : "bg-transparent"
       }`}
     >
-      <div className="container flex h-16 lg:h-20 items-center justify-between">
+      <div className="container flex h-16 lg:h-20 items-center justify-between px-4 sm:px-6">
         <Logo />
 
         <nav className="hidden lg:flex items-center gap-1">
@@ -80,6 +80,8 @@ export function Header() {
                 size="icon"
                 className="lg:hidden"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
+                aria-expanded={isMenuOpen}
               >
                 {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
@@ -99,6 +101,8 @@ export function Header() {
                 size="icon"
                 className="lg:hidden"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
+                aria-expanded={isMenuOpen}
               >
                 {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
@@ -108,7 +112,7 @@ export function Header() {
       </div>
 
       {isMenuOpen && (
-        <div className="lg:hidden bg-card border-b border-border shadow-xl animate-fade-in">
+        <div className="lg:hidden bg-card border-b border-border shadow-lg animate-fade-in">
           <div className="container py-6 space-y-2">
             {navLinks.map((link) => (
               <a

@@ -115,10 +115,10 @@ export default function MobileHomePage() {
   // Mostrar loading enquanto carrega dados
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center" role="status" aria-live="polite">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 animate-pulse">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          <div className="w-14 h-14 bg-mobile rounded-lg flex items-center justify-center shadow-lg animate-pulse">
+            <Loader2 className="h-7 w-7 animate-spin text-mobile-foreground" aria-hidden="true" />
           </div>
           <p className="text-sm font-medium text-muted-foreground">Carregando...</p>
         </div>
@@ -136,8 +136,8 @@ export default function MobileHomePage() {
 
       {/* Welcome Card */}
       <div className="mx-4 mt-4">
-        <div className="bg-blue-50 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+        <div className="bg-mobile-soft border border-mobile/15 rounded-lg p-4 flex items-center gap-4 shadow-sm">
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-muted flex-shrink-0 ring-2 ring-card">
             {patient?.photo_url ? (
               <img 
                 src={patient.photo_url} 
@@ -145,17 +145,17 @@ export default function MobileHomePage() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-emerald-500 flex items-center justify-center text-white font-bold text-xl">
+              <div className="w-full h-full bg-mobile flex items-center justify-center text-mobile-foreground font-bold text-xl">
                 {firstName.charAt(0)}
               </div>
             )}
           </div>
           
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-gray-800">
+            <h2 className="text-lg font-bold text-foreground">
               Olá, {firstName.toUpperCase()} 👋
             </h2>
-            <p className="text-sm text-gray-500">Que bom ter você conosco!</p>
+            <p className="text-sm text-muted-foreground">Que bom ter você conosco!</p>
           </div>
         </div>
       </div>
