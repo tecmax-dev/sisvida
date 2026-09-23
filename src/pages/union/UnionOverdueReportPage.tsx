@@ -107,6 +107,40 @@ export default function UnionOverdueReportPage() {
     setSearch("");
   };
 
+  const EXCLUDE_KEY = "overdue-report-excluded-cnpjs";
+  const [excludeInput, setExcludeInput] = useState<string>("");
+  const [excludedCnpjs, setExcludedCnpjs] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(EXCLUDE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((t) => typeof t === "string") : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const persistExcluded = (list: string[]) => {
+    setExcludedCnpjs(list);
+    try {
+      localStorage.setItem(EXCLUDE_KEY, JSON.stringify(list));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const addExcludedFromInput = () => {
+    const parts = excludeInput
+      .split(/[,;\n|]+/)
+      .map((p) => p.replace(/\D/g, ""))
+      .filter((p) => p.length >= 8);
+    if (!parts.length) {
+      toast.error("Informe ao menos um CNPJ válido");
+      return;
+    }
+    persistExcluded(Array.from(new Set([...excludedCnpjs, ...parts])));
+    setExcludeInput("");
+  };
+
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["overdue-report", clinicId, startDate, endDate],
     queryFn: async (): Promise<Row[]> => {
