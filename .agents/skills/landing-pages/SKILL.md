@@ -1,6 +1,6 @@
 ---
 name: Landing Pages
-description: Metodologia de landing pages orientada a conversão: um objetivo primário por página, entrega above-the-fold (título / subtítulo / visual / CTA / prova social), fluxo de copy PAS (Problema-Agitação-Solução) e disciplina de A/B testing. Define os tipos de página por objetivo (captação, venda, evento, produto) e entrega estrutura e copy prontos.
+description: "Metodologia de landing pages orientada a conversão: um objetivo primário por página, entrega above-the-fold (título / subtítulo / visual / CTA / prova social), fluxo de copy PAS (Problema-Agitação-Solução) e disciplina de A/B testing. Define os tipos de página por objetivo (captação, venda, evento, produto) e entrega estrutura e copy prontos."
 ---
 
 Analyze and improve the landing page(s) of this project for maximum conversion.
