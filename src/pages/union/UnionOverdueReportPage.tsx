@@ -565,6 +565,58 @@ export default function UnionOverdueReportPage() {
               </div>
             )}
           </div>
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+            <Label htmlFor="excludeCnpj" className="text-xs">
+              Excluir CNPJs do relatório (separe por vírgula)
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="excludeCnpj"
+                placeholder="Ex.: 03025212000111, 12.345.678/0001-99"
+                value={excludeInput}
+                onChange={(e) => setExcludeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addExcludedFromInput();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={addExcludedFromInput}>
+                <Plus className="h-4 w-4 mr-1" />
+                Excluir
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              As empresas com estes CNPJs não aparecem na lista nem no PDF.
+            </p>
+            {excludedCnpjs.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {excludedCnpjs.map((c) => (
+                  <Badge key={c} variant="destructive" className="gap-1 font-normal">
+                    {c}
+                    <button
+                      type="button"
+                      aria-label={`Remover ${c}`}
+                      onClick={() => persistExcluded(excludedCnpjs.filter((x) => x !== c))}
+                      className="hover:opacity-70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => persistExcluded([])}
+                >
+                  Limpar exclusões
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="startDate" className="text-xs">
               Vencimento a partir de
