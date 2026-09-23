@@ -199,14 +199,14 @@ export default function HubLandingPage() {
                     Central de Atendimento
                   </p>
                   <p className="font-display text-2xl font-bold text-prosinge-cream">
-                    (71) 98278-6864
+                    (11) 5194-3839
                   </p>
                 </div>
                 <Button
                   asChild
                   className="h-14 rounded-xl bg-prosinge-gold px-8 font-bold text-prosinge-emerald shadow-xl hover:bg-prosinge-gold/90"
                 >
-                  <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     Solicitar uma demonstração
                     <ArrowRight className="h-5 w-5" />
                   </a>

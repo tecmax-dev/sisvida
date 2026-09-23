@@ -45,7 +45,7 @@ export function MigrationSection() {
               className="btn-eclini px-8 h-14 text-base"
               asChild
             >
-              <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 Solicitar migração
                 <ArrowRight className="h-5 w-5" />
               </a>

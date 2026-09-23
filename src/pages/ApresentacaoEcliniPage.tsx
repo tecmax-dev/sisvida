@@ -66,7 +66,7 @@ const ApresentacaoEcliniPage = () => {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text('(71) 98278-6864', pageWidth - margin, 10, { align: 'right' });
+        doc.text('(11) 5194-3839', pageWidth - margin, 10, { align: 'right' });
         
         doc.setFontSize(8);
         doc.text(`Página ${pageNum} de 4`, pageWidth - margin, 17, { align: 'right' });
@@ -78,7 +78,7 @@ const ApresentacaoEcliniPage = () => {
         
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(8);
-        doc.text('www.prosinge.com.br | contato@prosinge.com.br | (71) 98278-6864', pageWidth / 2, pageHeight - 5, { align: 'center' });
+        doc.text('www.prosinge.com.br | contato@prosinge.com.br | (11) 5194-3839', pageWidth / 2, pageHeight - 5, { align: 'center' });
       };
 
       const drawCard = (x: number, y: number, w: number, h: number, title: string, items: string[], iconColor: [number, number, number]) => {
@@ -190,7 +190,7 @@ const ApresentacaoEcliniPage = () => {
       doc.setTextColor(...secondaryColor);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('(71) 98278-6864', pageWidth - 60, 90, { align: 'center' });
+      doc.text('(11) 5194-3839', pageWidth - 60, 90, { align: 'center' });
       
       drawFooter();
 
@@ -453,7 +453,7 @@ const ApresentacaoEcliniPage = () => {
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('PROSINGE | (71) 98278-6864 | contato@prosinge.com.br', pageWidth/2, 172, { align: 'center' });
+      doc.text('PROSINGE | (11) 5194-3839 | contato@prosinge.com.br', pageWidth/2, 172, { align: 'center' });
       
       drawFooter();
 
@@ -481,7 +481,7 @@ const ApresentacaoEcliniPage = () => {
             Proposta para o Sindicato dos Comerciários
           </p>
           <p className="text-muted-foreground">
-            Prosinge | (71) 98278-6864
+            Prosinge | (11) 5194-3839
           </p>
         </div>
 

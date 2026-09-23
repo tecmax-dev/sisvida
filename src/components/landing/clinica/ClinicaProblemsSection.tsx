@@ -36,7 +36,7 @@ export function ClinicaProblemsSection() {
 
           <div className="text-center">
             <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-14 text-base font-semibold shadow-lg shadow-primary/20" asChild>
-              <a href="https://wa.me/5571982786864?text=Olá! Quero saber mais sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a href="https://wa.me/551151943839?text=Olá! Quero saber mais sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 Falar com um especialista
                 <ArrowRight className="h-5 w-5" />
               </a>

@@ -63,13 +63,13 @@ export function ClinicaHeroSection() {
 
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-14 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:-translate-y-0.5" asChild>
-                <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   Testar 7 dias grátis
                   <ArrowRight className="h-5 w-5" />
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="rounded-full px-8 h-14 text-base border-border/60 hover:border-primary/30 hover:bg-primary/5" asChild>
-                <a href="https://wa.me/5571982786864?text=Olá! Quero ver uma demonstração do Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href="https://wa.me/551151943839?text=Olá! Quero ver uma demonstração do Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <Play className="h-4 w-4 fill-current" />
                   Ver demonstração
                 </a>

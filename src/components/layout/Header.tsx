@@ -91,7 +91,7 @@ export function Header() {
                   <Link to="/auth">Entrar</Link>
                 </Button>
                 <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 text-sm font-semibold shadow-md" asChild>
-                  <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20recuperar%20arquivos%20enviados%20que%20não%20aparecem." target="_blank" rel="noopener noreferrer">Recuperar Arquivos</a>
+                  <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20recuperar%20arquivos%20enviados%20que%20não%20aparecem." target="_blank" rel="noopener noreferrer">Recuperar Arquivos</a>
                 </Button>
               </div>
               <Button
@@ -123,7 +123,7 @@ export function Header() {
             {!user && (
               <div className="flex flex-col gap-3 pt-4 mt-2 border-t border-border">
                 <Button className="w-full bg-primary text-primary-foreground rounded-full font-semibold" asChild>
-                  <a href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)}>
+                  <a href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente." target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)}>
                     Solicitar Demo
                   </a>
                 </Button>

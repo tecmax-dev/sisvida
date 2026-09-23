@@ -36,11 +36,11 @@ export function BlockedClinicOverlay({ reason }: BlockedClinicOverlayProps) {
           <h3 className="font-medium mb-3">Contato do Suporte</h3>
           <div className="space-y-2 text-sm">
             <a 
-              href="tel:+5571982786864" 
+              href="tel:+551151943839" 
               className="flex items-center justify-center gap-2 text-primary hover:underline"
             >
               <Phone className="h-4 w-4" />
-              (71) 98278-6864
+              (11) 5194-3839
             </a>
             <a 
               href="mailto:suporte@prosinge.com.br" 
