@@ -95,7 +95,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   ];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Drawer */}
       <MobileDrawer 
         open={drawerOpen} 
@@ -104,16 +104,17 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
       />
 
       {/* Header - Clean green design */}
-      <header className="bg-emerald-600 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+      <header className="bg-mobile text-mobile-foreground px-3 py-2.5 flex items-center justify-between sticky top-0 z-50 shadow-md safe-area-top">
         <button 
-          className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 active:scale-95" 
+          className="inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors hover:bg-mobile-foreground/10 active:bg-mobile-foreground/15" 
           onClick={() => setDrawerOpen(true)}
+          aria-label="Abrir menu"
         >
           <Menu className="h-6 w-6" />
         </button>
         
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
+          <div className="w-10 h-10 bg-card rounded-full flex items-center justify-center overflow-hidden ring-2 ring-mobile-foreground/20">
             {(() => {
               const isSindicato = (clinicId || SINDICATO_CLINIC_ID) === SINDICATO_CLINIC_ID;
               const remote = clinic?.logo_url || "";
@@ -134,7 +135,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
             })()}
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">{clinic?.name || "Sindicato"}</h1>
+            <h1 className="font-display font-semibold text-base sm:text-lg leading-tight line-clamp-1">{clinic?.name || "Sindicato"}</h1>
           </div>
         </div>
         
@@ -142,11 +143,11 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
       </header>
 
       {/* Main Content */}
-      <main className={`flex-1 ${showBottomNav ? 'pb-24' : ''}`}>{children}</main>
+      <main className={`flex-1 w-full ${showBottomNav ? 'pb-24' : ''}`}>{children}</main>
 
       {/* Bottom Navigation - Simple clean design */}
       {showBottomNav && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2 flex justify-around z-50">
+        <nav aria-label="Navegação do aplicativo" className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 flex justify-around z-50 shadow-[0_-8px_24px_hsl(var(--foreground)/0.06)]">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path || 
               (item.path === "/app" && location.pathname === "/app/home");
@@ -154,14 +155,15 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-1 py-2 px-4 transition-all duration-200 ${
+                aria-current={isActive ? "page" : undefined}
+                className={`relative flex min-w-[76px] flex-col items-center gap-1 rounded-md py-1.5 px-3 transition-colors duration-200 ${
                   isActive 
-                    ? "text-emerald-600" 
-                    : "text-gray-400"
+                    ? "bg-mobile-soft text-mobile font-semibold" 
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
-                <item.icon className="h-6 w-6" />
-                <span className="text-[10px] font-medium">
+                <item.icon className="h-5 w-5" />
+                <span className="text-[11px] font-medium">
                   {item.label}
                 </span>
               </button>

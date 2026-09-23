@@ -75,6 +75,11 @@
     /* Info */
     --info: 220 80% 50%;
     --info-foreground: 0 0% 100%;
+
+    /* App do associado */
+    --mobile-primary: 166 76% 33%;
+    --mobile-primary-foreground: 0 0% 100%;
+    --mobile-primary-soft: 166 45% 94%;
     
     /* Borders & Inputs */
     --border: 216 22% 88%;
@@ -152,6 +157,10 @@
     --border: 220 15% 18%;
     --input: 220 15% 18%;
     --ring: 220 70% 60%;
+
+    --mobile-primary: 166 62% 42%;
+    --mobile-primary-foreground: 0 0% 100%;
+    --mobile-primary-soft: 166 28% 15%;
     
     --sidebar-background: 220 15% 4%;
     --sidebar-foreground: 220 5% 80%;

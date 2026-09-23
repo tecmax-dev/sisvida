@@ -62,6 +62,11 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        mobile: {
+          DEFAULT: "hsl(var(--mobile-primary))",
+          foreground: "hsl(var(--mobile-primary-foreground))",
+          soft: "hsl(var(--mobile-primary-soft))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

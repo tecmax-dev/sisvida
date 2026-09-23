@@ -469,7 +469,7 @@ export function DashboardLayout() {
         )}
         
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 px-3 lg:px-6 h-14 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 border-b border-border/50">
+        <header className="sticky top-0 z-30 flex items-center gap-2 lg:gap-3 px-3 lg:px-6 min-h-14 bg-card/95 backdrop-blur-md supports-[backdrop-filter]:bg-card/85 border-b border-border/80 shadow-sm">
           <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
             <img src={prosingeClinicaLogo} alt="Prosinge" className="h-7 w-7 object-contain" />
             <span className="text-sm font-semibold hidden sm:inline">Prosinge</span>
@@ -487,7 +487,7 @@ export function DashboardLayout() {
           </div>
 
           {/* Horizontal navigation with submenus */}
-          <div className="flex-1 min-w-0 flex justify-center">
+          <div className="flex-1 min-w-0 flex justify-center overflow-hidden">
             <DashboardHeaderNav
               categories={filteredCategories}
               showUnionLink={hasUnionEntity}
@@ -495,7 +495,7 @@ export function DashboardLayout() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle />
             <NotificationBell />
             <UserMenu compact showName={false} />
@@ -503,18 +503,20 @@ export function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6 pb-16">
+        <main className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:p-5 lg:p-6 pb-16">
           <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex items-center justify-center h-64" role="status" aria-label="Carregando conteúdo">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
             </div>
           }>
-            <Outlet />
+            <div className="mx-auto w-full max-w-[1600px] animate-enter">
+              <Outlet />
+            </div>
           </Suspense>
         </main>
 
         {/* Footer */}
-        <footer className="h-10 bg-muted/50 border-t border-border flex items-center justify-between px-4 text-xs shrink-0">
+        <footer className="min-h-10 bg-card border-t border-border/80 flex items-center justify-between px-3 sm:px-4 text-xs shrink-0">
           <div className="flex items-center gap-4">
             <Logo size="sm" />
             {currentClinic && (
