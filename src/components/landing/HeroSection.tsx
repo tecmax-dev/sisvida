@@ -53,23 +53,36 @@ export function HeroSection() {
             <p className="mb-10 max-w-xl text-lg leading-relaxed text-prosinge-cream/80">
               {description}
             </p>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <Button
                 asChild
-                className="h-14 rounded-xl bg-prosinge-gold px-8 text-base font-bold text-prosinge-emerald shadow-xl shadow-prosinge-emerald/30 hover:bg-prosinge-gold/90 hover:shadow-2xl"
+                className="group h-14 min-w-[240px] rounded-xl bg-prosinge-gold px-8 text-base font-bold text-prosinge-emerald shadow-xl shadow-prosinge-emerald/30 hover:bg-prosinge-gold/90 hover:shadow-2xl"
               >
-                <a href={primaryButtonLink} target="_blank" rel="noopener noreferrer">{primaryButtonText}</a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="group h-14 rounded-xl border-prosinge-cream/20 bg-transparent px-8 text-base font-bold text-prosinge-cream hover:bg-prosinge-cream/10 hover:text-prosinge-cream"
-              >
-                <a href="#features" className="flex items-center gap-2">
-                  Conhecer Funcionalidades
+                <a
+                  href={primaryButtonLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2"
+                >
+                  {primaryButtonText}
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </a>
               </Button>
+              <a
+                href="#features"
+                className="text-sm font-semibold text-prosinge-cream/70 underline-offset-4 hover:text-prosinge-cream hover:underline"
+              >
+                Ver funcionalidades
+              </a>
+            </div>
+
+            {/* Prova social junto ao CTA */}
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-semibold uppercase tracking-widest text-prosinge-cream/60">
+              <span>+200 sindicatos atendidos</span>
+              <span className="hidden h-1 w-1 rounded-full bg-prosinge-gold sm:block" />
+              <span>+1 milhão de vidas</span>
+              <span className="hidden h-1 w-1 rounded-full bg-prosinge-gold sm:block" />
+              <span>100% LGPD</span>
             </div>
           </div>
 
