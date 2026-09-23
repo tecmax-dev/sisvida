@@ -4,9 +4,11 @@ import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Receipt, DollarSign, Handshake, TrendingUp, TrendingDown, Calendar, Loader2 } from "lucide-react";
+import { Building2, Users, Receipt, DollarSign, Handshake, TrendingUp, TrendingDown, Calendar } from "lucide-react";
 import { PushNotificationSetup } from "@/components/union/PushNotificationSetup";
 import { NonAdminUnionHome } from "@/components/union/NonAdminUnionHome";
+import { EmptyState, PageLoading } from "@/components/ui/page-state";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface DashboardStats {
@@ -202,9 +204,7 @@ export default function UnionDashboard() {
 
   if (entityLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageLoading label="Carregando painel sindical..." className="min-h-[400px]" />
     );
   }
 
@@ -214,10 +214,11 @@ export default function UnionDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Módulo Sindical</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="border-b border-border/70 pb-4">
+        <p className="mb-1 text-xs font-semibold uppercase text-primary">Visão geral</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Módulo Sindical</h1>
+        <p className="mt-1 text-sm sm:text-base text-muted-foreground">
           Visão geral do gerenciamento sindical de {displayName}
         </p>
       </div>
@@ -225,20 +226,20 @@ export default function UnionDashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="pt-6">
+          <Card key={stat.label} className="transition-[border-color,box-shadow] hover:border-primary/20 hover:shadow-md">
+            <CardContent className="pt-4 sm:pt-5 lg:pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                   <p className="text-2xl font-bold">
                     {loading ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <Skeleton className="mt-1 h-7 w-16" />
                     ) : (
                       stat.value
                     )}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                  <div className={`p-3 rounded-md ${stat.bgColor}`}>
                   <stat.icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
               </div>
@@ -267,7 +268,7 @@ export default function UnionDashboard() {
                   </div>
                   <p className={`text-xl font-semibold ${item.color}`}>
                     {loading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Skeleton className="h-6 w-28" />
                     ) : (
                       item.value
                     )}
@@ -289,10 +290,7 @@ export default function UnionDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhuma contribuição recente</p>
-            </div>
+            <EmptyState icon={Receipt} title="Nenhuma contribuição recente" description="As movimentações mais recentes aparecerão aqui." />
           </CardContent>
         </Card>
 
@@ -304,10 +302,7 @@ export default function UnionDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum vencimento próximo</p>
-            </div>
+            <EmptyState icon={Calendar} title="Nenhum vencimento próximo" description="Os próximos compromissos financeiros aparecerão aqui." />
           </CardContent>
         </Card>
       </div>
