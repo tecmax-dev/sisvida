@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CardExpiryWithPayslipDialog } from "./CardExpiryWithPayslipDialog";
+import { notifyCardRenewal } from "@/lib/notifyCardRenewal";
 
 interface InlineCardExpiryEditProps {
   entityId: string;
@@ -174,6 +175,8 @@ export function InlineCardExpiryEdit({
             dependentsUpdated = count || 0;
           }
         }
+
+        await notifyCardRenewal({ patientId: entityId, newExpiresAt: newDate });
       } else {
         const { error } = await supabase
           .from("patient_dependents")

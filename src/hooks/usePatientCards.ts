@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { notifyCardRenewal } from '@/lib/notifyCardRenewal';
 
 export interface PatientCard {
   id: string;
@@ -216,6 +217,13 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
       
       if (error) throw error;
       if (!data) throw new Error('Carteirinha não encontrada');
+
+      await notifyCardRenewal({
+        patientId: String((data as any).patient_id),
+        newExpiresAt: newExpiresAt,
+        clinicId: clinicId,
+      });
+
       return data;
     },
     onSuccess: () => {
