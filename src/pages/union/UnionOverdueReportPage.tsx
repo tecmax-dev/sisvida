@@ -107,6 +107,40 @@ export default function UnionOverdueReportPage() {
     setSearch("");
   };
 
+  const EXCLUDE_KEY = "overdue-report-excluded-cnpjs";
+  const [excludeInput, setExcludeInput] = useState<string>("");
+  const [excludedCnpjs, setExcludedCnpjs] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(EXCLUDE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((t) => typeof t === "string") : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const persistExcluded = (list: string[]) => {
+    setExcludedCnpjs(list);
+    try {
+      localStorage.setItem(EXCLUDE_KEY, JSON.stringify(list));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const addExcludedFromInput = () => {
+    const parts = excludeInput
+      .split(/[,;\n|]+/)
+      .map((p) => p.replace(/\D/g, ""))
+      .filter((p) => p.length >= 8);
+    if (!parts.length) {
+      toast.error("Informe ao menos um CNPJ válido");
+      return;
+    }
+    persistExcluded(Array.from(new Set([...excludedCnpjs, ...parts])));
+    setExcludeInput("");
+  };
+
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["overdue-report", clinicId, startDate, endDate],
     queryFn: async (): Promise<Row[]> => {
@@ -273,7 +307,19 @@ export default function UnionOverdueReportPage() {
       g.total += r.value || 0;
       map.set(key, g);
     }
-    const list = Array.from(map.values()).sort((a, b) => b.total - a.total);
+    let list = Array.from(map.values()).sort((a, b) => b.total - a.total);
+
+    const excluded = excludedCnpjs
+      .map((c) => c.replace(/\D/g, ""))
+      .filter(Boolean);
+    if (excluded.length) {
+      list = list.filter((g) => {
+        const cnpj = (g.cnpj || "").replace(/\D/g, "");
+        if (!cnpj) return true;
+        return !excluded.some((e) => cnpj === e || cnpj.includes(e));
+      });
+    }
+
     const terms = [
       ...savedTerms,
       ...search.split(/[,;\n|]+/),
@@ -293,7 +339,7 @@ export default function UnionOverdueReportPage() {
         return name.includes(term);
       });
     });
-  }, [rows, search, savedTerms, officeMap]);
+  }, [rows, search, savedTerms, officeMap, excludedCnpjs]);
 
   const totals = useMemo(() => {
     const flat = grouped.flatMap((g) => g.items);
@@ -515,6 +561,58 @@ export default function UnionOverdueReportPage() {
                   onClick={() => persistTerms([])}
                 >
                   Limpar todos
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+            <Label htmlFor="excludeCnpj" className="text-xs">
+              Excluir CNPJs do relatório (separe por vírgula)
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="excludeCnpj"
+                placeholder="Ex.: 03025212000111, 12.345.678/0001-99"
+                value={excludeInput}
+                onChange={(e) => setExcludeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addExcludedFromInput();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={addExcludedFromInput}>
+                <Plus className="h-4 w-4 mr-1" />
+                Excluir
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              As empresas com estes CNPJs não aparecem na lista nem no PDF.
+            </p>
+            {excludedCnpjs.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {excludedCnpjs.map((c) => (
+                  <Badge key={c} variant="destructive" className="gap-1 font-normal">
+                    {c}
+                    <button
+                      type="button"
+                      aria-label={`Remover ${c}`}
+                      onClick={() => persistExcluded(excludedCnpjs.filter((x) => x !== c))}
+                      className="hover:opacity-70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => persistExcluded([])}
+                >
+                  Limpar exclusões
                 </Button>
               </div>
             )}
