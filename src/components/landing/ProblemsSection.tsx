@@ -26,28 +26,28 @@ const reasons = [
 
 export function ProblemsSection() {
   return (
-    <section className="py-20 lg:py-28 bg-background">
-      <div className="container">
+    <section className="bg-prosinge-cream px-6 py-24 font-body">
+      <div className="mx-auto max-w-7xl">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 block">
+            <span className="mb-3 block text-xs font-bold uppercase tracking-[0.2em] text-prosinge-emerald-mid">
               Diferenciais
             </span>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
+            <h2 className="font-display text-4xl font-bold tracking-tight text-prosinge-emerald md:text-5xl">
               Por que escolher o{" "}
-              <span className="text-primary">Prosinge</span>?
+              <span className="text-prosinge-gold">Prosinge</span>?
             </h2>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-10 mb-14">
+          <div className="mb-14 grid gap-6 sm:grid-cols-2">
             {reasons.map((reason, index) => (
-              <div key={index} className="flex gap-5 group">
-                <div className="w-14 h-14 rounded-2xl bg-primary/8 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
-                  <reason.icon className="h-7 w-7 text-primary" />
+              <div key={index} className="group flex gap-5 rounded-2xl border border-prosinge-emerald/10 bg-card p-7 transition-all hover:-translate-y-0.5 hover:shadow-xl">
+                <div className="w-14 h-14 rounded-2xl flex flex-shrink-0 items-center justify-center bg-prosinge-emerald">
+                  <reason.icon className="h-7 w-7 text-prosinge-gold" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-foreground mb-2 text-lg">{reason.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <h3 className="mb-2 font-display text-lg font-bold text-prosinge-emerald">{reason.title}</h3>
+                  <p className="leading-relaxed text-prosinge-emerald-mid/80">
                     {reason.description}
                   </p>
                 </div>
@@ -58,7 +58,7 @@ export function ProblemsSection() {
           <div className="text-center">
             <Button
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-14 text-base font-semibold shadow-lg shadow-primary/20"
+              className="h-14 rounded-xl bg-prosinge-emerald px-8 text-base font-bold text-prosinge-cream shadow-xl hover:bg-prosinge-emerald/90"
               asChild
             >
               <a

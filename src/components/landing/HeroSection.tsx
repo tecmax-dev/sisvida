@@ -101,10 +101,10 @@ export function HeroSection() {
               Dados reais embaçados · LGPD
             </div>
             <div className="absolute -bottom-6 -left-6 hidden rounded-lg bg-prosinge-gold p-6 shadow-xl sm:block">
-              <p className="text-xs font-bold uppercase tracking-widest text-prosinge-cream">
+              <p className="text-xs font-bold uppercase tracking-widest text-prosinge-emerald">
                 Sindicatos Atendidos
               </p>
-              <p className="font-display text-3xl font-bold text-prosinge-cream">
+              <p className="font-display text-3xl font-bold text-prosinge-emerald">
                 +200
               </p>
             </div>
