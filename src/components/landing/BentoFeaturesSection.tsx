@@ -4,11 +4,11 @@ export function BentoFeaturesSection() {
   return (
     <section id="features" className="bg-prosinge-cream px-6 py-24 font-body">
       <div className="mx-auto max-w-7xl">
-        {/* Magazine header */}
+        
         <div className="mb-12 flex flex-col gap-4 border-b border-prosinge-emerald/10 pb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-prosinge-emerald-mid">
-              Edição · Plataforma
+              Plataforma completa
             </div>
             <h2 className="font-display text-4xl font-bold leading-tight text-prosinge-emerald md:text-5xl">
               Ecossistema Integrado<br />de Gestão Sindical
@@ -26,7 +26,7 @@ export function BentoFeaturesSection() {
           <article className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-prosinge-emerald p-10 lg:col-span-7 lg:min-h-[480px]">
             <div className="relative z-10">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-prosinge-cream/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-prosinge-cream/80">
-                <Users className="h-3 w-3" /> Capa
+                <Users className="h-3 w-3" /> Associados
               </div>
               <h3 className="mb-4 font-display text-3xl font-bold leading-tight text-prosinge-cream md:text-4xl">
                 Gestão estratégica de associados, do cadastro à carteirinha digital
@@ -37,16 +37,16 @@ export function BentoFeaturesSection() {
                 única plataforma.
               </p>
             </div>
-            <div className="relative z-10 mt-10 flex items-center gap-2 text-sm font-semibold text-prosinge-cream">
-              Ler matéria completa
+            <a href="#contact" className="relative z-10 mt-10 flex items-center gap-2 text-sm font-semibold text-prosinge-gold">
+              Conhecer o módulo
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </div>
+            </a>
             <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-prosinge-emerald-mid/40 blur-3xl" />
           </article>
 
           {/* Secondary column */}
           <div className="flex flex-col gap-6 lg:col-span-5">
-            <article className="group rounded-3xl border border-prosinge-emerald/10 bg-white p-7 transition-all hover:-translate-y-0.5 hover:shadow-xl">
+            <article className="group rounded-3xl border border-prosinge-emerald/10 bg-card p-7 transition-all hover:-translate-y-0.5 hover:shadow-xl">
               <div className="mb-4 flex items-center gap-3">
                 <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-prosinge-cream text-prosinge-emerald">
                   <Wallet className="h-5 w-5" />
@@ -64,7 +64,7 @@ export function BentoFeaturesSection() {
               </p>
             </article>
 
-            <article className="group rounded-3xl border border-prosinge-emerald/10 bg-white p-7 transition-all hover:-translate-y-0.5 hover:shadow-xl">
+            <article className="group rounded-3xl border border-prosinge-emerald/10 bg-card p-7 transition-all hover:-translate-y-0.5 hover:shadow-xl">
               <div className="mb-4 flex items-center gap-3">
                 <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-prosinge-cream text-prosinge-emerald">
                   <Scale className="h-5 w-5" />
@@ -83,7 +83,7 @@ export function BentoFeaturesSection() {
           </div>
 
           {/* Wide bottom story */}
-          <article className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-prosinge-emerald/10 bg-white p-10 lg:col-span-12">
+          <article className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-prosinge-emerald/10 bg-card p-10 lg:col-span-12">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-2xl">
                 <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-prosinge-emerald-mid">
