@@ -216,6 +216,13 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
       
       if (error) throw error;
       if (!data) throw new Error('Carteirinha não encontrada');
+
+      await notifyCardRenewal({
+        patientId: String((data as any).patient_id),
+        newExpiresAt: newExpiresAt,
+        clinicId: clinicId,
+      });
+
       return data;
     },
     onSuccess: () => {
