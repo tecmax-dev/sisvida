@@ -37,7 +37,7 @@ export function Footer() {
                  { href: "/#features", label: "Funcionalidades" },
                  { href: "/apresentacao-clinica", label: "Módulo Clínica" },
                  { href: "/#pricing", label: "Planos" },
-                 { href: "https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20solicitar%20uma%20demo%20do%20Prosinge.", label: "Solicitar Demo", external: true },
+                 { href: "https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20solicitar%20uma%20demo%20do%20Prosinge.", label: "Solicitar Demo", external: true },
                  { href: "/ajuda", label: "Central de Ajuda" },
               ].map((link) => (
                  <li key={link.href}>
@@ -75,13 +75,13 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20entrar%20em%20contato%20com%20a%20Prosinge."
+                  href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20entrar%20em%20contato%20com%20a%20Prosinge."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  (71) 98278-6864
+                  (11) 5194-3839
                 </a>
               </li>
               <li>

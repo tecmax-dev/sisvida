@@ -56,7 +56,7 @@ export function ClinicaFAQSection() {
           <div className="mt-12 text-center">
             <p className="text-muted-foreground text-sm mb-4">Ainda tem dúvidas?</p>
             <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 font-semibold shadow-md">
-              <a href="https://wa.me/5571982786864?text=Olá! Tenho uma dúvida sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o Prosinge Clínica." target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Falar no WhatsApp
               </a>

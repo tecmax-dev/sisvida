@@ -224,7 +224,7 @@ export function PricingSection() {
                   asChild
                 >
                   <a
-                    href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente."
+                    href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20testar%20o%20Prosinge%20gratuitamente."
                     target="_blank"
                     rel="noopener noreferrer"
                   >

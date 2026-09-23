@@ -28,7 +28,7 @@ export function CTASection() {
               className="group h-14 min-w-[240px] rounded-xl bg-prosinge-gold px-8 font-bold text-prosinge-emerald shadow-xl hover:bg-prosinge-gold/90"
             >
               <a
-                href="https://wa.me/5571982786864?text=Ol%C3%A1!%20Quero%20solicitar%20um%20or%C3%A7amento%20do%20Prosinge."
+                href="https://wa.me/551151943839?text=Ol%C3%A1!%20Quero%20solicitar%20um%20or%C3%A7amento%20do%20Prosinge."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2"
@@ -41,10 +41,10 @@ export function CTASection() {
             <p className="text-center text-sm text-prosinge-cream/70 lg:text-right">
               Ou ligue agora:{" "}
               <a
-                href="tel:+5571982786864"
+                href="tel:+551151943839"
                 className="font-bold text-prosinge-cream underline-offset-4 hover:underline"
               >
-                (71) 98278-6864
+                (11) 5194-3839
               </a>
             </p>
           </div>

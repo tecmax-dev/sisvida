@@ -264,8 +264,8 @@ export default function LgpdPolicy() {
                         </p>
                         <p className="text-foreground">
                           <strong>WhatsApp:</strong>{" "}
-                          <a href="https://wa.me/5571982786864" className="text-primary hover:underline">
-                            (71) 98278-6864
+                          <a href="https://wa.me/551151943839" className="text-primary hover:underline">
+                            (11) 5194-3839
                           </a>
                         </p>
                       </div>
