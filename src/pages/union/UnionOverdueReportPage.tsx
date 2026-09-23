@@ -307,7 +307,19 @@ export default function UnionOverdueReportPage() {
       g.total += r.value || 0;
       map.set(key, g);
     }
-    const list = Array.from(map.values()).sort((a, b) => b.total - a.total);
+    let list = Array.from(map.values()).sort((a, b) => b.total - a.total);
+
+    const excluded = excludedCnpjs
+      .map((c) => c.replace(/\D/g, ""))
+      .filter(Boolean);
+    if (excluded.length) {
+      list = list.filter((g) => {
+        const cnpj = (g.cnpj || "").replace(/\D/g, "");
+        if (!cnpj) return true;
+        return !excluded.some((e) => cnpj === e || cnpj.includes(e));
+      });
+    }
+
     const terms = [
       ...savedTerms,
       ...search.split(/[,;\n|]+/),
@@ -327,7 +339,7 @@ export default function UnionOverdueReportPage() {
         return name.includes(term);
       });
     });
-  }, [rows, search, savedTerms, officeMap]);
+  }, [rows, search, savedTerms, officeMap, excludedCnpjs]);
 
   const totals = useMemo(() => {
     const flat = grouped.flatMap((g) => g.items);
