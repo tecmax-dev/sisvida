@@ -897,6 +897,10 @@ export default function SindicalFiliacaoPage() {
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-3">Sindicato não encontrado</h2>
           <p className="text-muted-foreground">O link de acesso está incorreto ou o sindicato não está disponível no momento.</p>
+          <Button className="mt-6 w-full" onClick={() => window.location.reload()}>
+            Tentar novamente
+          </Button>
+          <p className="mt-2 text-xs text-muted-foreground">Os dados já preenchidos continuam salvos.</p>
         </Card>
       </div>
     );
