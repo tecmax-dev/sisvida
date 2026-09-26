@@ -892,6 +892,30 @@ export function UnionCreateMemberDialog({
 
                 <FormField
                   control={form.control}
+                  name="payroll_discount_authorized"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border-2 border-amber-500/20 bg-amber-500/5 p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="mt-1"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm font-semibold text-gray-800 cursor-pointer">
+                          Autoriza desconto em folha
+                        </FormLabel>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          Marque quando o associado autorizar o desconto em folha. No cadastro presencial, a assinatura será coletada manualmente na ficha impressa.
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="whatsapp_consent"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border-2 border-primary/10 bg-primary/5 p-4">
