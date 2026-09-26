@@ -438,17 +438,35 @@ export default function SindicalFiliacaoPage() {
         return;
       }
 
+      const cacheKey = `filiacao_sindicato_${sindicatoSlug}`;
       try {
-        const { data: sindicatoData, error: sindicatoError } = await supabase
-          .from("union_entities")
-          .select(
-            "id, cnpj, razao_social, nome_fantasia, logo_url, clinic_id, status, allowed_relationship_types"
-          )
-          .or(`cnpj.eq.${sindicatoSlug},id.eq.${sindicatoSlug}`)
-          .eq("status", "ativa")
-          .single();
+        // Após o Android fechar a página por falta de memória (câmera), a
+        // recarga pode acontecer com a rede ainda instável. Tentamos algumas
+        // vezes e usamos a cópia salva do sindicato antes de mostrar erro.
+        let sindicatoData: any = null;
+        let notFound = false;
+        for (let attempt = 0; attempt < 4 && !sindicatoData && !notFound; attempt++) {
+          if (attempt > 0) await new Promise((r) => setTimeout(r, 800 * attempt));
+          const { data, error: sindicatoError } = await supabase
+            .from("union_entities")
+            .select(
+              "id, cnpj, razao_social, nome_fantasia, logo_url, clinic_id, status, allowed_relationship_types"
+            )
+            .or(`cnpj.eq.${sindicatoSlug},id.eq.${sindicatoSlug}`)
+            .eq("status", "ativa")
+            .maybeSingle();
+          if (data) sindicatoData = data;
+          else if (!sindicatoError) notFound = true;
+        }
 
-        if (sindicatoError || !sindicatoData) {
+        if (!sindicatoData && !notFound) {
+          try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) sindicatoData = JSON.parse(cached);
+          } catch { /* ignore */ }
+        }
+
+        if (!sindicatoData) {
           toast({
             title: "Sindicato não encontrado",
             description: "Verifique o link de acesso.",
@@ -458,6 +476,7 @@ export default function SindicalFiliacaoPage() {
           return;
         }
 
+        try { localStorage.setItem(cacheKey, JSON.stringify(sindicatoData)); } catch { /* ignore */ }
         setSindicato(sindicatoData);
 
         // Buscar dados da clínica (para a logo)
