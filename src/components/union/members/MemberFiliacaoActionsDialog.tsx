@@ -204,6 +204,11 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
       }
     }
 
+    // Autorização de desconto marcada no cadastro presencial (sem assinatura digital)
+    if (member.signature_accepted === true || matching.some((p) => p.signature_accepted === true)) {
+      result = { ...result, assinatura_aceite_desconto: true };
+    }
+
     // ========== ENRICH EMPLOYER DATA ==========
     // Try to find full employer data from employers table
     const hasFullEmployerData = result.empresa_endereco || result.empresa_bairro;
