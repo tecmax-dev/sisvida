@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, Save, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -133,6 +134,7 @@ export default function UnionMemberNewPage() {
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [payrollDiscountAuthorized, setPayrollDiscountAuthorized] = useState(false);
 
   // Fetch insurance plans on mount
   useEffect(() => {
@@ -268,6 +270,8 @@ export default function UnionMemberNewPage() {
           is_union_member: true,
           union_member_status: 'ativo',
           union_joined_at: new Date().toISOString(),
+          signature_accepted: payrollDiscountAuthorized ? true : null,
+          signature_accepted_at: payrollDiscountAuthorized ? new Date().toISOString() : null,
           tag: (formData.tag && formData.tag.trim()) || 'Ativo',
         })
         .select('id')
@@ -386,6 +390,23 @@ export default function UnionMemberNewPage() {
               onCnpjLookup={handleCnpjLookup}
               cnpjLoading={cnpjLoading}
             />
+
+            <div className="mt-4 flex items-start gap-3 rounded-lg border-2 border-amber-500/20 bg-amber-500/5 p-4">
+              <Checkbox
+                id="payroll-discount-authorized"
+                checked={payrollDiscountAuthorized}
+                onCheckedChange={(checked) => setPayrollDiscountAuthorized(checked === true)}
+                className="mt-1"
+              />
+              <div className="space-y-1 leading-none">
+                <label htmlFor="payroll-discount-authorized" className="text-sm font-semibold cursor-pointer">
+                  Autoriza desconto em folha
+                </label>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Marque quando o associado autorizar o desconto em folha. No cadastro presencial, a assinatura será coletada manualmente na ficha impressa.
+                </p>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>
