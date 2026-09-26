@@ -133,6 +133,7 @@ export default function UnionMemberNewPage() {
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [payrollDiscountAuthorized, setPayrollDiscountAuthorized] = useState(false);
 
   // Fetch insurance plans on mount
   useEffect(() => {
@@ -268,6 +269,8 @@ export default function UnionMemberNewPage() {
           is_union_member: true,
           union_member_status: 'ativo',
           union_joined_at: new Date().toISOString(),
+          signature_accepted: payrollDiscountAuthorized ? true : null,
+          signature_accepted_at: payrollDiscountAuthorized ? new Date().toISOString() : null,
           tag: (formData.tag && formData.tag.trim()) || 'Ativo',
         })
         .select('id')
