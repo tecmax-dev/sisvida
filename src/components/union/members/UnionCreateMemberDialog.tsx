@@ -93,6 +93,7 @@ const schema = z.object({
   payment_method: z.string().optional().or(z.literal("")),
   observations: z.string().optional().or(z.literal("")),
   whatsapp_consent: z.boolean().default(false),
+  payroll_discount_authorized: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -357,6 +358,9 @@ export function UnionCreateMemberDialog({
         job_function: values.job_function || null,
         employer_cnpj: employerData?.cnpj ? onlyDigits(employerData.cnpj) : null,
         employer_name: employerData?.razao_social || employerData?.nome_fantasia || null,
+        // Autorização de desconto em folha (assinatura manual na ficha impressa)
+        signature_accepted: values.payroll_discount_authorized ? true : null,
+        signature_accepted_at: values.payroll_discount_authorized ? new Date().toISOString() : null,
         ...unionPatch,
       };
 
