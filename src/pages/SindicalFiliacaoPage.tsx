@@ -1153,6 +1153,7 @@ export default function SindicalFiliacaoPage() {
                                 {...field} 
                               />
                             </FormControl>
+                          <FormMessage />
                           </FormInputWrapper>
                         </FormItem>
                       )}
@@ -1198,6 +1199,7 @@ export default function SindicalFiliacaoPage() {
                                 <SelectItem value="outro">Prefiro não informar</SelectItem>
                               </SelectContent>
                             </Select>
+                          <FormMessage />
                           </FormInputWrapper>
                         </FormItem>
                       )}
@@ -1223,6 +1225,7 @@ export default function SindicalFiliacaoPage() {
                                 <SelectItem value="uniao_estavel">União Estável</SelectItem>
                               </SelectContent>
                             </Select>
+                          <FormMessage />
                           </FormInputWrapper>
                         </FormItem>
                       )}
@@ -1241,6 +1244,7 @@ export default function SindicalFiliacaoPage() {
                                 {...field} 
                               />
                             </FormControl>
+                          <FormMessage />
                           </FormInputWrapper>
                         </FormItem>
                       )}
@@ -1259,6 +1263,7 @@ export default function SindicalFiliacaoPage() {
                                 {...field} 
                               />
                             </FormControl>
+                          <FormMessage />
                           </FormInputWrapper>
                         </FormItem>
                       )}
@@ -1482,7 +1487,8 @@ export default function SindicalFiliacaoPage() {
                                   {...field} 
                                 />
                               </FormControl>
-                            </FormInputWrapper>
+                            <FormMessage />
+                          </FormInputWrapper>
                           </FormItem>
                         )}
                       />
