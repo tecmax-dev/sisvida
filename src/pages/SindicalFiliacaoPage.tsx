@@ -549,6 +549,50 @@ export default function SindicalFiliacaoPage() {
     }
   };
 
+  // ===== Rascunho local: evita perda de dados quando o Android fecha a página ao abrir a câmera (pouca memória) =====
+  const draftKey = `filiacao_draft_${sindicatoSlug || ""}`;
+  const draftRestoredRef = useRef(false);
+  useEffect(() => {
+    if (loading || editMode || success || draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft || Date.now() - (draft.savedAt || 0) > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+      if (draft.values) form.reset({ ...form.getValues(), ...draft.values });
+      if (draft.fotoUrl) setFotoUrl(draft.fotoUrl);
+      if (draft.docFrenteUrl) setDocFrenteUrl(draft.docFrenteUrl);
+      if (draft.docVersoUrl) setDocVersoUrl(draft.docVersoUrl);
+      if (draft.employerData) setEmployerData(draft.employerData);
+      if (Array.isArray(draft.dependents)) setDependents(draft.dependents);
+    } catch {
+      /* ignore */
+    }
+  }, [loading, editMode, success, draftKey]);
+
+  const draftValues = form.watch();
+  useEffect(() => {
+    if (!draftRestoredRef.current || editMode || success) return;
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ savedAt: Date.now(), values: draftValues, fotoUrl, docFrenteUrl, docVersoUrl, employerData, dependents })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [draftValues, fotoUrl, docFrenteUrl, docVersoUrl, employerData, dependents, editMode, success, draftKey]);
+
+  useEffect(() => {
+    if (success) {
+      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+    }
+  }, [success, draftKey]);
+
   const handleCepChange = async (cep: string) => {
     const formattedCep = formatCep(cep);
     form.setValue("cep", formattedCep);
