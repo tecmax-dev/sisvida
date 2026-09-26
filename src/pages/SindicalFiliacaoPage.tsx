@@ -37,7 +37,6 @@ import {
 } from "lucide-react";
 import { CnpjEmployerSearch } from "@/components/filiacao/CnpjEmployerSearch";
 import { DependentsList, Dependent } from "@/components/filiacao/DependentsList";
-import { PhotoUploadWithCamera } from "@/components/filiacao/PhotoUploadWithCamera";
 import { SignatureCapture } from "@/components/filiacao/SignatureCapture";
 import { DocumentUpload } from "@/components/filiacao/DocumentUpload";
 import { Badge } from "@/components/ui/badge";
@@ -642,10 +641,10 @@ export default function SindicalFiliacaoPage() {
         return;
       }
 
-      if (!fotoUrl || !docFrenteUrl) {
+      if (!docFrenteUrl) {
         toast({
-          title: "Documentos obrigatórios",
-          description: "Envie a foto 3x4 e o documento (frente) antes de salvar as alterações.",
+          title: "Documento obrigatório",
+          description: "Envie o documento (frente) antes de salvar as alterações.",
           variant: "destructive",
         });
         return;
@@ -743,10 +742,10 @@ export default function SindicalFiliacaoPage() {
       return;
     }
 
-    if (!fotoUrl || !docFrenteUrl) {
+    if (!docFrenteUrl) {
       toast({
-        title: "Documentos obrigatórios",
-        description: "Envie a foto 3x4 e o documento (frente) antes de enviar a filiação. Se você já tentou enviar e não funcionou, tente novamente.",
+        title: "Documento obrigatório",
+        description: "Envie o documento (frente) antes de enviar a filiação. Se você já tentou enviar e não funcionou, tente novamente.",
         variant: "destructive",
       });
       return;
@@ -1622,7 +1621,7 @@ export default function SindicalFiliacaoPage() {
                 <Separator className="my-8" />
 
                 {/* DOCUMENTOS */}
-                <FormSection icon={FileImage} title="Documentos" subtitle="Envie sua foto e documentos" accentColor="cyan">
+                <FormSection icon={FileImage} title="Documentos" subtitle="Envie seus documentos" accentColor="cyan">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* RG Frente */}
                     <div className="space-y-2">
