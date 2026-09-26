@@ -48,12 +48,12 @@ import { Separator } from "@/components/ui/separator";
 const filiacaoSchema = z.object({
   nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   cpf: z.string().min(14, "CPF inválido"),
-  rg: z.string().optional(),
+  rg: z.string().trim().min(3, "RG ou CNH é obrigatório"),
   data_nascimento: z.string().min(1, "Data de nascimento é obrigatória"),
-  sexo: z.string().optional(),
-  estado_civil: z.string().optional(),
-  nome_pai: z.string().optional(),
-  nome_mae: z.string().optional(),
+  sexo: z.string().min(1, "Sexo é obrigatório"),
+  estado_civil: z.string().min(1, "Estado civil é obrigatório"),
+  nome_pai: z.string().trim().min(3, "Nome do pai é obrigatório"),
+  nome_mae: z.string().trim().min(3, "Nome da mãe é obrigatório"),
   cep: z.string().optional(),
   endereco: z.string().optional(),
   numero: z.string().optional(),
@@ -63,7 +63,7 @@ const filiacaoSchema = z.object({
   uf: z.string().optional(),
   email: z.string().email("E-mail inválido"),
   celular: z.string().min(14, "Celular inválido"),
-  funcao: z.string().optional(),
+  funcao: z.string().trim().min(2, "Função / Cargo é obrigatório"),
   data_admissao: z.string().optional(),
   forma_pagamento: z.string().optional(),
   aceite_lgpd: z.boolean().refine(val => val === true, "Você deve aceitar os termos"),
@@ -102,7 +102,7 @@ const EXCLUSIVE_PAYMENT_METHODS = ["desconto_folha", "desconto_contracheque"];
 // ===== WhatsApp Consent (Meta/LGPD) =====
 const WHATSAPP_CONSENT_TERM_VERSION = "whatsapp_operational_v1_2026";
 const WHATSAPP_CONSENT_TEXT =
-  "Autorizo o Sindicato a utilizar meu número de WhatsApp para comunicações relacionadas ao meu cadastro, carteirinha, atendimentos, agendamentos e serviços solicitados, conforme a Política de Privacidade.";
+  "Autorizo o Sindicato a utilizar meu número de WhatsApp para comunicações relacionadas ao meu cadastro, carteirinha, atendimentos, agendamentos e serviços solicitados, conforme a Política de Privacidade. Declaro ainda que a assinatura digital autorizando o desconto em folha é válida mesmo quando realizada por meio de link enviado a outro número de WhatsApp diferente do informado neste cadastro.";
 
 interface EmployerData {
   employer_id?: string;
@@ -559,7 +559,7 @@ export default function SindicalFiliacaoPage() {
         form.setValue("endereco", data.logradouro);
         form.setValue("bairro", data.bairro);
         form.setValue("cidade", data.localidade);
-        form.setValue("uf", data.uf);
+        form.setValue("uf", (data.uf || "").toUpperCase(), { shouldValidate: true, shouldDirty: true });
       }
     }
   };
@@ -1145,10 +1145,10 @@ export default function SindicalFiliacaoPage() {
                       name="rg"
                       render={({ field }) => (
                         <FormItem>
-                          <FormInputWrapper label="RG" hint="Número do documento">
+                          <FormInputWrapper label="RG ou CNH" hint="Número do documento" required>
                             <FormControl>
                               <Input 
-                                placeholder="Número do RG" 
+                                placeholder="Número do RG ou CNH" 
                                 className="h-11 rounded-xl border-gray-200 focus:border-emerald-500"
                                 {...field} 
                               />
@@ -1185,8 +1185,8 @@ export default function SindicalFiliacaoPage() {
                       name="sexo"
                       render={({ field }) => (
                         <FormItem>
-                          <FormInputWrapper label="Sexo">
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormInputWrapper label="Sexo" required>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="h-11 rounded-xl border-gray-200">
                                   <SelectValue placeholder="Selecione..." />
@@ -1208,8 +1208,8 @@ export default function SindicalFiliacaoPage() {
                       name="estado_civil"
                       render={({ field }) => (
                         <FormItem>
-                          <FormInputWrapper label="Estado Civil">
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormInputWrapper label="Estado Civil" required>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="h-11 rounded-xl border-gray-200">
                                   <SelectValue placeholder="Selecione..." />
@@ -1233,7 +1233,7 @@ export default function SindicalFiliacaoPage() {
                       name="nome_pai"
                       render={({ field }) => (
                         <FormItem>
-                          <FormInputWrapper label="Nome do Pai" hint="Opcional">
+                          <FormInputWrapper label="Nome do Pai" required>
                             <FormControl>
                               <Input 
                                 placeholder="Nome completo do pai" 
@@ -1251,7 +1251,7 @@ export default function SindicalFiliacaoPage() {
                       name="nome_mae"
                       render={({ field }) => (
                         <FormItem>
-                          <FormInputWrapper label="Nome da Mãe" hint="Opcional">
+                          <FormInputWrapper label="Nome da Mãe" required>
                             <FormControl>
                               <Input 
                                 placeholder="Nome completo da mãe" 
@@ -1391,7 +1391,7 @@ export default function SindicalFiliacaoPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormInputWrapper label="UF">
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="h-11 rounded-xl border-gray-200">
                                   <SelectValue placeholder="UF" />
@@ -1474,7 +1474,7 @@ export default function SindicalFiliacaoPage() {
                         name="funcao"
                         render={({ field }) => (
                           <FormItem>
-                            <FormInputWrapper label="Função / Cargo">
+                            <FormInputWrapper label="Função / Cargo" required>
                               <FormControl>
                                 <Input 
                                   placeholder="Sua função na empresa" 
