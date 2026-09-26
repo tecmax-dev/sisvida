@@ -101,6 +101,21 @@ export default function UnionPayslipApprovalsPage() {
   const [isSendingBatch, setIsSendingBatch] = useState(false);
   const [reviewImageUrl, setReviewImageUrl] = useState<string | null>(null);
   const [reviewImageLoading, setReviewImageLoading] = useState(false);
+  const [rejectionTemplate, setRejectionTemplate] = useState<string>('none');
+  const [rejectionContribution, setRejectionContribution] = useState('Taxa Negocial');
+  const [templateStatus, setTemplateStatus] = useState<Record<string, string>>({});
+  const REJECTION_OPTIONS = [
+    {
+      name: 'contracheque_recusado_sem_desconto',
+      label: 'Sem desconto de contribuição',
+      note: (c: string) => `Contracheque sem o desconto da contribuição ${c}.`,
+    },
+    {
+      name: 'contracheque_recusado_prazo',
+      label: 'Folha com mais de 60 dias',
+      note: () => 'Contracheque enviado com mais de 60 dias do período da folha de pagamento.',
+    },
+  ];
 
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
@@ -121,6 +136,16 @@ export default function UnionPayslipApprovalsPage() {
     setViewerOpen(false);
     setSelectedRequest(request);
     setReviewNotes('');
+    setRejectionTemplate('none');
+    setRejectionContribution('Taxa Negocial');
+    supabase.functions
+      .invoke('send-payslip-rejection', { body: { action: 'templates' } })
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        for (const t of ((data as any)?.templates || [])) map[t.name] = t.status;
+        setTemplateStatus(map);
+      })
+      .catch(() => setTemplateStatus({}));
     const defaultExpiry = new Date();
     defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
     setNewExpiresAt(defaultExpiry.toISOString().split('T')[0]);
@@ -230,22 +255,32 @@ export default function UnionPayslipApprovalsPage() {
         notes: reviewNotes,
       });
 
-      if (selectedRequest.patients?.phone) {
-        await supabase.functions.invoke('send-payslip-rejection', {
+      let waMsg = "Nenhum aviso por WhatsApp foi enviado.";
+      if (selectedRequest.patients?.phone && rejectionTemplate !== 'none') {
+        const { data: waRes } = await supabase.functions.invoke('send-payslip-rejection', {
           body: {
+            action: 'send',
+            template_name: rejectionTemplate,
+            contribution_name: rejectionContribution,
             clinic_id: resolvedClinic.id,
             patient_id: selectedRequest.patient_id,
             patient_name: selectedRequest.patients.name,
             patient_phone: selectedRequest.patients.phone,
-            card_id: selectedRequest.card_id,
-            rejection_reason: reviewNotes
           }
         });
+        const r: any = waRes || {};
+        waMsg = r.ok
+          ? "O sócio foi avisado por WhatsApp com o motivo."
+          : r.reason === 'NO_CONSENT' ? "WhatsApp não enviado: sócio sem consentimento."
+          : r.reason === 'OPT_OUT' ? "WhatsApp não enviado: sócio pediu para não receber mensagens."
+          : r.reason === 'INVALID_PHONE' ? "WhatsApp não enviado: telefone inválido."
+          : r.reason === 'TEMPLATE_NOT_APPROVED' ? "WhatsApp não enviado: modelo ainda não aprovado pela Meta."
+          : "WhatsApp não enviado: falha no envio.";
       }
 
       toast({
         title: "Contracheque rejeitado",
-        description: "O sócio foi notificado e uma nova solicitação foi criada.",
+        description: waMsg,
       });
 
       setReviewDialogOpen(false);
@@ -729,6 +764,50 @@ export default function UnionPayslipApprovalsPage() {
                 value={newExpiresAt}
                 onChange={(e) => setNewExpiresAt(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2 rounded-md border p-3">
+              <Label>Aviso por WhatsApp em caso de rejeição</Label>
+              <Select
+                value={rejectionTemplate}
+                onValueChange={(v) => {
+                  setRejectionTemplate(v);
+                  const opt = REJECTION_OPTIONS.find((o) => o.name === v);
+                  if (opt) setReviewNotes(opt.note(rejectionContribution));
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Escolha o motivo (template)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não enviar WhatsApp</SelectItem>
+                  {REJECTION_OPTIONS.map((o) => {
+                    const st = templateStatus[o.name];
+                    const approved = st === 'APPROVED';
+                    return (
+                      <SelectItem key={o.name} value={o.name} disabled={!approved}>
+                        {o.label} {approved ? '' : `(${st === undefined ? 'verificando…' : 'aguardando aprovação Meta'})`}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {rejectionTemplate === 'contracheque_recusado_sem_desconto' && (
+                <Select
+                  value={rejectionContribution}
+                  onValueChange={(v) => {
+                    setRejectionContribution(v);
+                    setReviewNotes(REJECTION_OPTIONS[0].note(v));
+                  }}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Taxa Negocial">Taxa Negocial</SelectItem>
+                    <SelectItem value="Mensalidade Sindical">Mensalidade Sindical</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Só aparecem liberados os modelos aprovados pela Meta. O envio respeita consentimento e opt-out.
+              </p>
             </div>
 
             <div className="space-y-2">
