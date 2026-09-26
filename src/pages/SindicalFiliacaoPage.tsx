@@ -1624,21 +1624,6 @@ export default function SindicalFiliacaoPage() {
                 {/* DOCUMENTOS */}
                 <FormSection icon={FileImage} title="Documentos" subtitle="Envie sua foto e documentos" accentColor="cyan">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Foto 3x4 */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <User className="h-4 w-4 text-cyan-600" />
-                        Foto 3x4
-                      </label>
-                      <PhotoUploadWithCamera
-                        sindicatoId={sindicato.id}
-                        photoUrl={fotoUrl}
-                        onUpload={setFotoUrl}
-                        onClear={() => setFotoUrl(null)}
-                        onUploadingChange={setUploadingFoto}
-                      />
-                    </div>
-
                     {/* RG Frente */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
