@@ -110,7 +110,9 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const newStatus = mapLytexStatus(raw, row.due_date);
+        let newStatus = mapLytexStatus(raw, row.due_date);
+        // Nunca rebaixar pago, nem reabrir cancelado/negociado (duplicatas ou quitados por acordo)
+        if (["paid", "cancelled", "negotiated"].includes(row.status)) newStatus = row.status;
         const newUrl = extractInvoiceUrl(raw) || row.lytex_invoice_url;
         const paidValue = newStatus === "paid" ? extractPaidValue(raw) : null;
         const paidAt = newStatus === "paid" ? extractPaidAt(raw) : null;
