@@ -1320,6 +1320,27 @@ export default function NegotiationDetailsDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={showCancelBoletosDialog} onOpenChange={setShowCancelBoletosDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar boletos do acordo</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancellableInstallments.length} boleto(s) em aberto vinculado(s) a este acordo cancelado serão cancelados na Lytex. Boletos pagos não são afetados. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processing}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleCancelBoletos(); }}
+              disabled={processing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {processing ? "Cancelando..." : "Cancelar boletos"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
