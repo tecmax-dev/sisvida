@@ -471,7 +471,7 @@ export default function NegotiationDetailsDialog({
   };
 
   const cancellableInstallments = installments.filter(
-    (i) => !!i.lytex_invoice_id && i.status !== "paid" && i.status !== "cancelled"
+    (i) => !!i.lytex_invoice_id && !i.paid_at && i.status !== "paid" && i.status !== "cancelled"
   );
 
   const handleCancelBoletos = async () => {
