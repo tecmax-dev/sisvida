@@ -173,6 +173,7 @@ export default function NegotiationDetailsDialog({
   // Cancel dialog
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [showCancelBoletosDialog, setShowCancelBoletosDialog] = useState(false);
 
   // WhatsApp dialog
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
@@ -464,6 +465,40 @@ export default function NegotiationDetailsDialog({
     } catch (error) {
       console.error("Error:", error);
       toast.error("Erro ao efetivar negociação");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const cancellableInstallments = installments.filter(
+    (i) => !!i.lytex_invoice_id && i.status !== "paid" && i.status !== "cancelled"
+  );
+
+  const handleCancelBoletos = async () => {
+    setProcessing(true);
+    let ok = 0;
+    const failed: number[] = [];
+    try {
+      for (const inst of cancellableInstallments) {
+        const { data, error } = await supabase.functions.invoke("lytex-cancel-invoice", {
+          body: { invoiceId: inst.lytex_invoice_id, credentials: "all" },
+        });
+        if (error || !(data as any)?.success) {
+          failed.push(inst.installment_number);
+          continue;
+        }
+        const { error: upErr } = await supabase
+          .from("negotiation_installments")
+          .update({ status: "cancelled" })
+          .eq("id", inst.id);
+        if (upErr) failed.push(inst.installment_number);
+        else ok++;
+      }
+      if (ok) toast.success(`${ok} boleto(s) cancelado(s)`);
+      if (failed.length) toast.error(`Falha ao cancelar parcela(s): ${failed.join(", ")}`);
+      setShowCancelBoletosDialog(false);
+      await fetchDetails();
+      onRefresh();
     } finally {
       setProcessing(false);
     }
@@ -1075,6 +1110,16 @@ export default function NegotiationDetailsDialog({
           {/* Actions */}
           <div className="flex justify-between pt-4 border-t">
             <div className="flex gap-2">
+              {currentNegotiation.status === "cancelled" && cancellableInstallments.length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowCancelBoletosDialog(true)}
+                  disabled={processing}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancelar boletos ({cancellableInstallments.length})
+                </Button>
+              )}
               {negotiation.status !== "cancelled" && negotiation.status !== "completed" && (
                 <Button
                   variant="destructive"
