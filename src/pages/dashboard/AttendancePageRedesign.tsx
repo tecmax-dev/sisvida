@@ -1263,11 +1263,13 @@ export default function AttendancePageRedesign() {
                   <div className="flex items-center gap-3">
                     <Button 
                       variant="outline" 
-                      size="icon" 
                       onClick={() => navigate('/dashboard/calendar')}
                       title="Voltar à Agenda"
+                      className="gap-2"
                     >
+                      <ChevronLeft className="h-4 w-4" />
                       <CalendarDays className="h-4 w-4" />
+                      Voltar à Agenda
                     </Button>
                     <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Resumo do Paciente</h1>
                   </div>
