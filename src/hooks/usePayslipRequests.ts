@@ -1,3 +1,4 @@
+import { toCardExpiryTimestamp } from "@/lib/cardExpiry";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -99,7 +100,7 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
         if (request?.card_id) {
           const { error: cardError } = await supabase
             .from('patient_cards')
-            .update({ expires_at: newExpiresAt })
+            .update({ expires_at: toCardExpiryTimestamp(newExpiresAt) })
             .eq('id', request.card_id);
 
           if (cardError) throw cardError;
