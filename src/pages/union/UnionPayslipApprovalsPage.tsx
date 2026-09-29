@@ -197,20 +197,23 @@ export default function UnionPayslipApprovalsPage() {
       onSuccess: async () => {
         if (selectedRequest.patients?.phone) {
           try {
-            await supabase.functions.invoke('send-payslip-approval', {
+            const { data: r } = await supabase.functions.invoke('send-payslip-approval', {
               body: {
                 clinic_id: resolvedClinic.id,
                 patient_id: selectedRequest.patient_id,
-                patient_name: selectedRequest.patients.name,
-                patient_phone: selectedRequest.patients.phone,
-                card_id: selectedRequest.card_id,
                 new_expires_at: newExpiresAt,
-                notes: reviewNotes || undefined,
               },
             });
+            const reason = (r as any)?.reason;
             toast({
               title: "Contracheque aprovado",
-              description: "O sócio foi notificado por WhatsApp e SMS.",
+              description: (r as any)?.ok
+                ? "O sócio foi avisado pelo WhatsApp oficial."
+                : reason === 'NO_CONSENT' ? "WhatsApp não enviado: sócio sem consentimento."
+                : reason === 'OPT_OUT' ? "WhatsApp não enviado: sócio pediu para não receber mensagens."
+                : reason === 'INVALID_PHONE' ? "WhatsApp não enviado: telefone inválido."
+                : reason === 'TEMPLATE_NOT_APPROVED' ? "WhatsApp não enviado: modelo não aprovado pela Meta."
+                : "WhatsApp não enviado: falha no envio.",
             });
           } catch (err) {
             console.error('Error sending approval notification:', err);

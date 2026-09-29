@@ -128,19 +128,18 @@ export default function PayslipApprovalsPage() {
            // Notify user via WhatsApp
            if (selectedRequest.patients?.phone) {
              try {
-               await supabase.functions.invoke('send-payslip-approval', {
+               const { data: r } = await supabase.functions.invoke('send-payslip-approval', {
                  body: {
                    clinic_id: clinicId,
                    patient_id: selectedRequest.patient_id,
-                   patient_name: selectedRequest.patients.name,
-                   patient_phone: selectedRequest.patients.phone,
                    new_expires_at: newExpiresAt,
-                   notes: reviewNotes || undefined,
                  },
                });
                toast({
                  title: "Contracheque aprovado",
-                  description: "O associado foi notificado via WhatsApp e SMS.",
+                 description: (r as any)?.ok
+                   ? "O associado foi avisado pelo WhatsApp oficial."
+                   : `WhatsApp não enviado (${(r as any)?.reason || 'falha no envio'}).`,
                });
              } catch (err) {
                console.error('Error sending approval notification:', err);

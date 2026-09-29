@@ -182,40 +182,9 @@ export default function PendingPayslipReviews() {
     if (!currentClinic) return;
     
     try {
-      // Get patient phone
-      const { data: patient } = await supabase
-        .from('patients')
-        .select('phone')
-        .eq('id', patientId)
-        .single();
-      
-      if (!patient?.phone) return;
-      
-      // Get dependents names
-      const { data: dependents } = await supabase
-        .from('patient_dependents')
-        .select('name')
-        .eq('patient_id', patientId)
-        .eq('is_active', true);
-      
-      const formattedDate = format(parseDateOnlyToLocalNoon(newExpiry), "dd/MM/yyyy");
-      const firstName = patientName.split(' ')[0];
-      
-      // Build names list
-      let namesSection = `👤 *${patientName}* (titular)`;
-      if (dependents && dependents.length > 0) {
-        const dependentNames = dependents.map(d => `👤 ${d.name}`).join('\n');
-        namesSection += `\n${dependentNames}`;
-      }
-      
-      const message = `Olá, ${firstName}! 🎉\n\nSeu contracheque foi aprovado e as carteirinhas foram renovadas com sucesso!\n\n📅 *Nova validade: ${formattedDate}*\n\n*Beneficiários atualizados:*\n${namesSection}\n\nObrigado por manter seus dados atualizados. Estamos à disposição para qualquer dúvida!\n\n${currentClinic.name}`;
-      
-      await supabase.functions.invoke('send-whatsapp', {
-        body: {
-          clinicId: currentClinic.id,
-          phone: patient.phone,
-          message
-        }
+      // WhatsApp oficial Meta (template aprovado + consentimento + auditoria)
+      await supabase.functions.invoke('card-renewal-notify', {
+        body: { patientId, newExpiresAt: newExpiry, clinicId: currentClinic.id },
       });
     } catch (error) {
       console.error('Error sending approval notification:', error);
