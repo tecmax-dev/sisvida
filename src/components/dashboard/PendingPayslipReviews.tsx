@@ -1,3 +1,4 @@
+import { toCardExpiryTimestamp } from "@/lib/cardExpiry";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -207,7 +208,7 @@ export default function PendingPayslipReviews() {
     setProcessing(true);
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
-      const expiryTimestamp = new Date(newExpiryDate).toISOString();
+      const expiryTimestamp = toCardExpiryTimestamp(newExpiryDate);
       
       // Update payslip request status
       const { error: requestError } = await supabase
