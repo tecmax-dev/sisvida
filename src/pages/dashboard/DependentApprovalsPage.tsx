@@ -889,16 +889,44 @@ export default function DependentApprovalsPage() {
           <DialogHeader>
             <DialogTitle>Rejeitar Solicitação</DialogTitle>
             <DialogDescription>
-              Informe o motivo da rejeição do cadastro de {selectedApproval?.dependent?.name}
+              Escolha o motivo. O associado recebe o aviso oficial do WhatsApp (modelo "dependente_recusado" aprovado pela Meta).
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="space-y-3 py-2">
+            <p className="text-sm font-medium">Motivos prontos</p>
+            <div className="grid gap-2">
+              {[
+                "documento do dependente enviado sem o verso",
+                "documento do titular enviado sem o verso",
+                "documentos do dependente e do titular incompletos (falta frente ou verso)",
+                "foto do documento ilegível ou cortada",
+                "documento enviado não comprova o parentesco",
+                "dependente fora da idade permitida",
+              ].map((m) => (
+                <Button
+                  key={m}
+                  type="button"
+                  variant={rejectionReason === m ? "default" : "outline"}
+                  className="h-auto justify-start whitespace-normal text-left py-2"
+                  onClick={() => setRejectionReason(m)}
+                >
+                  {m}
+                </Button>
+              ))}
+            </div>
+            <p className="text-sm font-medium pt-1">Ou escreva outro motivo</p>
             <Textarea
               placeholder="Motivo da rejeição..."
               value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              rows={4}
+              onChange={(e) => setRejectionReason(e.target.value.slice(0, 300))}
+              rows={2}
             />
+            <div className="rounded-md border bg-muted/50 p-3 text-sm">
+              <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Prévia da mensagem no WhatsApp</p>
+              <p className="whitespace-pre-line">
+                {`Olá, ${(selectedApproval?.patient?.name || "Associado").split(" ")[0]}. A solicitação de inclusão de ${selectedApproval?.dependent?.name || "seu dependente"} como seu dependente não pôde ser aprovada.\n\nMotivo: ${rejectionReason.trim() || "…"}\n\nPara concluir, envie uma nova solicitação pelo aplicativo oficial do sindicato com a foto da frente e do verso do documento do dependente e do titular.`}
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectionDialogOpen(false)}>
