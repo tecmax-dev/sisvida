@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useModal } from "@/contexts/ModalContext";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { PayslipImageViewer } from "@/components/patients/PayslipImageViewer";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,7 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
 export default function DependentApprovalsPage() {
   const { user, currentClinic } = useAuth();
   const { toast } = useToast();
+  const { openModal } = useModal();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
@@ -713,7 +715,18 @@ export default function DependentApprovalsPage() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{approval.patient?.name || '-'}</p>
+                          {approval.patient?.id ? (
+                            <button
+                              type="button"
+                              onClick={() => openModal('unionMemberEdit', { memberId: approval.patient!.id })}
+                              className="font-medium text-primary hover:underline text-left"
+                              title="Ver dados do sócio"
+                            >
+                              {approval.patient.name || '-'}
+                            </button>
+                          ) : (
+                            <p className="font-medium">{approval.patient?.name || '-'}</p>
+                          )}
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Phone className="h-3 w-3" />
                             {formatPhone(approval.requester_phone)}
