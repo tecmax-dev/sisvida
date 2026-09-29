@@ -79,3 +79,5 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 ## Quando atualizar
 
 Ao alterar texto ou variáveis de qualquer template, sempre incrementar versão (`_v3`, `_v4`) — Meta bloqueia o nome por dias após delete.
+
+- `dependente_aprovado` (2 vars: nome, dependente) e `dependente_recusado` (3 vars: nome, dependente, motivo) — UTILITY sem botões, registrados em 2026-09-29 (PENDING, ids 1772142214010613 / 1132271135795160). Envio por `send-dependent-approval-notification` somente quando APPROVED, com consentimento/opt-out.
