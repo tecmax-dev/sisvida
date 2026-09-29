@@ -134,6 +134,24 @@ const formatPhone = (value: string): string => {
 
 const DEPENDENT_DOCUMENT_BUCKET = "dependent-cpf-photos";
 
+type DocKey = "dep_front" | "dep_back" | "holder_front" | "holder_back";
+interface DocState {
+  file: File;
+  preview: string;
+}
+const DOC_SLOTS: { key: DocKey; group: "dependent" | "holder"; side: string; label: string }[] = [
+  { key: "dep_front", group: "dependent", side: "Frente", label: "frente do documento do dependente" },
+  { key: "dep_back", group: "dependent", side: "Verso", label: "verso do documento do dependente" },
+  { key: "holder_front", group: "holder", side: "Frente", label: "frente do documento do titular" },
+  { key: "holder_back", group: "holder", side: "Verso", label: "verso do documento do titular" },
+];
+const EMPTY_DOCS: Record<DocKey, DocState | null> = {
+  dep_front: null,
+  dep_back: null,
+  holder_front: null,
+  holder_back: null,
+};
+
 interface FormData {
   name: string;
   cpf: string;
@@ -169,13 +187,12 @@ export function DependentInclusionForm({
     gender: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [documentPreview, setDocumentPreview] = useState<string | null>(null);
+  const [docs, setDocs] = useState<Record<DocKey, DocState | null>>(EMPTY_DOCS);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkingCpf, setCheckingCpf] = useState(false);
   const [cpfExists, setCpfExists] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileRefs = useRef<Partial<Record<DocKey, HTMLInputElement | null>>>({});
   const { toast } = useToast();
 
   // Check if CPF already exists in the database
@@ -250,21 +267,19 @@ export function DependentInclusionForm({
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (key: DocKey, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type (images only)
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Arquivo inválido",
-        description: "Por favor, selecione uma imagem (foto do RG/CPF).",
+        description: "Por favor, selecione uma foto do documento.",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
@@ -274,23 +289,23 @@ export function DependentInclusionForm({
       return;
     }
 
-    setDocumentFile(file);
     setErrors((prev) => ({ ...prev, document: undefined }));
-
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
-      setDocumentPreview(reader.result as string);
+      setDocs((prev) => ({ ...prev, [key]: { file, preview: reader.result as string } }));
     };
     reader.readAsDataURL(file);
   };
 
-  const removeDocument = () => {
-    setDocumentFile(null);
-    setDocumentPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  const removeDocument = (key: DocKey) => {
+    setDocs((prev) => ({ ...prev, [key]: null }));
+    const el = fileRefs.current[key];
+    if (el) el.value = "";
+  };
+
+  const clearAllDocuments = () => {
+    setDocs(EMPTY_DOCS);
+    Object.values(fileRefs.current).forEach((el) => el && (el.value = ""));
   };
 
   const validateForm = (): boolean => {
@@ -348,40 +363,36 @@ export function DependentInclusionForm({
       }
     }
 
-    // Document validation
-    if (!documentFile) {
-      newErrors.document = "Foto do RG/CPF é obrigatória";
+    // Document validation (frente e verso do dependente e do titular)
+    const missing = DOC_SLOTS.filter((s) => !docs[s.key]);
+    if (missing.length > 0) {
+      newErrors.document = `Falta enviar: ${missing.map((m) => m.label).join(", ")}`;
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const uploadDocument = async (): Promise<string | null> => {
-    if (!documentFile) return null;
+  const uploadOne = async (key: DocKey): Promise<string> => {
+    const file = docs[key]!.file;
+    const fileExt = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const fileName = `${patientId}/${Date.now()}-${key}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from(DEPENDENT_DOCUMENT_BUCKET)
+      .upload(fileName, file, { cacheControl: "3600", upsert: false });
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      throw new Error(uploadError.message || "Erro ao enviar documento");
+    }
+    return fileName;
+  };
 
+  const uploadDocuments = async (): Promise<Record<DocKey, string>> => {
     setUploading(true);
     try {
-      const fileExt = documentFile.name.split(".").pop();
-      const fileName = `${patientId}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(DEPENDENT_DOCUMENT_BUCKET)
-        .upload(fileName, documentFile, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw new Error(uploadError.message || "Erro ao enviar documento");
-      }
-
-      // Return just the path (not public URL) since bucket is private
-      return fileName;
-    } catch (error) {
-      console.error("Error uploading document:", error);
-      throw error;
+      const out = {} as Record<DocKey, string>;
+      for (const s of DOC_SLOTS) out[s.key] = await uploadOne(s.key);
+      return out;
     } finally {
       setUploading(false);
     }
@@ -391,7 +402,7 @@ export function DependentInclusionForm({
     if (!validateForm()) {
       toast({
         title: "Formulário incompleto",
-        description: "Por favor, preencha todos os campos corretamente.",
+        description: "Preencha todos os campos e envie as 4 fotos dos documentos.",
         variant: "destructive",
       });
       return;
@@ -399,11 +410,7 @@ export function DependentInclusionForm({
 
     setSubmitting(true);
     try {
-      // Upload document first
-      const documentUrl = await uploadDocument();
-      if (!documentUrl) {
-        throw new Error("Erro ao enviar documento");
-      }
+      const paths = await uploadDocuments();
 
       // Parse birth date
       const birthDate = parseBirthDate(formData.birthDate);
@@ -425,7 +432,10 @@ export function DependentInclusionForm({
         p_phone: cleanPhone,
         p_relationship: formData.relationship,
         p_gender: formData.gender,
-        p_cpf_photo_url: documentUrl,
+        p_cpf_photo_url: paths.dep_front,
+        p_cpf_photo_back_url: paths.dep_back,
+        p_holder_doc_front_url: paths.holder_front,
+        p_holder_doc_back_url: paths.holder_back,
       });
 
       if (rpcError) {
@@ -447,7 +457,7 @@ export function DependentInclusionForm({
         phone: "",
         relationship: "",
       });
-      removeDocument();
+      clearAllDocuments();
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
@@ -473,7 +483,7 @@ export function DependentInclusionForm({
       gender: "",
     });
     setErrors({});
-    removeDocument();
+    clearAllDocuments();
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -484,6 +494,7 @@ export function DependentInclusionForm({
   };
 
   const isLoading = uploading || submitting;
+  const docsDone = DOC_SLOTS.filter((s) => docs[s.key]).length;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -682,67 +693,88 @@ export function DependentInclusionForm({
             </div>
 
             {/* Document Upload */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                Foto do RG/CPF <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Envie uma foto legível do documento de identidade para validação
-              </p>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-
-              {!documentFile ? (
-                <Card
-                  className={`border-dashed cursor-pointer hover:bg-muted/50 transition-colors ${
-                    errors.document ? "border-red-500" : ""
-                  }`}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <CardContent className="p-6 text-center">
-                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Camera className="h-6 w-6 text-emerald-600" />
-                    </div>
-                    <p className="text-sm font-medium text-foreground">
-                      Toque para adicionar foto
+            <div className="space-y-4 pt-2">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                <div className="flex items-start gap-2">
+                  <FileText className="h-4 w-4 text-emerald-700 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-900">Documentos obrigatórios</p>
+                    <p className="text-xs text-emerald-800 mt-0.5">
+                      Fotografe a <strong>frente e o verso</strong> do RG ou CNH do dependente e do titular.
+                      Use boa iluminação e deixe todos os dados legíveis.
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      JPG, PNG ou HEIC até 5MB
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="overflow-hidden">
-                  <CardContent className="p-0 relative">
-                    <img
-                      src={documentPreview || ""}
-                      alt="Documento"
-                      className="w-full h-40 object-cover"
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-emerald-100 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 transition-all"
+                      style={{ width: `${(docsDone / DOC_SLOTS.length) * 100}%` }}
                     />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                      onClick={removeDocument}
-                      disabled={isLoading}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-3">
-                      <div className="flex items-center gap-2 text-white text-sm">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Documento anexado</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
+                  <span className="text-xs font-medium text-emerald-800">
+                    {docsDone}/{DOC_SLOTS.length}
+                  </span>
+                </div>
+              </div>
+
+              {(["dependent", "holder"] as const).map((group) => (
+                <div key={group} className="space-y-2">
+                  <p className="text-sm font-medium">
+                    {group === "dependent" ? "Documento do dependente" : "Documento do titular (você)"}{" "}
+                    <span className="text-red-500">*</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {DOC_SLOTS.filter((s) => s.group === group).map((slot) => {
+                      const doc = docs[slot.key];
+                      return (
+                        <div key={slot.key}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            ref={(el) => (fileRefs.current[slot.key] = el)}
+                            onChange={(e) => handleFileSelect(slot.key, e)}
+                          />
+                          {!doc ? (
+                            <button
+                              type="button"
+                              disabled={isLoading}
+                              onClick={() => fileRefs.current[slot.key]?.click()}
+                              className={`w-full aspect-[4/3] rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 bg-background hover:bg-muted/50 transition-colors ${
+                                errors.document && !doc ? "border-red-400" : "border-muted-foreground/30"
+                              }`}
+                            >
+                              <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <Camera className="h-4 w-4 text-emerald-600" />
+                              </div>
+                              <span className="text-xs font-semibold text-foreground">{slot.side}</span>
+                              <span className="text-[10px] text-muted-foreground">Toque para fotografar</span>
+                            </button>
+                          ) : (
+                            <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border">
+                              <img src={doc.preview} alt={slot.label} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                disabled={isLoading}
+                                onClick={() => removeDocument(slot.key)}
+                                className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow"
+                                aria-label={`Remover ${slot.label}`}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                              <div className="absolute bottom-0 inset-x-0 bg-black/55 px-2 py-1 flex items-center gap-1 text-white text-[11px]">
+                                <CheckCircle2 className="h-3 w-3" />
+                                {slot.side}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
 
               {errors.document && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
