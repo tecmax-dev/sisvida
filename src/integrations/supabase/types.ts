@@ -9208,9 +9208,12 @@ export type Database = {
       pending_dependent_approvals: {
         Row: {
           clinic_id: string
+          cpf_photo_back_url: string | null
           cpf_photo_url: string | null
           created_at: string
           dependent_id: string
+          holder_doc_back_url: string | null
+          holder_doc_front_url: string | null
           id: string
           patient_id: string
           rejection_reason: string | null
@@ -9221,9 +9224,12 @@ export type Database = {
         }
         Insert: {
           clinic_id: string
+          cpf_photo_back_url?: string | null
           cpf_photo_url?: string | null
           created_at?: string
           dependent_id: string
+          holder_doc_back_url?: string | null
+          holder_doc_front_url?: string | null
           id?: string
           patient_id: string
           rejection_reason?: string | null
@@ -9234,9 +9240,12 @@ export type Database = {
         }
         Update: {
           clinic_id?: string
+          cpf_photo_back_url?: string | null
           cpf_photo_url?: string | null
           created_at?: string
           dependent_id?: string
+          holder_doc_back_url?: string | null
+          holder_doc_front_url?: string | null
           id?: string
           patient_id?: string
           rejection_reason?: string | null
@@ -20793,8 +20802,11 @@ export type Database = {
           p_birth_date: string
           p_clinic_id: string
           p_cpf: string
+          p_cpf_photo_back_url?: string
           p_cpf_photo_url: string
           p_gender?: string
+          p_holder_doc_back_url?: string
+          p_holder_doc_front_url?: string
           p_name: string
           p_patient_id: string
           p_phone: string

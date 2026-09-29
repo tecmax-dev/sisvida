@@ -66,6 +66,9 @@ interface PendingApproval {
   dependent_id: string;
   requester_phone: string;
   cpf_photo_url: string | null;
+  cpf_photo_back_url?: string | null;
+  holder_doc_front_url?: string | null;
+  holder_doc_back_url?: string | null;
   status: string;
   rejection_reason: string | null;
   reviewed_by: string | null;
@@ -126,6 +129,7 @@ export default function DependentApprovalsPage() {
   // Photo viewer dialog
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+  const [docLabel, setDocLabel] = useState<string>("Documento");
   const [loadingPhoto, setLoadingPhoto] = useState(false);
   
   // Approval dialog
@@ -197,6 +201,37 @@ export default function DependentApprovalsPage() {
       supabase.removeChannel(channel);
     };
   }, [currentClinic?.id]);
+
+  const getDocs = (a: PendingApproval) =>
+    [
+      { label: "Dependente - frente", short: "Dep. F", url: a.cpf_photo_url },
+      { label: "Dependente - verso", short: "Dep. V", url: a.cpf_photo_back_url },
+      { label: "Titular - frente", short: "Tit. F", url: a.holder_doc_front_url },
+      { label: "Titular - verso", short: "Tit. V", url: a.holder_doc_back_url },
+    ].filter((d): d is { label: string; short: string; url: string } => !!d.url);
+
+  const notifyViaTemplate = async (approvalId: string, outcome: 'approved' | 'rejected', title: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-dependent-approval-notification', {
+        body: { approval_id: approvalId, outcome },
+      });
+      if (error || !data?.ok) {
+        const reasons: Record<string, string> = {
+          TEMPLATE_NOT_APPROVED: "O modelo de mensagem ainda não foi aprovado pela Meta.",
+          NO_CONSENT: "O associado não autorizou receber mensagens no WhatsApp.",
+          OPT_OUT: "O associado pediu para não receber mensagens no WhatsApp.",
+          INVALID_PHONE: "O associado não tem telefone válido cadastrado.",
+        };
+        toast({
+          title: `${title} (WhatsApp não enviado)`,
+          description: reasons[data?.reason] || data?.error || "Falha ao enviar o aviso no WhatsApp.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('[Approval] WhatsApp template error:', err);
+    }
+  };
 
   const viewPhoto = async (photoUrl: string | null) => {
     if (!photoUrl) {
@@ -279,8 +314,8 @@ export default function DependentApprovalsPage() {
       
       if (dependentError) throw dependentError;
 
-      // Copy the inclusion document to the titular's attachments ("Doc Dependentes" folder)
-      if (selectedApproval.cpf_photo_url) {
+      // Copy the inclusion documents to the titular's attachments ("Doc Dependentes" folder)
+      for (const doc of getDocs(selectedApproval)) {
         try {
           const { error: copyError } = await supabase.functions.invoke(
             'copy-dependent-doc-to-attachments',
@@ -288,8 +323,8 @@ export default function DependentApprovalsPage() {
               body: {
                 clinic_id: currentClinic.id,
                 patient_id: selectedApproval.patient_id,
-                dependent_name: selectedApproval.dependent?.name,
-                cpf_photo_url: selectedApproval.cpf_photo_url,
+                dependent_name: `${selectedApproval.dependent?.name || 'Dependente'} - ${doc.label}`,
+                cpf_photo_url: doc.url,
               },
             }
           );
@@ -377,27 +412,8 @@ export default function DependentApprovalsPage() {
         // Don't fail the approval if card creation fails
       }
       
-      // Send WhatsApp notification to requester
-      if (selectedApproval.requester_phone) {
-        const cardInfo = cardNumber ? `\n\n🪪 *Carteirinha Digital:* ${cardNumber}` : '';
-        const message = `✅ *Cadastro Aprovado!*\n\nOlá! O cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* foi *aprovado* com sucesso!${cardInfo}\n\nEle(a) já pode realizar agendamentos pelo WhatsApp ou pelo sistema.\n\nAtenciosamente,\n${currentClinic.name}`;
-
-        const result = await sendWhatsAppMessage({
-          phone: selectedApproval.requester_phone,
-          message,
-          clinicId: currentClinic.id,
-          type: 'custom',
-        });
-
-        if (!result.success) {
-          console.error('Failed to send approval notification:', result.error);
-          toast({
-            title: "Aprovado (WhatsApp não enviado)",
-            description: result.error || "Falha ao enviar a notificação no WhatsApp.",
-            variant: "destructive",
-          });
-        }
-      }
+      // Aviso pelo WhatsApp oficial (template Meta aprovado)
+      await notifyViaTemplate(selectedApproval.id, 'approved', 'Aprovado');
 
       toast({
         title: "Aprovado!",
@@ -447,26 +463,8 @@ export default function DependentApprovalsPage() {
       
       if (dependentError) throw dependentError;
       
-      // Send WhatsApp notification to requester
-      if (selectedApproval.requester_phone) {
-        const message = `❌ *Cadastro Não Aprovado*\n\nOlá! Infelizmente o cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* não foi aprovado.\n\n*Motivo:* ${rejectionReason.trim()}\n\nPor favor, entre em contato conosco para mais informações.\n\nAtenciosamente,\n${currentClinic.name}`;
-
-        const result = await sendWhatsAppMessage({
-          phone: selectedApproval.requester_phone,
-          message,
-          clinicId: currentClinic.id,
-          type: 'custom',
-        });
-
-        if (!result.success) {
-          console.error('Failed to send rejection notification:', result.error);
-          toast({
-            title: "Rejeitado (WhatsApp não enviado)",
-            description: result.error || "Falha ao enviar a notificação no WhatsApp.",
-            variant: "destructive",
-          });
-        }
-      }
+      // Aviso pelo WhatsApp oficial (template Meta aprovado)
+      await notifyViaTemplate(selectedApproval.id, 'rejected', 'Rejeitado');
       
       toast({
         title: "Rejeitado",
@@ -757,14 +755,30 @@ export default function DependentApprovalsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => viewPhoto(approval.cpf_photo_url)}
-                            disabled={!approval.cpf_photo_url}
-                          >
-                            <ImageIcon className="h-4 w-4" />
-                          </Button>
+                          <div className="flex flex-wrap justify-end gap-1 max-w-[220px]">
+                            {getDocs(approval).length === 0 && (
+                              <Button variant="outline" size="sm" disabled>
+                                <ImageIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {getDocs(approval).map((d) => (
+                              <Button
+                                key={d.label}
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2 text-xs"
+                                title={d.label}
+                                onClick={() => {
+                                  setSelectedApproval(approval);
+                                  setDocLabel(d.label);
+                                  viewPhoto(d.url);
+                                }}
+                              >
+                                <ImageIcon className="h-3.5 w-3.5 mr-1" />
+                                {d.short}
+                              </Button>
+                            ))}
+                          </div>
                           {approval.status === 'pending' && (
                             <>
                               <Button
@@ -822,7 +836,7 @@ export default function DependentApprovalsPage() {
         onOpenChange={setPhotoDialogOpen}
         imageUrl={selectedPhotoUrl}
         patientName={selectedApproval?.dependent?.name || "Dependente"}
-        titlePrefix="Documento"
+        titlePrefix={docLabel || "Documento"}
         loading={loadingPhoto}
       />
 
