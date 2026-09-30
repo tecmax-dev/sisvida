@@ -22,43 +22,59 @@ serve(async (req) => {
     const input = await req.json().catch(() => null);
     const associadoId = input?.associadoId;
     const patientId = input?.patientId;
-    if (typeof associadoId !== "string" || !UUID.test(associadoId)) {
-      if (typeof patientId !== "string" || !UUID.test(patientId)) return json({ success: false, error: "INVALID_INPUT" }, 400);
-    }
+    const inputClinicId = input?.clinicId;
+    const viaPatient = !(typeof associadoId === "string" && UUID.test(associadoId));
+    if (viaPatient && (typeof patientId !== "string" || !UUID.test(patientId))) return json({ success: false, error: "INVALID_INPUT" }, 400);
+    if (viaPatient && (typeof inputClinicId !== "string" || !UUID.test(inputClinicId))) return json({ success: false, error: "INVALID_INPUT" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", { auth: { persistSession: false } });
 
     let member: { id: string; nome: string | null; telefone: string | null; status: string | null; aprovado_at: string | null; sindicato_id: string } | null = null;
-    if (typeof associadoId === "string" && UUID.test(associadoId)) {
+    let clinicId: string;
+    let patientActive = false;
+    if (!viaPatient) {
       const { data, error: memberError } = await admin.from("sindical_associados")
         .select("id, nome, telefone, status, aprovado_at, sindicato_id")
         .eq("id", associadoId).maybeSingle();
-      if (memberError) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+      if (memberError || !data) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
       member = data;
+      const { data: entity, error: entityError } = await admin.from("union_entities")
+        .select("clinic_id").eq("id", member.sindicato_id).maybeSingle();
+      if (entityError || !entity?.clinic_id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
+      clinicId = entity.clinic_id as string;
     } else {
-      // Resolve the affiliation record from the patient (members list) by CPF within the same union entity.
-      const { data: patient } = await admin.from("patients")
-        .select("id, cpf, clinic_id").eq("id", patientId).maybeSingle();
-      if (!patient?.cpf || !patient.clinic_id) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+      // Manual send from the members list: resolve the affiliation record by CPF
+      // within the union entity of the clinic informed by the caller.
       const { data: ent } = await admin.from("union_entities")
-        .select("id").eq("clinic_id", patient.clinic_id).maybeSingle();
-      if (!ent?.id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
+        .select("id, clinic_id").eq("clinic_id", inputClinicId).maybeSingle();
+      if (!ent?.id || !ent.clinic_id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
+      clinicId = ent.clinic_id as string;
+      const { data: patient } = await admin.from("patients")
+        .select("id, cpf, is_active").eq("id", patientId).maybeSingle();
+      if (!patient?.cpf) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+      patientActive = patient.is_active !== false;
       const cpfDigits = String(patient.cpf).replace(/\D/g, "");
       const { data: candidates } = await admin.from("sindical_associados")
         .select("id, nome, telefone, status, aprovado_at, sindicato_id, cpf")
         .eq("sindicato_id", ent.id);
       member = (candidates ?? []).find((a) => String(a.cpf ?? "").replace(/\D/g, "") === cpfDigits) ?? null;
+      // Fallback: use the patient's own data when there is no affiliation record.
+      if (!member) {
+        const { data: p } = await admin.from("patients")
+          .select("id, name, phone").eq("id", patientId).maybeSingle();
+        if (!p) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+        member = { id: p.id, nome: p.name, telefone: p.phone, status: "ativo", aprovado_at: null, sindicato_id: ent.id };
+      }
     }
-    if (!member) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
-    const { data: entity, error: entityError } = await admin.from("union_entities")
-      .select("clinic_id").eq("id", member.sindicato_id).maybeSingle();
-    if (entityError || !entity?.clinic_id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
-    const clinicId = entity.clinic_id as string;
     if (!actor.isSuperAdmin) {
       const { data: allowed, error } = await admin.rpc("has_clinic_access", { _user_id: actor.userId, _clinic_id: clinicId });
       if (error || allowed !== true) throw new AuthError("FORBIDDEN", 403);
     }
-    if (member.status !== "ativo" || !member.aprovado_at) return json({ success: false, reason: "NOT_APPROVED" });
+    if (viaPatient) {
+      if (!patientActive) return json({ success: false, reason: "NOT_APPROVED" });
+    } else if (member.status !== "ativo" || !member.aprovado_at) {
+      return json({ success: false, reason: "NOT_APPROVED" });
+    }
 
     const log = async (decision: string, details: Record<string, unknown> = {}) => admin.from("whatsapp_compliance_logs").insert({
       intent: "AFFILIATION_WELCOME", decision,
