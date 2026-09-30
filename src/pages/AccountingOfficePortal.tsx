@@ -2,6 +2,7 @@
  import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkerListValidationStep } from "@/components/portal/WorkerListValidationStep";
+import { AccountingWorkerListsPanel } from "@/components/portal/AccountingWorkerListsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,7 +135,7 @@ export default function AccountingOfficePortal() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   
   // Views
-  const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao" | "cobranca">("home");
+  const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao" | "cobranca" | "listas">("home");
   
   // Filters
   const [filterEmployer, setFilterEmployer] = useState<string>("all");
@@ -779,6 +780,13 @@ export default function AccountingOfficePortal() {
               color="blue"
             />
             <SindSystemServiceCard
+              icon={<FileText className="h-12 w-12" />}
+              title="ENVIO DE LISTAS"
+              description="Listas de trabalhadores de todas as empresas."
+              onClick={() => setActiveView("listas")}
+              color="green"
+            />
+            <SindSystemServiceCard
               icon={<FolderOpen className="h-12 w-12" />}
               title="DOCUMENTOS COLETIVOS"
               description="Listagem de documentos coletivos."
@@ -793,6 +801,19 @@ export default function AccountingOfficePortal() {
               color="blue"
             />
           </div>
+        </SindSystemMain>
+      </SindSystemContainer>
+    );
+  }
+
+  if (activeView === "listas" && accountingOffice) {
+    return (
+      <SindSystemContainer>
+        <SindSystemHeader logoUrl={clinic?.logo_url} entityName={accountingOffice?.name || "Escritório"} entityEmail={accountingOffice?.email} onLogout={handleLogout} />
+        <SindSystemMain>
+          <SindSystemPageHeader icon={<FileText className="h-6 w-6" />} title="Envio de Listas" subtitle="Relações de trabalhadores de todas as empresas vinculadas." onBack={() => setActiveView("home")} />
+          <AccountingWorkerListsPanel accountingOfficeId={accountingOffice.id} />
+          <div className="mt-6"><SindSystemBackButton onClick={() => setActiveView("home")} /></div>
         </SindSystemMain>
       </SindSystemContainer>
     );
