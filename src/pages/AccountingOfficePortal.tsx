@@ -502,6 +502,7 @@ export default function AccountingOfficePortal() {
           due_date: setValueDueDate || undefined,
           portal_type: "accounting_office",
           portal_id: accountingOffice.id,
+          worker_list_validation_id: workerListValidationId,
         },
       });
 

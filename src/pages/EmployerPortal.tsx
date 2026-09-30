@@ -434,6 +434,7 @@ const [showTutorial, setShowTutorial] = useState(false);
           due_date: setValueDueDate || undefined,
           portal_type: "employer",
           portal_id: employer.id,
+          worker_list_validation_id: workerListValidationId,
         },
       });
 
