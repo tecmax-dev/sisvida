@@ -56,10 +56,10 @@ const SIGNATURE_COMPONENTS = [
   },
 ];
 
-const WELCOME_TEMPLATE_NAME = "boas_vindas_filiacao_v1";
+const WELCOME_TEMPLATE_NAME = "boas_vindas_filiacao_v2";
 const WELCOME_COMPONENTS = [{
   type: "BODY",
-  text: "Olá, {{1}}. Seja bem-vindo(a) ao SECMI! Sua filiação foi aprovada.\n\nSeu cadastro de associado está ativo. Para acessar sua carteirinha digital, consultar seus atendimentos e documentos e gerenciar seus dados, acesse o aplicativo oficial: https://prosinge.com.br/app/baixar-app\n\nEsta é uma comunicação referente à aprovação da sua filiação.\nEquipe SECMI.",
+  text: "Olá, {{1}}. Seja bem-vindo(a) ao SECMI! Sua filiação foi aprovada.\n\nSeu cadastro de associado está ativo. Acesse sua carteirinha digital, atendimentos e documentos pelo aplicativo oficial:\n\niPhone: https://prosindweb.com.br/app\nAndroid: https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app&pcampaignid=web_share\n\nEsta é uma comunicação referente à aprovação da sua filiação.\nEquipe SECMI.",
   example: { body_text: [["Maria"]] },
 }];
 
