@@ -609,6 +609,30 @@ export function PatientFormFields({
         </div>
       </div>
 
+      {/* WhatsApp Consent Auditável (Etapa 5.2) - junto ao celular para ficar visível */}
+      <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
+        <div className="flex items-start space-x-3">
+          <Checkbox
+            id="whatsappConsent"
+            checked={!!formData.whatsappConsent}
+            onCheckedChange={(checked) => updateField('whatsappConsent', !!checked)}
+            className="mt-1"
+          />
+          <div className="space-y-1">
+            <Label htmlFor="whatsappConsent" className="text-sm font-semibold text-foreground cursor-pointer">
+              Autoriza comunicação pelo WhatsApp
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              O associado autorizou receber avisos operacionais (carteirinha, agendamentos) pelo WhatsApp oficial?
+              <br/>
+              <span className="text-[10px] uppercase">
+                Versão: whatsapp_operational_v1_2026 | Fonte: PRESENCIAL
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Linha 8: Celular, Telefone, Email, Canal */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
@@ -893,29 +917,6 @@ export function PatientFormFields({
         </div>
       )}
 
-      {/* WhatsApp Consent Auditável (Etapa 5.2) - Admin / Painel */}
-      <div className="rounded-xl border-2 border-primary/10 bg-primary/5 p-4 mt-6">
-        <div className="flex items-start space-x-3">
-          <Checkbox
-            id="whatsappConsent"
-            checked={formData.whatsappConsent}
-            onCheckedChange={(checked) => updateField('whatsappConsent', !!checked)}
-            className="mt-1"
-          />
-          <div className="space-y-1">
-            <Label htmlFor="whatsappConsent" className="text-sm font-semibold text-gray-800 cursor-pointer">
-              Consentimento WhatsApp (SERVICE_OPERATIONAL)
-            </Label>
-            <p className="text-xs text-gray-600">
-              O associado autorizou comunicações operacionais (carteirinha, agendamentos) via WhatsApp? 
-              <br/>
-              <span className="text-[10px] text-muted-foreground uppercase">
-                Versão: whatsapp_operational_v1_2026 | Fonte: PRESENCIAL
-              </span>
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
