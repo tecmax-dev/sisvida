@@ -161,13 +161,20 @@ export default function UnionAssociadosPage() {
         await syncAssociadoToPatient(associado.id, clinicId);
       }
 
-      return associado.id;
+       const { data: welcome, error: welcomeError } = await supabase.functions.invoke("send-affiliation-welcome", {
+         body: { associadoId: associado.id },
+       });
+
+       return { id: associado.id, welcome, welcomeError };
     },
-    onSuccess: () => {
+     onSuccess: ({ welcome, welcomeError }) => {
       queryClient.invalidateQueries({ queryKey: ["sindical-associados"] });
       toast({ 
         title: "Associado aprovado com sucesso!", 
-        description: "O cadastro foi aprovado e o associado está ativo." 
+         description: welcomeError ? "Cadastro ativo. Não foi possível consultar o envio pelo WhatsApp."
+           : welcome?.success ? "Cadastro ativo. Boas-vindas aceitas pela Meta para envio."
+           : welcome?.reason === "TEMPLATE_NOT_APPROVED" ? "Cadastro ativo. O modelo de WhatsApp ainda aguarda aprovação da Meta."
+           : "Cadastro ativo. WhatsApp não enviado; confira consentimento e auditoria."
       });
       setShowDetailDialog(false);
     },

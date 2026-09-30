@@ -92,29 +92,29 @@ export function FiliacaoApprovalDialog({
           console.error("Error syncing to patients:", syncErr);
         }
 
-        // Send notifications
-        if (sendEmail || sendWhatsApp) {
-          const channels = [];
-          if (sendEmail) channels.push("email");
-          if (sendWhatsApp) channels.push("whatsapp");
-
-          for (const channel of channels) {
-            try {
-              await supabase.functions.invoke("send-filiacao-notification", {
-                body: {
-                  filiacaoId: filiacao.id,
-                  channel,
-                },
-              });
-            } catch (notifError) {
-              console.error(`Error sending ${channel} notification:`, notifError);
-            }
-          }
+        let whatsappNotice = "";
+        if (sendWhatsApp) {
+          const { data: result, error: notifError } = await supabase.functions.invoke("send-affiliation-welcome", {
+            body: { associadoId: filiacao.id },
+          });
+          whatsappNotice = notifError ? "WhatsApp não enviado: falha ao consultar o serviço." : result?.success
+            ? "Boas-vindas aceitas pela Meta para envio."
+            : result?.reason === "TEMPLATE_NOT_APPROVED" ? "WhatsApp não enviado: modelo ainda não aprovado pela Meta."
+            : result?.reason === "NO_CONSENT" ? "WhatsApp não enviado: falta autorização para este telefone."
+            : result?.reason === "OPT_OUT" ? "WhatsApp não enviado: associado optou por não receber."
+            : result?.reason === "ALREADY_ATTEMPTED" ? "WhatsApp não reenviado: tentativa já registrada."
+            : "WhatsApp não enviado. Consulte a auditoria para mais detalhes.";
+        }
+        if (sendEmail) {
+          const { error: emailError } = await supabase.functions.invoke("send-filiacao-notification", {
+            body: { filiacaoId: filiacao.id, channel: "email" },
+          });
+          if (emailError) console.error("Error sending affiliation email", emailError);
         }
 
         toast({
           title: "Filiação aprovada com sucesso!",
-          description: "Status atualizado e matrícula gerada.",
+          description: `Status atualizado e matrícula gerada. ${whatsappNotice}`,
         });
       } else {
         // Reject
