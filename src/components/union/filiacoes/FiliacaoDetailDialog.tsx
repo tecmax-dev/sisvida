@@ -280,15 +280,16 @@ export function FiliacaoDetailDialog({
     
     setSendingWhatsApp(true);
     try {
-      const { error } = await supabase.functions.invoke("send-filiacao-notification", {
-        body: {
-          filiacaoId: data.id,
-          channel: "whatsapp",
-        },
+      const { data: result, error } = await supabase.functions.invoke("send-affiliation-welcome", {
+        body: { associadoId: data.id },
       });
 
       if (error) throw error;
-      toast({ title: "WhatsApp enviado com sucesso!" });
+      if (!result?.success) {
+        toast({ title: "WhatsApp não enviado", description: result?.reason === "TEMPLATE_NOT_APPROVED" ? "O modelo ainda aguarda aprovação da Meta." : result?.reason === "ALREADY_ATTEMPTED" ? "Esta filiação já teve uma tentativa de envio." : "Confira consentimento, opt-out e auditoria.", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Boas-vindas aceitas pela Meta para envio." });
     } catch (error: any) {
       console.error("Error sending WhatsApp:", error);
       toast({ 
