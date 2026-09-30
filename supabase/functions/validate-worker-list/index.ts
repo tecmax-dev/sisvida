@@ -102,11 +102,23 @@ serve(async (req) => {
     if (!OPENAI_API_KEY) return json({ error: "Validação por IA não configurada." }, 200);
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { contribution_id, contribution_type_id, portal_type, portal_id, file_base64, file_name, mime_type } =
-      await req.json();
+    const body = await req.json();
+    const { contribution_id, contribution_type_id, portal_type, portal_id, file_base64, file_name, mime_type } = body;
 
     if (!contribution_id || !portal_id || !["employer", "accounting_office"].includes(portal_type)) {
       return json({ error: "Dados do lançamento incompletos." }, 400);
+    }
+    if (body.action === "list_types") {
+      const { data: c } = await supabase.from("employer_contributions").select("employer_id, clinic_id, contribution_type_id, employer:employers(clinic_id)").eq("id", contribution_id).maybeSingle();
+      if (!c) return json({ error: "Contribuição não encontrada." }, 404);
+      if (portal_type === "employer" && c.employer_id !== portal_id) return json({ error: "Sem permissão." }, 403);
+      if (portal_type === "accounting_office") {
+        const { data: l } = await supabase.from("accounting_office_employers").select("id").eq("accounting_office_id", portal_id).eq("employer_id", c.employer_id).maybeSingle();
+        if (!l) return json({ error: "Sem permissão." }, 403);
+      }
+      const clinicId = (c.employer as any)?.clinic_id || c.clinic_id;
+      const { data: types } = await supabase.from("contribution_types").select("id, name").eq("clinic_id", clinicId).eq("is_active", true).order("name");
+      return json({ types: types || [], default_type_id: c.contribution_type_id });
     }
     if (!contribution_type_id) return json({ error: "Selecione o tipo de contribuição." }, 400);
     if (!file_base64) return json({ error: "Envie a relação de trabalhadores." }, 400);
