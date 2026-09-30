@@ -22,6 +22,13 @@
       "when": 1790726738564,
       "tag": "0002_worker_list_validations",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790728074250,
+      "tag": "0003_worker_lists_staff_read",
+      "breakpoints": true
     }
   ]
 }

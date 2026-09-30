@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 import EmployerEmployeesTab from "@/components/employers/EmployerEmployeesTab";
+import EmployerWorkerListsTab from "@/components/employers/EmployerWorkerListsTab";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 
@@ -232,6 +233,7 @@ export default function EmployerDetailPage({
                   { value: 'contributions', label: 'Contribuições', icon: Receipt },
                   { value: 'employees', label: 'Colaboradores', icon: Users },
                   { value: 'negotiations', label: 'Negociações', icon: Handshake },
+                  { value: 'worker-lists', label: 'Listas de Trabalhadores', icon: FileText },
                   { value: 'data', label: 'Dados', icon: FileText },
                 ].map((tab) => {
                   const Icon = tab.icon;
@@ -289,6 +291,9 @@ export default function EmployerDetailPage({
                 employerId={employer.id} 
                 clinicId={currentClinic?.id || ""}
               />
+            </TabsContent>
+            <TabsContent value="worker-lists" className="m-0 p-6">
+              <EmployerWorkerListsTab employerId={employer.id} />
             </TabsContent>
             <TabsContent value="data" className="m-0 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
