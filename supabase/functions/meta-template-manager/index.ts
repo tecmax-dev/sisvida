@@ -56,6 +56,13 @@ const SIGNATURE_COMPONENTS = [
   },
 ];
 
+const WELCOME_TEMPLATE_NAME = "boas_vindas_filiacao_v1";
+const WELCOME_COMPONENTS = [{
+  type: "BODY",
+  text: "Olá, {{1}}. Seja bem-vindo(a) ao SECMI! Sua filiação foi aprovada.\n\nSeu cadastro de associado está ativo. Para acessar sua carteirinha digital, consultar seus atendimentos e documentos e gerenciar seus dados, acesse o aplicativo oficial: https://prosinge.com.br/app/baixar-app\n\nEsta é uma comunicação referente à aprovação da sua filiação.\nEquipe SECMI.",
+  example: { body_text: [["Maria"]] },
+}];
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -90,6 +97,33 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const action = body.action;
+    if (action === "submit-welcome-template" || action === "welcome-template-status") {
+      const actor = await getAuthContext(req);
+      if (!actor?.isSuperAdmin) return json({ success: false, error: "FORBIDDEN" }, 403);
+      const token = await getToken();
+      if (!token) return json({ success: false, error: "META_TOKEN_NOT_CONFIGURED" }, 503);
+      const headers = { Authorization: `Bearer ${token}` };
+      const read = await fetch(`${GRAPH}/${wabaId()}/message_templates?name=${WELCOME_TEMPLATE_NAME}&limit=50`, { headers });
+      const readBody: any = await read.json().catch(() => ({}));
+      if (!read.ok) return json({ success: false, error: "META_LOOKUP_FAILED", http: read.status, details: readBody?.error?.message ?? null }, 502);
+      const existing = (readBody?.data ?? []).find((t: any) => t.name === WELCOME_TEMPLATE_NAME && t.language === LANGUAGE);
+      if (existing || action === "welcome-template-status") {
+        return json({ success: true, name: WELCOME_TEMPLATE_NAME, created: false, status: existing?.status ?? "NOT_FOUND", id: existing?.id ?? null, category: existing?.category ?? null });
+      }
+      // Uma submissão autorizada, sem repetição automática.
+      const submitted = await fetch(`${GRAPH}/${wabaId()}/message_templates`, {
+        method: "POST", headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: WELCOME_TEMPLATE_NAME, language: LANGUAGE, category: CATEGORY, components: WELCOME_COMPONENTS }),
+      });
+      const submittedBody: any = await submitted.json().catch(() => ({}));
+      await admin.from("whatsapp_compliance_logs").insert({
+        intent: "TEMPLATE_SUBMIT", decision: submitted.ok && submittedBody?.id ? "SUBMITTED" : "FAILED",
+        metadata: { template: WELCOME_TEMPLATE_NAME, http: submitted.status, id: submittedBody?.id ?? null, error: submittedBody?.error?.message ?? null },
+      });
+      if (!submitted.ok || !submittedBody?.id) return json({ success: false, error: "META_SUBMISSION_FAILED", http: submitted.status, details: submittedBody?.error?.message ?? null }, 502);
+      await admin.from("whatsapp_meta_templates").insert({ name: WELCOME_TEMPLATE_NAME, language: LANGUAGE, category: submittedBody?.category ?? CATEGORY, status: submittedBody?.status ?? "PENDING", meta_template_id: submittedBody.id, components: WELCOME_COMPONENTS, variables_count: 1, last_synced_at: new Date().toISOString() });
+      return json({ success: true, name: WELCOME_TEMPLATE_NAME, created: true, id: submittedBody.id, status: submittedBody?.status ?? "PENDING", category: submittedBody?.category ?? CATEGORY });
+    }
     if (action === "submit-signature-template" || action === "signature-template-status") {
       const actor = await getAuthContext(req);
       if (!actor?.isSuperAdmin) return json({ success: false, error: "FORBIDDEN" }, 403);
