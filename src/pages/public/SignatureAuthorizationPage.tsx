@@ -316,16 +316,16 @@ export default function SignatureAuthorizationPage() {
               <div className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Nome:</span>
-                  <span className="font-medium">{tokenData?.patient.name}</span>
+                  <span className="font-medium text-gray-900 text-right">{tokenData?.patient.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">CPF:</span>
-                  <span className="font-mono">{formatCPF(tokenData?.patient.cpf || "")}</span>
+                  <span className="font-mono text-gray-900">{formatCPF(tokenData?.patient.cpf || "")}</span>
                 </div>
                 {tokenData?.patient.employer_name && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Empresa:</span>
-                    <span>{tokenData.patient.employer_name}</span>
+                    <span className="text-gray-900 text-right">{tokenData.patient.employer_name}</span>
                   </div>
                 )}
               </div>
