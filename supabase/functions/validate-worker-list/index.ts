@@ -161,6 +161,27 @@ serve(async (req) => {
       });
     }
 
+    // Link temporário (1h) para visualizar o documento de uma validação,
+    // com a mesma checagem de permissão do portal.
+    if (body.action === "get_file_url") {
+      const validationId = body.validation_id;
+      if (!validationId || !portal_id) return json({ error: "Dados incompletos." }, 400);
+      const { data: v } = await supabase
+        .from("contribution_worker_list_validations")
+        .select("id, employer_id, file_path, file_name, mime_type")
+        .eq("id", validationId)
+        .maybeSingle();
+      if (!v) return json({ error: "Validação não encontrada." }, 404);
+      if (portal_type === "employer" && v.employer_id !== portal_id) return json({ error: "Sem permissão." }, 403);
+      if (portal_type === "accounting_office") {
+        const { data: l } = await supabase.from("accounting_office_employers").select("id").eq("accounting_office_id", portal_id).eq("employer_id", v.employer_id).maybeSingle();
+        if (!l) return json({ error: "Sem permissão." }, 403);
+      }
+      const { data: s, error: sErr } = await supabase.storage.from("worker-lists").createSignedUrl(v.file_path, 3600);
+      if (sErr || !s?.signedUrl) return json({ error: "Não foi possível abrir o arquivo." }, 200);
+      return json({ url: s.signedUrl, file_name: v.file_name, mime_type: v.mime_type });
+    }
+
     if (!contribution_id || !portal_id || !["employer", "accounting_office"].includes(portal_type)) {
       return json({ error: "Dados do lançamento incompletos." }, 400);
     }
