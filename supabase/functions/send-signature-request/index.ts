@@ -10,9 +10,9 @@ const WABA_ID = "2063797207822998";
 const PHONE_ID = "1213495528515111";
 const TEMPLATE = "assinatura_filiacao_v1";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+const json = (body: any, status = 200) => { if (body?.success === false) console.warn("send-signature-request blocked:", body.reason); return new Response(JSON.stringify(body), {
   status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-});
+}); };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
