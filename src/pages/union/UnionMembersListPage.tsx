@@ -1541,16 +1541,6 @@ export default function UnionMembersListPage() {
         </Card>
       )}
 
-      {/* Welcome WhatsApp Dialog */}
-      <SendWelcomeWhatsAppDialog
-        open={welcomeDialogOpen}
-        onOpenChange={setWelcomeDialogOpen}
-        member={selectedMemberForWelcome}
-        clinicId={resolvedClinic?.id || ""}
-        entityName={resolvedClinic?.name || "Sindicato"}
-        appUrl="https://prosinge.com.br/app/baixar-app"
-        headerImageUrl="https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-headers/header_bem_vindo_socio_secmi.png"
-      />
 
       {/* Filiacao Actions Dialog */}
       {selectedMemberForFiliacao && (
