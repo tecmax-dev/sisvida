@@ -187,7 +187,7 @@ export default function PatientEditPage() {
   const canViewPrescriptions = hasPermission('view_prescriptions');
   const canManagePatients = hasPermission('manage_patients');
   // Apenas admins podem desbloquear pacientes (owner, admin ou super admin)
-  const canUnblockPatients = isAdmin;
+  const canUnblockPatients = isAdmin || hasPermission("unblock_patients") || hasPermission("union_unblock_patients");
   
   // Secretárias (receptionist) NUNCA podem acessar prontuário/odontograma,
   // mesmo que tenham grupo de acesso configurado incorretamente.
@@ -657,10 +657,10 @@ export default function PatientEditPage() {
     if (!id || !currentClinic) return;
     
     // Guard: only admins can unblock
-    if (!isAdmin) {
+    if (!canUnblockPatients) {
       toast({
         title: "Acesso negado",
-        description: "Apenas administradores podem desbloquear pacientes.",
+        description: "Você não tem permissão para desbloquear pacientes.",
         variant: "destructive",
       });
       return;
