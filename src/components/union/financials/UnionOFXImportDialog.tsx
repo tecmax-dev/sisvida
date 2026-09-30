@@ -15,13 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -187,19 +180,19 @@ export function UnionOFXImportDialog({
         <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 min-h-0">
           {/* Cash Register Selection */}
           <div>
-            <Label className="text-xs sm:text-sm">Conta Bancária *</Label>
-            <Select value={selectedCashRegister} onValueChange={setSelectedCashRegister}>
-              <SelectTrigger className="mt-1 text-xs sm:text-sm">
-                <SelectValue placeholder="Selecione a conta bancária" />
-              </SelectTrigger>
-              <SelectContent>
-                {cashRegisters.map((cr) => (
-                  <SelectItem key={cr.id} value={cr.id}>
-                    {cr.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="ofx-cash-register" className="text-xs sm:text-sm">Conta Bancária *</Label>
+            <select
+              id="ofx-cash-register"
+              value={selectedCashRegister}
+              onChange={(event) => setSelectedCashRegister(event.target.value)}
+              disabled={isImporting}
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm"
+            >
+              <option value="" disabled>Selecione a conta bancária</option>
+              {cashRegisters.map((cr) => (
+                <option key={cr.id} value={cr.id}>{cr.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* File Upload */}
