@@ -24,8 +24,8 @@ serve(async (req) => {
     const patientId = input?.patientId;
     const inputClinicId = input?.clinicId;
     const viaPatient = !(typeof associadoId === "string" && UUID.test(associadoId));
-    if (viaPatient && (typeof patientId !== "string" || !UUID.test(patientId))) return json({ success: false, error: "INVALID_INPUT" }, 400);
-    if (viaPatient && (typeof inputClinicId !== "string" || !UUID.test(inputClinicId))) return json({ success: false, error: "INVALID_INPUT" }, 400);
+    if (viaPatient && (typeof patientId !== "string" || !UUID.test(patientId))) return json({ success: false, reason: "INVALID_INPUT" });
+    if (viaPatient && (typeof inputClinicId !== "string" || !UUID.test(inputClinicId))) return json({ success: false, reason: "INVALID_INPUT" });
 
     const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", { auth: { persistSession: false } });
 
@@ -36,22 +36,22 @@ serve(async (req) => {
       const { data, error: memberError } = await admin.from("sindical_associados")
         .select("id, nome, telefone, status, aprovado_at, sindicato_id")
         .eq("id", associadoId).maybeSingle();
-      if (memberError || !data) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+      if (memberError || !data) return json({ success: false, reason: "MEMBER_NOT_FOUND" });
       member = data;
       const { data: entity, error: entityError } = await admin.from("union_entities")
         .select("clinic_id").eq("id", member.sindicato_id).maybeSingle();
-      if (entityError || !entity?.clinic_id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
+      if (entityError || !entity?.clinic_id) return json({ success: false, reason: "ENTITY_NOT_FOUND" });
       clinicId = entity.clinic_id as string;
     } else {
       // Manual send from the members list: resolve the affiliation record by CPF
       // within the union entity of the clinic informed by the caller.
       const { data: ent } = await admin.from("union_entities")
         .select("id, clinic_id").eq("clinic_id", inputClinicId).maybeSingle();
-      if (!ent?.id || !ent.clinic_id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
+      if (!ent?.id || !ent.clinic_id) return json({ success: false, reason: "ENTITY_NOT_FOUND" });
       clinicId = ent.clinic_id as string;
       const { data: patient } = await admin.from("patients")
         .select("id, cpf, is_active").eq("id", patientId).maybeSingle();
-      if (!patient?.cpf) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+      if (!patient?.cpf) return json({ success: false, reason: "MEMBER_NOT_FOUND" });
       patientActive = patient.is_active !== false;
       const cpfDigits = String(patient.cpf).replace(/\D/g, "");
       const { data: candidates } = await admin.from("sindical_associados")
@@ -62,7 +62,7 @@ serve(async (req) => {
       if (!member) {
         const { data: p } = await admin.from("patients")
           .select("id, name, phone").eq("id", patientId).maybeSingle();
-        if (!p) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+        if (!p) return json({ success: false, reason: "MEMBER_NOT_FOUND" });
         member = { id: p.id, nome: p.name, telefone: p.phone, status: "ativo", aprovado_at: null, sindicato_id: ent.id };
       }
     }
@@ -102,7 +102,7 @@ serve(async (req) => {
     const { error: attemptError } = await log("ATTEMPT");
     if (attemptError) {
       if (attemptError.code === "23505") return json({ success: false, reason: "ALREADY_ATTEMPTED" });
-      return json({ success: false, reason: "AUDIT_UNAVAILABLE" }, 500);
+      return json({ success: false, reason: "AUDIT_UNAVAILABLE" });
     }
     const firstName = String(member.nome || "Associado").replace(/[\r\n\t]/g, " ").trim().split(/\s+/)[0].slice(0, 60);
     const res = await fetch(`${GRAPH}/${PHONE_ID}/messages`, {
@@ -126,6 +126,6 @@ serve(async (req) => {
     const denied = authErrorResponse(error, corsHeaders);
     if (denied) return denied;
     console.error("Affiliation welcome failed", error);
-    return json({ success: false, reason: "SEND_FAILED" }, 500);
+    return json({ success: false, reason: "SEND_FAILED" });
   }
 });
