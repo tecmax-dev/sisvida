@@ -87,7 +87,6 @@ import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointm
 import { usePermissions } from "@/hooks/usePermissions";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
 import MemberContributionsTab from "@/components/union/MemberContributionsTab";
-import { SendWelcomeWhatsAppDialog } from "@/components/union/SendWelcomeWhatsAppDialog";
 import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
 import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
@@ -204,9 +203,6 @@ export default function UnionMembersListPage() {
   const [cardFilter, setCardFilter] = useState<"all" | "valid" | "expired" | "no-card">("all");
   const [loading, setLoading] = useState(true);
 
-  // Welcome message dialog state
-  const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
-  const [selectedMemberForWelcome, setSelectedMemberForWelcome] = useState<UnionMember | null>(null);
 
   // Filiacao actions dialog state
   const [filiacaoDialogOpen, setFiliacaoDialogOpen] = useState(false);
@@ -718,6 +714,34 @@ export default function UnionMembersListPage() {
     }
   };
 
+  // Enviar boas-vindas pelo WhatsApp oficial (template Meta aprovado)
+  const handleSendWelcomeOfficial = async (member: UnionMember) => {
+    if (!resolvedClinic?.id) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("send-affiliation-welcome", {
+        body: { patientId: member.id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: "Boas-vindas enviadas!", description: `Mensagem oficial enviada para ${member.name}.` });
+      } else {
+        const reason = data?.reason;
+        const msg = reason === "TEMPLATE_NOT_APPROVED" ? "Modelo ainda não aprovado pela Meta."
+          : reason === "NO_CONSENT" ? "Falta autorização de WhatsApp para este telefone."
+          : reason === "OPT_OUT" ? "Este associado optou por não receber mensagens."
+          : reason === "INVALID_PHONE" ? "Telefone inválido para WhatsApp."
+          : reason === "NOT_APPROVED" ? "A filiação deste sócio não consta como aprovada."
+          : reason === "ALREADY_ATTEMPTED" ? "As boas-vindas já foram enviadas para este sócio."
+          : reason === "MEMBER_NOT_FOUND" ? "Filiação não encontrada para este sócio."
+          : "Não foi possível enviar. Consulte a auditoria.";
+        toast({ title: "Não foi possível enviar", description: msg, variant: "destructive" });
+      }
+    } catch (err: any) {
+      const extracted = extractFunctionsError(err);
+      toast({ title: "Não foi possível enviar", description: extracted.message, variant: "destructive" });
+    }
+  };
+
   // Gerar link de assinatura e abrir WhatsApp
   const handleManualSendSignatureWhatsApp = async (member: UnionMember) => {
     try {
@@ -1182,10 +1206,7 @@ export default function UnionMembersListPage() {
                               Ficha de Filiação
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedMemberForWelcome(member);
-                                setWelcomeDialogOpen(true);
-                              }}
+                              onClick={() => handleSendWelcomeOfficial(member)}
                               className="text-green-600"
                             >
                               <MessageCircle className="h-4 w-4 mr-2" />
@@ -1520,16 +1541,6 @@ export default function UnionMembersListPage() {
         </Card>
       )}
 
-      {/* Welcome WhatsApp Dialog */}
-      <SendWelcomeWhatsAppDialog
-        open={welcomeDialogOpen}
-        onOpenChange={setWelcomeDialogOpen}
-        member={selectedMemberForWelcome}
-        clinicId={resolvedClinic?.id || ""}
-        entityName={resolvedClinic?.name || "Sindicato"}
-        appUrl="https://prosinge.com.br/app/baixar-app"
-        headerImageUrl="https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-headers/header_bem_vindo_socio_secmi.png"
-      />
 
       {/* Filiacao Actions Dialog */}
       {selectedMemberForFiliacao && (

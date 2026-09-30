@@ -21,13 +21,35 @@ serve(async (req) => {
     if (!actor.isStaff) throw new AuthError("FORBIDDEN", 403);
     const input = await req.json().catch(() => null);
     const associadoId = input?.associadoId;
-    if (typeof associadoId !== "string" || !UUID.test(associadoId)) return json({ success: false, error: "INVALID_INPUT" }, 400);
+    const patientId = input?.patientId;
+    if (typeof associadoId !== "string" || !UUID.test(associadoId)) {
+      if (typeof patientId !== "string" || !UUID.test(patientId)) return json({ success: false, error: "INVALID_INPUT" }, 400);
+    }
 
     const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", { auth: { persistSession: false } });
-    const { data: member, error: memberError } = await admin.from("sindical_associados")
-      .select("id, nome, telefone, status, aprovado_at, sindicato_id")
-      .eq("id", associadoId).maybeSingle();
-    if (memberError || !member) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+
+    let member: { id: string; nome: string | null; telefone: string | null; status: string | null; aprovado_at: string | null; sindicato_id: string } | null = null;
+    if (typeof associadoId === "string" && UUID.test(associadoId)) {
+      const { data, error: memberError } = await admin.from("sindical_associados")
+        .select("id, nome, telefone, status, aprovado_at, sindicato_id")
+        .eq("id", associadoId).maybeSingle();
+      if (memberError) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+      member = data;
+    } else {
+      // Resolve the affiliation record from the patient (members list) by CPF within the same union entity.
+      const { data: patient } = await admin.from("patients")
+        .select("id, cpf, clinic_id").eq("id", patientId).maybeSingle();
+      if (!patient?.cpf || !patient.clinic_id) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
+      const { data: ent } = await admin.from("union_entities")
+        .select("id").eq("clinic_id", patient.clinic_id).maybeSingle();
+      if (!ent?.id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
+      const cpfDigits = String(patient.cpf).replace(/\D/g, "");
+      const { data: candidates } = await admin.from("sindical_associados")
+        .select("id, nome, telefone, status, aprovado_at, sindicato_id, cpf")
+        .eq("sindicato_id", ent.id);
+      member = (candidates ?? []).find((a) => String(a.cpf ?? "").replace(/\D/g, "") === cpfDigits) ?? null;
+    }
+    if (!member) return json({ success: false, error: "MEMBER_NOT_FOUND" }, 404);
     const { data: entity, error: entityError } = await admin.from("union_entities")
       .select("clinic_id").eq("id", member.sindicato_id).maybeSingle();
     if (entityError || !entity?.clinic_id) return json({ success: false, error: "ENTITY_NOT_FOUND" }, 404);
@@ -40,11 +62,11 @@ serve(async (req) => {
 
     const log = async (decision: string, details: Record<string, unknown> = {}) => admin.from("whatsapp_compliance_logs").insert({
       intent: "AFFILIATION_WELCOME", decision,
-      metadata: { associado_id: associadoId, clinic_id: clinicId, actor_id: actor.userId, template: TEMPLATE, ...details },
+      metadata: { associado_id: member.id, clinic_id: clinicId, actor_id: actor.userId, template: TEMPLATE, ...details },
     });
     const { valid, e164 } = normalizeBrPhone(member.telefone);
     if (!valid || !e164) { await log("BLOCKED", { reason: "INVALID_PHONE" }); return json({ success: false, reason: "INVALID_PHONE" }); }
-    const gate = await validateConsentForCurrentPhone(admin, e164, { personId: associadoId, tenantId: clinicId });
+    const gate = await validateConsentForCurrentPhone(admin, e164, { personId: member.id, tenantId: clinicId });
     if (!gate.allow) {
       await log("BLOCKED", { reason: gate.opt_out ? "OPT_OUT" : "NO_CONSENT", reasons: gate.reasons });
       return json({ success: false, reason: gate.opt_out ? "OPT_OUT" : "NO_CONSENT" });
