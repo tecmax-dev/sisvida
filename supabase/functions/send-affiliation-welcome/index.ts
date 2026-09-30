@@ -66,7 +66,7 @@ serve(async (req) => {
     });
     const { valid, e164 } = normalizeBrPhone(member.telefone);
     if (!valid || !e164) { await log("BLOCKED", { reason: "INVALID_PHONE" }); return json({ success: false, reason: "INVALID_PHONE" }); }
-    const gate = await validateConsentForCurrentPhone(admin, e164, { personId: associadoId, tenantId: clinicId });
+    const gate = await validateConsentForCurrentPhone(admin, e164, { personId: member.id, tenantId: clinicId });
     if (!gate.allow) {
       await log("BLOCKED", { reason: gate.opt_out ? "OPT_OUT" : "NO_CONSENT", reasons: gate.reasons });
       return json({ success: false, reason: gate.opt_out ? "OPT_OUT" : "NO_CONSENT" });
