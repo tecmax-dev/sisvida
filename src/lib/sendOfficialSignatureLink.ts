@@ -11,6 +11,9 @@ export async function sendOfficialSignatureLink(associadoId: string, clinicId: s
     NO_CONSENT: "O associado precisa autorizar o recebimento de mensagens neste número antes do envio.",
     OPT_OUT: "Este número não aceita mensagens do sindicato.",
     INVALID_PHONE: "O telefone do associado não é válido para WhatsApp.",
+    FORBIDDEN: "Você não tem acesso a este sindicato.",
+    ASSOCIADO_NAO_ENCONTRADO: "Sócio não encontrado neste sindicato.",
+    META_TOKEN_NOT_CONFIGURED: "WhatsApp oficial não está configurado.",
     SEND_FAILED: "A Meta não confirmou o envio. Consulte a auditoria antes de tentar novamente.",
   };
   throw new Error(reasons[data?.reason] || data?.error || "Não foi possível enviar o link de assinatura.");

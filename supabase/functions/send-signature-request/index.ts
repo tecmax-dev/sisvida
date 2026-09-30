@@ -10,13 +10,13 @@ const WABA_ID = "2063797207822998";
 const PHONE_ID = "1213495528515111";
 const TEMPLATE = "assinatura_filiacao_v1";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+const json = (body: any, status = 200) => { if (body?.success === false) console.warn("send-signature-request blocked:", body.reason); return new Response(JSON.stringify(body), {
   status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-});
+}); };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json({ success: false, error: "METHOD_NOT_ALLOWED" }, 405);
+  if (req.method !== "POST") return json({ success: false, reason: "METHOD_NOT_ALLOWED" });
   try {
     const actor = await getAuthContext(req);
     if (!actor) throw new AuthError("UNAUTHORIZED", 401);
@@ -27,7 +27,7 @@ serve(async (req) => {
     const clinicId = input?.clinicId;
     const official = input?.sendOfficial === true;
     if (typeof associadoId !== "string" || !uuid.test(associadoId) || typeof clinicId !== "string" || !uuid.test(clinicId)) {
-      return json({ success: false, error: "ID do associado e da clínica são obrigatórios" }, 400);
+      return json({ success: false, reason: "ID do associado e da clínica são obrigatórios" });
     }
 
     const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
@@ -35,12 +35,12 @@ serve(async (req) => {
     });
     if (!actor.isSuperAdmin) {
       const { data: access, error: accessError } = await admin.rpc("has_clinic_access", { _user_id: actor.userId, _clinic_id: clinicId });
-      if (accessError || access !== true) return json({ success: false, error: "FORBIDDEN" }, 403);
+      if (accessError || access !== true) return json({ success: false, reason: "FORBIDDEN" });
     }
     const { data: patient, error: patientError } = await admin.from("patients")
       .select("id, clinic_id, name, phone").eq("id", associadoId).eq("clinic_id", clinicId).maybeSingle();
-    if (patientError) return json({ success: false, error: "PATIENT_LOOKUP_FAILED" }, 500);
-    if (!patient) return json({ success: false, error: "ASSOCIADO_NAO_ENCONTRADO" }, 404);
+    if (patientError) return json({ success: false, reason: "PATIENT_LOOKUP_FAILED" });
+    if (!patient) return json({ success: false, reason: "ASSOCIADO_NAO_ENCONTRADO" });
 
     const log = async (decision: string, details: Record<string, unknown> = {}) => {
       const { error } = await admin.from("whatsapp_compliance_logs").insert({
@@ -73,7 +73,7 @@ serve(async (req) => {
       }
       const { data: secret } = await admin.rpc("get_meta_vault_secret", { _secret_name: "META_WHATSAPP_TOKEN_V2" });
       metaToken = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2") ?? null;
-      if (!metaToken) return json({ success: false, error: "META_TOKEN_NOT_CONFIGURED" }, 503);
+      if (!metaToken) return json({ success: false, reason: "META_TOKEN_NOT_CONFIGURED" });
       const statusResponse = await fetch(`${GRAPH}/${WABA_ID}/message_templates?name=${TEMPLATE}&limit=10`, {
         headers: { Authorization: `Bearer ${metaToken}` },
       });
@@ -90,7 +90,7 @@ serve(async (req) => {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const { error: insertError } = await admin.from("patient_signature_tokens")
       .insert({ token, patient_id: associadoId, clinic_id: clinicId, expires_at: expiresAt });
-    if (insertError) return json({ success: false, error: "Erro ao gerar link de assinatura" }, 500);
+    if (insertError) return json({ success: false, reason: "Erro ao gerar link de assinatura" });
     if (!official) return json({ success: true, token });
 
     // The template's dynamic URL parameter must contain ONLY the UUID suffix.
@@ -121,6 +121,6 @@ serve(async (req) => {
     const denied = authErrorResponse(error, corsHeaders);
     if (denied) return denied;
     console.error("Signature request failed", error);
-    return json({ success: false, error: "Erro ao processar solicitação de assinatura" }, 500);
+    return json({ success: false, reason: "Erro ao processar solicitação de assinatura" });
   }
 });
