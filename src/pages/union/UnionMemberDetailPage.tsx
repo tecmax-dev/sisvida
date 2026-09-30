@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
  import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText } from "lucide-react";
 import { extractFunctionsError } from "@/lib/functionsError";
-import { openWhatsApp } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
