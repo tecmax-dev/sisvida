@@ -46,7 +46,7 @@ Verifique:
 4. Se o tipo de contribuição aparece e se é compatível com o selecionado.
 5. Competência/período e quantidade de trabalhadores.
 6. Qualquer inconsistência.
-Observação: listas de trabalhadores muitas vezes não informam o tipo de contribuição nem a competência; nesse caso use null em tipo_compativel e registre em inconsistencias, sem reprovar por isso. Marque tipo_compativel=false apenas se o documento indicar claramente OUTRO tipo de contribuição.
+Observação: listas de trabalhadores muitas vezes não informam o tipo de contribuição nem a competência; nesse caso use null em tipo_compativel e registre em inconsistencias, sem reprovar por isso. Marque tipo_compativel=false apenas se o documento indicar claramente OUTRO tipo de contribuição. IMPORTANTE: as denominações "Taxa Assistencial", "Contribuição Assistencial" e variantes próximas (ex.: "contribuição assistencial sindical") são SINÔNIMOS aceitos do tipo de contribuição selecionado; se o documento usar qualquer uma dessas denominações, marque tipo_compativel=true e informe o texto exato em tipo_contribuicao_identificado.
 
 Responda SOMENTE com JSON, sem markdown:
 {
@@ -269,7 +269,10 @@ serve(async (req) => {
       const match = names.some((n) => n && (a.includes(n) || n.includes(a)));
       if (!match) blocks.push(`Empresa do documento (${ai.empresa_identificada}) diferente da empresa do lançamento.`);
     }
-    if (ai.tipo_compativel === false) blocks.push("O tipo de contribuição do documento não é compatível com o selecionado.");
+    // "Taxa Assistencial" / "Contribuição Assistencial" são sinônimos aceitos do tipo selecionado
+    const identifiedType = normName(ai.tipo_contribuicao_identificado);
+    const assistentialAlias = /taxa assistencial|contribuicao assistencial/.test(identifiedType);
+    if (ai.tipo_compativel === false && !assistentialAlias) blocks.push("O tipo de contribuição do documento não é compatível com o selecionado.");
     const qtd = Number(ai.quantidade_trabalhadores);
     if (!qtd || qtd < 1) blocks.push("Nenhum trabalhador identificado no documento.");
     const confianca = Math.max(0, Math.min(1, Number(ai.confianca) || 0));
