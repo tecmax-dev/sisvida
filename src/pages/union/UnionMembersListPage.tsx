@@ -87,7 +87,6 @@ import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointm
 import { usePermissions } from "@/hooks/usePermissions";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
 import MemberContributionsTab from "@/components/union/MemberContributionsTab";
-import { SendWelcomeWhatsAppDialog } from "@/components/union/SendWelcomeWhatsAppDialog";
 import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
 import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
@@ -204,9 +203,6 @@ export default function UnionMembersListPage() {
   const [cardFilter, setCardFilter] = useState<"all" | "valid" | "expired" | "no-card">("all");
   const [loading, setLoading] = useState(true);
 
-  // Welcome message dialog state
-  const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
-  const [selectedMemberForWelcome, setSelectedMemberForWelcome] = useState<UnionMember | null>(null);
 
   // Filiacao actions dialog state
   const [filiacaoDialogOpen, setFiliacaoDialogOpen] = useState(false);
