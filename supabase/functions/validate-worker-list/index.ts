@@ -177,6 +177,25 @@ serve(async (req) => {
       const allowed = (types || []).filter((t: any) => isAllowedType(t.name));
       return json({ types: allowed, default_type_id: c.contribution_type_id });
     }
+    // Reaproveita somente validação do MESMO lançamento/empresa/portal (válida, não usada, 24h)
+    if (body.action === "latest_valid") {
+      const { data: c } = await supabase.from("employer_contributions").select("employer_id").eq("id", contribution_id).maybeSingle();
+      if (!c) return json({ validation: null });
+      if (portal_type === "employer" && c.employer_id !== portal_id) return json({ error: "Sem permissão." }, 403);
+      if (portal_type === "accounting_office") {
+        const { data: l } = await supabase.from("accounting_office_employers").select("id").eq("accounting_office_id", portal_id).eq("employer_id", c.employer_id).maybeSingle();
+        if (!l) return json({ error: "Sem permissão." }, 403);
+      }
+      const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: v } = await supabase
+        .from("contribution_worker_list_validations")
+        .select("id, contribution_type_id, reason, confidence, ai_result, file_name")
+        .eq("contribution_id", contribution_id).eq("employer_id", c.employer_id)
+        .eq("portal_type", portal_type).eq("portal_id", portal_id)
+        .eq("status", "valid").is("used_at", null).gte("created_at", sinceIso)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return json({ validation: v || null });
+    }
     if (!contribution_type_id) return json({ error: "Selecione o tipo de contribuição." }, 400);
     if (!file_base64) return json({ error: "Envie a relação de trabalhadores." }, 400);
     const mime = String(mime_type || "").toLowerCase();
