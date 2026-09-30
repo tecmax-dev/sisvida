@@ -718,6 +718,34 @@ export default function UnionMembersListPage() {
     }
   };
 
+  // Enviar boas-vindas pelo WhatsApp oficial (template Meta aprovado)
+  const handleSendWelcomeOfficial = async (member: UnionMember) => {
+    if (!resolvedClinic?.id) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("send-affiliation-welcome", {
+        body: { patientId: member.id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: "Boas-vindas enviadas!", description: `Mensagem oficial enviada para ${member.name}.` });
+      } else {
+        const reason = data?.reason;
+        const msg = reason === "TEMPLATE_NOT_APPROVED" ? "Modelo ainda não aprovado pela Meta."
+          : reason === "NO_CONSENT" ? "Falta autorização de WhatsApp para este telefone."
+          : reason === "OPT_OUT" ? "Este associado optou por não receber mensagens."
+          : reason === "INVALID_PHONE" ? "Telefone inválido para WhatsApp."
+          : reason === "NOT_APPROVED" ? "A filiação deste sócio não consta como aprovada."
+          : reason === "ALREADY_ATTEMPTED" ? "As boas-vindas já foram enviadas para este sócio."
+          : reason === "MEMBER_NOT_FOUND" ? "Filiação não encontrada para este sócio."
+          : "Não foi possível enviar. Consulte a auditoria.";
+        toast({ title: "Não foi possível enviar", description: msg, variant: "destructive" });
+      }
+    } catch (err: any) {
+      const extracted = extractFunctionsError(err);
+      toast({ title: "Não foi possível enviar", description: extracted.message, variant: "destructive" });
+    }
+  };
+
   // Gerar link de assinatura e abrir WhatsApp
   const handleManualSendSignatureWhatsApp = async (member: UnionMember) => {
     try {
@@ -1182,10 +1210,7 @@ export default function UnionMembersListPage() {
                               Ficha de Filiação
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedMemberForWelcome(member);
-                                setWelcomeDialogOpen(true);
-                              }}
+                              onClick={() => handleSendWelcomeOfficial(member)}
                               className="text-green-600"
                             >
                               <MessageCircle className="h-4 w-4 mr-2" />
