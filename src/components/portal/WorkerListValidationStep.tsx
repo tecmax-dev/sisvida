@@ -64,6 +64,26 @@ export function WorkerListValidationStep({
       .then(({ data }) => {
         setTypes(data?.types || []);
       });
+    // Lista já validada (ex.: Envio de Listas em lote) para ESTE lançamento
+    supabase.functions
+      .invoke("validate-worker-list", {
+        body: { action: "latest_valid", contribution_id: contributionId, portal_type: portalType, portal_id: portalId },
+      })
+      .then(({ data }) => {
+        const v = data?.validation;
+        if (!v?.id) return;
+        setTypeId(v.contribution_type_id || "");
+        setResult({
+          valido: true, confianca: Number(v.confidence) || 0,
+          empresa_identificada: v.ai_result?.empresa_identificada ?? null,
+          cnpj_identificado: v.ai_result?.cnpj_identificado ?? null,
+          tipo_contribuicao_identificado: v.ai_result?.tipo_contribuicao_identificado ?? null,
+          competencia: v.ai_result?.competencia ?? null,
+          quantidade_trabalhadores: v.ai_result?.quantidade_trabalhadores ?? null,
+          inconsistencias: [], motivo: v.reason || "Relação validada.",
+        });
+        onValidated(v.id);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contributionId, portalId]);
 
