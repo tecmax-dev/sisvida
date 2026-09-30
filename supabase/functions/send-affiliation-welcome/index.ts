@@ -62,7 +62,7 @@ serve(async (req) => {
 
     const log = async (decision: string, details: Record<string, unknown> = {}) => admin.from("whatsapp_compliance_logs").insert({
       intent: "AFFILIATION_WELCOME", decision,
-      metadata: { associado_id: associadoId, clinic_id: clinicId, actor_id: actor.userId, template: TEMPLATE, ...details },
+      metadata: { associado_id: member.id, clinic_id: clinicId, actor_id: actor.userId, template: TEMPLATE, ...details },
     });
     const { valid, e164 } = normalizeBrPhone(member.telefone);
     if (!valid || !e164) { await log("BLOCKED", { reason: "INVALID_PHONE" }); return json({ success: false, reason: "INVALID_PHONE" }); }
