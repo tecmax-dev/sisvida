@@ -248,6 +248,7 @@ export default function UnionMemberDetailPage({
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [signatureImageUrl, setSignatureImageUrl] = useState<string | null>(null);
   const [signatureAcceptedAt, setSignatureAcceptedAt] = useState<string | null>(null);
+  const [payrollAuthorized, setPayrollAuthorized] = useState(false);
    const [sendingSignatureRequest, setSendingSignatureRequest] = useState(false);
    const [isFiliacaoDialogOpen, setIsFiliacaoDialogOpen] = useState(false);
 
@@ -431,6 +432,7 @@ export default function UnionMemberDetailPage({
         const rawSignatureUrl = (data as any).signature_url || null;
         setSignatureUrl(rawSignatureUrl);
         setSignatureAcceptedAt((data as any).signature_accepted_at || null);
+        setPayrollAuthorized((data as any).signature_accepted === true || !!rawSignatureUrl);
 
         // Generate signed URL for the signature image
         if (rawSignatureUrl) {
@@ -716,6 +718,8 @@ export default function UnionMemberDetailPage({
         job_function: formData.jobFunction.trim() || null,
         admission_date: formData.admissionDate || null,
         union_affiliation_date: formData.affiliationDate || null,
+        signature_accepted: payrollAuthorized ? true : null,
+        signature_accepted_at: payrollAuthorized ? (signatureAcceptedAt || new Date().toISOString()) : (signatureUrl ? signatureAcceptedAt : null),
       };
 
       if (isAdmin) {
@@ -1275,6 +1279,21 @@ export default function UnionMemberDetailPage({
                     <Pen className="h-4 w-4 text-violet-600" />
                     Assinatura Digital - Autorização de Desconto
                   </h4>
+
+                  <label className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3 mb-4 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 accent-primary"
+                      checked={payrollAuthorized}
+                      onChange={(e) => setPayrollAuthorized(e.target.checked)}
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block text-sm font-semibold">Autoriza desconto em folha</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Marcado: a ficha impressa sai com "Sim" em Desconto em Folha. Salve o cadastro para aplicar.
+                      </span>
+                    </span>
+                  </label>
                   
                    {signatureUrl ? (
                     <div className="space-y-3">
