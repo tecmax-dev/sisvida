@@ -733,6 +733,9 @@ export default function UnionMembersListPage() {
           : reason === "NOT_APPROVED" ? "A filiação deste sócio não consta como aprovada."
           : reason === "ALREADY_ATTEMPTED" ? "As boas-vindas já foram enviadas para este sócio."
           : reason === "MEMBER_NOT_FOUND" ? "Filiação não encontrada para este sócio."
+          : reason === "ENTITY_NOT_FOUND" ? "Sindicato deste sócio não encontrado."
+          : reason === "INVALID_INPUT" ? "Dados do sócio incompletos."
+          : reason === "SEND_FAILED" ? "A Meta recusou o envio para este número."
           : "Não foi possível enviar. Consulte a auditoria.";
         toast({ title: "Não foi possível enviar", description: msg, variant: "destructive" });
       }
