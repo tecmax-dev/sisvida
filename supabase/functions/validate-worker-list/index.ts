@@ -43,6 +43,7 @@ Verifique:
 4. Se o tipo de contribuição aparece e se é compatível com o selecionado.
 5. Competência/período e quantidade de trabalhadores.
 6. Qualquer inconsistência.
+Observação: listas de trabalhadores muitas vezes não informam o tipo de contribuição nem a competência; nesse caso use null em tipo_compativel e registre em inconsistencias, sem reprovar por isso. Marque tipo_compativel=false apenas se o documento indicar claramente OUTRO tipo de contribuição.
 
 Responda SOMENTE com JSON, sem markdown:
 {
@@ -199,7 +200,8 @@ serve(async (req) => {
     const confianca = Math.max(0, Math.min(1, Number(ai.confianca) || 0));
     if (confianca < 0.6) blocks.push("Confiança da análise insuficiente.");
 
-    const valido = ai.valido === true && blocks.length === 0;
+    // ausência de tipo/competência no documento é registrada como inconsistência, não bloqueia
+    const valido = blocks.length === 0;
     const allInconsistencies = [...blocks, ...inconsistencias.filter((i) => !blocks.includes(i))];
     const motivo = valido ? String(ai.motivo || "Relação validada.") : blocks[0] || String(ai.motivo || "Documento não validado.");
 
