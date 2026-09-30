@@ -1,6 +1,7 @@
  import { useState, useEffect, useMemo, useRef } from "react";
  import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { WorkerListValidationStep } from "@/components/portal/WorkerListValidationStep";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,6 +148,7 @@ export default function AccountingOfficePortal() {
   // Dialog de definir valor
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
+  const [workerListValidationId, setWorkerListValidationId] = useState<string | null>(null);
   const [setValueDueDate, setSetValueDueDate] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
 
@@ -448,6 +450,7 @@ export default function AccountingOfficePortal() {
           new_due_date: newDueDate,
           portal_type: "accounting_office",
           portal_id: accountingOffice.id,
+          worker_list_validation_id: workerListValidationId,
         },
       });
 
@@ -475,6 +478,10 @@ export default function AccountingOfficePortal() {
   const handleSetValue = async () => {
     if (!selectedContribution || !accountingOffice || !newValue) {
       toast.error("Informe o valor da contribuição");
+      return;
+    }
+    if (!workerListValidationId) {
+      toast.error("Envie e valide a relação de trabalhadores antes de informar o valor.");
       return;
     }
 
@@ -1322,13 +1329,13 @@ export default function AccountingOfficePortal() {
       {/* Dialog de Definir Valor */}
       <Dialog open={showSetValueDialog} onOpenChange={(open) => {
         setShowSetValueDialog(open);
-        if (!open) {
+        if (!open) { setWorkerListValidationId(null);
           setNewValue("");
           setSetValueDueDate("");
           setSelectedContribution(null);
         }
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-900">
               <DollarSign className="h-5 w-5 text-purple-600" />
@@ -1343,6 +1350,18 @@ export default function AccountingOfficePortal() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {selectedContribution && accountingOffice && (
+              <WorkerListValidationStep
+                contributionId={selectedContribution.id}
+                portalType="accounting_office"
+                portalId={accountingOffice.id}
+                employerName={selectedContribution.employer?.name || ""}
+                employerCnpj={selectedContribution.employer?.cnpj || ""}
+                validationId={workerListValidationId}
+                onValidated={setWorkerListValidationId}
+              />
+            )}
+            {workerListValidationId && (<>
             <div>
               <Label className="text-slate-700 text-sm font-medium">Valor (R$)</Label>
               <Input
@@ -1390,6 +1409,7 @@ export default function AccountingOfficePortal() {
                 </div>
               );
             })()}
+          </>)}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)} className="border-slate-200">
@@ -1397,7 +1417,7 @@ export default function AccountingOfficePortal() {
             </Button>
             <Button 
               onClick={handleSetValue} 
-              disabled={isSettingValue || !newValue || !setValueDueDate}
+              disabled={isSettingValue || !workerListValidationId || !newValue || !setValueDueDate}
               className="bg-purple-600 hover:bg-purple-700"
             >
               {isSettingValue ? (

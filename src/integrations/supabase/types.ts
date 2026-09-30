@@ -2704,6 +2704,75 @@ export type Database = {
           },
         ]
       }
+      contribution_worker_list_validations: {
+        Row: {
+          ai_result: Json | null
+          clinic_id: string | null
+          competence_month: number | null
+          competence_year: number | null
+          confidence: number | null
+          contribution_id: string
+          contribution_type_id: string | null
+          created_at: string
+          employer_id: string
+          extracted_data: Json | null
+          file_name: string | null
+          file_path: string
+          id: string
+          inconsistencies: Json | null
+          mime_type: string | null
+          portal_id: string
+          portal_type: string
+          reason: string | null
+          status: string
+          used_at: string | null
+        }
+        Insert: {
+          ai_result?: Json | null
+          clinic_id?: string | null
+          competence_month?: number | null
+          competence_year?: number | null
+          confidence?: number | null
+          contribution_id: string
+          contribution_type_id?: string | null
+          created_at?: string
+          employer_id: string
+          extracted_data?: Json | null
+          file_name?: string | null
+          file_path: string
+          id?: string
+          inconsistencies?: Json | null
+          mime_type?: string | null
+          portal_id: string
+          portal_type: string
+          reason?: string | null
+          status: string
+          used_at?: string | null
+        }
+        Update: {
+          ai_result?: Json | null
+          clinic_id?: string | null
+          competence_month?: number | null
+          competence_year?: number | null
+          confidence?: number | null
+          contribution_id?: string
+          contribution_type_id?: string | null
+          created_at?: string
+          employer_id?: string
+          extracted_data?: Json | null
+          file_name?: string | null
+          file_path?: string
+          id?: string
+          inconsistencies?: Json | null
+          mime_type?: string | null
+          portal_id?: string
+          portal_type?: string
+          reason?: string | null
+          status?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       cost_centers: {
         Row: {
           clinic_id: string

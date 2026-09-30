@@ -38,6 +38,7 @@ import {
   Receipt
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { WorkerListValidationStep } from "@/components/portal/WorkerListValidationStep";
 import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
 import { SindicatoWhatsappBanner } from "@/components/portals/SindicatoWhatsappBanner";
@@ -158,6 +159,7 @@ export default function EmployerPortal() {
   const [isGeneratingReissue, setIsGeneratingReissue] = useState(false);
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
+  const [workerListValidationId, setWorkerListValidationId] = useState<string | null>(null);
   const [setValueDueDate, setSetValueDueDate] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
   const [showChangeValueDialog, setShowChangeValueDialog] = useState(false);
@@ -381,6 +383,7 @@ const [showTutorial, setShowTutorial] = useState(false);
           new_due_date: newDueDate,
           portal_type: "employer",
           portal_id: employer.id,
+          worker_list_validation_id: workerListValidationId,
         },
       });
 
@@ -408,6 +411,10 @@ const [showTutorial, setShowTutorial] = useState(false);
   const handleSetValue = async () => {
     if (!selectedContribution || !employer || !newValue) {
       toast.error("Informe o valor da contribuição");
+      return;
+    }
+    if (!workerListValidationId) {
+      toast.error("Envie e valide a relação de trabalhadores antes de informar o valor.");
       return;
     }
 
@@ -803,9 +810,9 @@ const [showTutorial, setShowTutorial] = useState(false);
 
       <Dialog open={showSetValueDialog} onOpenChange={(open) => {
         setShowSetValueDialog(open);
-        if (!open) { setNewValue(""); setSetValueDueDate(""); setSelectedContribution(null); }
+        if (!open) { setWorkerListValidationId(null); setNewValue(""); setSetValueDueDate(""); setSelectedContribution(null); }
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-900">
               <DollarSign className="h-5 w-5 text-purple-600" />
@@ -816,6 +823,18 @@ const [showTutorial, setShowTutorial] = useState(false);
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {selectedContribution && employer && (
+              <WorkerListValidationStep
+                contributionId={selectedContribution.id}
+                portalType="employer"
+                portalId={employer.id}
+                employerName={employer?.name || ""}
+                employerCnpj={employer?.cnpj || ""}
+                validationId={workerListValidationId}
+                onValidated={setWorkerListValidationId}
+              />
+            )}
+            {workerListValidationId && (<>
             <div>
               <Label className="text-slate-700 text-sm font-medium">Valor (R$)</Label>
               <Input type="text" placeholder="0,00" value={newValue} onChange={(e) => setNewValue(e.target.value.replace(/[^0-9,]/g, ""))} className="mt-2 h-10 text-lg font-medium border-slate-200" />
@@ -840,10 +859,11 @@ const [showTutorial, setShowTutorial] = useState(false);
                 </div>
               );
             })()}
+          </>)}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>Cancelar</Button>
-            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue || !setValueDueDate} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={handleSetValue} disabled={isSettingValue || !workerListValidationId || !newValue || !setValueDueDate} className="bg-purple-600 hover:bg-purple-700">
               {isSettingValue ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando...</> : <><FileText className="h-4 w-4 mr-2" />Gerar Boleto</>}
             </Button>
           </DialogFooter>
