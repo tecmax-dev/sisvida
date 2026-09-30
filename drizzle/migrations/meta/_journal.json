@@ -15,6 +15,13 @@
       "when": 1790687137880,
       "tag": "0001_dependent_docs_front_back",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790726738564,
+      "tag": "0002_worker_list_validations",
+      "breakpoints": true
     }
   ]
 }
