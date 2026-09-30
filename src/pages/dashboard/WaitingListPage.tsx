@@ -534,6 +534,57 @@ function WaitingListContent() {
     }
   };
 
+  const [syncing, setSyncing] = useState(false);
+  const handleSyncWithAgenda = async () => {
+    if (!currentClinic) return;
+    const candidates = entries.filter((e) => e.patient?.id && e.professional?.id);
+    if (candidates.length === 0) {
+      toast({ title: "Nada para sincronizar", description: "Nenhum paciente na fila com profissional definido." });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const patientIds = Array.from(new Set(candidates.map((e) => e.patient.id)));
+      const appts: { patient_id: string; professional_id: string; created_at: string }[] = [];
+      for (let i = 0; i < patientIds.length; i += 200) {
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("patient_id, professional_id, created_at")
+          .eq("clinic_id", currentClinic.id)
+          .in("patient_id", patientIds.slice(i, i + 200))
+          .not("status", "in", "(cancelled,no_show)");
+        if (error) throw error;
+        appts.push(...((data as any[]) || []));
+      }
+      const toRemove = candidates.filter((e) =>
+        appts.some(
+          (a) =>
+            a.patient_id === e.patient.id &&
+            a.professional_id === e.professional!.id &&
+            a.created_at >= e.created_at,
+        ),
+      );
+      if (toRemove.length === 0) {
+        toast({ title: "Lista já sincronizada", description: "Nenhum paciente da fila agendou com o profissional." });
+        return;
+      }
+      const { error } = await supabase
+        .from("waiting_list")
+        .update({ is_active: false, notification_status: "confirmed", confirmed_at: new Date().toISOString() })
+        .in("id", toRemove.map((e) => e.id));
+      if (error) throw error;
+      toast({
+        title: "Lista sincronizada com a agenda",
+        description: `${toRemove.length} paciente(s) já agendado(s) removido(s) da fila.`,
+      });
+      fetchWaitingList();
+    } catch (error: any) {
+      toast({ title: "Erro ao sincronizar", description: error.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const _handleSchedulePatient = async (entry: WaitingListEntry) => {
     // Mark as inactive and confirmed
     await supabase
@@ -977,6 +1028,10 @@ function WaitingListContent() {
                   Limpar filtros
                 </Button>
               )}
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={handleSyncWithAgenda} disabled={syncing}>
+                {syncing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Calendar className="h-3.5 w-3.5 mr-1" />}
+                Sincronizar com agenda
+              </Button>
               <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={handlePrint}>
                 <Printer className="h-3.5 w-3.5 mr-1" />
                 Imprimir lista
