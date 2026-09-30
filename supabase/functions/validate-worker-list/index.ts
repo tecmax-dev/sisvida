@@ -14,6 +14,9 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+// Somente as contribuições 124, 125 e 126 passam pela validação
+const isAllowedType = (name: unknown) => /^\s*(124|125|126)\b/.test(String(name ?? ""));
+
 const digits = (s: unknown) => String(s ?? "").replace(/\D/g, "");
 
 function normName(s: unknown) {
@@ -119,7 +122,8 @@ serve(async (req) => {
       }
       const clinicId = (c.employer as any)?.clinic_id || c.clinic_id;
       const { data: types } = await supabase.from("contribution_types").select("id, name").eq("clinic_id", clinicId).eq("is_active", true).order("name");
-      return json({ types: types || [], default_type_id: c.contribution_type_id });
+      const allowed = (types || []).filter((t: any) => isAllowedType(t.name));
+      return json({ types: allowed, default_type_id: c.contribution_type_id });
     }
     if (!contribution_type_id) return json({ error: "Selecione o tipo de contribuição." }, 400);
     if (!file_base64) return json({ error: "Envie a relação de trabalhadores." }, 400);
@@ -156,7 +160,7 @@ serve(async (req) => {
       .select("id, name")
       .eq("id", contribution_type_id)
       .maybeSingle();
-    if (!selectedType) return json({ error: "Tipo de contribuição inválido." }, 400);
+    if (!selectedType || !isAllowedType(selectedType.name)) return json({ error: "Tipo de contribuição inválido." }, 400);
 
     const employer: any = contribution.employer;
     const competence = `${String(contribution.competence_month).padStart(2, "0")}/${contribution.competence_year}`;
