@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS whatsapp_affiliation_welcome_one_attempt ON public.whatsapp_compliance_logs ((metadata->>'associado_id')) WHERE intent = 'AFFILIATION_WELCOME' AND decision = 'ATTEMPT' AND metadata->>'associado_id' IS NOT NULL;

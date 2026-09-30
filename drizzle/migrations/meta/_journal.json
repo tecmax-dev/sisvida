@@ -29,6 +29,13 @@
       "when": 1790728074250,
       "tag": "0003_worker_lists_staff_read",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790741506967,
+      "tag": "0004_unique_affiliation_welcome_attempt",
+      "breakpoints": true
     }
   ]
 }
