@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts"
+import { requireStaff, authErrorResponse, getAuthContext } from "../_shared/authGuard.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,6 +43,19 @@ const TEMPLATE_COMPONENTS = [
   },
 ];
 
+const SIGNATURE_TEMPLATE_NAME = "assinatura_filiacao_v1";
+const SIGNATURE_COMPONENTS = [
+  {
+    type: "BODY",
+    text: "Olá, {{1}}. A autorização de desconto em folha da sua filiação ao sindicato está disponível para assinatura digital.\n\nAcesse o link seguro pelo botão abaixo para conferir e assinar o documento. O link é individual e válido por 24 horas. Se você não solicitou esta assinatura, desconsidere esta mensagem.",
+    example: { body_text: [["Maria"]] },
+  },
+  {
+    type: "BUTTONS",
+    buttons: [{ type: "URL", text: "Acessar assinatura", url: "https://sindexa.com.br/assinar/{{1}}", example: ["https://sindexa.com.br/assinar/00000000-0000-4000-8000-000000000000"] }],
+  },
+];
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -77,6 +90,33 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const action = body.action;
+    if (action === "submit-signature-template" || action === "signature-template-status") {
+      const actor = await getAuthContext(req);
+      if (!actor?.isSuperAdmin) return json({ success: false, error: "FORBIDDEN" }, 403);
+      const token = await getToken();
+      if (!token) return json({ success: false, error: "META_TOKEN_NOT_CONFIGURED" }, 503);
+      const headers = { Authorization: `Bearer ${token}` };
+      const read = await fetch(`${GRAPH}/${wabaId()}/message_templates?name=${SIGNATURE_TEMPLATE_NAME}&limit=50`, { headers });
+      const readBody: any = await read.json().catch(() => ({}));
+      if (!read.ok) return json({ success: false, error: "META_LOOKUP_FAILED", http: read.status, details: readBody?.error?.message ?? null }, 502);
+      const existing = (readBody?.data ?? []).find((t: any) => t.name === SIGNATURE_TEMPLATE_NAME && t.language === LANGUAGE);
+      if (existing || action === "signature-template-status") {
+        return json({ success: true, name: SIGNATURE_TEMPLATE_NAME, created: false, status: existing?.status ?? "NOT_FOUND", id: existing?.id ?? null });
+      }
+      // One authorized submission; do not retry a failed request automatically.
+      const submitted = await fetch(`${GRAPH}/${wabaId()}/message_templates`, {
+        method: "POST", headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: SIGNATURE_TEMPLATE_NAME, language: LANGUAGE, category: CATEGORY, components: SIGNATURE_COMPONENTS }),
+      });
+      const submittedBody: any = await submitted.json().catch(() => ({}));
+      await admin.from("whatsapp_compliance_logs").insert({
+        intent: "TEMPLATE_SUBMIT", decision: submitted.ok && submittedBody?.id ? "SUBMITTED" : "FAILED",
+        metadata: { template: SIGNATURE_TEMPLATE_NAME, http: submitted.status, id: submittedBody?.id ?? null, error: submittedBody?.error?.message ?? null },
+      });
+      if (!submitted.ok || !submittedBody?.id) return json({ success: false, error: "META_SUBMISSION_FAILED", http: submitted.status, details: submittedBody?.error?.message ?? null }, 502);
+      await admin.from("whatsapp_meta_templates").insert({ name: SIGNATURE_TEMPLATE_NAME, language: LANGUAGE, category: CATEGORY, status: submittedBody?.status ?? "PENDING", meta_template_id: submittedBody.id, components: SIGNATURE_COMPONENTS, variables_count: 2, last_synced_at: new Date().toISOString() });
+      return json({ success: true, name: SIGNATURE_TEMPLATE_NAME, created: true, id: submittedBody.id, status: submittedBody?.status ?? "PENDING", category: submittedBody?.category ?? CATEGORY });
+    }
 
     if (action === "diagnose") {
       const token = await getToken();

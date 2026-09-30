@@ -1,3 +1,4 @@
+import { sendOfficialSignatureLink } from "@/lib/sendOfficialSignatureLink";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -719,38 +720,11 @@ export default function UnionMembersListPage() {
 
   // Gerar link de assinatura e abrir WhatsApp
   const handleManualSendSignatureWhatsApp = async (member: UnionMember) => {
-    if (!member.phone) {
-      toast({
-        title: "Erro",
-        description: "Telefone do sócio não encontrado.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      const { data, error } = await supabase.functions.invoke("send-signature-request", {
-        body: {
-          associadoId: member.id,
-          clinicId: resolvedClinic.id,
-          createOnly: true, // Nova flag para não disparar o email se já tiver
-        },
-      });
-
-      if (error) throw error;
-
-      const baseUrl = window.location.origin;
-      const signatureUrl = `${baseUrl}/assinar/${data.token}`;
-      const message = `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${member.name}*!\n\nSolicitamos que você assine digitalmente a autorização de desconto em folha.\n\n📝 *Acesse o link abaixo para assinar:* \n${signatureUrl}\n\nAtenciosamente,\n*${resolvedClinic.name}*`;
-
-      openWhatsApp(member.phone, message);
+      await sendOfficialSignatureLink(member.id, resolvedClinic.id);
+      toast({ title: "Link de assinatura enviado pelo WhatsApp oficial." });
     } catch (err: any) {
-      console.error("[manual-send-signature] error", err);
-      toast({
-        title: "Erro ao gerar link",
-        description: err.message || "Erro desconhecido",
-        variant: "destructive",
-      });
+      toast({ title: "Não foi possível enviar", description: err.message, variant: "destructive" });
     }
   };
 
@@ -1232,7 +1206,7 @@ export default function UnionMembersListPage() {
                                  className="text-emerald-600 font-medium"
                                >
                                  <MessageCircle className="h-4 w-4 mr-2" />
-                                 Link Assinatura (Manual)
+                                 Enviar Link de Assinatura
                                </DropdownMenuItem>
                              )}
                              {member.phone && canManageMembers() && !member.signature_accepted && (
