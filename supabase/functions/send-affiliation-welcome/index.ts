@@ -8,7 +8,7 @@ import { chatwootMirrorTemplateSent } from "../_shared/chatwoot-client.ts";
 const GRAPH = "https://graph.facebook.com/v21.0";
 const WABA_ID = "2063797207822998";
 const PHONE_ID = "1213495528515111";
-const TEMPLATE = "boas_vindas_filiacao_v1";
+const TEMPLATE = "boas_vindas_filiacao_v2";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
