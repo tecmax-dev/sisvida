@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Upload, RefreshCw, Files, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { WorkerListDocumentModal } from "@/components/portal/WorkerListDocumentModal";
 
 interface Validation {
   id: string; status: string; reason: string | null; file_name: string | null; created_at: string;
@@ -54,6 +55,7 @@ export function AccountingWorkerListsPanel({ accountingOfficeId }: { accountingO
   const singleInput = useRef<HTMLInputElement>(null);
   const batchInput = useRef<HTMLInputElement>(null);
   const [singleTarget, setSingleTarget] = useState<string | null>(null);
+  const [viewId, setViewId] = useState<string | null>(null);
 
   const empById = useMemo(() => Object.fromEntries(emps.map((e) => [e.id, e])), [emps]);
 
@@ -227,7 +229,13 @@ export function AccountingWorkerListsPanel({ accountingOfficeId }: { accountingO
                     <td className="p-2 whitespace-nowrap">{fmtCnpj(e?.cnpj || "")}</td>
                     <td className="p-2">{i.contribution_type?.name}</td>
                     <td className="p-2">{comp(i)}</td>
-                    <td className="p-2 max-w-[180px] truncate">{i.validation?.file_name || "—"}</td>
+                    <td className="p-2 max-w-[180px] truncate">
+                      {i.validation ? (
+                        <button type="button" className="text-primary underline-offset-2 hover:underline truncate max-w-full text-left" onClick={() => setViewId(i.validation!.id)} title="Abrir documento">
+                          {i.validation.file_name || "Ver documento"}
+                        </button>
+                      ) : "—"}
+                    </td>
                     <td className="p-2 text-xs max-w-[240px]">
                       {st === "Validada" ? `✅ Lista validada${i.validation?.quantidade ? ` • ${i.validation.quantidade} trab.` : ""}`
                         : i.validation?.status === "valid" ? "Validação expirada ou já usada — envie novamente"
@@ -246,6 +254,8 @@ export function AccountingWorkerListsPanel({ accountingOfficeId }: { accountingO
           </table>
         </div>
       )}
+
+      <WorkerListDocumentModal validationId={viewId} portalType="accounting_office" portalId={accountingOfficeId} onClose={() => setViewId(null)} />
 
       <Dialog open={batchOpen} onOpenChange={(o) => !batchRunning && setBatchOpen(o)}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">

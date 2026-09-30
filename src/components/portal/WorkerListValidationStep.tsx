@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Upload, CheckCircle2, XCircle, Building2, FileText } from "lucide-react";
+import { Loader2, Upload, CheckCircle2, XCircle, Building2, FileText, Eye } from "lucide-react";
+import { WorkerListDocumentModal } from "@/components/portal/WorkerListDocumentModal";
 
 export interface WorkerListValidationResult {
   valido: boolean;
@@ -52,6 +53,7 @@ export function WorkerListValidationStep({
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<WorkerListValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [viewDoc, setViewDoc] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Nova validação sempre que mudar a empresa/lançamento
@@ -180,8 +182,13 @@ export function WorkerListValidationStep({
           <div className="text-muted-foreground">
             {result.quantidade_trabalhadores ?? "?"} trabalhador(es){result.competencia ? ` • Competência ${result.competencia}` : ""}
           </div>
+          <button type="button" className="flex items-center gap-1 text-primary underline-offset-2 hover:underline font-medium" onClick={() => setViewDoc(true)}>
+            <Eye className="h-4 w-4" /> Ver documento validado
+          </button>
         </div>
       )}
+
+      <WorkerListDocumentModal validationId={viewDoc ? validationId : null} portalType={portalType} portalId={portalId} onClose={() => setViewDoc(false)} />
 
       {result && !result.valido && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm space-y-2">
