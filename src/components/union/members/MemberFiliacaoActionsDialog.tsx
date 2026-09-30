@@ -1,3 +1,4 @@
+import { sendOfficialSignatureLink } from "@/lib/sendOfficialSignatureLink";
 import { useState } from "react";
 import {
   Dialog,
@@ -251,22 +252,12 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
 
   // Fetch filiacao data when dialog opens
   const handleManualSendSignatureWhatsApp = async () => {
-    if (!member.phone) {
-      toast({ title: "Telefone do sócio não encontrado.", variant: "destructive" });
-      return;
-    }
     setSendingManualLink(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-signature-request", {
-        body: { associadoId: member.id, clinicId, createOnly: true },
-      });
-      if (error) throw error;
-      const baseUrl = window.location.origin;
-      const signatureUrl = `${baseUrl}/assinar/${data.token}`;
-      const message = `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${member.name}*!\n\nSolicitamos que você assine digitalmente a autorização de desconto em folha.\n\n📝 *Acesse o link abaixo para assinar:* \n${signatureUrl}\n\nAtenciosamente,\n*${sindicato?.razao_social || "Sindicato"}*`;
-      openWhatsApp(member.phone, message);
+      await sendOfficialSignatureLink(member.id, clinicId);
+      toast({ title: "Link de assinatura enviado pelo WhatsApp oficial." });
     } catch (err: any) {
-      toast({ title: "Erro ao gerar link", description: err.message || "Erro desconhecido", variant: "destructive" });
+      toast({ title: "Não foi possível enviar", description: err.message, variant: "destructive" });
     } finally {
       setSendingManualLink(false);
     }
@@ -715,11 +706,11 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Share2 className="h-4 w-4 text-emerald-600" />
-                Link Assinatura (Manual)
+                Enviar Link de Assinatura
               </Label>
               <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-lg p-3">
                 <p className="text-xs text-emerald-800 dark:text-emerald-300 mb-3">
-                  Gera um link de assinatura digital e abre o WhatsApp para envio manual.
+                  Envia um link individual de assinatura pelo WhatsApp oficial, somente com autorização e modelo aprovado.
                 </p>
                 <Button
                   onClick={handleManualSendSignatureWhatsApp}
@@ -728,7 +719,7 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
                   size="sm"
                 >
                   {sendingManualLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                  Gerar Link e Abrir WhatsApp
+                  Enviar link pelo WhatsApp oficial
                 </Button>
               </div>
             </div>
