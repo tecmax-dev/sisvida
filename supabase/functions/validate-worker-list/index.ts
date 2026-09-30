@@ -109,6 +109,58 @@ serve(async (req) => {
     const body = await req.json();
     const { contribution_id, contribution_type_id, portal_type, portal_id, file_base64, file_name, mime_type } = body;
 
+    // Painel "Envio de Listas" (Portal do Contador): lançamentos aguardando valor
+    // de TODAS as empresas vinculadas + última validação de cada um.
+    if (body.action === "portal_status") {
+      if (portal_type !== "accounting_office" || !portal_id) return json({ error: "Sem permissão." }, 403);
+      const { data: links } = await supabase.from("accounting_office_employers").select("employer_id").eq("accounting_office_id", portal_id);
+      const employerIds = (links || []).map((l: any) => l.employer_id);
+      if (employerIds.length === 0) return json({ employers: [], items: [] });
+      const { data: emps } = await supabase.from("employers").select("id, name, trade_name, cnpj").in("id", employerIds).order("name");
+      const items: any[] = [];
+      for (let i = 0; i < employerIds.length; i += 200) {
+        const { data: cs } = await supabase
+          .from("employer_contributions")
+          .select("id, employer_id, contribution_type_id, competence_month, competence_year, due_date, status, contribution_type:contribution_types(id, name)")
+          .in("employer_id", employerIds.slice(i, i + 200))
+          .eq("status", "awaiting_value")
+          .order("competence_year", { ascending: false })
+          .order("competence_month", { ascending: false })
+          .order("id");
+        items.push(...(cs || []).filter((c: any) => isAllowedType(c.contribution_type?.name)));
+      }
+      const ids = items.map((c) => c.id);
+      const latest: Record<string, any> = {};
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data: vs } = await supabase
+          .from("contribution_worker_list_validations")
+          .select("id, contribution_id, status, reason, file_name, created_at, used_at, confidence, ai_result")
+          .in("contribution_id", ids.slice(i, i + 200))
+          .eq("portal_type", "accounting_office")
+          .eq("portal_id", portal_id)
+          .order("created_at", { ascending: false });
+        for (const v of vs || []) if (!latest[v.contribution_id]) latest[v.contribution_id] = v;
+      }
+      const since = Date.now() - 24 * 60 * 60 * 1000;
+      return json({
+        employers: emps || [],
+        items: items.map((c) => {
+          const v = latest[c.id];
+          return {
+            ...c,
+            validation: v
+              ? {
+                  id: v.id, status: v.status, reason: v.reason, file_name: v.file_name, created_at: v.created_at,
+                  quantidade: v.ai_result?.quantidade_trabalhadores ?? null,
+                  cnpj_identificado: v.ai_result?.cnpj_identificado ?? null,
+                  usable: v.status === "valid" && !v.used_at && new Date(v.created_at).getTime() >= since,
+                }
+              : null,
+          };
+        }),
+      });
+    }
+
     if (!contribution_id || !portal_id || !["employer", "accounting_office"].includes(portal_type)) {
       return json({ error: "Dados do lançamento incompletos." }, 400);
     }
@@ -124,6 +176,25 @@ serve(async (req) => {
       const { data: types } = await supabase.from("contribution_types").select("id, name").eq("clinic_id", clinicId).eq("is_active", true).order("name");
       const allowed = (types || []).filter((t: any) => isAllowedType(t.name));
       return json({ types: allowed, default_type_id: c.contribution_type_id });
+    }
+    // Reaproveita somente validação do MESMO lançamento/empresa/portal (válida, não usada, 24h)
+    if (body.action === "latest_valid") {
+      const { data: c } = await supabase.from("employer_contributions").select("employer_id").eq("id", contribution_id).maybeSingle();
+      if (!c) return json({ validation: null });
+      if (portal_type === "employer" && c.employer_id !== portal_id) return json({ error: "Sem permissão." }, 403);
+      if (portal_type === "accounting_office") {
+        const { data: l } = await supabase.from("accounting_office_employers").select("id").eq("accounting_office_id", portal_id).eq("employer_id", c.employer_id).maybeSingle();
+        if (!l) return json({ error: "Sem permissão." }, 403);
+      }
+      const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: v } = await supabase
+        .from("contribution_worker_list_validations")
+        .select("id, contribution_type_id, reason, confidence, ai_result, file_name")
+        .eq("contribution_id", contribution_id).eq("employer_id", c.employer_id)
+        .eq("portal_type", portal_type).eq("portal_id", portal_id)
+        .eq("status", "valid").is("used_at", null).gte("created_at", sinceIso)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return json({ validation: v || null });
     }
     if (!contribution_type_id) return json({ error: "Selecione o tipo de contribuição." }, 400);
     if (!file_base64) return json({ error: "Envie a relação de trabalhadores." }, 400);
