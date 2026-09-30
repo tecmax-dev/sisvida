@@ -719,7 +719,7 @@ export default function UnionMembersListPage() {
     if (!resolvedClinic?.id) return;
     try {
       const { data, error } = await supabase.functions.invoke("send-affiliation-welcome", {
-        body: { patientId: member.id },
+        body: { patientId: member.id, clinicId: resolvedClinic.id },
       });
       if (error) throw error;
       if (data?.success) {
