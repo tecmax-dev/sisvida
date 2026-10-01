@@ -64,7 +64,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { findNextFreeSlot } from "@/lib/waitingListNextSlot";
+import { findNextFreeSlot, isSlotStillFree } from "@/lib/waitingListNextSlot";
 import { FeatureGate } from "@/components/features/FeatureGate";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
