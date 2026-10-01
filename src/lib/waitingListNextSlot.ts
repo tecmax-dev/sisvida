@@ -109,7 +109,7 @@ export async function findNextFreeSlot(params: {
       .eq("professional_id", professionalId)
       .gte("appointment_date", startStr)
       .lte("appointment_date", endStr)
-      .neq("status", "cancelled"),
+      .not("status", "in", "(cancelled,no_show)"),
     supabase
       .from("appointment_slot_blocks")
       .select("block_date, start_time")
@@ -176,4 +176,57 @@ export async function findNextFreeSlot(params: {
   }
 
   return null;
+}
+
+/**
+ * Confere se um dia/horário específico ainda está livre na agenda do profissional
+ * (dentro do expediente, no futuro, sem consulta ativa, bloqueio ou feriado).
+ */
+export async function isSlotStillFree(params: {
+  clinicId: string;
+  professionalId: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM[:SS]
+}): Promise<boolean> {
+  const { clinicId, professionalId, date } = params;
+  const time = params.time.slice(0, 5);
+  const { data: professional } = await supabase
+    .from("professionals")
+    .select("id, name, schedule, appointment_duration, is_active")
+    .eq("id", professionalId)
+    .maybeSingle();
+  if (!professional || professional.is_active === false) return false;
+
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, m] = time.split(":").map(Number);
+  const day = new Date(y, mo - 1, d, 12, 0, 0);
+  const slot = new Date(y, mo - 1, d, h, m, 0);
+  if (slot.getTime() <= Date.now()) return false;
+  if (!scheduleTimesForDate(professional as any, day).includes(time)) return false;
+
+  const [{ data: holiday }, { data: appts }, { data: blocks }] = await Promise.all([
+    supabase.rpc("is_holiday", { p_clinic_id: clinicId, p_date: date }),
+    supabase
+      .from("appointments")
+      .select("start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("professional_id", professionalId)
+      .eq("appointment_date", date)
+      .not("status", "in", "(cancelled,no_show)"),
+    supabase
+      .from("appointment_slot_blocks")
+      .select("start_time")
+      .eq("clinic_id", clinicId)
+      .eq("professional_id", professionalId)
+      .eq("block_date", date),
+  ]);
+  if ((holiday as any)?.[0]?.is_holiday) return false;
+  const mins = h * 60 + m;
+  const busy = (appts || []).some((a: any) => {
+    const [ash, asm] = String(a.start_time).slice(0, 5).split(":").map(Number);
+    const [aeh, aem] = String(a.end_time).slice(0, 5).split(":").map(Number);
+    return mins >= ash * 60 + asm && mins < aeh * 60 + aem;
+  });
+  if (busy) return false;
+  return !(blocks || []).some((b: any) => String(b.start_time).slice(0, 5) === time);
 }

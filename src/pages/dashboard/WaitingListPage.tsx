@@ -64,7 +64,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { findNextFreeSlot } from "@/lib/waitingListNextSlot";
+import { findNextFreeSlot, isSlotStillFree } from "@/lib/waitingListNextSlot";
 import { FeatureGate } from "@/components/features/FeatureGate";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
@@ -368,6 +368,28 @@ function WaitingListContent() {
         override?.professionalId ?? entry.offered_professional_id ?? entry.professional?.id ?? null;
       let slotProfName =
         override?.professionalName || entry.offered_professional_name || entry.professional?.name || "Profissional";
+
+      // Confere na agenda se a vaga informada/guardada ainda está livre
+      if (slotDateValue && slotTimeValue && currentClinic && slotProfId) {
+        const free = await isSlotStillFree({
+          clinicId: currentClinic.id,
+          professionalId: slotProfId,
+          date: slotDateValue,
+          time: String(slotTimeValue),
+        });
+        if (!free) {
+          if (override) {
+            toast({
+              title: "Horário indisponível na agenda",
+              description: "Esse dia/horário não está livre na agenda do profissional. Escolha outro.",
+              variant: "destructive",
+            });
+            return;
+          }
+          slotDateValue = null;
+          slotTimeValue = null;
+        }
+      }
 
       // Busca automática da próxima vaga livre na agenda do profissional
       if ((!slotDateValue || !slotTimeValue) && currentClinic && slotProfId) {
