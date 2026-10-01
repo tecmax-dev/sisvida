@@ -40,13 +40,11 @@ Dados do lançamento:
 - Competência: "${p.competence}"
 
 Verifique:
-1. Se o documento realmente contém uma relação de trabalhadores (nomes de pessoas, idealmente com CPF/matrícula).
-2. Se o documento é legível e tem informações suficientes.
-3. Qual empresa (razão social) e CNPJ aparecem no documento.
-4. Se o tipo de contribuição aparece e se é compatível com o selecionado.
-5. Competência/período e quantidade de trabalhadores.
-6. Qualquer inconsistência.
-Observação: listas de trabalhadores muitas vezes não informam o tipo de contribuição nem a competência; nesse caso use null em tipo_compativel e registre em inconsistencias, sem reprovar por isso. Marque tipo_compativel=false apenas se o documento indicar claramente OUTRO tipo de contribuição. IMPORTANTE: as denominações "Taxa Assistencial", "Contribuição Assistencial" e variantes próximas (ex.: "contribuição assistencial sindical") são SINÔNIMOS aceitos do tipo de contribuição selecionado; se o documento usar qualquer uma dessas denominações, marque tipo_compativel=true e informe o texto exato em tipo_contribuicao_identificado.
+1. Se o documento contém uma lista de nomes de funcionários/trabalhadores (CPF/matrícula são opcionais).
+2. Se o documento é legível.
+3. Qual empresa aparece: basta o nome, a razão social, o nome fantasia OU o CNPJ (qualquer um deles é suficiente).
+4. Competência/período (se houver) e quantidade de nomes de trabalhadores.
+O tipo de contribuição é escolhido pelo usuário no envio: NÃO reprove por tipo ausente ou diferente; use null em tipo_compativel. Não reprove por falta de CPF, competência ou tipo.
 
 Responda SOMENTE com JSON, sem markdown:
 {
@@ -271,33 +269,29 @@ serve(async (req) => {
       file_name,
     );
 
-    // Regras determinísticas (não dependem apenas da IA)
+    // Regras simplificadas: basta uma lista de nomes + identificação da empresa
+    // (nome, razão social OU CNPJ). O tipo de contribuição é o escolhido pelo usuário no envio.
     const inconsistencias: string[] = Array.isArray(ai.inconsistencias) ? ai.inconsistencias.map(String) : [];
     const blocks: string[] = [];
-    if (contribution.contribution_type_id && contribution.contribution_type_id !== selectedType.id) {
-      blocks.push(`O tipo selecionado (${selectedType.name}) não corresponde ao tipo deste lançamento (${(contribution.contribution_type as any)?.name || "outro"}).`);
-    }
     if (!ai.e_relacao_trabalhadores) blocks.push("O documento não é uma relação de trabalhadores.");
     if (ai.legivel === false) blocks.push("O documento está ilegível ou sem informações suficientes.");
     const docCnpj = digits(ai.cnpj_identificado);
     const empCnpj = digits(employer?.cnpj);
-    if (docCnpj.length === 14 && empCnpj && docCnpj !== empCnpj) {
+    const cnpjMatch = docCnpj.length === 14 && !!empCnpj && docCnpj === empCnpj;
+    const a = normName(ai.empresa_identificada);
+    const names = [normName(employer?.name), normName(employer?.trade_name)].filter(Boolean);
+    const nameMatch = !!a && names.some((n) => n && (a.includes(n) || n.includes(a)));
+    if (docCnpj.length === 14 && empCnpj && docCnpj !== empCnpj && !nameMatch) {
       blocks.push(`CNPJ do documento (${ai.cnpj_identificado}) diferente do CNPJ da empresa do lançamento.`);
+    } else if (!cnpjMatch && !nameMatch) {
+      blocks.push(ai.empresa_identificada
+        ? `Empresa do documento (${ai.empresa_identificada}) diferente da empresa do lançamento.`
+        : "O documento não informa o nome, a razão social ou o CNPJ da empresa.");
     }
-    if (docCnpj.length !== 14 && ai.empresa_identificada) {
-      const a = normName(ai.empresa_identificada);
-      const names = [normName(employer?.name), normName(employer?.trade_name)].filter(Boolean);
-      const match = names.some((n) => n && (a.includes(n) || n.includes(a)));
-      if (!match) blocks.push(`Empresa do documento (${ai.empresa_identificada}) diferente da empresa do lançamento.`);
-    }
-    // "Taxa Assistencial" / "Contribuição Assistencial" são sinônimos aceitos do tipo selecionado
-    const identifiedType = normName(ai.tipo_contribuicao_identificado);
-    const assistentialAlias = /taxa assistencial|contribuicao assistencial/.test(identifiedType);
-    if (ai.tipo_compativel === false && !assistentialAlias) blocks.push("O tipo de contribuição do documento não é compatível com o selecionado.");
     const qtd = Number(ai.quantidade_trabalhadores);
     if (!qtd || qtd < 1) blocks.push("Nenhum trabalhador identificado no documento.");
     const confianca = Math.max(0, Math.min(1, Number(ai.confianca) || 0));
-    if (confianca < 0.6) blocks.push("Confiança da análise insuficiente.");
+    if (confianca < 0.5) blocks.push("Confiança da análise insuficiente.");
 
     // ausência de tipo/competência no documento é registrada como inconsistência, não bloqueia
     const valido = blocks.length === 0;
