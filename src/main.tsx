@@ -55,6 +55,35 @@ async function bootstrapApp() {
  * Registra Service Worker e renderiza React
  */
 async function renderApp() {
+  /**
+   * ONE-SHOT PORTAL WIPE — Portais da Empresa e do Contador.
+   * Em cada dispositivo que abrir um dos portais, apaga uma única vez os caches
+   * do navegador e a sessão salva (inclusive de quem já estava logado) e recarrega.
+   */
+  const PORTAL_WIPE_VERSION = "20261001-portais-listas";
+  const isPortalRoute = /portal-(empresa|contador)/.test(window.location.pathname);
+  if (isPortalRoute) {
+    try {
+      if (localStorage.getItem("__portal_cache_wipe_version") !== PORTAL_WIPE_VERSION) {
+        localStorage.setItem("__portal_cache_wipe_version", PORTAL_WIPE_VERSION);
+        localStorage.removeItem("accounting_office_session");
+        sessionStorage.removeItem("employer_session");
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
+        }
+        window.location.reload();
+        return;
+      }
+    } catch (err) {
+      console.warn("[PORTAL] Limpeza de cache falhou (não é crítico):", err);
+    }
+  }
+
   const isStandaloneApp =
     window.matchMedia?.("(display-mode: standalone)").matches === true ||
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
