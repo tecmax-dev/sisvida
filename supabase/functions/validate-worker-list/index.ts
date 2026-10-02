@@ -29,6 +29,21 @@ function normName(s: unknown) {
     .trim();
 }
 
+function escapeHtml(s: unknown) {
+  const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return String(s ?? "").replace(/[&<>"']/g, (c) => map[c]);
+}
+
+// Gera um documento HTML real (upload físico ao Storage) para listas montadas no editor do sistema,
+// evitando registros com file_path fictício que não correspondem a nenhum arquivo existente.
+function buildRosterHtml(p: { employerName: string; employerCnpj: string; typeName: string; competence: string; workers: { nome: string; cpf: string | null }[] }) {
+  const rows = p.workers
+    .map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(w.nome)}</td><td>${escapeHtml(w.cpf || "")}</td></tr>`)
+    .join("");
+  const head = `<p><strong>Empresa:</strong> ${escapeHtml(p.employerName)}${p.employerCnpj ? ` — CNPJ ${escapeHtml(p.employerCnpj)}` : ""}</p><p><strong>Tipo de contribuição:</strong> ${escapeHtml(p.typeName)} ${p.competence ? `— Competência ${escapeHtml(p.competence)}` : ""}</p><p><strong>Total de trabalhadores:</strong> ${p.workers.length}</p>`;
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relação de trabalhadores</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:24px;color:#111}h1{font-size:18px;margin-bottom:4px}p{margin:2px 0;color:#444;font-size:13px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #ddd;padding:6px 8px;font-size:13px;text-align:left}th{background:#f3f3f3}</style></head><body><h1>Relação de trabalhadores</h1>${head}<table><thead><tr><th>#</th><th>Nome</th><th>CPF</th></tr></thead><tbody>${rows}</tbody></table><p style="margin-top:24px;color:#888">Documento gerado automaticamente a partir da lista confirmada no sistema em ${new Date().toLocaleString("pt-BR")}.</p></body></html>`;
+}
+
 function buildPrompt(p: { employerName: string; employerCnpj: string; typeName: string; competence: string }) {
   return `Você é um auditor sindical brasileiro. Analise o documento enviado por uma empresa e verifique se ele é uma RELAÇÃO/LISTA DE TRABALHADORES que tiveram contribuição sindical recolhida.
 
@@ -97,7 +112,7 @@ async function callOpenAI(prompt: string, base64: string, mime: string, fileName
   return JSON.parse(cleaned.slice(s, e + 1));
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     if (!OPENAI_API_KEY) return json({ error: "Validação por IA não configurada." }, 200);
@@ -209,14 +224,21 @@ serve(async (req) => {
         const { data: l } = await supabase.from("accounting_office_employers").select("id").eq("accounting_office_id", portal_id).eq("employer_id", v.employer_id).maybeSingle();
         if (!l) return json({ error: "Sem permissão." }, 403);
       }
-      // Listas montadas no sistema (editor de nomes) não têm arquivo real no Storage;
-      // nesse caso devolvemos a relação de nomes em vez de tentar abrir um arquivo inexistente.
-      if (!v.file_path || v.file_path.startsWith("roster/")) {
+      // Registros antigos (anteriores a esta correção) foram salvos com um file_path
+      // fictício e sem mime_type, sem nenhum arquivo físico no Storage — para esses,
+      // devolvemos a relação de nomes já extraída em vez de tentar abrir um arquivo inexistente.
+      if (!v.file_path || (!v.mime_type && v.file_path.startsWith("roster/"))) {
         const workers = (v.extracted_data as any)?.trabalhadores || [];
         return json({ roster: true, workers, file_name: v.file_name || "Lista de trabalhadores" });
       }
       const { data: s, error: sErr } = await supabase.storage.from("worker-lists").createSignedUrl(v.file_path, 3600);
-      if (sErr || !s?.signedUrl) return json({ error: "Não foi possível abrir o arquivo." }, 200);
+      if (sErr || !s?.signedUrl) {
+        // Autocorreção: se mesmo tendo file_path o arquivo não existe mais no bucket,
+        // cai para a relação de nomes (quando disponível) em vez de bloquear o usuário.
+        const workers = (v.extracted_data as any)?.trabalhadores || [];
+        if (workers.length > 0) return json({ roster: true, workers, file_name: v.file_name || "Lista de trabalhadores" });
+        return json({ error: "Não foi possível abrir o arquivo." }, 200);
+      }
       return json({ url: s.signedUrl, file_name: v.file_name, mime_type: v.mime_type });
     }
 
@@ -228,7 +250,7 @@ serve(async (req) => {
         employerId = cc?.employer_id || "";
       }
       if (!employerId) return json({ error: "Empresa não informada." }, 400);
-      const { data: emp } = await supabase.from("employers").select("id, clinic_id").eq("id", employerId).maybeSingle();
+      const { data: emp } = await supabase.from("employers").select("id, clinic_id, name, trade_name, cnpj").eq("id", employerId).maybeSingle();
       if (!emp) return json({ error: "Empresa não encontrada." }, 404);
       // Autorização
       if (portal_type === "employer") {
@@ -349,13 +371,29 @@ serve(async (req) => {
 
         // Registro de envio da competência (portais: libera o VALOR pelas regras existentes)
         const actorId = portal_type === "staff" ? (await supabase.auth.getUser((req.headers.get("Authorization") || "").replace("Bearer ", ""))).data.user?.id : portal_id;
+
+        // Gera um documento REAL (HTML) com a relação de nomes e envia ao Storage,
+        // para que "Ver" sempre encontre um arquivo físico (nunca mais file_path fictício).
+        const competenceStr = `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`;
+        const rosterWorkers = Array.from(clean.values()).map((x) => ({ nome: x.name, cpf: x.cpf }));
+        const html = buildRosterHtml({
+          employerName: emp.trade_name || emp.name || "",
+          employerCnpj: emp.cnpj || "",
+          typeName: (c as any).contribution_type?.name || "",
+          competence: competenceStr,
+          workers: rosterWorkers,
+        });
+        const rosterPath = `roster/${contribId}/${Date.now()}.html`;
+        const { error: upErr } = await supabase.storage.from("worker-lists").upload(rosterPath, new TextEncoder().encode(html), { contentType: "text/html" });
+        if (upErr) { console.error("[roster_save] upload", upErr); return json({ error: "Falha ao gerar o documento da lista." }, 200); }
+
         const { data: v, error: vErr } = await supabase.from("contribution_worker_list_validations").insert({
           clinic_id: emp.clinic_id, employer_id: employerId, contribution_id: contribId, contribution_type_id: c.contribution_type_id,
           competence_month: c.competence_month, competence_year: c.competence_year, portal_type, portal_id: actorId,
-          file_path: `roster/${contribId}/${Date.now()}`, file_name: "Lista montada no sistema", mime_type: null,
+          file_path: rosterPath, file_name: "Relação de trabalhadores.html", mime_type: "text/html",
           status: "valid", confidence: 1,
           ai_result: { quantidade_trabalhadores: ids.length, origem: "lista_montada" },
-          extracted_data: { trabalhadores: Array.from(clean.values()).map((x) => ({ nome: x.name, cpf_ou_identificador: x.cpf })) },
+          extracted_data: { trabalhadores: rosterWorkers.map((x) => ({ nome: x.nome, cpf_ou_identificador: x.cpf })) },
           reason: "Lista de nomes confirmada no sistema.",
         }).select("id").single();
         if (vErr) { console.error(vErr); return json({ error: "Falha ao registrar a lista." }, 200); }
