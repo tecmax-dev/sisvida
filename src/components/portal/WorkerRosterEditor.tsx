@@ -19,7 +19,7 @@ const STATUS: Record<string, string> = { awaiting_value: "Aguardando valor", pen
 
 export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, contributionId }: {
   employerId?: string; portalType: "employer" | "accounting_office" | "staff"; portalId?: string;
-  onSaved?: (validationId?: string) => void; contributionId?: string;
+  onSaved?: (validationId?: string, total?: number) => void; contributionId?: string;
 }) {
   const fixed = !!contributionId;
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -103,7 +103,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, 
     const d: any = data || {};
     if (d.error) return toast.error(d.error);
     toast.success(`Lista da competência salva com ${d.total} trabalhador(es).`);
-    await load(); onSaved?.(d.validation_id);
+    await load(); onSaved?.(d.validation_id, d.total);
   };
 
   const shown = useMemo(() => names.filter((n) => !filter || key(n.nome).includes(key(filter))), [names, filter]);
