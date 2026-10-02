@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  FileText, Loader2, RefreshCw, Eye, Download, CalendarDays, CheckCircle2, XCircle, Users, FolderOpen, Search, ChevronDown, ChevronRight,
+  FileText, Loader2, RefreshCw, Eye, Download, CalendarDays, CheckCircle2, XCircle, Users, FolderOpen, Search, ChevronDown, ChevronRight, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { StaffWorkerListUploadDialog } from "./StaffWorkerListUploadDialog";
 
 interface Row {
   id: string;
@@ -37,6 +38,7 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
   const [year, setYear] = useState<string>("all");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [viewer, setViewer] = useState<{ url: string; name: string; isPdf: boolean } | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -139,9 +141,15 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
             {stats.lastWorkers ? ` Última lista validada: ${stats.lastWorkers} trabalhador(es).` : ""}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={cn("h-4 w-4 mr-1", loading && "animate-spin")} /> Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => setUploadOpen(true)}>
+            <Upload className="h-4 w-4 mr-1" /> Enviar lista
+          </Button>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4 mr-1", loading && "animate-spin")} /> Atualizar
+          </Button>
+        </div>
+        <StaffWorkerListUploadDialog employerId={employerId} open={uploadOpen} onOpenChange={setUploadOpen} onUploaded={load} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -218,7 +226,7 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
                           <div className="text-muted-foreground text-xs mt-0.5">
                             {r.type_name || "—"}
                             {r.quantidade ? ` • ${r.quantidade} trabalhador(es)` : ""}
-                            {` • ${r.portal_type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa"}`}
+                            {` • ${r.portal_type === "accounting_office" ? "Portal do Contador" : r.portal_type === "staff" ? "Equipe do Sindicato" : "Portal da Empresa"}`}
                             {` • ${new Date(r.created_at).toLocaleString("pt-BR")}`}
                           </div>
                           {r.status !== "valid" && r.reason && <div className="text-xs text-destructive mt-0.5">{r.reason}</div>}
