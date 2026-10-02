@@ -7,9 +7,9 @@ const cors = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-const CLIENT_ID = "108ce93f-426b-4974-98f7-a6675ca34e18";
+const CLIENT_ID = "954f6397-f970-4f7c-b686-8be2d24c0cde";
 const TOKEN_URL = "https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token";
-const SCOPE = "boletos_inclusao boletos_consulta boletos_listagem boletos_alteracao webhooks_inclusao webhooks_consulta webhooks_alteracao";
+const SCOPE = "boletos_inclusao boletos_consulta boletos_alteracao webhooks_inclusao webhooks_consulta webhooks_alteracao";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
