@@ -160,15 +160,16 @@ export function WorkerListValidationStep({
             contributionId={contributionId}
             portalType={portalType}
             portalId={portalId}
-            onSaved={(vid) => {
+            onSaved={(vid, total) => {
               if (!vid) return;
               setError(null);
               setResult({
                 valido: true, confianca: 1, empresa_identificada: employerName, cnpj_identificado: employerCnpj,
-                tipo_contribuicao_identificado: null, competencia: null, quantidade_trabalhadores: null,
+                tipo_contribuicao_identificado: null, competencia: null, quantidade_trabalhadores: total ?? null,
                 inconsistencias: [], motivo: "Lista de nomes confirmada no sistema.",
               });
               onValidated(vid);
+              setTimeout(() => document.getElementById("portal-contribution-value")?.focus(), 150);
             }}
           />
           <div className="flex items-center gap-2 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border" />ou envie um arquivo<div className="h-px flex-1 bg-border" /></div>

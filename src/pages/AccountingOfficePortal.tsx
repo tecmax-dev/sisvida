@@ -1390,7 +1390,7 @@ export default function AccountingOfficePortal() {
             {workerListValidationId && (<>
             <div>
               <Label className="text-slate-700 text-sm font-medium">Valor (R$)</Label>
-              <Input
+              <Input id="portal-contribution-value"
                 type="text"
                 placeholder="0,00"
                 value={newValue}

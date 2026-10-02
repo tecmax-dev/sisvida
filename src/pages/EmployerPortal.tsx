@@ -840,7 +840,7 @@ const [showTutorial, setShowTutorial] = useState(false);
             {workerListValidationId && (<>
             <div>
               <Label className="text-slate-700 text-sm font-medium">Valor (R$)</Label>
-              <Input type="text" placeholder="0,00" value={newValue} onChange={(e) => setNewValue(e.target.value.replace(/[^0-9,]/g, ""))} className="mt-2 h-10 text-lg font-medium border-slate-200" />
+              <Input id="portal-contribution-value" type="text" placeholder="0,00" value={newValue} onChange={(e) => setNewValue(e.target.value.replace(/[^0-9,]/g, ""))} className="mt-2 h-10 text-lg font-medium border-slate-200" />
               <p className="text-xs text-slate-500 mt-2">Após definir o valor, o boleto será gerado automaticamente.</p>
             </div>
             {selectedContribution && (() => {
