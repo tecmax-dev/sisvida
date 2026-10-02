@@ -64,6 +64,13 @@
       "when": 1790901770761,
       "tag": "0008_grant_worker_list_validations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790902023288,
+      "tag": "0009_fk_worker_list_contribution_type",
+      "breakpoints": true
     }
   ]
 }
