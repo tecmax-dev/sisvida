@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Download, Plus, X, Save, Users, Search } from "lucide-react";
 import { toast } from "sonner";
 
-type Name = { nome: string; cpf: string | null };
+type Name = { nome: string; cpf: string | null; active?: boolean; inactive_reason?: string | null; inactive_note?: string | null; manual?: boolean };
+const REASONS = ["Férias", "Licença INSS", "Demissão", "Outros"];
 interface Contrib { id: string; competence_month: number; competence_year: number; status: string; type_name: string | null }
 interface Item { worker_id: string; contribution_id: string; competence_month: number; competence_year: number; type_name: string | null }
 
@@ -18,7 +20,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
   employerId: string; portalType: "employer" | "accounting_office" | "staff"; portalId?: string; onSaved?: () => void;
 }) {
   const [loading, setLoading] = useState(true);
-  const [workers, setWorkers] = useState<{ id: string; name: string; cpf: string | null }[]>([]);
+  const [workers, setWorkers] = useState<{ id: string; name: string; cpf: string | null; active: boolean; inactive_reason: string | null; inactive_note: string | null }[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [contribs, setContribs] = useState<Contrib[]>([]);
   const [contribId, setContribId] = useState("");
@@ -43,21 +45,14 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
   };
   useEffect(() => { setContribId(""); setNames([]); load(); /* eslint-disable-next-line */ }, [employerId]);
 
-  // Ao escolher competência: usa a lista dela, ou a da competência anterior mais recente
+  // Todos os nomes cadastrados entram na lista com o status salvo (nunca são excluídos)
   useEffect(() => {
     if (!contribId) { setNames([]); return; }
-    const byId = new Map(workers.map((w) => [w.id, w]));
-    const toNames = (cid: string) => items.filter((i) => i.contribution_id === cid)
-      .map((i) => byId.get(i.worker_id)).filter(Boolean).map((w) => ({ nome: w!.name, cpf: w!.cpf }));
-    const own = toNames(contribId);
-    if (own.length) { setNames(own); return; }
-    const c = contribs.find((x) => x.id === contribId);
-    const idx = c ? c.competence_year * 12 + c.competence_month : 0;
-    const prev = [...new Set(items.filter((i) => i.competence_year * 12 + i.competence_month < idx)
-      .sort((a, b) => (b.competence_year * 12 + b.competence_month) - (a.competence_year * 12 + a.competence_month))
-      .map((i) => i.contribution_id))][0];
-    setNames(prev ? toNames(prev) : workers.map((w) => ({ nome: w.name, cpf: w.cpf })));
-  }, [contribId, items, workers, contribs]);
+    setNames(workers.map((w) => ({ nome: w.name, cpf: w.cpf, active: w.active !== false, inactive_reason: w.inactive_reason, inactive_note: w.inactive_note })));
+  }, [contribId, workers]);
+
+  const patch = (nome: string, p: Partial<Name>) =>
+    setNames((cur) => cur.map((x) => (key(x.nome) === key(nome) ? { ...x, ...p } : x)));
 
   const merge = (incoming: Name[]) => {
     setNames((cur) => {
@@ -79,11 +74,13 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
     merge(d.names);
   };
 
-  const addName = () => { if (newName.trim()) { merge([{ nome: newName.trim(), cpf: null }]); setNewName(""); } };
+  const addName = () => { if (newName.trim()) { merge([{ nome: newName.trim(), cpf: null, manual: true }]); setNewName(""); } };
 
   const save = async () => {
     if (!contribId) return toast.error("Escolha a competência.");
-    if (!names.length) return toast.error("Inclua pelo menos 1 nome.");
+    if (!names.some((n) => n.active !== false)) return toast.error("Deixe pelo menos 1 trabalhador ativo.");
+    const bad = names.find((n) => n.active === false && (!n.inactive_reason || (n.inactive_reason === "Outros" && !n.inactive_note?.trim())));
+    if (bad) return toast.error(`Informe o motivo da desativação de ${bad.nome}.`);
     setSaving(true);
     const { data } = await call("roster_save", { contribution_id: contribId, names });
     setSaving(false);
@@ -135,27 +132,49 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
               <Search className="h-3.5 w-3.5 absolute left-2.5 top-3 text-muted-foreground" />
               <Input className="pl-8 h-9" placeholder="Buscar na lista" value={filter} onChange={(e) => setFilter(e.target.value)} />
             </div>
-            <Badge variant="secondary">{names.length} nome(s)</Badge>
+            <Badge variant="secondary">{names.filter((n) => n.active !== false).length} ativo(s) de {names.length}</Badge>
           </div>
 
           <div className="max-h-80 overflow-y-auto rounded-md border divide-y">
             {shown.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum nome. Importe das listas enviadas ou inclua manualmente.</p>
             ) : shown.map((n) => (
-              <div key={key(n.nome)} className="flex items-center justify-between px-3 py-1.5 text-sm">
-                <span className="truncate">
-                  {n.nome}
-                  {!prevKeys.has(key(n.nome)) && <Badge variant="outline" className="ml-2 text-[10px]">novo</Badge>}
-                </span>
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive"
-                  onClick={() => setNames((cur) => cur.filter((x) => key(x.nome) !== key(n.nome)))} aria-label="Remover nome">
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+              <div key={key(n.nome)} className={`px-3 py-1.5 text-sm ${n.active === false ? "bg-muted/40" : ""}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`truncate ${n.active === false ? "text-muted-foreground line-through" : ""}`}>
+                    {n.nome}
+                    {!prevKeys.has(key(n.nome)) && <Badge variant="outline" className="ml-2 text-[10px]">novo</Badge>}
+                    {n.active === false && n.inactive_reason && <Badge variant="secondary" className="ml-2 text-[10px]">{n.inactive_reason}</Badge>}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {n.manual && !prevKeys.has(key(n.nome)) && (
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive"
+                        onClick={() => setNames((cur) => cur.filter((x) => key(x.nome) !== key(n.nome)))} aria-label="Remover nome digitado">
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    <Switch checked={n.active !== false} aria-label={n.active === false ? "Ativar trabalhador" : "Desativar trabalhador"}
+                      onCheckedChange={(on) => patch(n.nome, on ? { active: true, inactive_reason: null, inactive_note: null } : { active: false })} />
+                  </div>
+                </div>
+                {n.active === false && (
+                  <div className="mt-1.5 flex flex-col sm:flex-row gap-2">
+                    <select value={n.inactive_reason || ""} onChange={(e) => patch(n.nome, { inactive_reason: e.target.value, inactive_note: e.target.value === "Outros" ? n.inactive_note : null })}
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs sm:w-44">
+                      <option value="">Motivo da desativação *</option>
+                      {REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    {n.inactive_reason === "Outros" && (
+                      <Input className="h-8 text-xs" placeholder="Informe o motivo *" maxLength={300}
+                        value={n.inactive_note || ""} onChange={(e) => patch(n.nome, { inactive_note: e.target.value })} />
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
-          <Button className="w-full" onClick={save} disabled={saving || !contribId || !names.length}>
+          <Button className="w-full" onClick={save} disabled={saving || !contribId || !names.some((n) => n.active !== false)}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Confirmar lista da competência
           </Button>
