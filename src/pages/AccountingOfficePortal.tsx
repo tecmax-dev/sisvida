@@ -3,6 +3,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { WorkerListValidationStep } from "@/components/portal/WorkerListValidationStep";
 import { AccountingWorkerListsPanel } from "@/components/portal/AccountingWorkerListsPanel";
+import { PortalSentWorkerLists } from "@/components/portal/PortalSentWorkerLists";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -814,6 +815,7 @@ export default function AccountingOfficePortal() {
         <SindSystemMain>
           <SindSystemPageHeader icon={<FileText className="h-6 w-6" />} title="Envio de Listas" subtitle="Relações de trabalhadores de todas as empresas vinculadas." onBack={() => setActiveView("home")} />
           <AccountingWorkerListsPanel accountingOfficeId={accountingOffice.id} />
+          <PortalSentWorkerLists portalType="accounting_office" portalId={accountingOffice.id} showEmployer />
           <div className="mt-6"><SindSystemBackButton onClick={() => setActiveView("home")} /></div>
         </SindSystemMain>
       </SindSystemContainer>
