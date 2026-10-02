@@ -50,6 +50,13 @@
       "when": 1790900582989,
       "tag": "0006_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790901505043,
+      "tag": "0007_allow_staff_worker_list",
+      "breakpoints": true
     }
   ]
 }
