@@ -791,7 +791,7 @@ export function exportCSV(
   const esc = (s: string | number | undefined) => {
     let v = String(s ?? "");
     if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
-    return '"' + v.replaceAll('"', '""') + '"';
+    return '"' + v.replace(/"/g, '""') + '"';
   };
   downloadText(
     name,
