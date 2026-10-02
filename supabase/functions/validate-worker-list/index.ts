@@ -217,7 +217,11 @@ serve(async (req) => {
 
     // ===== Lista de nomes (cadastro de trabalhadores por empresa) =====
     if (typeof body.action === "string" && body.action.startsWith("roster_")) {
-      const employerId = String(body.employer_id || "");
+      let employerId = String(body.employer_id || "");
+      if (!employerId && body.contribution_id) {
+        const { data: cc } = await supabase.from("employer_contributions").select("employer_id").eq("id", body.contribution_id).maybeSingle();
+        employerId = cc?.employer_id || "";
+      }
       if (!employerId) return json({ error: "Empresa não informada." }, 400);
       const { data: emp } = await supabase.from("employers").select("id, clinic_id").eq("id", employerId).maybeSingle();
       if (!emp) return json({ error: "Empresa não encontrada." }, 404);
