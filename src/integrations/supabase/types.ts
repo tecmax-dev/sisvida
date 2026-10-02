@@ -3695,6 +3695,7 @@ export type Database = {
         Row: {
           active: boolean
           clinic_id: string | null
+          contribution_type_id: string | null
           cpf: string | null
           created_at: string
           employer_id: string
@@ -3708,6 +3709,7 @@ export type Database = {
         Insert: {
           active?: boolean
           clinic_id?: string | null
+          contribution_type_id?: string | null
           cpf?: string | null
           created_at?: string
           employer_id: string
@@ -3721,6 +3723,7 @@ export type Database = {
         Update: {
           active?: boolean
           clinic_id?: string | null
+          contribution_type_id?: string | null
           cpf?: string | null
           created_at?: string
           employer_id?: string
@@ -3732,6 +3735,13 @@ export type Database = {
           name_norm?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employer_workers_contribution_type_id_fkey"
+            columns: ["contribution_type_id"]
+            isOneToOne: false
+            referencedRelation: "contribution_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employer_workers_employer_id_fkey"
             columns: ["employer_id"]

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 type Name = { nome: string; cpf: string | null; active?: boolean; inactive_reason?: string | null; inactive_note?: string | null; manual?: boolean };
 const REASONS = ["Férias", "Licença INSS", "Demissão", "Outros"];
-interface Contrib { id: string; competence_month: number; competence_year: number; status: string; type_name: string | null }
+interface Contrib { id: string; competence_month: number; competence_year: number; status: string; contribution_type_id?: string | null; type_name: string | null }
 interface Item { worker_id: string; contribution_id: string; competence_month: number; competence_year: number; type_name: string | null }
 
 const key = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -26,7 +26,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, 
   const [bulkReason, setBulkReason] = useState("");
   const [bulkNote, setBulkNote] = useState("");
   const [loading, setLoading] = useState(true);
-  const [workers, setWorkers] = useState<{ id: string; name: string; cpf: string | null; active: boolean; inactive_reason: string | null; inactive_note: string | null }[]>([]);
+  const [workers, setWorkers] = useState<{ id: string; name: string; cpf: string | null; active: boolean; inactive_reason: string | null; inactive_note: string | null; contribution_type_id?: string | null }[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [contribs, setContribs] = useState<Contrib[]>([]);
   const [contribId, setContribId] = useState("");
@@ -51,11 +51,13 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, 
   };
   useEffect(() => { setContribId(contributionId || ""); setNames([]); setSelected(new Set()); load(); /* eslint-disable-next-line */ }, [employerId, contributionId]);
 
+  const typeId = contribs.find((c) => c.id === contribId)?.contribution_type_id || null;
+  const typeWorkers = useMemo(() => workers.filter((w) => (w.contribution_type_id || null) === typeId), [workers, typeId]);
   // Todos os nomes cadastrados entram na lista com o status salvo (nunca são excluídos)
   useEffect(() => {
     if (!contribId) { setNames([]); return; }
-    setNames(workers.map((w) => ({ nome: w.name, cpf: w.cpf, active: w.active !== false, inactive_reason: w.inactive_reason, inactive_note: w.inactive_note })));
-  }, [contribId, workers]);
+    setNames(typeWorkers.map((w) => ({ nome: w.name, cpf: w.cpf, active: w.active !== false, inactive_reason: w.inactive_reason, inactive_note: w.inactive_note })));
+  }, [contribId, typeWorkers]);
 
   const patch = (nome: string, p: Partial<Name>) =>
     setNames((cur) => cur.map((x) => (key(x.nome) === key(nome) ? { ...x, ...p } : x)));
@@ -81,8 +83,9 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, 
   };
 
   const importLists = async () => {
+    if (!contribId) return toast.error("Escolha primeiro a competência — os nomes são importados só das listas do mesmo tipo de contribuição.");
     setImporting(true);
-    const { data } = await call("roster_import");
+    const { data } = await call("roster_import", { contribution_id: contribId });
     setImporting(false);
     const d: any = data || {};
     if (d.error) return toast.error(d.error);
@@ -107,16 +110,16 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, 
   };
 
   const shown = useMemo(() => names.filter((n) => !filter || key(n.nome).includes(key(filter))), [names, filter]);
-  const prevKeys = useMemo(() => new Set(workers.map((w) => key(w.name))), [workers]);
+  const prevKeys = useMemo(() => new Set(typeWorkers.map((w) => key(w.name))), [typeWorkers]);
 
   return (
     <section className={fixed ? "rounded-lg border bg-card" : "rounded-xl border bg-card"}>
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b">
         <div>
           <h2 className="text-base font-semibold text-foreground flex items-center gap-2"><Users className="h-4 w-4" /> {fixed ? "Nomes já salvos" : "Trabalhadores da empresa"}</h2>
-          <p className="text-xs text-muted-foreground">Monte a lista de cada competência sem repetir nomes. {workers.length} nome(s) cadastrado(s).</p>
+          <p className="text-xs text-muted-foreground">Monte a lista de cada competência sem repetir nomes. {contribId ? `${typeWorkers.length} nome(s) neste tipo de contribuição.` : "Escolha a competência para ver os nomes do tipo de contribuição."}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={importLists} disabled={importing || loading}>
+        <Button variant="outline" size="sm" onClick={importLists} disabled={importing || loading || !contribId}>
           {importing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
           Importar das listas enviadas
         </Button>

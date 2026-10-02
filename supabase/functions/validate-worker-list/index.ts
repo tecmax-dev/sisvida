@@ -324,10 +324,12 @@ Deno.serve(async (req) => {
           seen.set(k, { clinic_id: v.clinic_id, employer_id: v.employer_id, name, name_norm: k, cpf: cpf.length === 11 ? cpf : null, active: true });
         }
         if (seen.size === 0) return json({ error: "Nenhum nome encontrado no arquivo." }, 200);
+        if (!v.contribution_type_id) return json({ error: "Defina o tipo de contribuição da lista antes de importar os nomes." }, 200);
+        seen.forEach((r) => { r.contribution_type_id = v.contribution_type_id; });
         const keys = Array.from(seen.keys());
         const existing = new Set<string>();
         for (let i = 0; i < keys.length; i += 300) {
-          const { data: ws } = await supabase.from("employer_workers").select("name_norm").eq("employer_id", v.employer_id).in("name_norm", keys.slice(i, i + 300));
+          const { data: ws } = await supabase.from("employer_workers").select("name_norm").eq("employer_id", v.employer_id).eq("contribution_type_id", v.contribution_type_id).in("name_norm", keys.slice(i, i + 300));
           (ws || []).forEach((w: any) => existing.add(w.name_norm));
         }
         const rows = Array.from(seen.entries()).filter(([k]) => !existing.has(k)).map(([, r]) => r);
@@ -419,27 +421,34 @@ Deno.serve(async (req) => {
       const nameKey = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
 
       if (body.action === "roster_get") {
-        const { data: workers } = await supabase.from("employer_workers").select("id, name, cpf, active, inactive_reason, inactive_note").eq("employer_id", employerId).order("name").limit(5000);
+        const { data: workers } = await supabase.from("employer_workers").select("id, name, cpf, active, inactive_reason, inactive_note, contribution_type_id").eq("employer_id", employerId).order("name").limit(5000);
         const { data: items } = await supabase.from("employer_worker_roster_items")
           .select("worker_id, contribution_id, competence_month, competence_year, contribution_type:contribution_types(name)")
           .eq("employer_id", employerId).limit(20000);
         const { data: contribs } = await supabase.from("employer_contributions")
-          .select("id, competence_month, competence_year, status, contribution_type:contribution_types(name)")
+          .select("id, competence_month, competence_year, status, contribution_type_id, contribution_type:contribution_types(name)")
           .eq("employer_id", employerId).in("status", ["awaiting_value", "pending", "overdue", "paid"])
           .order("competence_year", { ascending: false }).order("competence_month", { ascending: false }).limit(60);
         return json({
           workers: workers || [],
           items: (items || []).map((i: any) => ({ ...i, type_name: i.contribution_type?.name ?? null })),
           contributions: (contribs || []).filter((c: any) => isAllowedType(c.contribution_type?.name))
-            .map((c: any) => ({ id: c.id, competence_month: c.competence_month, competence_year: c.competence_year, status: c.status, type_name: c.contribution_type?.name ?? null })),
+            .map((c: any) => ({ id: c.id, competence_month: c.competence_month, competence_year: c.competence_year, status: c.status, contribution_type_id: c.contribution_type_id, type_name: c.contribution_type?.name ?? null })),
         });
       }
 
       if (body.action === "roster_import") {
         // Extrai nomes das listas validadas (usa o que a IA já leu; se faltar, lê o arquivo)
+        // Só listas do mesmo tipo de contribuição (não misturar Mensalidade e Taxa Negocial)
+        let importType = String(body.contribution_type_id || "");
+        if (!importType && body.contribution_id) {
+          const { data: ct } = await supabase.from("employer_contributions").select("contribution_type_id").eq("id", body.contribution_id).maybeSingle();
+          importType = ct?.contribution_type_id || "";
+        }
+        if (!importType) return json({ error: "Escolha a competência (tipo de contribuição) antes de importar." }, 200);
         const { data: vs } = await supabase.from("contribution_worker_list_validations")
           .select("id, file_path, file_name, mime_type, extracted_data")
-          .eq("employer_id", employerId).eq("status", "valid").not("file_path", "like", "roster/%")
+          .eq("employer_id", employerId).eq("contribution_type_id", importType).eq("status", "valid").not("file_path", "like", "roster/%")
           .order("created_at", { ascending: false }).limit(12);
         const seen = new Map<string, { nome: string; cpf: string | null }>();
         let aiCalls = 0;
@@ -486,14 +495,18 @@ Deno.serve(async (req) => {
           all.set(k, { name, cpf: cpf.length === 11 ? cpf : null, active, reason, note });
         }
         const clean = new Map(Array.from(all.entries()).filter(([, v]) => v.active));
+        if (!contribId) return json({ error: "Escolha a competência." }, 200);
+        const { data: ctype } = await supabase.from("employer_contributions").select("contribution_type_id, employer_id").eq("id", contribId).maybeSingle();
+        if (!ctype || ctype.employer_id !== employerId || !ctype.contribution_type_id) return json({ error: "Competência inválida." }, 400);
+        const typeId = ctype.contribution_type_id;
         // Cadastro único por empresa (sem repetir nomes)
         // Nomes nunca são excluídos: só ativados/desativados com motivo
         const rows = Array.from(all.entries()).map(([k, v]) => ({
-          clinic_id: emp.clinic_id, employer_id: employerId, name: v.name, name_norm: k, cpf: v.cpf,
+          clinic_id: emp.clinic_id, employer_id: employerId, name: v.name, name_norm: k, cpf: v.cpf, contribution_type_id: typeId,
           active: v.active, inactive_reason: v.reason, inactive_note: v.note, inactive_at: v.active ? null : new Date().toISOString(),
         }));
         for (let i = 0; i < rows.length; i += 500) {
-          const { error } = await supabase.from("employer_workers").upsert(rows.slice(i, i + 500), { onConflict: "employer_id,name_norm" });
+          const { error } = await supabase.from("employer_workers").upsert(rows.slice(i, i + 500), { onConflict: "employer_id,contribution_type_id,name_norm" });
           if (error) { console.error(error); return json({ error: "Falha ao salvar os nomes." }, 200); }
         }
         if (!contribId) return json({ success: true, saved: rows.length });
@@ -508,7 +521,7 @@ Deno.serve(async (req) => {
         const keys = Array.from(clean.keys());
         const ids: string[] = [];
         for (let i = 0; i < keys.length; i += 300) {
-          const { data: ws } = await supabase.from("employer_workers").select("id").eq("employer_id", employerId).in("name_norm", keys.slice(i, i + 300));
+          const { data: ws } = await supabase.from("employer_workers").select("id").eq("employer_id", employerId).eq("contribution_type_id", typeId).in("name_norm", keys.slice(i, i + 300));
           ids.push(...(ws || []).map((w: any) => w.id));
         }
         await supabase.from("employer_worker_roster_items").delete().eq("contribution_id", contribId);
