@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -201,7 +200,7 @@ serve(async (req) => {
       if (!validationId || !portal_id) return json({ error: "Dados incompletos." }, 400);
       const { data: v } = await supabase
         .from("contribution_worker_list_validations")
-        .select("id, employer_id, file_path, file_name, mime_type")
+        .select("id, employer_id, file_path, file_name, mime_type, extracted_data")
         .eq("id", validationId)
         .maybeSingle();
       if (!v) return json({ error: "Validação não encontrada." }, 404);
@@ -209,6 +208,12 @@ serve(async (req) => {
       if (portal_type === "accounting_office") {
         const { data: l } = await supabase.from("accounting_office_employers").select("id").eq("accounting_office_id", portal_id).eq("employer_id", v.employer_id).maybeSingle();
         if (!l) return json({ error: "Sem permissão." }, 403);
+      }
+      // Listas montadas no sistema (editor de nomes) não têm arquivo real no Storage;
+      // nesse caso devolvemos a relação de nomes em vez de tentar abrir um arquivo inexistente.
+      if (!v.file_path || v.file_path.startsWith("roster/")) {
+        const workers = (v.extracted_data as any)?.trabalhadores || [];
+        return json({ roster: true, workers, file_name: v.file_name || "Lista de trabalhadores" });
       }
       const { data: s, error: sErr } = await supabase.storage.from("worker-lists").createSignedUrl(v.file_path, 3600);
       if (sErr || !s?.signedUrl) return json({ error: "Não foi possível abrir o arquivo." }, 200);
