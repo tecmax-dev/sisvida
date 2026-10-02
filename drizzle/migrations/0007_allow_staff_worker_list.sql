@@ -1,0 +1,2 @@
+ALTER TABLE public.contribution_worker_list_validations DROP CONSTRAINT contribution_worker_list_validations_portal_type_check;
+ALTER TABLE public.contribution_worker_list_validations ADD CONSTRAINT contribution_worker_list_validations_portal_type_check CHECK (portal_type = ANY (ARRAY['employer'::text, 'accounting_office'::text, 'staff'::text]));
