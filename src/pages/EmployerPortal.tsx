@@ -2,6 +2,7 @@
  import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PortalSentWorkerLists } from "@/components/portal/PortalSentWorkerLists";
+import { WorkerRosterEditor } from "@/components/portal/WorkerRosterEditor";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1451,6 +1452,7 @@ const [showTutorial, setShowTutorial] = useState(false);
               </Button>
             </div>
             {employer?.id && <PortalSentWorkerLists portalType="employer" portalId={employer.id} />}
+            {employer?.id && <div className="mt-8"><WorkerRosterEditor employerId={employer.id} portalType="employer" portalId={employer.id} /></div>}
           </>
         )}
 

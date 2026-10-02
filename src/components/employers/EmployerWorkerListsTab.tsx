@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { StaffWorkerListUploadDialog } from "./StaffWorkerListUploadDialog";
+import { WorkerRosterEditor } from "@/components/portal/WorkerRosterEditor";
 
 interface Row {
   id: string;
@@ -151,6 +152,8 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
         </div>
         <StaffWorkerListUploadDialog employerId={employerId} open={uploadOpen} onOpenChange={setUploadOpen} onUploaded={load} />
       </div>
+
+      <WorkerRosterEditor employerId={employerId} portalType="staff" onSaved={load} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
