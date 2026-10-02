@@ -678,7 +678,7 @@ export function LineChart({
   color?: string;
   title?: string;
 }) {
-  const id = useId().replaceAll(":", "");
+  const id = useId().replace(/:/g, "");
   const min = Math.min(0, ...values);
   const range = (Math.max(...values, 1) - min) * 1.15;
   const points = values
@@ -791,7 +791,7 @@ export function exportCSV(
   const esc = (s: string | number | undefined) => {
     let v = String(s ?? "");
     if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
-    return '"' + v.replaceAll('"', '""') + '"';
+    return '"' + v.replace(/"/g, '""') + '"';
   };
   downloadText(
     name,
