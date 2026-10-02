@@ -57,6 +57,13 @@
       "when": 1790901505043,
       "tag": "0007_allow_staff_worker_list",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790901770761,
+      "tag": "0008_grant_worker_list_validations",
+      "breakpoints": true
     }
   ]
 }
