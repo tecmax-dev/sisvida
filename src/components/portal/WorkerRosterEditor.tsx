@@ -163,7 +163,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, 
             </div>
           )}
 
-          <div className={`${fixed ? "max-h-56" : "max-h-80"} overflow-y-auto rounded-md border divide-y">
+          <div className={`${fixed ? "max-h-56" : "max-h-80"} overflow-y-auto rounded-md border divide-y`}>
             {shown.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum nome. Importe das listas enviadas ou inclua manualmente.</p>
             ) : shown.map((n) => (
