@@ -215,6 +215,134 @@ serve(async (req) => {
       return json({ url: s.signedUrl, file_name: v.file_name, mime_type: v.mime_type });
     }
 
+    // ===== Lista de nomes (cadastro de trabalhadores por empresa) =====
+    if (typeof body.action === "string" && body.action.startsWith("roster_")) {
+      const employerId = String(body.employer_id || "");
+      if (!employerId) return json({ error: "Empresa não informada." }, 400);
+      const { data: emp } = await supabase.from("employers").select("id, clinic_id").eq("id", employerId).maybeSingle();
+      if (!emp) return json({ error: "Empresa não encontrada." }, 404);
+      // Autorização
+      if (portal_type === "employer") {
+        if (portal_id !== employerId) return json({ error: "Sem permissão." }, 403);
+      } else if (portal_type === "accounting_office") {
+        const { data: l } = await supabase.from("accounting_office_employers").select("id").eq("accounting_office_id", portal_id).eq("employer_id", employerId).maybeSingle();
+        if (!l) return json({ error: "Sem permissão." }, 403);
+      } else if (portal_type === "staff") {
+        const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+        const { data: u } = await supabase.auth.getUser(token);
+        if (!u?.user) return json({ error: "Sessão expirada." }, 401);
+        const { data: ok } = await supabase.rpc("has_clinic_access", { _user_id: u.user.id, _clinic_id: emp.clinic_id });
+        if (!ok) return json({ error: "Sem permissão." }, 403);
+      } else return json({ error: "Sem permissão." }, 403);
+
+      const nameKey = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
+
+      if (body.action === "roster_get") {
+        const { data: workers } = await supabase.from("employer_workers").select("id, name, cpf").eq("employer_id", employerId).order("name").limit(5000);
+        const { data: items } = await supabase.from("employer_worker_roster_items")
+          .select("worker_id, contribution_id, competence_month, competence_year, contribution_type:contribution_types(name)")
+          .eq("employer_id", employerId).limit(20000);
+        const { data: contribs } = await supabase.from("employer_contributions")
+          .select("id, competence_month, competence_year, status, contribution_type:contribution_types(name)")
+          .eq("employer_id", employerId).in("status", ["awaiting_value", "pending", "overdue", "paid"])
+          .order("competence_year", { ascending: false }).order("competence_month", { ascending: false }).limit(60);
+        return json({
+          workers: workers || [],
+          items: (items || []).map((i: any) => ({ ...i, type_name: i.contribution_type?.name ?? null })),
+          contributions: (contribs || []).filter((c: any) => isAllowedType(c.contribution_type?.name))
+            .map((c: any) => ({ id: c.id, competence_month: c.competence_month, competence_year: c.competence_year, status: c.status, type_name: c.contribution_type?.name ?? null })),
+        });
+      }
+
+      if (body.action === "roster_import") {
+        // Extrai nomes das listas validadas (usa o que a IA já leu; se faltar, lê o arquivo)
+        const { data: vs } = await supabase.from("contribution_worker_list_validations")
+          .select("id, file_path, file_name, mime_type, extracted_data")
+          .eq("employer_id", employerId).eq("status", "valid").not("file_path", "like", "roster/%")
+          .order("created_at", { ascending: false }).limit(12);
+        const seen = new Map<string, { nome: string; cpf: string | null }>();
+        let aiCalls = 0;
+        for (const v of vs || []) {
+          let list: any[] = (v.extracted_data as any)?.trabalhadores || [];
+          if ((!list || list.length === 0) && v.file_path && aiCalls < 3 && OPENAI_API_KEY) {
+            aiCalls++;
+            const { data: f } = await supabase.storage.from("worker-lists").download(v.file_path);
+            if (f) {
+              const buf = new Uint8Array(await f.arrayBuffer());
+              let bin = ""; for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768));
+              try {
+                const ai = await callOpenAI(
+                  'Extraia todos os nomes de trabalhadores do documento. Responda SOMENTE JSON: {"trabalhadores":[{"nome":string,"cpf_ou_identificador":string|null}]}',
+                  btoa(bin), v.mime_type || "application/pdf", v.file_name || "lista.pdf");
+                list = ai?.trabalhadores || [];
+                await supabase.from("contribution_worker_list_validations").update({ extracted_data: { trabalhadores: list } }).eq("id", v.id);
+              } catch (e) { console.error("[roster_import]", e); }
+            }
+          }
+          for (const t of list || []) {
+            const nome = String(t?.nome || "").trim(); const k = nameKey(nome);
+            if (k.length < 3 || seen.has(k)) continue;
+            const cpf = digits(t?.cpf_ou_identificador); seen.set(k, { nome, cpf: cpf.length === 11 ? cpf : null });
+          }
+        }
+        return json({ names: Array.from(seen.values()).sort((a, b) => a.nome.localeCompare(b.nome)) });
+      }
+
+      if (body.action === "roster_save") {
+        const names: any[] = Array.isArray(body.names) ? body.names.slice(0, 3000) : [];
+        const contribId = String(body.contribution_id || "");
+        const clean = new Map<string, { name: string; cpf: string | null }>();
+        for (const n of names) {
+          const name = String(n?.nome ?? n?.name ?? "").trim().slice(0, 150); const k = nameKey(name);
+          if (k.length < 3 || clean.has(k)) continue;
+          const cpf = digits(n?.cpf); clean.set(k, { name, cpf: cpf.length === 11 ? cpf : null });
+        }
+        // Cadastro único por empresa (sem repetir nomes)
+        const rows = Array.from(clean.entries()).map(([k, v]) => ({ clinic_id: emp.clinic_id, employer_id: employerId, name: v.name, name_norm: k, cpf: v.cpf }));
+        for (let i = 0; i < rows.length; i += 500) {
+          const { error } = await supabase.from("employer_workers").upsert(rows.slice(i, i + 500), { onConflict: "employer_id,name_norm", ignoreDuplicates: true });
+          if (error) { console.error(error); return json({ error: "Falha ao salvar os nomes." }, 200); }
+        }
+        if (!contribId) return json({ success: true, saved: rows.length });
+        if (clean.size === 0) return json({ error: "Inclua pelo menos 1 nome." }, 200);
+
+        const { data: c } = await supabase.from("employer_contributions")
+          .select("id, employer_id, contribution_type_id, competence_month, competence_year, contribution_type:contribution_types(name)")
+          .eq("id", contribId).maybeSingle();
+        if (!c || c.employer_id !== employerId) return json({ error: "Competência inválida." }, 400);
+        if (!isAllowedType((c as any).contribution_type?.name)) return json({ error: "Tipo de contribuição não aceito." }, 400);
+
+        const keys = Array.from(clean.keys());
+        const ids: string[] = [];
+        for (let i = 0; i < keys.length; i += 300) {
+          const { data: ws } = await supabase.from("employer_workers").select("id").eq("employer_id", employerId).in("name_norm", keys.slice(i, i + 300));
+          ids.push(...(ws || []).map((w: any) => w.id));
+        }
+        await supabase.from("employer_worker_roster_items").delete().eq("contribution_id", contribId);
+        const origin = portal_type;
+        const items = ids.map((wid) => ({
+          clinic_id: emp.clinic_id, employer_id: employerId, contribution_id: contribId, contribution_type_id: c.contribution_type_id,
+          competence_month: c.competence_month, competence_year: c.competence_year, worker_id: wid, origin,
+        }));
+        for (let i = 0; i < items.length; i += 500) await supabase.from("employer_worker_roster_items").insert(items.slice(i, i + 500));
+
+        // Registro de envio da competência (portais: libera o VALOR pelas regras existentes)
+        const actorId = portal_type === "staff" ? (await supabase.auth.getUser((req.headers.get("Authorization") || "").replace("Bearer ", ""))).data.user?.id : portal_id;
+        const { data: v, error: vErr } = await supabase.from("contribution_worker_list_validations").insert({
+          clinic_id: emp.clinic_id, employer_id: employerId, contribution_id: contribId, contribution_type_id: c.contribution_type_id,
+          competence_month: c.competence_month, competence_year: c.competence_year, portal_type, portal_id: actorId,
+          file_path: `roster/${contribId}/${Date.now()}`, file_name: "Lista montada no sistema", mime_type: null,
+          status: "valid", confidence: 1,
+          ai_result: { quantidade_trabalhadores: ids.length, origem: "lista_montada" },
+          extracted_data: { trabalhadores: Array.from(clean.values()).map((x) => ({ nome: x.name, cpf_ou_identificador: x.cpf })) },
+          reason: "Lista de nomes confirmada no sistema.",
+        }).select("id").single();
+        if (vErr) { console.error(vErr); return json({ error: "Falha ao registrar a lista." }, 200); }
+        return json({ success: true, validation_id: v.id, total: ids.length });
+      }
+      return json({ error: "Ação inválida." }, 400);
+    }
+
     if (!contribution_id || !portal_id || !["employer", "accounting_office"].includes(portal_type)) {
       return json({ error: "Dados do lançamento incompletos." }, 400);
     }
