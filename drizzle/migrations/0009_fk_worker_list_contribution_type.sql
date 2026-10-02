@@ -1,0 +1,2 @@
+ALTER TABLE public.contribution_worker_list_validations ADD CONSTRAINT contribution_worker_list_validations_contribution_type_id_fkey FOREIGN KEY (contribution_type_id) REFERENCES public.contribution_types(id) ON DELETE SET NULL NOT VALID;
+NOTIFY pgrst, 'reload schema';

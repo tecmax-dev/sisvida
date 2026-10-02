@@ -2771,7 +2771,15 @@ export type Database = {
           status?: string
           used_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contribution_worker_list_validations_contribution_type_id_fkey"
+            columns: ["contribution_type_id"]
+            isOneToOne: false
+            referencedRelation: "contribution_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cost_centers: {
         Row: {
