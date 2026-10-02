@@ -29,6 +29,47 @@ function normName(s: unknown) {
     .trim();
 }
 
+// Regras simplificadas: basta uma lista de nomes + identificação da empresa
+// (nome, razão social OU CNPJ). O tipo de contribuição é o escolhido pelo usuário no envio.
+function evaluateAi(ai: any, employer: any) {
+  const inconsistencias: string[] = Array.isArray(ai.inconsistencias) ? ai.inconsistencias.map(String) : [];
+  const blocks: string[] = [];
+  if (!ai.e_relacao_trabalhadores) blocks.push("O documento não é uma relação de trabalhadores.");
+  if (ai.legivel === false) blocks.push("O documento está ilegível ou sem informações suficientes.");
+  const docCnpj = digits(ai.cnpj_identificado);
+  const empCnpj = digits(employer?.cnpj);
+  const cnpjMatch = docCnpj.length === 14 && !!empCnpj && docCnpj === empCnpj;
+  const a = normName(ai.empresa_identificada);
+  const names = [normName(employer?.name), normName(employer?.trade_name)].filter(Boolean);
+  const nameMatch = !!a && names.some((n) => n && (a.includes(n) || n.includes(a)));
+  if (docCnpj.length === 14 && empCnpj && docCnpj !== empCnpj && !nameMatch) {
+    blocks.push(`CNPJ do documento (${ai.cnpj_identificado}) diferente do CNPJ da empresa do lançamento.`);
+  } else if (!cnpjMatch && !nameMatch) {
+    blocks.push(ai.empresa_identificada
+      ? `Empresa do documento (${ai.empresa_identificada}) diferente da empresa do lançamento.`
+      : "O documento não informa o nome, a razão social ou o CNPJ da empresa.");
+  }
+  const qtd = Number(ai.quantidade_trabalhadores);
+  if (!qtd || qtd < 1) blocks.push("Nenhum trabalhador identificado no documento.");
+  const confianca = Math.max(0, Math.min(1, Number(ai.confianca) || 0));
+  if (confianca < 0.5) blocks.push("Confiança da análise insuficiente.");
+  const valido = blocks.length === 0;
+  const allInconsistencies = [...blocks, ...inconsistencias.filter((i) => !blocks.includes(i))];
+  const motivo = valido ? String(ai.motivo || "Relação validada.") : blocks[0] || String(ai.motivo || "Documento não validado.");
+  const result = {
+    valido, confianca,
+    empresa_identificada: ai.empresa_identificada ?? null,
+    cnpj_identificado: ai.cnpj_identificado ?? null,
+    tipo_contribuicao_identificado: ai.tipo_contribuicao_identificado ?? null,
+    competencia: ai.competencia ?? null,
+    quantidade_trabalhadores: qtd || null,
+    dados_extraidos: ai.dados_extraidos ?? null,
+    inconsistencias: allInconsistencies,
+    motivo,
+  };
+  return { valido, confianca, allInconsistencies, motivo, result };
+}
+
 function escapeHtml(s: unknown) {
   const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
   return String(s ?? "").replace(/[&<>"']/g, (c) => map[c]);
@@ -243,6 +284,62 @@ Deno.serve(async (req) => {
     }
 
     // ===== Lista de nomes (cadastro de trabalhadores por empresa) =====
+    // Gestores do sindicato: reprocessar pela IA ou aprovar manualmente uma lista
+    if (body.action === "staff_reprocess" || body.action === "staff_approve") {
+      const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+      const { data: u } = await supabase.auth.getUser(token);
+      if (!u?.user) return json({ error: "Sessão expirada. Entre novamente." }, 401);
+      const { data: v } = await supabase.from("contribution_worker_list_validations")
+        .select("id, clinic_id, employer_id, file_path, mime_type, file_name, contribution_type_id, competence_month, competence_year, ai_result")
+        .eq("id", String(body.validation_id || "")).maybeSingle();
+      if (!v) return json({ error: "Lista não encontrada." }, 404);
+      const [{ data: sa }, { data: roles }] = await Promise.all([
+        supabase.from("super_admins").select("id").eq("user_id", u.user.id).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", u.user.id).eq("clinic_id", v.clinic_id).in("role", ["owner", "admin"]),
+      ]);
+      if (!sa && !(roles || []).length) return json({ error: "Apenas gestores podem fazer isso." }, 403);
+
+      if (body.action === "staff_approve") {
+        const note = String(body.note || "").trim().slice(0, 300);
+        const { error } = await supabase.from("contribution_worker_list_validations").update({
+          status: "valid",
+          reason: `Aprovada manualmente por gestor${note ? `: ${note}` : "."}`,
+          ai_result: { ...(v.ai_result || {}), aprovacao_manual: { user_id: u.user.id, email: u.user.email, at: new Date().toISOString(), note } },
+        }).eq("id", v.id);
+        if (error) return json({ error: "Não foi possível aprovar a lista." }, 200);
+        return json({ success: true });
+      }
+
+      // Reprocessar
+      if (v.ai_result?.origem === "lista_montada") return json({ error: "Lista montada no sistema não precisa ser reprocessada." }, 200);
+      const { data: file, error: dErr } = await supabase.storage.from("worker-lists").download(v.file_path);
+      if (dErr || !file) return json({ error: "Arquivo da lista não encontrado." }, 200);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const b64 = btoa(bin);
+      const mimeR = v.mime_type || (/\.pdf$/i.test(v.file_path) ? "application/pdf" : /\.png$/i.test(v.file_path) ? "image/png" : "image/jpeg");
+      const [{ data: emp }, { data: tp }] = await Promise.all([
+        supabase.from("employers").select("name, trade_name, cnpj").eq("id", v.employer_id).maybeSingle(),
+        v.contribution_type_id ? supabase.from("contribution_types").select("name").eq("id", v.contribution_type_id).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      const competence = v.competence_month ? `${String(v.competence_month).padStart(2, "0")}/${v.competence_year}` : "";
+      const ai = await callOpenAI(
+        buildPrompt({ employerName: emp?.name || "", employerCnpj: emp?.cnpj || "", typeName: (tp as any)?.name || "", competence }),
+        b64, mimeR, v.file_name,
+      );
+      const ev = evaluateAi(ai, emp);
+      const { error } = await supabase.from("contribution_worker_list_validations").update({
+        status: ev.valido ? "valid" : "invalid",
+        confidence: ev.confianca,
+        ai_result: ai,
+        extracted_data: ai.dados_extraidos ?? null,
+        inconsistencies: ev.allInconsistencies,
+        reason: ev.motivo,
+      }).eq("id", v.id);
+      if (error) return json({ error: "Não foi possível salvar o reprocessamento." }, 200);
+      return json({ success: true, result: ev.result });
+    }
+
     if (typeof body.action === "string" && body.action.startsWith("roster_")) {
       let employerId = String(body.employer_id || "");
       if (!employerId && body.contribution_id) {
@@ -491,47 +588,7 @@ Deno.serve(async (req) => {
       file_name,
     );
 
-    // Regras simplificadas: basta uma lista de nomes + identificação da empresa
-    // (nome, razão social OU CNPJ). O tipo de contribuição é o escolhido pelo usuário no envio.
-    const inconsistencias: string[] = Array.isArray(ai.inconsistencias) ? ai.inconsistencias.map(String) : [];
-    const blocks: string[] = [];
-    if (!ai.e_relacao_trabalhadores) blocks.push("O documento não é uma relação de trabalhadores.");
-    if (ai.legivel === false) blocks.push("O documento está ilegível ou sem informações suficientes.");
-    const docCnpj = digits(ai.cnpj_identificado);
-    const empCnpj = digits(employer?.cnpj);
-    const cnpjMatch = docCnpj.length === 14 && !!empCnpj && docCnpj === empCnpj;
-    const a = normName(ai.empresa_identificada);
-    const names = [normName(employer?.name), normName(employer?.trade_name)].filter(Boolean);
-    const nameMatch = !!a && names.some((n) => n && (a.includes(n) || n.includes(a)));
-    if (docCnpj.length === 14 && empCnpj && docCnpj !== empCnpj && !nameMatch) {
-      blocks.push(`CNPJ do documento (${ai.cnpj_identificado}) diferente do CNPJ da empresa do lançamento.`);
-    } else if (!cnpjMatch && !nameMatch) {
-      blocks.push(ai.empresa_identificada
-        ? `Empresa do documento (${ai.empresa_identificada}) diferente da empresa do lançamento.`
-        : "O documento não informa o nome, a razão social ou o CNPJ da empresa.");
-    }
-    const qtd = Number(ai.quantidade_trabalhadores);
-    if (!qtd || qtd < 1) blocks.push("Nenhum trabalhador identificado no documento.");
-    const confianca = Math.max(0, Math.min(1, Number(ai.confianca) || 0));
-    if (confianca < 0.5) blocks.push("Confiança da análise insuficiente.");
-
-    // ausência de tipo/competência no documento é registrada como inconsistência, não bloqueia
-    const valido = blocks.length === 0;
-    const allInconsistencies = [...blocks, ...inconsistencias.filter((i) => !blocks.includes(i))];
-    const motivo = valido ? String(ai.motivo || "Relação validada.") : blocks[0] || String(ai.motivo || "Documento não validado.");
-
-    const result = {
-      valido,
-      confianca,
-      empresa_identificada: ai.empresa_identificada ?? null,
-      cnpj_identificado: ai.cnpj_identificado ?? null,
-      tipo_contribuicao_identificado: ai.tipo_contribuicao_identificado ?? null,
-      competencia: ai.competencia ?? null,
-      quantidade_trabalhadores: qtd || null,
-      dados_extraidos: ai.dados_extraidos ?? null,
-      inconsistencias: allInconsistencies,
-      motivo,
-    };
+    const { valido, confianca, allInconsistencies, motivo, result } = evaluateAi(ai, employer);
 
     const { data: row, error: insErr } = await supabase
       .from("contribution_worker_list_validations")
