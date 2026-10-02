@@ -3693,29 +3693,41 @@ export type Database = {
       }
       employer_workers: {
         Row: {
+          active: boolean
           clinic_id: string | null
           cpf: string | null
           created_at: string
           employer_id: string
           id: string
+          inactive_at: string | null
+          inactive_note: string | null
+          inactive_reason: string | null
           name: string
           name_norm: string
         }
         Insert: {
+          active?: boolean
           clinic_id?: string | null
           cpf?: string | null
           created_at?: string
           employer_id: string
           id?: string
+          inactive_at?: string | null
+          inactive_note?: string | null
+          inactive_reason?: string | null
           name: string
           name_norm: string
         }
         Update: {
+          active?: boolean
           clinic_id?: string | null
           cpf?: string | null
           created_at?: string
           employer_id?: string
           id?: string
+          inactive_at?: string | null
+          inactive_note?: string | null
+          inactive_reason?: string | null
           name?: string
           name_norm?: string
         }
