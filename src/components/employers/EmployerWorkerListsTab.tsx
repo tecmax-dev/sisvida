@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  FileText, Loader2, RefreshCw, Eye, Download, CalendarDays, CheckCircle2, XCircle, Users, FolderOpen, Search, ChevronDown, ChevronRight, Upload,
+  FileText, Loader2, RefreshCw, Eye, Download, CalendarDays, CheckCircle2, XCircle, Users, FolderOpen, Search, ChevronDown, ChevronRight, Upload, RotateCcw, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { StaffWorkerListUploadDialog } from "./StaffWorkerListUploadDialog";
 import { WorkerRosterEditor } from "@/components/portal/WorkerRosterEditor";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Row {
   id: string;
@@ -60,6 +61,25 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
   };
 
   useEffect(() => { load(); }, [employerId]);
+
+  const { isAdmin: isManager } = usePermissions();
+  const [acting, setActing] = useState<string | null>(null);
+  const staffAction = async (r: Row, action: "staff_reprocess" | "staff_approve") => {
+    let note = "";
+    if (action === "staff_approve") {
+      const n = window.prompt("Aprovar esta lista manualmente? Informe o motivo (opcional):", "");
+      if (n === null) return;
+      note = n;
+    }
+    setActing(`${action}:${r.id}`);
+    const { data, error } = await supabase.functions.invoke("validate-worker-list", { body: { action, validation_id: r.id, note } });
+    setActing(null);
+    if (error || data?.error) { toast.error(data?.error || "Não foi possível concluir a ação."); return; }
+    if (action === "staff_approve") toast.success("Lista aprovada manualmente.");
+    else if (data?.result?.valido) toast.success("Lista reprocessada e validada.");
+    else toast.warning(`Lista reprocessada e continua reprovada: ${data?.result?.motivo || ""}`);
+    load();
+  };
 
   const signedUrl = async (r: Row) => {
     setOpening(r.id);
@@ -236,6 +256,16 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant={r.status === "valid" ? "default" : "destructive"}>{r.status === "valid" ? "Validada" : "Reprovada"}</Badge>
+                          {isManager && r.status !== "valid" && (
+                            <>
+                              <Button size="sm" variant="outline" onClick={() => staffAction(r, "staff_reprocess")} disabled={!!acting}>
+                                {acting === `staff_reprocess:${r.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RotateCcw className="h-4 w-4 mr-1" />} Reprocessar
+                              </Button>
+                              <Button size="sm" onClick={() => staffAction(r, "staff_approve")} disabled={!!acting}>
+                                {acting === `staff_approve:${r.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ShieldCheck className="h-4 w-4 mr-1" />} Aprovar
+                              </Button>
+                            </>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => view(r)} disabled={opening === r.id}>
                             {opening === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4 mr-1" />} Ver
                           </Button>
