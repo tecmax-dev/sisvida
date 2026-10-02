@@ -159,6 +159,36 @@ serve(async (req) => {
       });
     }
 
+    // Listas enviadas (histórico) visíveis no portal da empresa/contador
+    if (body.action === "list_sent") {
+      if (!portal_id || !["employer", "accounting_office"].includes(portal_type)) return json({ error: "Sem permissão." }, 403);
+      let employerIds: string[] = [];
+      if (portal_type === "employer") employerIds = [portal_id];
+      else {
+        const { data: links } = await supabase.from("accounting_office_employers").select("employer_id").eq("accounting_office_id", portal_id);
+        employerIds = (links || []).map((l: any) => l.employer_id);
+      }
+      if (body.employer_id) employerIds = employerIds.filter((id) => id === body.employer_id);
+      if (employerIds.length === 0) return json({ lists: [] });
+      const lists: any[] = [];
+      for (let i = 0; i < employerIds.length; i += 200) {
+        const { data: vs } = await supabase
+          .from("contribution_worker_list_validations")
+          .select("id, employer_id, status, reason, file_name, created_at, portal_type, competence_month, competence_year, ai_result, contribution_type:contribution_types(name), employer:employers(name, trade_name, cnpj)")
+          .in("employer_id", employerIds.slice(i, i + 200))
+          .order("created_at", { ascending: false })
+          .limit(1000);
+        lists.push(...(vs || []).map((v: any) => ({
+          id: v.id, employer_id: v.employer_id, status: v.status, reason: v.reason, file_name: v.file_name,
+          created_at: v.created_at, origin: v.portal_type, competence_month: v.competence_month, competence_year: v.competence_year,
+          quantidade: v.ai_result?.quantidade_trabalhadores ?? null,
+          type_name: v.contribution_type?.name ?? null,
+          employer_name: v.employer?.trade_name || v.employer?.name || null,
+        })));
+      }
+      return json({ lists });
+    }
+
     // Link temporário (1h) para visualizar o documento de uma validação,
     // com a mesma checagem de permissão do portal.
     if (body.action === "get_file_url") {
