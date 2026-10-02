@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Upload, CheckCircle2, XCircle, Building2, FileText, Eye } from "lucide-react";
 import { WorkerListDocumentModal } from "@/components/portal/WorkerListDocumentModal";
+import { WorkerRosterEditor } from "@/components/portal/WorkerRosterEditor";
 
 export interface WorkerListValidationResult {
   valido: boolean;
@@ -152,6 +153,27 @@ export function WorkerListValidationStep({
           </SelectContent>
         </Select>
       </div>
+
+      {!validationId && (
+        <>
+          <WorkerRosterEditor
+            contributionId={contributionId}
+            portalType={portalType}
+            portalId={portalId}
+            onSaved={(vid) => {
+              if (!vid) return;
+              setError(null);
+              setResult({
+                valido: true, confianca: 1, empresa_identificada: employerName, cnpj_identificado: employerCnpj,
+                tipo_contribuicao_identificado: null, competencia: null, quantidade_trabalhadores: null,
+                inconsistencias: [], motivo: "Lista de nomes confirmada no sistema.",
+              });
+              onValidated(vid);
+            }}
+          />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border" />ou envie um arquivo<div className="h-px flex-1 bg-border" /></div>
+        </>
+      )}
 
       <div>
         <Label className="text-sm font-medium">Relação de trabalhadores com contribuição recolhida *</Label>
