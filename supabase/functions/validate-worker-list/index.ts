@@ -285,12 +285,12 @@ Deno.serve(async (req) => {
 
     // ===== Lista de nomes (cadastro de trabalhadores por empresa) =====
     // Gestores do sindicato: reprocessar pela IA ou aprovar manualmente uma lista
-    if (body.action === "staff_reprocess" || body.action === "staff_approve") {
+    if (body.action === "staff_reprocess" || body.action === "staff_approve" || body.action === "staff_import_names") {
       const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
       const { data: u } = await supabase.auth.getUser(token);
       if (!u?.user) return json({ error: "Sessão expirada. Entre novamente." }, 401);
       const { data: v } = await supabase.from("contribution_worker_list_validations")
-        .select("id, clinic_id, employer_id, file_path, mime_type, file_name, contribution_type_id, competence_month, competence_year, ai_result")
+        .select("id, clinic_id, employer_id, file_path, mime_type, file_name, contribution_type_id, competence_month, competence_year, ai_result, extracted_data")
         .eq("id", String(body.validation_id || "")).maybeSingle();
       if (!v) return json({ error: "Lista não encontrada." }, 404);
       const [{ data: sa }, { data: roles }] = await Promise.all([
@@ -298,6 +298,59 @@ Deno.serve(async (req) => {
         supabase.from("user_roles").select("role").eq("user_id", u.user.id).eq("clinic_id", v.clinic_id).in("role", ["owner", "admin"]),
       ]);
       if (!sa && !(roles || []).length) return json({ error: "Apenas gestores podem fazer isso." }, 403);
+
+      // Importar nomes do arquivo enviado para o cadastro de trabalhadores da empresa
+      if (body.action === "staff_import_names") {
+        let list: any[] = (v.extracted_data as any)?.trabalhadores || [];
+        if ((!list || list.length === 0) && v.file_path && !String(v.file_path).startsWith("roster/")) {
+          const { data: f } = await supabase.storage.from("worker-lists").download(v.file_path);
+          if (!f) return json({ error: "Arquivo da lista não encontrado." }, 200);
+          const buf = new Uint8Array(await f.arrayBuffer());
+          let bin = ""; for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768));
+          try {
+            const ai = await callOpenAI(
+              'Extraia todos os nomes de trabalhadores do documento. Responda SOMENTE JSON: {"trabalhadores":[{"nome":string,"cpf_ou_identificador":string|null}]}',
+              btoa(bin), v.mime_type || "application/pdf", v.file_name || "lista.pdf");
+            list = ai?.trabalhadores || [];
+            await supabase.from("contribution_worker_list_validations").update({ extracted_data: { ...((v.extracted_data as any) || {}), trabalhadores: list } }).eq("id", v.id);
+          } catch (e) { console.error("[staff_import_names]", e); return json({ error: "Não foi possível ler os nomes do arquivo." }, 200); }
+        }
+        const nk = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
+        const seen = new Map<string, any>();
+        for (const t of list || []) {
+          const name = String(t?.nome || "").trim().slice(0, 150); const k = nk(name);
+          if (k.length < 3 || seen.has(k)) continue;
+          const cpf = digits(t?.cpf_ou_identificador);
+          seen.set(k, { clinic_id: v.clinic_id, employer_id: v.employer_id, name, name_norm: k, cpf: cpf.length === 11 ? cpf : null, active: true });
+        }
+        if (seen.size === 0) return json({ error: "Nenhum nome encontrado no arquivo." }, 200);
+        const keys = Array.from(seen.keys());
+        const existing = new Set<string>();
+        for (let i = 0; i < keys.length; i += 300) {
+          const { data: ws } = await supabase.from("employer_workers").select("name_norm").eq("employer_id", v.employer_id).in("name_norm", keys.slice(i, i + 300));
+          (ws || []).forEach((w: any) => existing.add(w.name_norm));
+        }
+        const rows = Array.from(seen.entries()).filter(([k]) => !existing.has(k)).map(([, r]) => r);
+        for (let i = 0; i < rows.length; i += 500) {
+          const { error } = await supabase.from("employer_workers").insert(rows.slice(i, i + 500));
+          if (error) { console.error(error); return json({ error: "Falha ao salvar os nomes." }, 200); }
+        }
+        return json({ success: true, found: seen.size, added: rows.length, skipped: seen.size - rows.length });
+      }
+
+      // Ajuste opcional de tipo/competência (via lançamento da empresa)
+      if (body.contribution_id) {
+        const { data: c } = await supabase.from("employer_contributions")
+          .select("id, employer_id, contribution_type_id, competence_month, competence_year, contribution_type:contribution_types(name)")
+          .eq("id", String(body.contribution_id)).maybeSingle();
+        if (!c || c.employer_id !== v.employer_id) return json({ error: "Competência inválida para esta empresa." }, 400);
+        if (!isAllowedType((c as any).contribution_type?.name)) return json({ error: "Tipo de contribuição não aceito." }, 400);
+        const { error: upErr } = await supabase.from("contribution_worker_list_validations").update({
+          contribution_id: c.id, contribution_type_id: c.contribution_type_id, competence_month: c.competence_month, competence_year: c.competence_year,
+        }).eq("id", v.id);
+        if (upErr) return json({ error: "Não foi possível alterar tipo/competência." }, 200);
+        v.contribution_type_id = c.contribution_type_id; v.competence_month = c.competence_month; v.competence_year = c.competence_year;
+      }
 
       if (body.action === "staff_approve") {
         const note = String(body.note || "").trim().slice(0, 300);

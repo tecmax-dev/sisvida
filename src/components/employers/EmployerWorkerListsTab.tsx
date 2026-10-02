@@ -64,22 +64,51 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
 
   const { isAdmin: isManager } = usePermissions();
   const [acting, setActing] = useState<string | null>(null);
-  const staffAction = async (r: Row, action: "staff_reprocess" | "staff_approve") => {
-    let note = "";
-    if (action === "staff_approve") {
-      const n = window.prompt("Aprovar esta lista manualmente? Informe o motivo (opcional):", "");
-      if (n === null) return;
-      note = n;
-    }
+  const [actionDlg, setActionDlg] = useState<{ row: Row; action: "staff_reprocess" | "staff_approve" } | null>(null);
+  const [contribOpts, setContribOpts] = useState<{ id: string; label: string }[]>([]);
+  const [dlgContrib, setDlgContrib] = useState("");
+  const [dlgNote, setDlgNote] = useState("");
+
+  const openAction = async (r: Row, action: "staff_reprocess" | "staff_approve") => {
+    setActionDlg({ row: r, action }); setDlgContrib(""); setDlgNote("");
+    const { data } = await (supabase as any)
+      .from("employer_contributions")
+      .select("id, competence_month, competence_year, status, contribution_type:contribution_types(name)")
+      .eq("employer_id", employerId)
+      .in("status", ["awaiting_value", "pending", "overdue", "paid"])
+      .order("competence_year", { ascending: false }).order("competence_month", { ascending: false })
+      .limit(60);
+    setContribOpts((data || []).map((c: any) => ({
+      id: c.id,
+      label: `${String(c.competence_month).padStart(2, "0")}/${c.competence_year} — ${c.contribution_type?.name || "Contribuição"}`,
+    })));
+  };
+
+  const runAction = async () => {
+    if (!actionDlg) return;
+    const { row: r, action } = actionDlg;
     setActing(`${action}:${r.id}`);
-    const { data, error } = await supabase.functions.invoke("validate-worker-list", { body: { action, validation_id: r.id, note } });
+    const { data, error } = await supabase.functions.invoke("validate-worker-list", {
+      body: { action, validation_id: r.id, note: dlgNote, contribution_id: dlgContrib || undefined },
+    });
     setActing(null);
     if (error || data?.error) { toast.error(data?.error || "Não foi possível concluir a ação."); return; }
+    setActionDlg(null);
     if (action === "staff_approve") toast.success("Lista aprovada manualmente.");
     else if (data?.result?.valido) toast.success("Lista reprocessada e validada.");
     else toast.warning(`Lista reprocessada e continua reprovada: ${data?.result?.motivo || ""}`);
     load();
   };
+
+  const importNames = async (r: Row) => {
+    setActing(`import:${r.id}`);
+    const { data, error } = await supabase.functions.invoke("validate-worker-list", { body: { action: "staff_import_names", validation_id: r.id } });
+    setActing(null);
+    if (error || data?.error) { toast.error(data?.error || "Não foi possível importar os nomes."); return; }
+    toast.success(`${data.added} nome(s) importado(s)${data.skipped ? ` • ${data.skipped} já cadastrado(s)` : ""}.`);
+    setRosterKey((k) => k + 1);
+  };
+  const [rosterKey, setRosterKey] = useState(0);
 
   const signedUrl = async (r: Row) => {
     setOpening(r.id);
@@ -173,7 +202,7 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
         <StaffWorkerListUploadDialog employerId={employerId} open={uploadOpen} onOpenChange={setUploadOpen} onUploaded={load} />
       </div>
 
-      <WorkerRosterEditor employerId={employerId} portalType="staff" onSaved={load} />
+      <WorkerRosterEditor key={rosterKey} employerId={employerId} portalType="staff" onSaved={load} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
@@ -258,13 +287,18 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
                           <Badge variant={r.status === "valid" ? "default" : "destructive"}>{r.status === "valid" ? "Validada" : "Reprovada"}</Badge>
                           {isManager && r.status !== "valid" && (
                             <>
-                              <Button size="sm" variant="outline" onClick={() => staffAction(r, "staff_reprocess")} disabled={!!acting}>
+                              <Button size="sm" variant="outline" onClick={() => openAction(r, "staff_reprocess")} disabled={!!acting}>
                                 {acting === `staff_reprocess:${r.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RotateCcw className="h-4 w-4 mr-1" />} Reprocessar
                               </Button>
-                              <Button size="sm" onClick={() => staffAction(r, "staff_approve")} disabled={!!acting}>
+                              <Button size="sm" onClick={() => openAction(r, "staff_approve")} disabled={!!acting}>
                                 {acting === `staff_approve:${r.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ShieldCheck className="h-4 w-4 mr-1" />} Aprovar
                               </Button>
                             </>
+                          )}
+                          {isManager && !r.file_path.startsWith("roster/") && (
+                            <Button size="sm" variant="outline" onClick={() => importNames(r)} disabled={!!acting}>
+                              {acting === `import:${r.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Users className="h-4 w-4 mr-1" />} Importar nomes
+                            </Button>
                           )}
                           <Button size="sm" variant="outline" onClick={() => view(r)} disabled={opening === r.id}>
                             {opening === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4 mr-1" />} Ver
@@ -282,6 +316,40 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
           })}
         </div>
       )}
+
+      <Dialog open={!!actionDlg} onOpenChange={(o) => !o && !acting && setActionDlg(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{actionDlg?.action === "staff_approve" ? "Aprovar lista manualmente" : "Reprocessar lista"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="text-muted-foreground">
+              Atual: {actionDlg?.row.type_name || "—"} • {actionDlg?.row.competence_month ? `${String(actionDlg.row.competence_month).padStart(2, "0")}/${actionDlg.row.competence_year}` : "sem competência"}
+            </div>
+            <div>
+              <label htmlFor="wl-edit-contrib" className="font-medium">Tipo de contribuição e competência</label>
+              <select id="wl-edit-contrib" value={dlgContrib} onChange={(e) => setDlgContrib(e.target.value)}
+                className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">Manter como está</option>
+                {contribOpts.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </div>
+            {actionDlg?.action === "staff_approve" && (
+              <div>
+                <label htmlFor="wl-edit-note" className="font-medium">Motivo (opcional)</label>
+                <Input id="wl-edit-note" className="mt-2" value={dlgNote} onChange={(e) => setDlgNote(e.target.value)} maxLength={300} />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setActionDlg(null)} disabled={!!acting}>Cancelar</Button>
+              <Button onClick={runAction} disabled={!!acting}>
+                {acting && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+                {actionDlg?.action === "staff_approve" ? "Aprovar" : "Reprocessar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!viewer} onOpenChange={(o) => !o && setViewer(null)}>
         <DialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col">
