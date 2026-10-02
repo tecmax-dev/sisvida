@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Download, Plus, X, Save, Users, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,9 +17,14 @@ const key = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").to
 const comp = (m: number, y: number) => `${String(m).padStart(2, "0")}/${y}`;
 const STATUS: Record<string, string> = { awaiting_value: "Aguardando valor", pending: "A vencer", overdue: "Vencida", paid: "Paga" };
 
-export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }: {
-  employerId: string; portalType: "employer" | "accounting_office" | "staff"; portalId?: string; onSaved?: () => void;
+export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved, contributionId }: {
+  employerId?: string; portalType: "employer" | "accounting_office" | "staff"; portalId?: string;
+  onSaved?: (validationId?: string) => void; contributionId?: string;
 }) {
+  const fixed = !!contributionId;
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkReason, setBulkReason] = useState("");
+  const [bulkNote, setBulkNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [workers, setWorkers] = useState<{ id: string; name: string; cpf: string | null; active: boolean; inactive_reason: string | null; inactive_note: string | null }[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -32,7 +38,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
 
   const call = (action: string, extra: Record<string, unknown> = {}) =>
     supabase.functions.invoke("validate-worker-list", {
-      body: { action, employer_id: employerId, portal_type: portalType, portal_id: portalId, ...extra },
+      body: { action, employer_id: employerId, contribution_id: contributionId, portal_type: portalType, portal_id: portalId, ...extra },
     });
 
   const load = async () => {
@@ -43,7 +49,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
     setWorkers(d.workers || []); setItems(d.items || []); setContribs(d.contributions || []);
     setLoading(false);
   };
-  useEffect(() => { setContribId(""); setNames([]); load(); /* eslint-disable-next-line */ }, [employerId]);
+  useEffect(() => { setContribId(contributionId || ""); setNames([]); setSelected(new Set()); load(); /* eslint-disable-next-line */ }, [employerId, contributionId]);
 
   // Todos os nomes cadastrados entram na lista com o status salvo (nunca são excluídos)
   useEffect(() => {
@@ -53,6 +59,16 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
 
   const patch = (nome: string, p: Partial<Name>) =>
     setNames((cur) => cur.map((x) => (key(x.nome) === key(nome) ? { ...x, ...p } : x)));
+
+  const toggleSel = (nome: string) => setSelected((cur) => { const n = new Set(cur); const k = key(nome); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  const deactivateSelected = () => {
+    if (!selected.size) return toast.error("Selecione os nomes.");
+    if (!bulkReason) return toast.error("Escolha o motivo da desativação.");
+    if (bulkReason === "Outros" && !bulkNote.trim()) return toast.error("Informe o motivo.");
+    setNames((cur) => cur.map((x) => selected.has(key(x.nome)) ? { ...x, active: false, inactive_reason: bulkReason, inactive_note: bulkReason === "Outros" ? bulkNote.trim() : null } : x));
+    toast.success(`${selected.size} nome(s) desativado(s).`);
+    setSelected(new Set()); setBulkReason(""); setBulkNote("");
+  };
 
   const merge = (incoming: Name[]) => {
     setNames((cur) => {
@@ -87,17 +103,17 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
     const d: any = data || {};
     if (d.error) return toast.error(d.error);
     toast.success(`Lista da competência salva com ${d.total} trabalhador(es).`);
-    await load(); onSaved?.();
+    await load(); onSaved?.(d.validation_id);
   };
 
   const shown = useMemo(() => names.filter((n) => !filter || key(n.nome).includes(key(filter))), [names, filter]);
   const prevKeys = useMemo(() => new Set(workers.map((w) => key(w.name))), [workers]);
 
   return (
-    <section className="rounded-xl border bg-card">
+    <section className={fixed ? "rounded-lg border bg-card" : "rounded-xl border bg-card"}>
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b">
         <div>
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Trabalhadores da empresa</h2>
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2"><Users className="h-4 w-4" /> {fixed ? "Nomes já salvos" : "Trabalhadores da empresa"}</h2>
           <p className="text-xs text-muted-foreground">Monte a lista de cada competência sem repetir nomes. {workers.length} nome(s) cadastrado(s).</p>
         </div>
         <Button variant="outline" size="sm" onClick={importLists} disabled={importing || loading}>
@@ -110,7 +126,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
         <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : (
         <div className="p-4 space-y-3">
-          <select value={contribId} onChange={(e) => setContribId(e.target.value)}
+          {!fixed && <select value={contribId} onChange={(e) => setContribId(e.target.value)}
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
             <option value="">{contribs.length ? "Escolha a competência" : "Nenhuma competência disponível"}</option>
             {contribs.map((c) => (
@@ -119,7 +135,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
                 {items.some((i) => i.contribution_id === c.id) ? " • lista salva" : ""}
               </option>
             ))}
-          </select>
+          </select>}
 
           <div className="flex gap-2">
             <Input placeholder="Incluir nome" value={newName} onChange={(e) => setNewName(e.target.value)}
@@ -135,13 +151,26 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
             <Badge variant="secondary">{names.filter((n) => n.active !== false).length} ativo(s) de {names.length}</Badge>
           </div>
 
-          <div className="max-h-80 overflow-y-auto rounded-md border divide-y">
+          {selected.size > 0 && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              <span className="text-xs font-medium whitespace-nowrap">{selected.size} selecionado(s)</span>
+              <select value={bulkReason} onChange={(e) => setBulkReason(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-xs sm:w-40">
+                <option value="">Motivo *</option>
+                {REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {bulkReason === "Outros" && <Input className="h-8 text-xs" placeholder="Informe o motivo *" value={bulkNote} onChange={(e) => setBulkNote(e.target.value)} />}
+              <Button size="sm" variant="destructive" className="h-8" onClick={deactivateSelected}>Desativar selecionados</Button>
+            </div>
+          )}
+
+          <div className={`${fixed ? "max-h-56" : "max-h-80"} overflow-y-auto rounded-md border divide-y">
             {shown.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nenhum nome. Importe das listas enviadas ou inclua manualmente.</p>
             ) : shown.map((n) => (
               <div key={key(n.nome)} className={`px-3 py-1.5 text-sm ${n.active === false ? "bg-muted/40" : ""}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`truncate ${n.active === false ? "text-muted-foreground line-through" : ""}`}>
+                  <Checkbox checked={selected.has(key(n.nome))} onCheckedChange={() => toggleSel(n.nome)} disabled={n.active === false} aria-label="Selecionar nome" />
+                  <span className={`flex-1 truncate ${n.active === false ? "text-muted-foreground line-through" : ""}`}>
                     {n.nome}
                     {!prevKeys.has(key(n.nome)) && <Badge variant="outline" className="ml-2 text-[10px]">novo</Badge>}
                     {n.active === false && n.inactive_reason && <Badge variant="secondary" className="ml-2 text-[10px]">{n.inactive_reason}</Badge>}
@@ -176,7 +205,7 @@ export function WorkerRosterEditor({ employerId, portalType, portalId, onSaved }
 
           <Button className="w-full" onClick={save} disabled={saving || !contribId || !names.some((n) => n.active !== false)}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            Confirmar lista da competência
+            {fixed ? `Repetir todos para esta competência (${names.filter((n) => n.active !== false).length})` : "Confirmar lista da competência"}
           </Button>
         </div>
       )}
