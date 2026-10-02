@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Eye, FileText, Loader2, RefreshCw } from "lucide-react";
@@ -104,8 +104,8 @@ export function PortalSentWorkerLists({ portalType, portalId, showEmployer }: {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <>
-                  <Line key={r.key} l={r.latest} />
+                <Fragment key={r.key}>
+                  <Line l={r.latest} />
                   {r.older.length > 0 && (
                     <tr key={r.key + "-t"}>
                       <td colSpan={showEmployer ? 7 : 6} className="px-3 pb-2">
@@ -118,7 +118,7 @@ export function PortalSentWorkerLists({ portalType, portalId, showEmployer }: {
                     </tr>
                   )}
                   {open[r.key] && r.older.map((o) => <Line key={o.id} l={o} sub />)}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
