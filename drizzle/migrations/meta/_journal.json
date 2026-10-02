@@ -43,6 +43,13 @@
       "when": 1790788662516,
       "tag": "0005_allow_unblock_permission_no_show",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790900582989,
+      "tag": "0006_migration",
+      "breakpoints": true
     }
   ]
 }
