@@ -202,7 +202,7 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
         <StaffWorkerListUploadDialog employerId={employerId} open={uploadOpen} onOpenChange={setUploadOpen} onUploaded={load} />
       </div>
 
-      <WorkerRosterEditor employerId={employerId} portalType="staff" onSaved={load} />
+      <WorkerRosterEditor key={rosterKey} employerId={employerId} portalType="staff" onSaved={load} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
