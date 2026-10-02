@@ -171,10 +171,15 @@ serve(async (req) => {
       if (body.employer_id) employerIds = employerIds.filter((id) => id === body.employer_id);
       if (employerIds.length === 0) return json({ lists: [] });
       const lists: any[] = [];
+      const empNames: Record<string, string> = {};
+      for (let i = 0; i < employerIds.length; i += 200) {
+        const { data: es } = await supabase.from("employers").select("id, name, trade_name").in("id", employerIds.slice(i, i + 200));
+        for (const e of es || []) empNames[e.id] = e.trade_name || e.name;
+      }
       for (let i = 0; i < employerIds.length; i += 200) {
         const { data: vs } = await supabase
           .from("contribution_worker_list_validations")
-          .select("id, employer_id, status, reason, file_name, created_at, portal_type, competence_month, competence_year, ai_result, contribution_type:contribution_types(name), employer:employers(name, trade_name, cnpj)")
+          .select("id, employer_id, status, reason, file_name, created_at, portal_type, competence_month, competence_year, ai_result, contribution_type:contribution_types(name)")
           .in("employer_id", employerIds.slice(i, i + 200))
           .order("created_at", { ascending: false })
           .limit(1000);
@@ -183,7 +188,7 @@ serve(async (req) => {
           created_at: v.created_at, origin: v.portal_type, competence_month: v.competence_month, competence_year: v.competence_year,
           quantidade: v.ai_result?.quantidade_trabalhadores ?? null,
           type_name: v.contribution_type?.name ?? null,
-          employer_name: v.employer?.trade_name || v.employer?.name || null,
+          employer_name: empNames[v.employer_id] || null,
         })));
       }
       return json({ lists });
