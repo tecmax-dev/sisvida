@@ -1449,6 +1449,7 @@ const [showTutorial, setShowTutorial] = useState(false);
                 Exibir várias contribuições
               </Button>
             </div>
+            {employer?.id && <PortalSentWorkerLists portalType="employer" portalId={employer.id} />}
           </>
         )}
 
