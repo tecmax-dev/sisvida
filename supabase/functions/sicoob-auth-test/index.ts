@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
       ok: res.ok,
       cert_subject: leaf.subject.attributes.map((a: any) => `${a.shortName}=${a.value}`).join(", "),
       cert_valid_to: leaf.validity.notAfter,
+      cert_public_pem: forge.pki.certificateToPem(leaf),
       token_received: !!body?.access_token,
       expires_in: body?.expires_in ?? null,
       error: res.ok ? null : body,
