@@ -20,6 +20,7 @@ const STATUS_LABEL: Record<string, string> = {
   awaiting_value: "Aguardando valor",
   pending: "A vencer",
   overdue: "Vencida",
+  paid: "Paga",
 };
 
 export function StaffWorkerListUploadDialog({
@@ -40,12 +41,17 @@ export function StaffWorkerListUploadDialog({
       .from("employer_contributions")
       .select("id, clinic_id, contribution_type_id, competence_month, competence_year, status, contribution_type:contribution_types(name)")
       .eq("employer_id", employerId)
-      .in("status", ["awaiting_value", "pending", "overdue"])
+      .in("status", ["awaiting_value", "pending", "overdue", "paid"])
       .order("competence_year", { ascending: false })
       .order("competence_month", { ascending: false })
       .then(({ data, error }: any) => {
         if (error) toast.error("Não foi possível carregar as contribuições.");
-        setContribs((data || []).map((c: any) => ({ ...c, type_name: c.contribution_type?.name ?? null })));
+        // Competências pagas: no máximo os últimos 6 meses
+        const now = new Date();
+        const minIdx = now.getFullYear() * 12 + now.getMonth() - 5; // inclui mês atual
+        const rows = (data || []).filter((c: any) =>
+          c.status !== "paid" || c.competence_year * 12 + (c.competence_month - 1) >= minIdx);
+        setContribs(rows.map((c: any) => ({ ...c, type_name: c.contribution_type?.name ?? null })));
         setLoading(false);
       });
   }, [open, employerId]);
