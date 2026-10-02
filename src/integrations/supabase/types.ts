@@ -3637,6 +3637,98 @@ export type Database = {
           },
         ]
       }
+      employer_worker_roster_items: {
+        Row: {
+          clinic_id: string | null
+          competence_month: number | null
+          competence_year: number | null
+          contribution_id: string
+          contribution_type_id: string | null
+          created_at: string
+          employer_id: string
+          id: string
+          origin: string
+          worker_id: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          competence_month?: number | null
+          competence_year?: number | null
+          contribution_id: string
+          contribution_type_id?: string | null
+          created_at?: string
+          employer_id: string
+          id?: string
+          origin?: string
+          worker_id: string
+        }
+        Update: {
+          clinic_id?: string | null
+          competence_month?: number | null
+          competence_year?: number | null
+          contribution_id?: string
+          contribution_type_id?: string | null
+          created_at?: string
+          employer_id?: string
+          id?: string
+          origin?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_worker_roster_items_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employer_worker_roster_items_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "employer_workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employer_workers: {
+        Row: {
+          clinic_id: string | null
+          cpf: string | null
+          created_at: string
+          employer_id: string
+          id: string
+          name: string
+          name_norm: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          cpf?: string | null
+          created_at?: string
+          employer_id: string
+          id?: string
+          name: string
+          name_norm: string
+        }
+        Update: {
+          clinic_id?: string | null
+          cpf?: string | null
+          created_at?: string
+          employer_id?: string
+          id?: string
+          name?: string
+          name_norm?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_workers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employers: {
         Row: {
           access_code: string | null
