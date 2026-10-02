@@ -238,7 +238,7 @@ serve(async (req) => {
       const nameKey = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
 
       if (body.action === "roster_get") {
-        const { data: workers } = await supabase.from("employer_workers").select("id, name, cpf").eq("employer_id", employerId).order("name").limit(5000);
+        const { data: workers } = await supabase.from("employer_workers").select("id, name, cpf, active, inactive_reason, inactive_note").eq("employer_id", employerId).order("name").limit(5000);
         const { data: items } = await supabase.from("employer_worker_roster_items")
           .select("worker_id, contribution_id, competence_month, competence_year, contribution_type:contribution_types(name)")
           .eq("employer_id", employerId).limit(20000);
@@ -291,20 +291,32 @@ serve(async (req) => {
       if (body.action === "roster_save") {
         const names: any[] = Array.isArray(body.names) ? body.names.slice(0, 3000) : [];
         const contribId = String(body.contribution_id || "");
-        const clean = new Map<string, { name: string; cpf: string | null }>();
+        const REASONS = ["Férias", "Licença INSS", "Demissão", "Outros"];
+        const all = new Map<string, { name: string; cpf: string | null; active: boolean; reason: string | null; note: string | null }>();
         for (const n of names) {
           const name = String(n?.nome ?? n?.name ?? "").trim().slice(0, 150); const k = nameKey(name);
-          if (k.length < 3 || clean.has(k)) continue;
-          const cpf = digits(n?.cpf); clean.set(k, { name, cpf: cpf.length === 11 ? cpf : null });
+          if (k.length < 3 || all.has(k)) continue;
+          const cpf = digits(n?.cpf);
+          const active = n?.active !== false;
+          const reason = active ? null : (REASONS.includes(n?.inactive_reason) ? n.inactive_reason : null);
+          const note = active ? null : (String(n?.inactive_note || "").trim().slice(0, 300) || null);
+          if (!active && !reason) return json({ error: `Informe o motivo da desativação de ${name}.` }, 200);
+          if (!active && reason === "Outros" && !note) return json({ error: `Descreva o motivo da desativação de ${name}.` }, 200);
+          all.set(k, { name, cpf: cpf.length === 11 ? cpf : null, active, reason, note });
         }
+        const clean = new Map(Array.from(all.entries()).filter(([, v]) => v.active));
         // Cadastro único por empresa (sem repetir nomes)
-        const rows = Array.from(clean.entries()).map(([k, v]) => ({ clinic_id: emp.clinic_id, employer_id: employerId, name: v.name, name_norm: k, cpf: v.cpf }));
+        // Nomes nunca são excluídos: só ativados/desativados com motivo
+        const rows = Array.from(all.entries()).map(([k, v]) => ({
+          clinic_id: emp.clinic_id, employer_id: employerId, name: v.name, name_norm: k, cpf: v.cpf,
+          active: v.active, inactive_reason: v.reason, inactive_note: v.note, inactive_at: v.active ? null : new Date().toISOString(),
+        }));
         for (let i = 0; i < rows.length; i += 500) {
-          const { error } = await supabase.from("employer_workers").upsert(rows.slice(i, i + 500), { onConflict: "employer_id,name_norm", ignoreDuplicates: true });
+          const { error } = await supabase.from("employer_workers").upsert(rows.slice(i, i + 500), { onConflict: "employer_id,name_norm" });
           if (error) { console.error(error); return json({ error: "Falha ao salvar os nomes." }, 200); }
         }
         if (!contribId) return json({ success: true, saved: rows.length });
-        if (clean.size === 0) return json({ error: "Inclua pelo menos 1 nome." }, 200);
+        if (clean.size === 0) return json({ error: "Deixe pelo menos 1 trabalhador ativo." }, 200);
 
         const { data: c } = await supabase.from("employer_contributions")
           .select("id, employer_id, contribution_type_id, competence_month, competence_year, contribution_type:contribution_types(name)")
