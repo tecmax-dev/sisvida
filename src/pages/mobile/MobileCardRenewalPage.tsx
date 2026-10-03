@@ -60,6 +60,7 @@ export default function MobileCardRenewalPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [autoApproved, setAutoApproved] = useState<boolean | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -303,9 +304,13 @@ export default function MobileCardRenewalPage() {
       }
 
 
+      const approved = result?.auto_approved === true;
+      setAutoApproved(approved);
       toast({
-        title: "Contracheque enviado!",
-        description: "Seu documento foi recebido com sucesso.",
+        title: approved ? "Carteirinha renovada!" : "Contracheque enviado!",
+        description: approved
+          ? "Seu contracheque foi validado automaticamente."
+          : "Não foi possível aprovar automaticamente. Aguarde a validação manual pelo departamento responsável.",
       });
 
       setSubmitted(true);
@@ -343,13 +348,21 @@ export default function MobileCardRenewalPage() {
         </div>
         <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
           <CheckCircle2 className="h-20 w-20 text-emerald-500 mb-6" />
-          <h2 className="text-2xl font-semibold text-foreground mb-3 text-center">Enviado com Sucesso!</h2>
-          <p className="text-muted-foreground text-center mb-2">
-            Seu contracheque foi enviado para análise.
-          </p>
-          <p className="text-sm text-muted-foreground text-center mb-8">
-            Você será notificado quando sua carteirinha for renovada.
-          </p>
+          <h2 className="text-2xl font-semibold text-foreground mb-3 text-center">{autoApproved ? "Carteirinha Renovada!" : "Enviado com Sucesso!"}</h2>
+          {autoApproved ? (
+            <p className="text-muted-foreground text-center mb-8">
+              Seu contracheque foi validado automaticamente e sua carteirinha já foi renovada.
+            </p>
+          ) : (
+            <>
+              <p className="text-muted-foreground text-center mb-2">
+                Não foi possível aprovar seu contracheque automaticamente.
+              </p>
+              <p className="text-sm text-muted-foreground text-center mb-8">
+                Aguarde a validação manual pelo departamento responsável. Você será notificado quando sua carteirinha for renovada.
+              </p>
+            </>
+          )}
           <Button 
             className="w-full max-w-xs bg-emerald-600 hover:bg-emerald-700"
             onClick={() => navigate("/app/home")}
