@@ -172,14 +172,15 @@ const MAX_PERIOD_DAYS = 30;
 
 async function autoValidate(file: File, patient: any): Promise<{ ok: boolean; reason: string; month: number; year: number }> {
   const type = file.type || '';
-  if (!type.startsWith('image/')) return { month: 0, year: 0, ok: false, reason: 'Formato não suportado para análise automática' };
+  const isPdf = type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  if (!type.startsWith('image/') && !isPdf) return { month: 0, year: 0, ok: false, reason: 'Formato não suportado para análise automática' };
   const bytes = new Uint8Array(await file.arrayBuffer());
   let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/verify-payslip-document`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
     body: JSON.stringify({
-      file_base64: btoa(bin), file_name: file.name, file_type: type,
+      file_base64: btoa(bin), file_name: file.name, file_type: isPdf ? 'application/pdf' : type,
       member_name: patient?.name || '', employer_name: patient?.employer_name || '', employer_cnpj: patient?.employer_cnpj || '',
     }),
   });

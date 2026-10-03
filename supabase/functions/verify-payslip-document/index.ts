@@ -72,7 +72,9 @@ async function callOpenAI(imageUrl: string, systemPrompt: string) {
           role: "user",
           content: [
             { type: "text", text: "Analise este documento e verifique se é um contracheque válido com descontos sindicais. Responda apenas com o JSON solicitado." },
-            { type: "image_url", image_url: { url: imageUrl } },
+            imageUrl.startsWith("data:application/pdf")
+              ? { type: "file", file: { filename: "contracheque.pdf", file_data: imageUrl } }
+              : { type: "image_url", image_url: { url: imageUrl } },
           ],
         },
       ],
