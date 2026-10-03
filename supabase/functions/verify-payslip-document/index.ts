@@ -17,6 +17,7 @@ Critérios de validação:
 3. Verificar se o nome do funcionário no documento é compatível com: "${member_name}".
 4. Verificar se a empresa ou CNPJ no documento é compatível com: "${employer_name}" ou "${employer_cnpj}".
 5. Extrair a competência (mês/ano de referência) e a data de pagamento do contracheque, se aparecerem. Não julgue se a data é recente; apenas extraia.
+6. A identificação é feita SOMENTE pelo nome do trabalhador e pelo nome da empresa. Muitos contracheques não trazem CPF: a ausência ou divergência de CPF NUNCA deve reprovar nem afetar name_match/employer_match.
 
 Responda ESTRITAMENTE em formato JSON, sem markdown, sem texto antes ou depois, apenas o objeto JSON:
 {
