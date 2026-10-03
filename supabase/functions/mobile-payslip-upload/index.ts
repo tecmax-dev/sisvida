@@ -126,18 +126,84 @@ serve(async (req) => {
 
     if (requestError) throw requestError;
 
-    const { data: patient } = await supabase.from('patients').select('name, phone').eq('id', patientId).single();
+    const { data: patient } = await supabase.from('patients').select('name, phone, employer_name, employer_cnpj').eq('id', patientId).single();
 
     if (patient) {
       edgeNotify(supabase, patientId, clinicId, request.id, patient.name, patient.phone);
     }
 
-    return json({ success: true, requestId: request.id, build_id: BUILD_ID });
+    // ---- Validação automática (mesma ferramenta: verify-payslip-document) ----
+    let autoApproved = false;
+    let autoReason: string | null = null;
+    try {
+      const auto = await autoValidate(file, patient);
+      autoApproved = auto.ok;
+      autoReason = auto.reason;
+      if (auto.ok) {
+        const exp = new Date();
+        exp.setFullYear(exp.getFullYear() + 1);
+        const expDate = exp.toISOString().slice(0, 10);
+        const expTs = `${expDate}T12:00:00-03:00`;
+        await supabase.from('payslip_requests').update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          notes: 'Aprovado automaticamente pela validação de contracheque.',
+        }).eq('id', request.id);
+        await supabase.from('patient_cards').update({ expires_at: expTs }).eq('id', cardId);
+        await supabase.from('patient_dependents').update({ card_expires_at: expTs }).eq('patient_id', patientId).eq('is_active', true);
+      } else {
+        await supabase.from('payslip_requests').update({
+          notes: `Validação automática não aprovou: ${auto.reason}. Aguardando validação manual.`,
+        }).eq('id', request.id);
+      }
+    } catch (e: any) {
+      console.error('[mobile-payslip-upload] auto-validate error:', e?.message);
+      autoReason = 'Falha na análise automática';
+    }
+
+    return json({ success: true, requestId: request.id, auto_approved: autoApproved, auto_reason: autoReason, build_id: BUILD_ID });
   } catch (e: any) {
     console.error(`[mobile-payslip-upload] ERROR: ${e.message}`, e);
     return json({ error: 'UPLOAD_FAILED', build_id: BUILD_ID }, 500);
   }
 });
+
+const MAX_PERIOD_DAYS = 30;
+
+async function autoValidate(file: File, patient: any): Promise<{ ok: boolean; reason: string }> {
+  const type = file.type || '';
+  if (!type.startsWith('image/')) return { ok: false, reason: 'Formato não suportado para análise automática' };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/verify-payslip-document`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+    body: JSON.stringify({
+      file_base64: btoa(bin), file_name: file.name, file_type: type,
+      member_name: patient?.name || '', employer_name: patient?.employer_name || '', employer_cnpj: patient?.employer_cnpj || '',
+    }),
+  });
+  const d: any = await res.json().catch(() => ({}));
+  if (d?.error) return { ok: false, reason: 'Falha na análise automática' };
+  if (!d?.is_payslip) return { ok: false, reason: 'Documento não identificado como contracheque' };
+  const it = d.found_items || {};
+  if (!(it.mensalidade_sindical || it.taxa_negocial || it.taxa_assistencial)) return { ok: false, reason: 'Desconto sindical não encontrado' };
+  if (d.name_match !== true) return { ok: false, reason: 'Nome do trabalhador diverge do cadastro' };
+  if (d.employer_match !== true) return { ok: false, reason: 'Nome da empresa diverge do cadastro' };
+
+  // Período de pagamento: no máximo 30 dias
+  let ref: Date | null = null;
+  const pay = String(d.data_pagamento || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pay)) ref = new Date(`${pay}T12:00:00-03:00`);
+  else {
+    const m = String(d.competencia || '').match(/^(\d{1,2})\/(\d{4})$/);
+    if (m) ref = new Date(Number(m[2]), Number(m[1]), 0, 12); // último dia da competência
+  }
+  if (!ref || isNaN(ref.getTime())) return { ok: false, reason: 'Período de pagamento não identificado' };
+  const days = (Date.now() - ref.getTime()) / 86400000;
+  if (days > MAX_PERIOD_DAYS) return { ok: false, reason: `Período de pagamento além de ${MAX_PERIOD_DAYS} dias` };
+  return { ok: true, reason: 'Aprovado' };
+}
 
 async function edgeNotify(supabase: any, patientId: string, clinicId: string, requestId: string, patientName: string, phone: string) {
   try {
