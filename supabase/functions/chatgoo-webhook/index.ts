@@ -61,6 +61,7 @@ type Intent =
   | "CTB_EMPRESAS"
   | "CTB_BOLETOS"
   | "MENU_ASSOCIADO"
+  | "ATUALIZAR_CARTEIRINHA"
   | "MENU_EMPRESA"
   | "MENU_CONTABILIDADE"
   | "HUMANO"
@@ -77,6 +78,7 @@ function detectIntent(text: string): Intent {
   if (/(sou empresa|empresa|empregador)/.test(t)) return "MENU_EMPRESA";
   if (/(contabilidade|contador|escritorio)/.test(t)) return "MENU_CONTABILIDADE";
   if (/(sou associado|associado|socio)/.test(t)) return "MENU_ASSOCIADO";
+  if (/(atualizar|renovar|renovacao)\s*(a\s*)?(carteirinha|carteira)/.test(t)) return "ATUALIZAR_CARTEIRINHA";
   if (/(carteirinha|carteira|validade)/.test(t)) return "CARTEIRINHA";
   if (/(consulta|agendamento|marcac|horario|medic)/.test(t)) return "AGENDAMENTOS";
   if (/(homologa|rescis)/.test(t)) return "HOMOLOGACAO";
@@ -135,14 +137,16 @@ const ASSOC_MENU = [
   "Atendimento ao associado:",
   "1 - Meu cadastro / situação",
   "2 - Carteirinha (validade)",
-  "3 - Meus agendamentos",
-  "4 - Homologação de rescisão",
-  "5 - Falar com um atendente",
+  "3 - Atualizar carteirinha",
+  "4 - Meus agendamentos",
+  "5 - Homologação de rescisão",
+  "6 - Falar com um atendente",
 ].join("\n");
 
 const ASSOC_LIST_ROWS = [
   { id: "OPT_CADASTRO", title: "Meu cadastro", description: "Dados e situação de associado" },
   { id: "OPT_CARTEIRINHA", title: "Carteirinha", description: "Validade e situação da carteirinha" },
+  { id: "OPT_ATUALIZAR_CARTEIRINHA", title: "Atualizar carteirinha", description: "Enviar contracheque pelo app" },
   { id: "OPT_AGENDAMENTOS", title: "Agendamentos", description: "Suas próximas consultas" },
   { id: "OPT_HOMOLOGACAO", title: "Homologação", description: "Homologação de rescisão" },
   { id: "OPT_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
@@ -193,9 +197,10 @@ const ROOT_NUMBER_MAP: Record<string, Intent> = {
 const ASSOC_NUMBER_MAP: Record<string, Intent> = {
   "1": "CADASTRO",
   "2": "CARTEIRINHA",
-  "3": "AGENDAMENTOS",
-  "4": "HOMOLOGACAO",
-  "5": "HUMANO",
+  "3": "ATUALIZAR_CARTEIRINHA",
+  "4": "AGENDAMENTOS",
+  "5": "HOMOLOGACAO",
+  "6": "HUMANO",
 };
 
 const EMP_NUMBER_MAP: Record<string, Intent> = {
@@ -223,6 +228,7 @@ const OPTION_ID_MAP: Record<string, Intent> = {
   OPT_PERFIL_CONTABILIDADE: "MENU_CONTABILIDADE",
   OPT_CADASTRO: "CADASTRO",
   OPT_CARTEIRINHA: "CARTEIRINHA",
+  OPT_ATUALIZAR_CARTEIRINHA: "ATUALIZAR_CARTEIRINHA",
   OPT_AGENDAMENTOS: "AGENDAMENTOS",
   OPT_HOMOLOGACAO: "HOMOLOGACAO",
   OPT_FINANCEIRO: "FINANCEIRO",
@@ -2272,6 +2278,21 @@ serve(async (req) => {
         vencida
           ? "• Situação: VENCIDA — atualize pelo aplicativo enviando o contracheque."
           : "• Situação: válida",
+      ].join("\n"),
+      "ANSWERED",
+      null,
+      patient.id,
+    );
+  }
+
+  if (intent === "ATUALIZAR_CARTEIRINHA") {
+    // Resposta dentro da janela de 24h iniciada pelo associado (texto livre permitido pela Meta).
+    return await answer(
+      [
+        `${first}, para atualizar sua carteirinha, toque no link abaixo, entre no aplicativo e envie seu contracheque mais recente:`,
+        "https://prosindweb.com.br/app/atualizar-carteirinha",
+        "",
+        "A validação é feita pelo próprio aplicativo. Para voltar ao menu, digite *menu*.",
       ].join("\n"),
       "ANSWERED",
       null,
