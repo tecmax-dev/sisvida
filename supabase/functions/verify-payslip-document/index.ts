@@ -16,6 +16,7 @@ Critérios de validação:
 2. Procurar por rubricas/descrições como: "Mensalidade Sindical", "Contribuição Sindical", "Taxa Assistencial", "Taxa Negocial", "Contribuição Assistencial", ou variações destes nomes.
 3. Verificar se o nome do funcionário no documento é compatível com: "${member_name}".
 4. Verificar se a empresa ou CNPJ no documento é compatível com: "${employer_name}" ou "${employer_cnpj}".
+5. Extrair a competência (mês/ano de referência) e a data de pagamento do contracheque, se aparecerem. Não julgue se a data é recente; apenas extraia.
 
 Responda ESTRITAMENTE em formato JSON, sem markdown, sem texto antes ou depois, apenas o objeto JSON:
 {
@@ -27,6 +28,10 @@ Responda ESTRITAMENTE em formato JSON, sem markdown, sem texto antes ou depois, 
   },
   "name_match": boolean,
   "name_found_in_document": "string ou null",
+  "employer_match": boolean,
+  "employer_found_in_document": "string ou null",
+  "competencia": "MM/AAAA ou null",
+  "data_pagamento": "AAAA-MM-DD ou null",
   "message": "Resumo em português da análise"
 }`;
 
