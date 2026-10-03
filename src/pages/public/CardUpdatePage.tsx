@@ -40,6 +40,7 @@ export default function CardUpdatePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [autoApproved, setAutoApproved] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +125,12 @@ export default function CardUpdatePage() {
       if (!res.ok) {
         throw new Error(result?.details || result?.error || "Não foi possível enviar o contracheque. Tente novamente.");
       }
-      toast({ title: "Contracheque enviado!", description: "Seu documento foi recebido." });
+      const ok = result?.auto_approved === true;
+      setAutoApproved(ok);
+      toast({
+        title: ok ? "Carteirinha renovada!" : "Contracheque enviado!",
+        description: ok ? "Seu contracheque foi validado automaticamente." : "Não foi possível aprovar automaticamente. Aguarde a validação manual pelo departamento responsável.",
+      });
       setSubmitted(true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Não foi possível enviar o contracheque. Tente novamente.";
@@ -168,10 +174,11 @@ export default function CardUpdatePage() {
       <Shell>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <CheckCircle2 className="h-16 w-16 text-primary mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Documento recebido com sucesso!</h2>
+          <h2 className="text-xl font-semibold mb-2">{autoApproved ? "Carteirinha Renovada!" : "Documento recebido com sucesso!"}</h2>
           <p className="text-muted-foreground mb-6">
-            Seu contracheque foi enviado e sua solicitação de atualização da carteirinha está em análise.
-            Você será informado após a conclusão.
+            {autoApproved
+              ? "Seu contracheque foi validado automaticamente e a validade da sua carteirinha foi atualizada."
+              : "Não foi possível aprovar automaticamente. Aguarde a validação manual pelo departamento responsável."}
           </p>
           <div className="bg-muted p-4 rounded-lg w-full">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Protocolo</p>

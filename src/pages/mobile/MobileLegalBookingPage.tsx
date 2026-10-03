@@ -537,8 +537,10 @@ export default function MobileLegalBookingPage() {
       }
 
       toast({
-        title: "Contracheque enviado!",
-        description: "Seu documento foi enviado para análise.",
+        title: result?.auto_approved ? "Carteirinha renovada!" : "Contracheque enviado!",
+        description: result?.auto_approved
+          ? "Seu contracheque foi validado automaticamente."
+          : "Não foi possível aprovar automaticamente. Aguarde a validação manual pelo departamento responsável.",
       });
 
       setPayslipSubmitted(true);
