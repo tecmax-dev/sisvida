@@ -52,6 +52,7 @@ type Intent =
   | "FINANCEIRO"
   | "EMP_BOLETOS"
   | "EMP_2VIA"
+  | "EMP_GERAR"
   | "CTB_2VIA"
   | "EMP_ATUALIZAR"
   | "CTB_ATUALIZAR"
@@ -156,16 +157,18 @@ const EMP_MENU = [
   "Atendimento à empresa:",
   "1 - Boletos e contribuições da empresa",
   "2 - Homologações da empresa",
-  "3 - Segunda via de boleto",
-  "4 - Atualizar boleto",
-  "5 - Dados cadastrais da empresa",
-  "6 - Falar com um atendente",
+  "3 - Gerar boleto",
+  "4 - Reenviar boleto já gerado",
+  "5 - Atualizar boleto",
+  "6 - Dados cadastrais da empresa",
+  "7 - Falar com um atendente",
 ].join("\n");
 
 const EMP_LIST_ROWS = [
   { id: "OPT_EMP_BOLETOS", title: "Boletos", description: "Contribuições em aberto da empresa" },
   { id: "OPT_EMP_HOMOLOGACAO", title: "Homologações", description: "Agendamentos de rescisão" },
-  { id: "OPT_EMP_2VIA", title: "2ª via de boleto", description: "Reenviar link e código do boleto" },
+  { id: "OPT_EMP_GERAR", title: "Gerar boleto", description: "Enviar lista de trabalhadores e gerar" },
+  { id: "OPT_EMP_2VIA", title: "Reenviar boleto", description: "Reenviar link e código do boleto já gerado" },
   { id: "OPT_EMP_ATUALIZAR", title: "Atualizar boleto", description: "Valor para zeradas ou vencimento para vencidas" },
   { id: "OPT_EMP_DADOS", title: "Dados cadastrais", description: "Dados da empresa no sindicato" },
   { id: "OPT_EMP_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
@@ -206,10 +209,11 @@ const ASSOC_NUMBER_MAP: Record<string, Intent> = {
 const EMP_NUMBER_MAP: Record<string, Intent> = {
   "1": "EMP_BOLETOS",
   "2": "EMP_HOMOLOGACAO",
-  "3": "EMP_2VIA",
-  "4": "EMP_ATUALIZAR",
-  "5": "EMP_DADOS",
-  "6": "HUMANO",
+  "3": "EMP_GERAR",
+  "4": "EMP_2VIA",
+  "5": "EMP_ATUALIZAR",
+  "6": "EMP_DADOS",
+  "7": "HUMANO",
 };
 
 const CTB_NUMBER_MAP: Record<string, Intent> = {
@@ -236,6 +240,7 @@ const OPTION_ID_MAP: Record<string, Intent> = {
   OPT_EMP_BOLETOS: "EMP_BOLETOS",
   OPT_EMP_HOMOLOGACAO: "EMP_HOMOLOGACAO",
   OPT_EMP_2VIA: "EMP_2VIA",
+  OPT_EMP_GERAR: "EMP_GERAR",
   OPT_EMP_ATUALIZAR: "EMP_ATUALIZAR",
   OPT_EMP_DADOS: "EMP_DADOS",
   OPT_EMP_HUMANO: "HUMANO",
@@ -608,7 +613,7 @@ serve(async (req) => {
   else if (intent === "MENU_CONTABILIDADE") profile = "CONTABILIDADE";
   else if (
     intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS" ||
-    intent === "EMP_2VIA" || intent === "EMP_ATUALIZAR"
+    intent === "EMP_2VIA" || intent === "EMP_ATUALIZAR" || intent === "EMP_GERAR"
   ) profile = "EMPRESA";
   else if (
     intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" || intent === "CTB_2VIA" ||
@@ -1804,7 +1809,7 @@ serve(async (req) => {
   // ===================== PERFIL: EMPRESA =====================
   if (
     intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" ||
-    intent === "EMP_DADOS" || intent === "EMP_2VIA"
+    intent === "EMP_DADOS" || intent === "EMP_2VIA" || intent === "EMP_GERAR"
   ) {
     // Prioriza o CNPJ informado pela empresa nesta conversa. O telefone é apenas
     // fallback quando nenhum CNPJ foi identificado.
@@ -1940,6 +1945,50 @@ serve(async (req) => {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // GERAR BOLETO (empresa): resposta dentro da janela de 24h aberta pela empresa.
+    // A lista de trabalhadores, o valor e a emissão seguem a regra do Portal da Empresa
+    // (validação obrigatória por tipo de contribuição, bloqueada no backend).
+    if (intent === "EMP_GERAR") {
+      const { data: abertas } = await supabase
+        .from("employer_contributions")
+        .select("competence_month,competence_year,due_date,status,contribution_types(name)")
+        .eq("employer_id", empresa.id)
+        .in("status", ["awaiting_value", "overdue"])
+        .order("competence_year", { ascending: false })
+        .order("competence_month", { ascending: false })
+        .limit(30);
+      const validas = (abertas ?? []).filter((c: any) =>
+        /^\s*(124|125|126)\s*-/.test(String(c.contribution_types?.name ?? "")) && Number(c.competence_year) >= 2026
+      ).slice(0, 8);
+      if (validas.length === 0) {
+        return await answer(
+          `${nomeEmpresa}, não encontrei competências aguardando valor ou vencidas para gerar boleto. Para reenviar um boleto já gerado, escolha "Reenviar boleto" no menu.`,
+          "ANSWERED",
+          "NO_COMPETENCE_TO_GENERATE",
+          null,
+        );
+      }
+      const linhas = validas.map((c: any) => {
+        const comp = `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`;
+        const tipo = String(c.contribution_types?.name ?? "Contribuição").replace(/^\s*\d+\s*-\s*/, "");
+        return `• ${comp} — ${tipo}${c.status === "overdue" ? " (vencida)" : " (aguardando valor)"}`;
+      });
+      return await answer(
+        [
+          `${nomeEmpresa}, competências disponíveis para gerar boleto:`,
+          ...linhas,
+          "",
+          "Para gerar, acesse o Portal da Empresa, escolha a competência, envie a lista de trabalhadores do tipo de contribuição e informe o valor:",
+          "https://prosindweb.com.br/portal-empresa",
+          "",
+          "Para voltar ao menu, digite *menu*.",
+        ].join("\n"),
+        "ANSWERED",
+        "GENERATE_PORTAL_LINK_SENT",
+        null,
+      );
     }
 
     if (intent === "EMP_BOLETOS") {
