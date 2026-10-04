@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       // deno-lint-ignore no-explicit-any
       const options = (all || []).filter((x: any) =>
         isDueCompetence(x) && /^\s*(124|125|126)\b|mensalidade|negocial|assistencial/i.test(String(x.contribution_type?.name ?? "")));
-      return json({ employer, contribution: c, options: options.length ? options : [c] });
+      return json({ employer, contribution: c, options: options.length ? options : [c], _dbg: (all || []).map((x: any) => [x.id, x.contribution_type?.name]) });
     }
     return json({ employer });
   } catch (e) {
