@@ -25,6 +25,8 @@ export default function DueBoletoPage() {
   const [saving, setSaving] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [options, setOptions] = useState<Contribution[]>([]);
+  const [chosen, setChosen] = useState(false);
 
   useEffect(() => {
     document.title = "Gerar boleto — ProsindWeb";
@@ -36,12 +38,22 @@ export default function DueBoletoPage() {
       if (e && !msg) { try { msg = JSON.parse(await (e as any).context.text())?.error; } catch { /* */ } }
       if (msg || !data?.contribution) setError(msg || "Este link não é válido para gerar boleto.");
       else {
-        setEmployer(data.employer); setContrib(data.contribution);
-        if (data.contribution.status === "pending") { setDone(true); setInvoiceUrl(data.contribution.lytex_invoice_url || null); }
+        setEmployer(data.employer);
+        const opts: Contribution[] = data.options?.length ? data.options : [data.contribution];
+        setOptions(opts);
+        if (opts.length === 1) pick(opts[0]); else setContrib(null);
       }
       setLoading(false);
     });
   }, []);
+
+  function pick(c: Contribution) {
+    setContrib(c); setChosen(true); setValidationId(null); setValue(""); setError(null);
+    if (c.status === "pending") { setDone(true); setInvoiceUrl(c.lytex_invoice_url || null); }
+    else { setDone(false); setInvoiceUrl(null); }
+  }
+  const typeName = (c: Contribution) => String(c.contribution_type?.name ?? "Contribuição").replace(/^\s*\d+\s*[-–]\s*/, "");
+  const compOf = (c: Contribution) => `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`;
 
   const generate = async () => {
     if (!employer || !contrib || !validationId) return;
@@ -67,7 +79,22 @@ export default function DueBoletoPage() {
       <div className="mx-auto max-w-2xl space-y-4">
         {loading && <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
 
-        {!loading && !contrib && (
+        {!loading && employer && !chosen && options.length > 1 && (
+          <Card>
+            <CardHeader><CardTitle>Qual contribuição você vai gerar?</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">{employer.name} — escolha o tipo de contribuição para enviar a lista de trabalhadores.</p>
+              {options.map((o) => (
+                <Button key={o.id} variant="outline" className="w-full h-auto py-3 justify-between" onClick={() => pick(o)}>
+                  <span className="text-left font-medium">{typeName(o)}</span>
+                  <span className="text-xs text-muted-foreground">{compOf(o)} · vence {formatDateBR(o.due_date)}{o.status === "pending" ? " · boleto gerado" : ""}</span>
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {!loading && !contrib && !(employer && options.length > 1) && (
           <Card><CardContent className="py-10 text-center space-y-3">
             <AlertTriangle className="h-10 w-10 mx-auto text-destructive" />
             <p className="font-medium">{error}</p>
@@ -79,7 +106,9 @@ export default function DueBoletoPage() {
         {employer && contrib && (
           <>
             <Card>
-              <CardHeader><CardTitle>Gerar boleto</CardTitle></CardHeader>
+              <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Gerar boleto</CardTitle>
+                {options.length > 1 && <Button variant="ghost" size="sm" onClick={() => { setChosen(false); setContrib(null); }}>Trocar tipo</Button>}
+              </CardHeader>
               <CardContent className="grid gap-1 text-sm">
                 <p><span className="text-muted-foreground">Empresa:</span> {employer.name}</p>
                 <p><span className="text-muted-foreground">Competência:</span> {comp} — {contrib.contribution_type?.name}</p>
