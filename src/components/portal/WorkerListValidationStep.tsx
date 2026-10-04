@@ -49,7 +49,7 @@ const toBase64 = (file: File) =>
   });
 
 export function WorkerListValidationStep({
-  contributionId, portalType, portalId, employerName, employerCnpj, validationId, onValidated, fixedTypeId, fixedTypeName,
+  contributionId, portalType, portalId, employerName, employerCnpj, validationId, onValidated, fixedTypeId, onTypeChange, typeBlockedMessage,
 }: Props) {
   const [types, setTypes] = useState<{ id: string; name: string }[]>([]);
   const [typeId, setTypeId] = useState(fixedTypeId || "");
