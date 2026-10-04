@@ -189,6 +189,35 @@ const [showTutorial, setShowTutorial] = useState(false);
   useEffect(() => {
     const paramCnpj = searchParams.get("cnpj");
     const paramCode = searchParams.get("code") || searchParams.get("access_code");
+    const linkToken = searchParams.get("t");
+
+    // Link seguro enviado pelo WhatsApp (uso único)
+    if (linkToken && !autoLoginAttempted.current) {
+      autoLoginAttempted.current = true;
+      window.history.replaceState(null, "", window.location.pathname);
+      (async () => {
+        setIsLoading(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("employer-portal-link", { body: { token: linkToken } });
+          let msg = data?.error as string | undefined;
+          if (error && !msg) {
+            try { msg = JSON.parse(await (error as any).context.text())?.error; } catch { /* ignore */ }
+          }
+          if (data?.employer) {
+            setEmployer(data.employer);
+            sessionStorage.setItem("employer_session", JSON.stringify(data.employer));
+            if (data.employer.clinic_id) loadClinicById(data.employer.clinic_id);
+            toast.success(`Bem-vindo, ${data.employer.name}!`);
+            loadContributions(data.employer.id);
+          } else {
+            toast.error(msg || "Não foi possível abrir o link. Peça um novo pelo WhatsApp.");
+          }
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+      return;
+    }
 
     if (paramCnpj && paramCode && !employer && !isLoading && !autoLoginAttempted.current) {
       autoLoginAttempted.current = true;
