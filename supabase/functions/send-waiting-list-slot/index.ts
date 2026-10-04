@@ -10,9 +10,11 @@ const cors = {
   "Content-Type": "application/json",
 };
 
-const BUILD = "WAITLIST-SLOT-2026-09-11-A";
+const BUILD = "WAITLIST-SLOT-2026-10-04-OPCOES";
 const PHONE_ID = "1213495528515111";
+const WABA_ID = "2063797207822998";
 const TEMPLATE_NAME = "vaga_disponivel_v1";
+const OPTIONS_TEMPLATE = "vaga_disponivel_opcoes_v1";
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
@@ -97,30 +99,75 @@ serve(async (req) => {
   const metaToken = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
   if (!metaToken) return json({ ok: false, error: "META_TOKEN_NOT_CONFIGURED", build: BUILD }, 400);
 
-  const parameters = [
-    { type: "text", text: displayName.split(" ")[0] },
-    { type: "text", text: formatDatePt(appointmentDate) },
-    { type: "text", text: startTime.slice(0, 5) },
-    { type: "text", text: professionalName },
-  ];
+  // Novo fluxo: link com TODAS as vagas livres (15 dias) para o associado escolher.
+  // Só usa o modelo novo se a Meta já o aprovou (consulta somente leitura); senão mantém o modelo antigo.
+  const profId = professionalId || (entry as any).professional_id || null;
+  let usedTemplate = TEMPLATE_NAME;
+  let res: Response | null = null;
+  let freeCount = 0;
+  if (profId) {
+    const tplRes = await fetch(`${GRAPH}/${WABA_ID}/message_templates?name=${OPTIONS_TEMPLATE}&fields=name,status`, {
+      headers: { Authorization: `Bearer ${metaToken}` },
+    }).then((r) => r.json()).catch(() => ({}));
+    const approved = (tplRes?.data || []).some((t: any) => t.name === OPTIONS_TEMPLATE && t.status === "APPROVED");
+    const slots = await listFreeSlots(admin, String(entry.clinic_id), profId, 15);
+    freeCount = slots.length;
+    if (approved && freeCount > 0) {
+      const raw = crypto.getRandomValues(new Uint8Array(32));
+      const token = btoa(String.fromCharCode(...raw)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+      const tokenHash = [...new Uint8Array(hashBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      await admin.from("waiting_list_pick_tokens").insert({
+        token_hash: tokenHash, waiting_list_id: entry.id, clinic_id: entry.clinic_id,
+        patient_id: entry.patient_id, professional_id: profId,
+        expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
+      });
+      usedTemplate = OPTIONS_TEMPLATE;
+      res = await fetch(`${GRAPH}/${PHONE_ID}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${metaToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp", recipient_type: "individual", to: e164, type: "template",
+          template: {
+            name: OPTIONS_TEMPLATE, language: { code: "pt_BR" },
+            components: [
+              { type: "body", parameters: [
+                { type: "text", text: displayName.split(" ")[0] },
+                { type: "text", text: professionalName },
+              ] },
+              { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: token }] },
+            ],
+          },
+        }),
+      });
+    }
+  }
 
-  const res = await fetch(`${GRAPH}/${PHONE_ID}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${metaToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: e164,
-      type: "template",
-      template: { name: TEMPLATE_NAME, language: { code: "pt_BR" }, components: [{ type: "body", parameters }] },
-    }),
-  });
+  if (!res) {
+    const parameters = [
+      { type: "text", text: displayName.split(" ")[0] },
+      { type: "text", text: formatDatePt(appointmentDate) },
+      { type: "text", text: startTime.slice(0, 5) },
+      { type: "text", text: professionalName },
+    ];
+    res = await fetch(`${GRAPH}/${PHONE_ID}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${metaToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: e164,
+        type: "template",
+        template: { name: TEMPLATE_NAME, language: { code: "pt_BR" }, components: [{ type: "body", parameters }] },
+      }),
+    });
+  }
   const result = await res.json().catch(() => ({}));
 
   await admin.from("whatsapp_compliance_logs").insert({
     intent: "WAITING_LIST_SLOT",
     decision: res.ok ? "SENT" : "TEMPLATE_NOT_AVAILABLE",
-    metadata: { build: BUILD, waiting_list_id: entry.id, template: TEMPLATE_NAME, http: res.status, response: result },
+    metadata: { build: BUILD, waiting_list_id: entry.id, template: usedTemplate, free_slots: freeCount, http: res.status, response: result },
   });
 
   if (!res.ok) {
