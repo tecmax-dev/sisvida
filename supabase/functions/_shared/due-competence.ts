@@ -7,6 +7,6 @@ export function isDueCompetence(
   c: { status: string; due_date: string | null },
   now: Date = new Date(),
 ): boolean {
-  if (c.status !== "awaiting_value" || !c.due_date) return false;
+  if (!["awaiting_value", "pending"].includes(c.status) || !c.due_date) return false;
   return c.due_date.slice(0, 10) >= todayBrasilia(now);
 }

@@ -1957,7 +1957,7 @@ serve(async (req) => {
         .from("employer_contributions")
         .select("id, status, due_date, competence_month, competence_year, contribution_type:contribution_types(name)")
         .eq("employer_id", empresa.id)
-        .eq("status", "awaiting_value")
+        .in("status", ["awaiting_value", "pending"])
         .gte("due_date", todayBrasilia())
         .order("due_date", { ascending: true })
         .limit(20);
