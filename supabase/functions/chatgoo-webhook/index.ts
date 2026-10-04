@@ -30,6 +30,7 @@ import {
   getChatwootConfig,
 } from "../_shared/chatwoot-client.ts";
 import { normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
+import { isDueCompetence, todayBrasilia } from "../_shared/due-competence.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
