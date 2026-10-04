@@ -149,16 +149,16 @@ export function WorkerListValidationStep({
 
       <div>
         <Label className="text-sm font-medium">Tipo de contribuição *</Label>
-        {fixedTypeId ? (
-          <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium">{fixedTypeName}</div>
-        ) : (
-          <Select value={typeId} onValueChange={(v) => { setTypeId(v); reset(); }} disabled={analyzing}>
-            <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-            <SelectContent>
-              {types.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
+        <Select value={typeId} onValueChange={(v) => {
+          setTypeId(v); reset();
+          onTypeChange?.(v, types.find((t) => t.id === v)?.name ?? "");
+        }} disabled={analyzing}>
+          <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+          <SelectContent>
+            {types.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {typeBlockedMessage && <p className="mt-2 text-sm text-destructive">{typeBlockedMessage}</p>}
       </div>
 
       {!validationId && (
@@ -197,7 +197,7 @@ export function WorkerListValidationStep({
           <Loader2 className="h-4 w-4 animate-spin" /> Analisando a relação de trabalhadores...
         </div>
       ) : !validationId && (
-        <Button type="button" className="w-full" onClick={validate} disabled={!typeId || !file}>
+        <Button type="button" className="w-full" onClick={validate} disabled={!typeId || !file || !!typeBlockedMessage}>
           Enviar e validar lista
         </Button>
       )}
