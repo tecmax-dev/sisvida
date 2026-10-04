@@ -1951,44 +1951,51 @@ serve(async (req) => {
     // A lista de trabalhadores, o valor e a emissão seguem a regra do Portal da Empresa
     // (validação obrigatória por tipo de contribuição, bloqueada no backend).
     if (intent === "EMP_GERAR") {
-      const { data: abertas } = await supabase
-        .from("employer_contributions")
-        .select("competence_month,competence_year,due_date,status,contribution_types(name)")
-        .eq("employer_id", empresa.id)
-        .in("status", ["awaiting_value", "overdue"])
-        .order("competence_year", { ascending: false })
-        .order("competence_month", { ascending: false })
-        .limit(30);
-      const validas = (abertas ?? []).filter((c: any) =>
-        /^\s*(124|125|126)\s*-/.test(String(c.contribution_types?.name ?? "")) && Number(c.competence_year) >= 2026
-      ).slice(0, 8);
-      if (validas.length === 0) {
-        return await answer(
-          `${nomeEmpresa}, não encontrei competências aguardando valor ou vencidas para gerar boleto. Para reenviar um boleto já gerado, escolha "Reenviar boleto" no menu.`,
-          "ANSWERED",
-          "NO_COMPETENCE_TO_GENERATE",
-          null,
-        );
-      }
-      const linhas = validas.map((c: any) => {
-        const comp = `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`;
-        const tipo = String(c.contribution_types?.name ?? "Contribuição").replace(/^\s*\d+\s*-\s*/, "");
-        return `• ${comp} — ${tipo}${c.status === "overdue" ? " (vencida)" : " (aguardando valor)"}`;
+      // Link pessoal (uso único, 2h) abre o Portal da Empresa já identificado.
+      // Mensagem curta com um único botão, enviada só como resposta (janela de 24h).
+      const raw = new Uint8Array(32);
+      crypto.getRandomValues(raw);
+      const linkToken = btoa(String.fromCharCode(...raw)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(linkToken));
+      const tokenHash = [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, "0")).join("");
+      const { error: tokErr } = await supabase.from("employer_portal_link_tokens").insert({
+        token_hash: tokenHash,
+        employer_id: empresa.id,
+        purpose: "generate_boleto",
+        phone: e164 ?? null,
+        expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
       });
-      return await answer(
-        [
-          `${nomeEmpresa}, competências disponíveis para gerar boleto:`,
-          ...linhas,
-          "",
-          "Para gerar, acesse o Portal da Empresa, escolha a competência, envie a lista de trabalhadores do tipo de contribuição e informe o valor:",
-          "https://prosindweb.com.br/portal-empresa",
-          "",
-          "Para voltar ao menu, digite *menu*.",
-        ].join("\n"),
-        "ANSWERED",
-        "GENERATE_PORTAL_LINK_SENT",
+      if (tokErr) {
+        console.error("portal_link_token_failed", tokErr.message);
+        return await answer("Não consegui gerar o link agora. Tente novamente ou digite ATENDENTE.", "SEND_FAILED", "PORTAL_LINK_TOKEN_FAILED", null);
+      }
+      const url = `${APP_BASE_URL}/portal-empresa?t=${encodeURIComponent(linkToken)}`;
+      const bodyText = `${nomeEmpresa}, toque no botão para gerar seu boleto no Portal da Empresa. Lá você escolhe a competência, envia a lista de trabalhadores e informa o valor.`;
+      const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
+        body: bodyText,
+        buttonLabel: "Gerar boleto",
+        url,
+        footer: "Link pessoal, válido por 2 horas",
+      }, { inboundNow: true });
+      let finalResult = result;
+      let mirrored = bodyText;
+      if (!result.sent && !result.dry_run && result.error !== "OUTSIDE_24H_WINDOW") {
+        mirrored = `${bodyText}\n\nAcessar: ${url}`;
+        finalResult = await chatgooSendTextViaMeta(supabase, e164 ?? "", mirrored, { inboundNow: true });
+      }
+      const delivered = finalResult.sent || finalResult.dry_run;
+      if (delivered) await mirrorBot(bodyText);
+      await log(
+        delivered ? "ANSWERED" : "SEND_FAILED",
+        delivered ? "GENERATE_PORTAL_LINK_SENT" : finalResult.error ?? `META_HTTP_${finalResult.status ?? "NETWORK"}`,
         null,
+        bodyText,
+        finalResult.message_id ?? null,
       );
+      return new Response(JSON.stringify({ status: delivered ? "ANSWERED" : "SEND_FAILED" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (intent === "EMP_BOLETOS") {

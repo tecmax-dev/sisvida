@@ -3599,6 +3599,47 @@ export type Database = {
           },
         ]
       }
+      employer_portal_link_tokens: {
+        Row: {
+          created_at: string
+          employer_id: string
+          expires_at: string
+          id: string
+          phone: string | null
+          purpose: string
+          token_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          employer_id: string
+          expires_at: string
+          id?: string
+          phone?: string | null
+          purpose?: string
+          token_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          employer_id?: string
+          expires_at?: string
+          id?: string
+          phone?: string | null
+          purpose?: string
+          token_hash?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_portal_link_tokens_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employer_portal_logs: {
         Row: {
           action: string
