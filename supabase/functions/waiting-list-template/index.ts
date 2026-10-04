@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts";
 
 const corsHeaders = {
@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const WABA_ID = "2063797207822998";
-const TEMPLATE_NAME = "vaga_disponivel_v1";
+const BASE_TEMPLATE_NAME = "vaga_disponivel_v1";
 const LANGUAGE = "pt_BR";
 const PUBLIC_BASE_URL = Deno.env.get("PUBLIC_APP_BASE_URL") || "https://sindexa.com.br";
 const APP_ROUTE = "/app/filas";
@@ -26,7 +26,7 @@ const BODY_TEXT =
   "Para verificar e reservar a vaga, utilize o botão abaixo (canal oficial).\n" +
   "Esta é uma comunicação automática referente a uma solicitação previamente registrada.";
 
-const TEMPLATE_COMPONENTS = [
+const BASE_COMPONENTS = [
   {
     type: "BODY",
     text: BODY_TEXT,
@@ -38,6 +38,24 @@ const TEMPLATE_COMPONENTS = [
     buttons: [
       { type: "URL", text: "Abrir aplicativo", url: `${PUBLIC_BASE_URL}${APP_ROUTE}` },
     ],
+  },
+];
+
+// Modelo com link pessoal para a página que lista TODAS as vagas livres (15 dias).
+const OPTIONS_NAME = "vaga_disponivel_opcoes_v1";
+const OPTIONS_COMPONENTS = [
+  {
+    type: "BODY",
+    text:
+      "Olá, {{1}}! Abriram vagas na agenda de {{2}}, profissional em cuja lista de espera você está.\n\n" +
+      "Toque no botão abaixo para ver todas as datas e horários livres dos próximos dias e escolher o que for melhor para você. " +
+      "O link é pessoal e vale por 24 horas.",
+    example: { body_text: [["João", "Dra. Karen Freire"]] },
+  },
+  { type: "FOOTER", text: "Sindicato dos Comerciários" },
+  {
+    type: "BUTTONS",
+    buttons: [{ type: "URL", text: "Escolher horário", url: "https://prosindweb.com.br/escolher-horario?t={{1}}", example: ["https://prosindweb.com.br/escolher-horario?t=AbCdEf123456GhIjKl789"] }],
   },
 ];
 
@@ -73,6 +91,9 @@ serve(async (req) => {
 
   const body = await req.json().catch(() => ({} as Record<string, unknown>));
   const action = String(body.action ?? "status");
+  const useOptions = body.template === "opcoes";
+  const TEMPLATE_NAME = useOptions ? OPTIONS_NAME : BASE_TEMPLATE_NAME;
+  const TEMPLATE_COMPONENTS = useOptions ? OPTIONS_COMPONENTS : BASE_COMPONENTS;
 
   if (action === "status") {
     const r = await fetch(

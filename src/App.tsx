@@ -91,6 +91,7 @@ const HomologacaoConfirmation = lazy(() => import("./pages/HomologacaoConfirmati
 const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
 const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
 const DueBoletoPage = lazy(() => import("./pages/public/DueBoletoPage"));
+const WaitingListPickPage = lazy(() => import("./pages/public/WaitingListPickPage"));
 const PresentationPage = lazy(() => import("./pages/public/PresentationPage"));
 const ClinicPresentationPage = lazy(() => import("./pages/public/ClinicPresentationPage"));
 const NegotiationPreviewPage = lazy(() => import("./pages/public/NegotiationPreviewPage"));
@@ -527,6 +528,7 @@ function App() {
                 {/* Public Panel and Totem routes */}
                 <Route path="/portal-empresa" element={<EmployerPortal />} />
                 <Route path="/gerar-boleto" element={<DueBoletoPage />} />
+                <Route path="/escolher-horario" element={<WaitingListPickPage />} />
                 <Route path="/portal-empresa/:clinicSlug" element={<EmployerPortal />} />
                 <Route path="/portal-contador" element={<AccountingOfficePortal />} />
                 <Route path="/portal-contador/:clinicSlug" element={<AccountingOfficePortal />} />
