@@ -1984,10 +1984,8 @@ serve(async (req) => {
         return await answer("Não consegui gerar o link agora. Tente novamente ou digite ATENDENTE.", "SEND_FAILED", "PORTAL_LINK_TOKEN_FAILED", null);
       }
       const url = `${APP_BASE_URL}/gerar-boleto?t=${encodeURIComponent(linkToken)}`;
-      const comp = `${String(alvo.competence_month).padStart(2, "0")}/${alvo.competence_year}`;
-      const venc = String(alvo.due_date).slice(0, 10).split("-").reverse().join("/");
-      const tipo = String(alvo.contribution_type?.name ?? "Contribuição").replace(/^\s*\d+\s*[-–]\s*/, "");
-      const bodyText = `${nomeEmpresa}, competência ${comp} – ${tipo}, vencimento ${venc}. Toque no botão para enviar a lista de trabalhadores e gerar o boleto.`;
+      // O tipo de contribuição (Mensalidade, Taxa Negocial...) é escolhido pela empresa na página, ao enviar a lista.
+      const bodyText = `${nomeEmpresa}, toque no botão para escolher o tipo de contribuição, enviar a lista de trabalhadores e gerar o boleto da competência a vencer.`;
       const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
         body: bodyText,
         buttonLabel: "Gerar boleto",

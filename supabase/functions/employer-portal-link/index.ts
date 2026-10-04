@@ -52,7 +52,18 @@ Deno.serve(async (req) => {
       if (!c || c.employer_id !== emp.id || !isDueCompetence(c)) {
         return json({ error: "Esta competência não está mais a vencer. Use o Portal da Empresa." }, 410);
       }
-      return json({ employer, contribution: c });
+      // Todas as competências a vencer da empresa (um por tipo): a empresa escolhe o tipo na página.
+      const { data: all } = await supabase
+        .from("employer_contributions")
+        .select("id, employer_id, status, due_date, lytex_invoice_url, competence_month, competence_year, contribution_type:contribution_types(name)")
+        .eq("employer_id", emp.id)
+        .in("status", ["awaiting_value", "pending"])
+        .order("due_date", { ascending: true })
+        .limit(30);
+      // deno-lint-ignore no-explicit-any
+      const options = (all || []).filter((x: any) =>
+        isDueCompetence(x) && /^\s*(124|125|126)\b|mensalidade|negocial|assistencial/i.test(String(x.contribution_type?.name ?? "")));
+      return json({ employer, contribution: c, options: options.length ? options : [c] });
     }
     return json({ employer });
   } catch (e) {
