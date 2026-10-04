@@ -17406,6 +17406,53 @@ export type Database = {
           },
         ]
       }
+      waiting_list_pick_tokens: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          patient_id: string
+          professional_id: string
+          token_hash: string
+          used_at: string | null
+          waiting_list_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          patient_id: string
+          professional_id: string
+          token_hash: string
+          used_at?: string | null
+          waiting_list_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          patient_id?: string
+          professional_id?: string
+          token_hash?: string
+          used_at?: string | null
+          waiting_list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiting_list_pick_tokens_waiting_list_id_fkey"
+            columns: ["waiting_list_id"]
+            isOneToOne: false
+            referencedRelation: "waiting_list"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_logs: {
         Row: {
           delivered_at: string | null
