@@ -27,6 +27,9 @@ interface Props {
   employerCnpj: string;
   validationId: string | null;
   onValidated: (validationId: string | null) => void;
+  /** Tipo já escolhido antes (ex.: página Gerar boleto): trava o campo. */
+  fixedTypeId?: string | null;
+  fixedTypeName?: string;
 }
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
@@ -46,10 +49,10 @@ const toBase64 = (file: File) =>
   });
 
 export function WorkerListValidationStep({
-  contributionId, portalType, portalId, employerName, employerCnpj, validationId, onValidated,
+  contributionId, portalType, portalId, employerName, employerCnpj, validationId, onValidated, fixedTypeId, fixedTypeName,
 }: Props) {
   const [types, setTypes] = useState<{ id: string; name: string }[]>([]);
-  const [typeId, setTypeId] = useState("");
+  const [typeId, setTypeId] = useState(fixedTypeId || "");
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<WorkerListValidationResult | null>(null);
@@ -59,7 +62,7 @@ export function WorkerListValidationStep({
 
   // Nova validação sempre que mudar a empresa/lançamento
   useEffect(() => {
-    setTypeId(""); setFile(null); setResult(null); setError(null); onValidated(null);
+    setTypeId(fixedTypeId || ""); setFile(null); setResult(null); setError(null); onValidated(null);
     supabase.functions
       .invoke("validate-worker-list", {
         body: { action: "list_types", contribution_id: contributionId, portal_type: portalType, portal_id: portalId },
@@ -146,12 +149,16 @@ export function WorkerListValidationStep({
 
       <div>
         <Label className="text-sm font-medium">Tipo de contribuição *</Label>
-        <Select value={typeId} onValueChange={(v) => { setTypeId(v); reset(); }} disabled={analyzing}>
-          <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-          <SelectContent>
-            {types.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        {fixedTypeId ? (
+          <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium">{fixedTypeName}</div>
+        ) : (
+          <Select value={typeId} onValueChange={(v) => { setTypeId(v); reset(); }} disabled={analyzing}>
+            <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+            <SelectContent>
+              {types.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {!validationId && (

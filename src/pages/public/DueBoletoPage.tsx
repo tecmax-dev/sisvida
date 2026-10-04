@@ -11,7 +11,7 @@ import { formatDateBR } from "@/lib/date";
 interface Employer { id: string; name: string; cnpj: string }
 interface Contribution {
   id: string; due_date: string; status: string; lytex_invoice_url: string | null; competence_month: number; competence_year: number;
-  contribution_type: { name: string } | null;
+  contribution_type_id?: string | null; contribution_type: { name: string } | null;
 }
 
 /** Página exclusiva aberta pelo botão "Gerar boleto" do WhatsApp: uma competência a vencer. */
@@ -41,7 +41,7 @@ export default function DueBoletoPage() {
         setEmployer(data.employer);
         const opts: Contribution[] = data.options?.length ? data.options : [data.contribution];
         setOptions(opts);
-        if (opts.length === 1) pick(opts[0]); else setContrib(null);
+        setContrib(null);
       }
       setLoading(false);
     });
@@ -79,7 +79,7 @@ export default function DueBoletoPage() {
       <div className="mx-auto max-w-2xl space-y-4">
         {loading && <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
 
-        {!loading && employer && !chosen && options.length > 1 && (
+        {!loading && employer && !chosen && options.length > 0 && (
           <Card>
             <CardHeader><CardTitle>Qual contribuição você vai gerar?</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -94,7 +94,7 @@ export default function DueBoletoPage() {
           </Card>
         )}
 
-        {!loading && !contrib && !(employer && options.length > 1) && (
+        {!loading && !contrib && !(employer && options.length > 0) && (
           <Card><CardContent className="py-10 text-center space-y-3">
             <AlertTriangle className="h-10 w-10 mx-auto text-destructive" />
             <p className="font-medium">{error}</p>
@@ -107,11 +107,12 @@ export default function DueBoletoPage() {
           <>
             <Card>
               <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Gerar boleto</CardTitle>
-                {options.length > 1 && <Button variant="ghost" size="sm" onClick={() => { setChosen(false); setContrib(null); }}>Trocar tipo</Button>}
+                <Button variant="ghost" size="sm" onClick={() => { setChosen(false); setContrib(null); }}>Trocar tipo</Button>
               </CardHeader>
               <CardContent className="grid gap-1 text-sm">
                 <p><span className="text-muted-foreground">Empresa:</span> {employer.name}</p>
-                <p><span className="text-muted-foreground">Competência:</span> {comp} — {contrib.contribution_type?.name}</p>
+                <p><span className="text-muted-foreground">Tipo escolhido:</span> {typeName(contrib)}</p>
+                <p><span className="text-muted-foreground">Competência:</span> {comp}</p>
                 <p><span className="text-muted-foreground">Vencimento:</span> {formatDateBR(contrib.due_date)}</p>
               </CardContent>
             </Card>
@@ -131,6 +132,7 @@ export default function DueBoletoPage() {
                     contributionId={contrib.id} portalType="employer" portalId={employer.id}
                     employerName={employer.name} employerCnpj={employer.cnpj}
                     validationId={validationId} onValidated={setValidationId}
+                    fixedTypeId={contrib.contribution_type_id ?? null} fixedTypeName={typeName(contrib)}
                   />
                 </CardContent></Card>
                 <Card><CardContent className="pt-6 space-y-3">

@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     if (row.purpose === "generate_boleto_due" && row.contribution_id) {
       const { data: c } = await supabase
         .from("employer_contributions")
-        .select("id, employer_id, status, due_date, lytex_invoice_url, competence_month, competence_year, contribution_type:contribution_types(name)")
+        .select("id, employer_id, status, due_date, lytex_invoice_url, competence_month, competence_year, contribution_type_id, contribution_type:contribution_types(name)")
         .eq("id", row.contribution_id)
         .maybeSingle();
       if (!c || c.employer_id !== emp.id || !isDueCompetence(c)) {
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       // Todas as competências a vencer da empresa (um por tipo): a empresa escolhe o tipo na página.
       const { data: all } = await supabase
         .from("employer_contributions")
-        .select("id, employer_id, status, due_date, lytex_invoice_url, competence_month, competence_year, contribution_type:contribution_types(name)")
+        .select("id, employer_id, status, due_date, lytex_invoice_url, competence_month, competence_year, contribution_type_id, contribution_type:contribution_types(name)")
         .eq("employer_id", emp.id)
         .in("status", ["awaiting_value", "pending"])
         .gte("due_date", todayBrasilia())
