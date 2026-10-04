@@ -16,3 +16,9 @@ describe("isDueCompetence", () => {
     expect(isDueCompetence({ status: "cancelled", due_date: "2026-10-20" }, now)).toBe(false);
   });
 });
+
+describe("isDueCompetence com boleto gerado", () => {
+  it("pendente a vencer continua a vencer", () => {
+    expect(isDueCompetence({ status: "pending", due_date: "2026-10-13" }, now)).toBe(true);
+  });
+});
