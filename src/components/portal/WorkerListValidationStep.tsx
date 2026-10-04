@@ -27,9 +27,11 @@ interface Props {
   employerCnpj: string;
   validationId: string | null;
   onValidated: (validationId: string | null) => void;
-  /** Tipo já escolhido antes (ex.: página Gerar boleto): trava o campo. */
+  /** Tipo pré-selecionado (editável) e callback ao trocar o tipo. */
   fixedTypeId?: string | null;
   fixedTypeName?: string;
+  onTypeChange?: (id: string, name: string) => void;
+  typeBlockedMessage?: string | null;
 }
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
