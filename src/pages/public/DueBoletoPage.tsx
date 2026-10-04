@@ -53,6 +53,15 @@ export default function DueBoletoPage() {
     else { setDone(false); setInvoiceUrl(null); }
   }
   const typeName = (c: Contribution) => String(c.contribution_type?.name ?? "Contribuição").replace(/^\s*\d+\s*[-–]\s*/, "");
+  const [noDue, setNoDue] = useState<string | null>(null);
+  function handleType(id: string, name: string) {
+    const opt = options.find((o) => o.contribution_type_id === id);
+    if (opt) { setNoDue(null); pick(opt); }
+    else {
+      setContrib(null); setDone(false); setValidationId(null);
+      setNoDue(`Não há competência a vencer de ${name.replace(/^\s*\d+\s*[-–]\s*/, "")} para esta empresa. Competências vencidas são geradas somente pelo Portal da Empresa.`);
+    }
+  }
   const compOf = (c: Contribution) => `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`;
 
   const generate = async () => {
@@ -79,22 +88,7 @@ export default function DueBoletoPage() {
       <div className="mx-auto max-w-2xl space-y-4">
         {loading && <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
 
-        {!loading && employer && !chosen && options.length > 0 && (
-          <Card>
-            <CardHeader><CardTitle>Qual contribuição você vai gerar?</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">{employer.name} — escolha o tipo de contribuição para enviar a lista de trabalhadores.</p>
-              {options.map((o) => (
-                <Button key={o.id} variant="outline" className="w-full h-auto py-3 justify-between" onClick={() => pick(o)}>
-                  <span className="text-left font-medium">{typeName(o)}</span>
-                  <span className="text-xs text-muted-foreground">{compOf(o)} · vence {formatDateBR(o.due_date)}{o.status === "pending" ? " · boleto gerado" : ""}</span>
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {!loading && !contrib && !(employer && options.length > 0) && (
+        {!loading && !(employer && options.length > 0) && (
           <Card><CardContent className="py-10 text-center space-y-3">
             <AlertTriangle className="h-10 w-10 mx-auto text-destructive" />
             <p className="font-medium">{error}</p>
@@ -103,48 +97,56 @@ export default function DueBoletoPage() {
           </CardContent></Card>
         )}
 
-        {employer && contrib && (
+        {!loading && employer && options.length > 0 && (
           <>
             <Card>
-              <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle>Gerar boleto</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => { setChosen(false); setContrib(null); }}>Trocar tipo</Button>
-              </CardHeader>
+              <CardHeader><CardTitle>Gerar boleto</CardTitle></CardHeader>
               <CardContent className="grid gap-1 text-sm">
                 <p><span className="text-muted-foreground">Empresa:</span> {employer.name}</p>
-                <p><span className="text-muted-foreground">Tipo escolhido:</span> {typeName(contrib)}</p>
-                <p><span className="text-muted-foreground">Competência:</span> {comp}</p>
-                <p><span className="text-muted-foreground">Vencimento:</span> {formatDateBR(contrib.due_date)}</p>
+                {contrib ? (
+                  <>
+                    <p><span className="text-muted-foreground">Tipo escolhido:</span> {typeName(contrib)}</p>
+                    <p><span className="text-muted-foreground">Competência:</span> {comp}</p>
+                    <p><span className="text-muted-foreground">Vencimento:</span> {formatDateBR(contrib.due_date)}</p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">Escolha abaixo o tipo de contribuição que você vai gerar.</p>
+                )}
               </CardContent>
             </Card>
 
-            {done ? (
+            {contrib && done ? (
               <Card><CardContent className="py-10 text-center space-y-3">
                 <CheckCircle2 className="h-10 w-10 mx-auto text-primary" />
                 <p className="font-medium">{contrib.status === "pending" ? "O boleto desta competência já foi gerado." : "Boleto gerado com sucesso!"}</p>
                 {invoiceUrl && (
                   <Button asChild><a href={invoiceUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Abrir boleto</a></Button>
                 )}
+                <Button variant="ghost" size="sm" onClick={() => { setContrib(null); setDone(false); setNoDue(null); }}>Escolher outro tipo</Button>
               </CardContent></Card>
             ) : (
               <>
                 <Card><CardContent className="pt-6">
                   <WorkerListValidationStep
-                    contributionId={contrib.id} portalType="employer" portalId={employer.id}
+                    contributionId={contrib?.id ?? options[0].id} portalType="employer" portalId={employer.id}
                     employerName={employer.name} employerCnpj={employer.cnpj}
                     validationId={validationId} onValidated={setValidationId}
-                    fixedTypeId={contrib.contribution_type_id ?? null} fixedTypeName={typeName(contrib)}
+                    fixedTypeId={contrib?.contribution_type_id ?? null}
+                    onTypeChange={handleType} typeBlockedMessage={noDue}
                   />
                 </CardContent></Card>
-                <Card><CardContent className="pt-6 space-y-3">
-                  <Label htmlFor="due-value">Valor (R$)</Label>
-                  <Input id="due-value" inputMode="decimal" placeholder="0,00" value={value}
-                    onChange={(e) => setValue(e.target.value)} disabled={!validationId || saving} />
-                  {!validationId && <p className="text-xs text-muted-foreground">Envie e valide a lista de trabalhadores para liberar o valor.</p>}
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button className="w-full" onClick={generate} disabled={!validationId || !value || saving}>
-                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Gerar boleto
-                  </Button>
-                </CardContent></Card>
+                {contrib && (
+                  <Card><CardContent className="pt-6 space-y-3">
+                    <Label htmlFor="due-value">Valor (R$)</Label>
+                    <Input id="due-value" inputMode="decimal" placeholder="0,00" value={value}
+                      onChange={(e) => setValue(e.target.value)} disabled={!validationId || saving} />
+                    {!validationId && <p className="text-xs text-muted-foreground">Envie e valide a lista de trabalhadores para liberar o valor.</p>}
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                    <Button className="w-full" onClick={generate} disabled={!validationId || !value || saving}>
+                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Gerar boleto
+                    </Button>
+                  </CardContent></Card>
+                )}
               </>
             )}
           </>
