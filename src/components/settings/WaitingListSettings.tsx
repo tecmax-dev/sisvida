@@ -136,7 +136,41 @@ export function WaitingListSettings() {
             Após esse prazo a oferta expira automaticamente e a vaga é oferecida ao próximo da fila.
           </p>
         </div>
+        <OptionsTemplateBox />
       </CardContent>
     </Card>
+  );
+}
+
+/** Modelo do WhatsApp com botão "Escolher horário" (lista todas as vagas livres). */
+function OptionsTemplateBox() {
+  const { toast } = useToast();
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const call = async (action: "status" | "create") => {
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke("waiting-list-template", { body: { action, template: "opcoes" } });
+    setBusy(false);
+    if (error) { toast({ title: "Erro", description: "Não foi possível falar com a Meta.", variant: "destructive" }); return; }
+    if (action === "status") setStatus((data as any)?.status ?? "NOT_FOUND");
+    else {
+      const ok = (data as any)?.success;
+      toast({ title: ok ? "Modelo enviado para aprovação" : "A Meta recusou o envio", description: ok ? "A aprovação pode levar até 48 horas." : JSON.stringify((data as any)?.response?.error?.message ?? "") , variant: ok ? undefined : "destructive" });
+      call("status");
+    }
+  };
+  useEffect(() => { call("status"); }, []);
+  const label: Record<string, string> = { APPROVED: "Aprovado", PENDING: "Em análise pela Meta", REJECTED: "Recusado", NOT_FOUND: "Ainda não enviado" };
+  return (
+    <div className="rounded-lg border p-3 space-y-2">
+      <Label>Aviso de vagas com todas as opções de horário</Label>
+      <p className="text-xs text-muted-foreground">
+        Quando aprovado, o aviso do WhatsApp traz o botão "Escolher horário", que mostra todas as vagas livres dos próximos 15 dias. Até lá, continua o aviso antigo com um único horário.
+      </p>
+      <p className="text-sm">Situação: <strong>{status ? label[status] ?? status : "Consultando..."}</strong></p>
+      {status === "NOT_FOUND" && (
+        <Button size="sm" disabled={busy} onClick={() => call("create")}>Enviar modelo para aprovação da Meta</Button>
+      )}
+    </div>
   );
 }
