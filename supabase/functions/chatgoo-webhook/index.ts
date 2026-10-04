@@ -156,21 +156,15 @@ const ASSOC_LIST_ROWS = [
 
 const EMP_MENU = [
   "Atendimento à empresa:",
-  "1 - Boletos e contribuições da empresa",
-  "2 - Homologações da empresa",
-  "3 - Gerar boleto",
-  "4 - Reenviar boleto já gerado",
-  "5 - Atualizar boleto",
-  "6 - Dados cadastrais da empresa",
-  "7 - Falar com um atendente",
+  "1 - Homologações da empresa",
+  "2 - Gerar boleto",
+  "3 - Dados cadastrais da empresa",
+  "4 - Falar com um atendente",
 ].join("\n");
 
 const EMP_LIST_ROWS = [
-  { id: "OPT_EMP_BOLETOS", title: "Boletos", description: "Contribuições em aberto da empresa" },
   { id: "OPT_EMP_HOMOLOGACAO", title: "Homologações", description: "Agendamentos de rescisão" },
   { id: "OPT_EMP_GERAR", title: "Gerar boleto", description: "Enviar lista de trabalhadores e gerar" },
-  { id: "OPT_EMP_2VIA", title: "Reenviar boleto", description: "Reenviar link e código do boleto já gerado" },
-  { id: "OPT_EMP_ATUALIZAR", title: "Atualizar boleto", description: "Valor para zeradas ou vencimento para vencidas" },
   { id: "OPT_EMP_DADOS", title: "Dados cadastrais", description: "Dados da empresa no sindicato" },
   { id: "OPT_EMP_HUMANO", title: "Falar com atendente", description: "Transferir para a equipe" },
 ];
@@ -208,13 +202,10 @@ const ASSOC_NUMBER_MAP: Record<string, Intent> = {
 };
 
 const EMP_NUMBER_MAP: Record<string, Intent> = {
-  "1": "EMP_BOLETOS",
-  "2": "EMP_HOMOLOGACAO",
-  "3": "EMP_GERAR",
-  "4": "EMP_2VIA",
-  "5": "EMP_ATUALIZAR",
-  "6": "EMP_DADOS",
-  "7": "HUMANO",
+  "1": "EMP_HOMOLOGACAO",
+  "2": "EMP_GERAR",
+  "3": "EMP_DADOS",
+  "4": "HUMANO",
 };
 
 const CTB_NUMBER_MAP: Record<string, Intent> = {
