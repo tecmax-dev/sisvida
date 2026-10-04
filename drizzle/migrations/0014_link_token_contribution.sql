@@ -1,0 +1,1 @@
+ALTER TABLE public.employer_portal_link_tokens ADD COLUMN IF NOT EXISTS contribution_id uuid REFERENCES public.employer_contributions(id) ON DELETE CASCADE;

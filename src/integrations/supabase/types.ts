@@ -3601,6 +3601,7 @@ export type Database = {
       }
       employer_portal_link_tokens: {
         Row: {
+          contribution_id: string | null
           created_at: string
           employer_id: string
           expires_at: string
@@ -3611,6 +3612,7 @@ export type Database = {
           used_at: string | null
         }
         Insert: {
+          contribution_id?: string | null
           created_at?: string
           employer_id: string
           expires_at: string
@@ -3621,6 +3623,7 @@ export type Database = {
           used_at?: string | null
         }
         Update: {
+          contribution_id?: string | null
           created_at?: string
           employer_id?: string
           expires_at?: string
@@ -3631,6 +3634,13 @@ export type Database = {
           used_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employer_portal_link_tokens_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employer_portal_link_tokens_employer_id_fkey"
             columns: ["employer_id"]
