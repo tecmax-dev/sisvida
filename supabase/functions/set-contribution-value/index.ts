@@ -364,6 +364,14 @@ serve(async (req) => {
       );
     }
 
+    // Página exclusiva do WhatsApp: só competência a vencer (vencidas apenas pelo Portal da Empresa)
+    if (body.due_only === true && !isDueCompetence(contribution)) {
+      return new Response(
+        JSON.stringify({ error: "Esta competência já venceu. Gere o boleto pelo Portal da Empresa." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Enforce valor mínimo por categoria do empregador
     if (contribution.employer_id) {
       const { data: empCat } = await supabase

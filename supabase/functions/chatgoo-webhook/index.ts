@@ -30,6 +30,7 @@ import {
   getChatwootConfig,
 } from "../_shared/chatwoot-client.ts";
 import { normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
+import { isDueCompetence, todayBrasilia } from "../_shared/due-competence.ts";
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://sindexa.com.br";
@@ -1951,8 +1952,29 @@ serve(async (req) => {
     // A lista de trabalhadores, o valor e a emissão seguem a regra do Portal da Empresa
     // (validação obrigatória por tipo de contribuição, bloqueada no backend).
     if (intent === "EMP_GERAR") {
-      // Link pessoal (uso único, 2h) abre o Portal da Empresa já identificado.
-      // Mensagem curta com um único botão, enviada só como resposta (janela de 24h).
+      // Fluxo exclusivo: só a competência A VENCER mais próxima. Vencidas: apenas Portal da Empresa.
+      const { data: candidatas } = await supabase
+        .from("employer_contributions")
+        .select("id, status, due_date, competence_month, competence_year, contribution_type:contribution_types(name)")
+        .eq("employer_id", empresa.id)
+        .eq("status", "awaiting_value")
+        .gte("due_date", todayBrasilia())
+        .order("due_date", { ascending: true })
+        .limit(20);
+      // deno-lint-ignore no-explicit-any
+      const alvo = (candidatas || []).find((c: any) =>
+        isDueCompetence(c) &&
+        /^\s*(124|125|126)\b|mensalidade|negocial|assistencial/i.test(String(c.contribution_type?.name ?? ""))
+      // deno-lint-ignore no-explicit-any
+      ) as any;
+      if (!alvo) {
+        return await answer(
+          `${nomeEmpresa}, não há competência a vencer para gerar boleto agora. Para competências vencidas, acesse o Portal da Empresa com seu CNPJ: ${APP_BASE_URL}/portal-empresa`,
+          "ANSWERED",
+          "NO_DUE_COMPETENCE",
+          null,
+        );
+      }
       const raw = new Uint8Array(32);
       crypto.getRandomValues(raw);
       const linkToken = btoa(String.fromCharCode(...raw)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -1961,7 +1983,8 @@ serve(async (req) => {
       const { error: tokErr } = await supabase.from("employer_portal_link_tokens").insert({
         token_hash: tokenHash,
         employer_id: empresa.id,
-        purpose: "generate_boleto",
+        contribution_id: alvo.id,
+        purpose: "generate_boleto_due",
         phone: e164 ?? null,
         expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
       });
@@ -1969,8 +1992,11 @@ serve(async (req) => {
         console.error("portal_link_token_failed", tokErr.message);
         return await answer("Não consegui gerar o link agora. Tente novamente ou digite ATENDENTE.", "SEND_FAILED", "PORTAL_LINK_TOKEN_FAILED", null);
       }
-      const url = `${APP_BASE_URL}/portal-empresa?t=${encodeURIComponent(linkToken)}`;
-      const bodyText = `${nomeEmpresa}, toque no botão para gerar seu boleto no Portal da Empresa. Lá você escolhe a competência, envia a lista de trabalhadores e informa o valor.`;
+      const url = `${APP_BASE_URL}/gerar-boleto?t=${encodeURIComponent(linkToken)}`;
+      const comp = `${String(alvo.competence_month).padStart(2, "0")}/${alvo.competence_year}`;
+      const venc = String(alvo.due_date).slice(0, 10).split("-").reverse().join("/");
+      const tipo = String(alvo.contribution_type?.name ?? "Contribuição").replace(/^\s*\d+\s*[-–]\s*/, "");
+      const bodyText = `${nomeEmpresa}, competência ${comp} – ${tipo}, vencimento ${venc}. Toque no botão para enviar a lista de trabalhadores e gerar o boleto.`;
       const result = await chatgooSendCtaUrlViaMeta(supabase, e164 ?? "", {
         body: bodyText,
         buttonLabel: "Gerar boleto",

@@ -2,6 +2,7 @@
 // e devolve a sessão do Portal da Empresa, no mesmo formato do login por CNPJ.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { isDueCompetence } from "../_shared/due-competence.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
       .eq("token_hash", hash)
       .is("used_at", null)
       .gt("expires_at", new Date().toISOString())
-      .select("employer_id")
+      .select("employer_id, contribution_id, purpose")
       .maybeSingle();
     if (!row) return json({ error: "Este link expirou ou já foi usado. Peça um novo pelo WhatsApp." }, 410);
 
@@ -40,6 +41,19 @@ Deno.serve(async (req) => {
     if (!emp || emp.is_active === false) return json({ error: "Empresa não encontrada." }, 404);
 
     const { is_active: _ignored, ...employer } = emp;
+
+    // Link exclusivo de competência a vencer: devolve só essa competência.
+    if (row.purpose === "generate_boleto_due" && row.contribution_id) {
+      const { data: c } = await supabase
+        .from("employer_contributions")
+        .select("id, employer_id, status, due_date, competence_month, competence_year, contribution_type:contribution_types(name)")
+        .eq("id", row.contribution_id)
+        .maybeSingle();
+      if (!c || c.employer_id !== emp.id || !isDueCompetence(c)) {
+        return json({ error: "Esta competência não está mais a vencer. Use o Portal da Empresa." }, 410);
+      }
+      return json({ employer, contribution: c });
+    }
     return json({ employer });
   } catch (e) {
     console.error("[employer-portal-link]", (e as Error)?.message);
