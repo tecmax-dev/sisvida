@@ -613,7 +613,7 @@ serve(async (req) => {
   else if (intent === "MENU_CONTABILIDADE") profile = "CONTABILIDADE";
   else if (
     intent === "EMP_BOLETOS" || intent === "EMP_HOMOLOGACAO" || intent === "EMP_DADOS" ||
-    intent === "EMP_2VIA" || intent === "EMP_ATUALIZAR"
+    intent === "EMP_2VIA" || intent === "EMP_ATUALIZAR" || intent === "EMP_GERAR"
   ) profile = "EMPRESA";
   else if (
     intent === "CTB_EMPRESAS" || intent === "CTB_BOLETOS" || intent === "CTB_2VIA" ||
