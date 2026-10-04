@@ -365,7 +365,7 @@ serve(async (req) => {
     }
 
     // Página exclusiva do WhatsApp: só competência a vencer (vencidas apenas pelo Portal da Empresa)
-    if (body.due_only === true && !isDueCompetence(contribution)) {
+    if (body.due_only === true && (contribution.status !== "awaiting_value" || !isDueCompetence(contribution))) {
       return new Response(
         JSON.stringify({ error: "Esta competência já venceu. Gere o boleto pelo Portal da Empresa." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

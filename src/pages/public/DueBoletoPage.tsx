@@ -10,7 +10,7 @@ import { formatDateBR } from "@/lib/date";
 
 interface Employer { id: string; name: string; cnpj: string }
 interface Contribution {
-  id: string; due_date: string; competence_month: number; competence_year: number;
+  id: string; due_date: string; status: string; lytex_invoice_url: string | null; competence_month: number; competence_year: number;
   contribution_type: { name: string } | null;
 }
 
@@ -35,7 +35,10 @@ export default function DueBoletoPage() {
       let msg = data?.error as string | undefined;
       if (e && !msg) { try { msg = JSON.parse(await (e as any).context.text())?.error; } catch { /* */ } }
       if (msg || !data?.contribution) setError(msg || "Este link não é válido para gerar boleto.");
-      else { setEmployer(data.employer); setContrib(data.contribution); }
+      else {
+        setEmployer(data.employer); setContrib(data.contribution);
+        if (data.contribution.status === "pending") { setDone(true); setInvoiceUrl(data.contribution.lytex_invoice_url || null); }
+      }
       setLoading(false);
     });
   }, []);
@@ -87,7 +90,7 @@ export default function DueBoletoPage() {
             {done ? (
               <Card><CardContent className="py-10 text-center space-y-3">
                 <CheckCircle2 className="h-10 w-10 mx-auto text-primary" />
-                <p className="font-medium">Boleto gerado com sucesso!</p>
+                <p className="font-medium">{contrib.status === "pending" ? "O boleto desta competência já foi gerado." : "Boleto gerado com sucesso!"}</p>
                 {invoiceUrl && (
                   <Button asChild><a href={invoiceUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4 mr-2" />Abrir boleto</a></Button>
                 )}
