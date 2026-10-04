@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { validateConsentForCurrentPhone, normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts";
 import { chatwootMirrorTemplateSent } from "../_shared/chatwoot-client.ts";
+import { listFreeSlots } from "../_shared/free-slots.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -57,7 +58,7 @@ serve(async (req) => {
 
   const { data: entry, error: entryErr } = await admin
     .from("waiting_list")
-    .select("id, clinic_id, patient_id, is_active, patient:patients(id, name, phone)")
+    .select("id, clinic_id, patient_id, professional_id, is_active, patient:patients(id, name, phone)")
     .eq("id", waitingListId)
     .maybeSingle();
 
