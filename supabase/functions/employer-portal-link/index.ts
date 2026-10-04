@@ -2,6 +2,7 @@
 // e devolve a sessão do Portal da Empresa, no mesmo formato do login por CNPJ.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { isDueCompetence } from "../_shared/due-competence.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
