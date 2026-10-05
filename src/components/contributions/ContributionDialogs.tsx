@@ -990,7 +990,35 @@ export default function ContributionDialogs({
                     </Button>
                   </>
                 )}
-                {(!selectedContribution.lytex_invoice_id || !selectedContribution.lytex_invoice_url) && 
+                {(selectedContribution.contribution_types as any)?.billing_provider === "sicoob" ? (
+                  <>
+                    {(selectedContribution as any).sicoob_nosso_numero ? (
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          const { data } = await supabase.functions.invoke("sicoob-boleto", {
+                            body: { action: "pdf", contribution_id: selectedContribution.id },
+                          });
+                          if ((data as any)?.url) window.open((data as any).url, "_blank");
+                          else toast.error((data as any)?.error || "PDF do boleto Sicoob não disponível.");
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Abrir boleto Sicoob
+                      </Button>
+                    ) : null}
+                    {selectedContribution.status !== "cancelled" && (
+                      <Button
+                        onClick={() => onGenerateInvoice(selectedContribution)}
+                        disabled={generatingInvoice}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        {generatingInvoice ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                        {(selectedContribution as any).sicoob_nosso_numero ? "Consultar pagamento Sicoob" : "Emitir boleto Sicoob"}
+                      </Button>
+                    )}
+                  </>
+                ) : (!selectedContribution.lytex_invoice_id || !selectedContribution.lytex_invoice_url) && 
                   selectedContribution.status !== "cancelled" && 
                   selectedContribution.status !== "paid" && (
                   <Button
