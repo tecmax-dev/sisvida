@@ -58,6 +58,36 @@ export default function EmployerDetailPage({
 
     setGeneratingInvoice(true);
     try {
+      // Tipos configurados para o Sicoob: emite/consulta pelo Sicoob, não pela Lytex
+      const { data: ct } = await supabase
+        .from("contribution_types")
+        .select("billing_provider")
+        .eq("id", contribution.contribution_type_id)
+        .maybeSingle();
+      if ((ct as any)?.billing_provider === "sicoob") {
+        const { data: row } = await supabase
+          .from("employer_contributions")
+          .select("sicoob_nosso_numero")
+          .eq("id", contribution.id)
+          .maybeSingle();
+        const action = (row as any)?.sicoob_nosso_numero ? "consult" : "emit";
+        const { data, error } = await supabase.functions.invoke("sicoob-boleto", {
+          body: { action, contribution_id: contribution.id },
+        });
+        let msg = (data as any)?.error as string | undefined;
+        if (error && !msg) {
+          try { msg = JSON.parse(await (error as any).context.text())?.error; } catch { msg = error.message; }
+        }
+        if (msg) throw new Error(msg);
+        if (action === "emit") toast.success("Boleto gerado no Sicoob!");
+        else toast.info(`Sicoob: ${(data as any)?.situacao || "consultado"}${(data as any)?.pago ? " — pagamento registrado" : ""}`);
+        const pdf = await supabase.functions.invoke("sicoob-boleto", { body: { action: "pdf", contribution_id: contribution.id } });
+        if ((pdf.data as any)?.url) window.open((pdf.data as any).url, "_blank");
+        setIsViewDialogOpen(false);
+        await fetchData();
+        return;
+      }
+
       const body: Record<string, unknown> = {
         action: "create_invoice",
         contributionId: contribution.id,
