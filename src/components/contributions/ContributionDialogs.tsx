@@ -867,7 +867,23 @@ export default function ContributionDialogs({
                     {format(new Date(selectedContribution.due_date + "T12:00:00"), "dd/MM/yyyy")}
                   </p>
                 </div>
+                {(selectedContribution as any).sicoob_nosso_numero && (
+                  <div>
+                    <p className="text-muted-foreground">Nº do boleto (Sicoob)</p>
+                    <p className="font-medium font-mono">{(selectedContribution as any).sicoob_nosso_numero}</p>
+                  </div>
+                )}
               </div>
+
+              {(selectedContribution as any).sicoob_linha_digitavel && (
+                <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                  <p className="text-xs text-muted-foreground">Linha digitável (Sicoob)</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono break-all flex-1">{(selectedContribution as any).sicoob_linha_digitavel}</code>
+                    <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText((selectedContribution as any).sicoob_linha_digitavel); toast.success("Linha digitável copiada"); }}>Copiar</Button>
+                  </div>
+                </div>
+              )}
 
               {selectedContribution.lytex_invoice_url && (
                 <div className="space-y-3 p-3 bg-muted/50 rounded-lg">

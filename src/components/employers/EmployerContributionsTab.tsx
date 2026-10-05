@@ -304,7 +304,11 @@ function ContributionCard({
         {/* Actions Row */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t">
           <div className="flex items-center gap-1 text-xs">
-            {getLytexTitleNumber(contrib) ? (
+            {(contrib as any).sicoob_nosso_numero ? (
+              <span className="font-mono text-muted-foreground" title="Nosso número do boleto Sicoob">
+                Sicoob nº {(contrib as any).sicoob_nosso_numero}
+              </span>
+            ) : getLytexTitleNumber(contrib) ? (
               <span className="font-mono text-muted-foreground" title="Número do título gerado no boleto Lytex">
                 Título: {getLytexTitleNumber(contrib)}
               </span>
