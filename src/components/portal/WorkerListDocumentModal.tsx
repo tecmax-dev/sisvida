@@ -64,7 +64,12 @@ export function WorkerListDocumentModal({ validationId, portalType, portalId, on
             </div>
           ) : loading || !url ? (
             <div className="h-full flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : mime === "application/pdf" || mime === "text/html" ? (
+          ) : mime === "application/pdf" ? (
+            <div className="h-full flex flex-col gap-2">
+              <iframe src={url} title={name} className="w-full flex-1" />
+              <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline self-end">Abrir em nova aba</a>
+            </div>
+          ) : mime === "text/html" ? (
             <iframe src={url} title={name} className="w-full h-full" sandbox="allow-same-origin" />
           ) : (
             <div className="h-full flex items-center justify-center"><img src={url} alt={name} className="max-w-full max-h-full object-contain" /></div>
