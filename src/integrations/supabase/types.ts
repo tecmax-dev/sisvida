@@ -2658,6 +2658,7 @@ export type Database = {
       }
       contribution_types: {
         Row: {
+          billing_provider: string
           clinic_id: string
           created_at: string
           default_value: number
@@ -2668,6 +2669,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_provider?: string
           clinic_id: string
           created_at?: string
           default_value?: number
@@ -2678,6 +2680,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_provider?: string
           clinic_id?: string
           created_at?: string
           default_value?: number
@@ -3414,6 +3417,7 @@ export type Database = {
           is_negotiated_debt: boolean | null
           is_reconciled: boolean | null
           last_lytex_sync_at: string | null
+          last_sicoob_sync_at: string | null
           lytex_boleto_barcode: string | null
           lytex_boleto_digitable_line: string | null
           lytex_fee_amount: number | null
@@ -3440,6 +3444,12 @@ export type Database = {
           reconciled_at: string | null
           reconciled_by: string | null
           reconciliation_notes: string | null
+          sicoob_codigo_barras: string | null
+          sicoob_linha_digitavel: string | null
+          sicoob_nosso_numero: number | null
+          sicoob_pdf_path: string | null
+          sicoob_raw: Json | null
+          sicoob_situacao: string | null
           status: string
           union_entity_id: string | null
           updated_at: string
@@ -3465,6 +3475,7 @@ export type Database = {
           is_negotiated_debt?: boolean | null
           is_reconciled?: boolean | null
           last_lytex_sync_at?: string | null
+          last_sicoob_sync_at?: string | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
           lytex_fee_amount?: number | null
@@ -3491,6 +3502,12 @@ export type Database = {
           reconciled_at?: string | null
           reconciled_by?: string | null
           reconciliation_notes?: string | null
+          sicoob_codigo_barras?: string | null
+          sicoob_linha_digitavel?: string | null
+          sicoob_nosso_numero?: number | null
+          sicoob_pdf_path?: string | null
+          sicoob_raw?: Json | null
+          sicoob_situacao?: string | null
           status?: string
           union_entity_id?: string | null
           updated_at?: string
@@ -3516,6 +3533,7 @@ export type Database = {
           is_negotiated_debt?: boolean | null
           is_reconciled?: boolean | null
           last_lytex_sync_at?: string | null
+          last_sicoob_sync_at?: string | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
           lytex_fee_amount?: number | null
@@ -3542,6 +3560,12 @@ export type Database = {
           reconciled_at?: string | null
           reconciled_by?: string | null
           reconciliation_notes?: string | null
+          sicoob_codigo_barras?: string | null
+          sicoob_linha_digitavel?: string | null
+          sicoob_nosso_numero?: number | null
+          sicoob_pdf_path?: string | null
+          sicoob_raw?: Json | null
+          sicoob_situacao?: string | null
           status?: string
           union_entity_id?: string | null
           updated_at?: string
@@ -20626,6 +20650,7 @@ export type Database = {
           is_negotiated_debt: boolean | null
           is_reconciled: boolean | null
           last_lytex_sync_at: string | null
+          last_sicoob_sync_at: string | null
           lytex_boleto_barcode: string | null
           lytex_boleto_digitable_line: string | null
           lytex_fee_amount: number | null
@@ -20652,6 +20677,12 @@ export type Database = {
           reconciled_at: string | null
           reconciled_by: string | null
           reconciliation_notes: string | null
+          sicoob_codigo_barras: string | null
+          sicoob_linha_digitavel: string | null
+          sicoob_nosso_numero: number | null
+          sicoob_pdf_path: string | null
+          sicoob_raw: Json | null
+          sicoob_situacao: string | null
           status: string
           union_entity_id: string | null
           updated_at: string
