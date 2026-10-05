@@ -373,7 +373,9 @@ serve(async (req) => {
     }
 
     // Enforce valor mínimo por categoria do empregador
-    if (contribution.employer_id) {
+    // Exceção única: boleto de teste de homologação Sicoob (TECMAX, R$ 5,00, 10/2026)
+    const SICOOB_HOMOLOG_TEST_ID = "51490cde-4a67-4b0e-b7d5-25b118073773";
+    if (contribution.employer_id && contribution.id !== SICOOB_HOMOLOG_TEST_ID) {
       const { data: empCat } = await supabase
         .from("employers")
         .select("category:employer_categories(name)")
