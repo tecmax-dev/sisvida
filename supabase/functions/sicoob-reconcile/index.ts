@@ -5,7 +5,7 @@ import forge from "npm:node-forge@1.3.1";
 // Não toca em contribuições com boleto Lytex nem em boletos já emitidos pelo sistema no Sicoob.
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-reconcile-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
@@ -83,10 +83,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
     const body = await req.json().catch(() => ({}));
-    // Chave interna de diagnóstico: só leitura (nunca aplica baixas)
-    const testKey = Deno.env.get("SICOOB_RECONCILE_TEST_KEY");
-    const internal = !!testKey && testKey.length >= 32 && req.headers.get("x-reconcile-key") === testKey;
-    if (internal) body.apply = false;
+    const internal = false;
     const { data: ud } = internal ? { data: { user: { id: "internal-test" } } } : await supabase.auth.getUser(jwt);
     const u = ud as any;
     if (!u?.user) return json({ error: "Faça login novamente." }, 401);
