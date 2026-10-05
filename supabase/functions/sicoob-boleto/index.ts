@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     if (!sa && !access) return json({ error: "Sem permissão para esta contribuição." }, 403);
     if (c.contribution_types?.billing_provider !== "sicoob") return json({ error: "Este tipo de contribuição não usa o Sicoob." }, 400);
 
-    const numeroCliente = Number(Deno.env.get("SICOOB_CONTRATO_COBRANCA"));
+    const numeroCliente = Number(Deno.env.get("SICOOB_NUMERO_CLIENTE") || Deno.env.get("SICOOB_CONTRATO_COBRANCA"));
     const contaCorrente = Deno.env.get("SICOOB_CONTA_CORRENTE");
 
     if (action === "emit") {
