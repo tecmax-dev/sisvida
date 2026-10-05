@@ -58,7 +58,7 @@ function paidDate(b: any): string | null {
   return d ? String(d).slice(0, 10) : null;
 }
 
-async function boletosDoPagador(supabase: any, cnpj: string, numeroCliente: number, conta: string | undefined, months: string[]) {
+async function boletosDoPagador(supabase: any, cnpj: string, numeroCliente: number, conta: string | undefined, months: string[], situacao?: string) {
   // Sicoob aceita no máximo 35 dias por consulta: consultamos só os meses de vencimento que interessam
   const all: any[] = [];
   for (const ym of months) {
@@ -66,6 +66,7 @@ async function boletosDoPagador(supabase: any, cnpj: string, numeroCliente: numb
     const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
     const q = new URLSearchParams({ numeroCliente: String(numeroCliente), dataInicio: `${ym}-01`, dataFim: `${ym}-${String(last).padStart(2, "0")}` });
     if (conta) q.set("numeroContaCorrente", conta);
+    if (situacao) q.set("codigoSituacao", situacao);
     const r = await get(supabase, `/pagadores/${cnpj}/boletos?${q}`);
     if (r.status === 404 || r.status === 204) { await sleep(60); continue; }
     if (!r.ok) throw new Error(`Sicoob [${r.status}]: ${JSON.stringify(r.data).slice(0, 300)}`);
@@ -102,7 +103,7 @@ Deno.serve(async (req) => {
     // Probe de um CNPJ (diagnóstico, sem alterar nada)
     if (body.action === "probe") {
       const cnpj = digits(body.cnpj);
-      const list = await boletosDoPagador(supabase, cnpj, numeroCliente, body.no_conta ? undefined : conta, (body.months || ["2022-03"]) as string[]);
+      const list = await boletosDoPagador(supabase, cnpj, numeroCliente, body.no_conta ? undefined : conta, (body.months || ["2022-03"]) as string[], body.situacao ? String(body.situacao) : undefined);
       return json({ ok: true, count: list.length, sample: list.slice(0, 3) });
     }
 
