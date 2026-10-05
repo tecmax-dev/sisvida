@@ -97,6 +97,23 @@ Deno.serve(async (req) => {
     const conta = Deno.env.get("SICOOB_CONTA_CORRENTE") || undefined;
     const apply = body.apply === true;
 
+    // Movimentações (liquidações) — somente consulta
+    if (body.action === "mov_request" || body.action === "mov_status" || body.action === "mov_download") {
+      const s = await session(supabase);
+      const h = { Authorization: `Bearer ${s.token}`, client_id: CLIENT_ID, Accept: "application/json", "Content-Type": "application/json" };
+      let res: Response;
+      if (body.action === "mov_request") {
+        res = await fetch(`${API}/boletos/movimentacoes`, { method: "POST", client: s.client, headers: h,
+          body: JSON.stringify({ numeroCliente, tipoMovimento: Number(body.tipo || 5), dataInicial: body.inicio, dataFinal: body.fim }) } as any);
+      } else {
+        const q = new URLSearchParams({ numeroCliente: String(numeroCliente), codigoSolicitacao: String(body.codigo) });
+        if (body.action === "mov_download") q.set("idArquivo", String(body.arquivo));
+        res = await fetch(`${API}/boletos/movimentacoes${body.action === "mov_download" ? "/download" : ""}?${q}`, { method: "GET", client: s.client, headers: h } as any);
+      }
+      const t = await res.text();
+      return json({ status: res.status, data: t.slice(0, 3000) });
+    }
+
     // Probe de um CNPJ (diagnóstico, sem alterar nada)
     if (body.action === "probe") {
       const cnpj = digits(body.cnpj);
