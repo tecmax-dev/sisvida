@@ -1070,7 +1070,11 @@ export default function ContributionsListTab({
                         </div>
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
-                        {contrib.lytex_invoice_id ? (
+                        {(contrib as any).sicoob_nosso_numero ? (
+                          <code className="text-xs bg-muted px-2 py-1 rounded font-mono font-semibold" title="Nosso número Sicoob">
+                            {(contrib as any).sicoob_nosso_numero}
+                          </code>
+                        ) : contrib.lytex_invoice_id ? (
                           <code className="text-xs bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300 px-2 py-1 rounded font-mono font-semibold">
                             {contrib.lytex_invoice_id.slice(-8).toUpperCase()}
                           </code>
