@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     // Probe de um CNPJ (diagnóstico, sem alterar nada)
     if (body.action === "probe") {
       const cnpj = digits(body.cnpj);
-      const list = await boletosDoPagador(supabase, cnpj, numeroCliente, conta, (body.months || ["2022-03"]) as string[]);
+      const list = await boletosDoPagador(supabase, cnpj, numeroCliente, body.no_conta ? undefined : conta, (body.months || ["2022-03"]) as string[]);
       return json({ ok: true, count: list.length, sample: list.slice(0, 3) });
     }
 
