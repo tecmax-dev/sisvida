@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
     const body = await req.json().catch(() => ({}));
-    const internal = body.__t === "mvT7q9Zk2026x";
+    const internal = false;
     const { data: ud } = internal ? { data: { user: { id: "internal-test" } } } : await supabase.auth.getUser(jwt);
     const u = ud as any;
     if (!u?.user) return json({ error: "Faça login novamente." }, 401);
