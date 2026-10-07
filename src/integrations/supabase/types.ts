@@ -21260,6 +21260,10 @@ export type Database = {
         Args: { p_password: string; p_patient_id: string }
         Returns: boolean
       }
+      set_patient_password_service: {
+        Args: { p_new_password: string; p_patient_id: string }
+        Returns: boolean
+      }
       sync_all_dependents_card_expiry: {
         Args: { p_clinic_id: string }
         Returns: number

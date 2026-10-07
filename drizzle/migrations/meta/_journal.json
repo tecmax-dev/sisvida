@@ -134,6 +134,13 @@
       "when": 1791365960872,
       "tag": "0018_app_password_reset_links",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791365988175,
+      "tag": "0019_set_patient_password_service",
+      "breakpoints": true
     }
   ]
 }
