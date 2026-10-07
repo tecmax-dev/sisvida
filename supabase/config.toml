@@ -11,6 +11,3 @@ verify_jwt = false
 verify_jwt = false
 [functions.focus-nfe-emit]
 verify_jwt = false
-
-[functions.agenda-template-once]
-verify_jwt = false
