@@ -11,3 +11,5 @@
 - [x] Vincular as ações de assinatura ao envio oficial com consentimento, opt-out e auditoria
 - [x] Cadastrar na Meta o modelo de boas-vindas informativas após aprovação de filiação (v1 excluído por links incorretos; v2 com links corrigidos, aguardando aprovação Meta)
 - [x] Ligar a aprovação à mensagem oficial, sujeita a consentimento, opt-out e aprovação do modelo
+
+- [ ] Enviar modelo Meta agenda_do_dia_profissional_v1 (send-professional-agenda action submit-template) assim que houver sessão de tecmaxbahia@gmail.com na prévia
