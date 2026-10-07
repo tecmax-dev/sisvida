@@ -786,6 +786,44 @@ export type Database = {
           },
         ]
       }
+      app_password_reset_links: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          patient_id: string
+          token_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          patient_id: string
+          token_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          patient_id?: string
+          token_hash?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_password_reset_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_slot_blocks: {
         Row: {
           block_date: string
@@ -21220,6 +21258,10 @@ export type Database = {
       }
       set_patient_password_direct: {
         Args: { p_password: string; p_patient_id: string }
+        Returns: boolean
+      }
+      set_patient_password_service: {
+        Args: { p_new_password: string; p_patient_id: string }
         Returns: boolean
       }
       sync_all_dependents_card_expiry: {
