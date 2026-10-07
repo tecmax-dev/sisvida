@@ -147,16 +147,28 @@ serve(async (req) => {
       const [{ data: prof }, { data: clinic }, { data: apts }] = await Promise.all([
         admin.from("professionals").select("name").eq("id", link.professional_id).maybeSingle(),
         admin.from("clinics").select("name").eq("id", link.clinic_id).maybeSingle(),
-        admin.from("appointments").select("start_time, status, patient:patients(name), dependent:patient_dependents(name), procedure:procedures(name)")
+        admin.from("appointments").select("start_time, status, patient:patients(name, birth_date), dependent:patient_dependents(name, birth_date), procedure:procedures(name)")
           .eq("clinic_id", link.clinic_id).eq("professional_id", link.professional_id).eq("appointment_date", link.agenda_date)
           .not("status", "in", "(cancelled,blocked)").order("start_time"),
       ]);
+      // Idade na data da agenda, calculada só com AAAA-MM-DD (sem fuso).
+      const ageAt = (birth: string | null | undefined, ref: string) => {
+        const b = String(birth ?? "").slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        const r = ref.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!b || !r) return null;
+        let age = Number(r[1]) - Number(b[1]);
+        if (Number(r[2]) < Number(b[2]) || (r[2] === b[2] && Number(r[3]) < Number(b[3]))) age--;
+        return age >= 0 && age < 130 ? age : null;
+      };
       return json({
         success: true, professional: prof?.name ?? "", clinic: clinic?.name ?? "", date: link.agenda_date,
-        items: (apts ?? []).map((a: any) => ({
-          time: String(a.start_time).slice(0, 5), status: a.status,
-          name: a.dependent?.name || a.patient?.name || "Paciente", procedure: a.procedure?.name ?? null,
-        })),
+        items: (apts ?? []).map((a: any) => {
+          const who = a.dependent?.name ? a.dependent : a.patient;
+          return {
+            time: String(a.start_time).slice(0, 5), status: a.status,
+            name: who?.name || "Paciente", age: ageAt(who?.birth_date, link.agenda_date), procedure: a.procedure?.name ?? null,
+          };
+        }),
       });
     }
 
