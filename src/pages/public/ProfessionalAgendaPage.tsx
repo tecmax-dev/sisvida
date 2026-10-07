@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CalendarDays } from "lucide-react";
 
-type Item = { time: string; name: string; status: string; procedure: string | null };
+type Item = { time: string; name: string; age?: number | null; status: string; procedure: string | null };
 type Data = { professional: string; clinic: string; date: string; items: Item[] };
 
 const STATUS: Record<string, string> = {
@@ -47,6 +47,7 @@ export default function ProfessionalAgendaPage() {
               <span className="w-14 shrink-0 font-mono font-semibold text-primary">{it.time}</span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-foreground break-words">{it.name}</p>
+                {it.age != null && <p className="text-xs text-muted-foreground">{it.age} {it.age === 1 ? "ano" : "anos"}</p>}
                 {it.procedure && <p className="text-xs text-muted-foreground">{it.procedure}</p>}
               </div>
               <span className="text-xs text-muted-foreground">{STATUS[it.status] ?? it.status}</span>
