@@ -447,6 +447,7 @@ function App() {
                 <Route path="/sindicato/baixar-app" element={<MobileInstallPage />} />
                 <Route path="/sindicato/app/*" element={<Navigate to="/app" replace />} />
                 <Route path="/sindicato/recuperar-senha" element={<MobilePasswordResetPage />} />
+                <Route path="/sindicato/nova-senha/:token" element={<MobilePasswordResetPage />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
                 <Route path="/sindicato/portal-contador" element={<Navigate to="/portal-contador" replace />} />
                 <Route path="/sindicato/portal-contador/:clinicSlug" element={<AccountingOfficePortal />} />
