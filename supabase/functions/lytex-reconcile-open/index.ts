@@ -101,14 +101,16 @@ Deno.serve(async (req) => {
         const invId = inv?._id || inv?.id;
         if (!invId) continue;
         if (body.onlyCnpj && String(inv?.client?.cpfCnpj || "").replace(/\D/g, "") !== body.onlyCnpj) continue;
-        const { data: byId } = await supabase
+        // Pode haver linhas duplicadas com o mesmo boleto: prefere a que ainda está em aberto.
+        const { data: byIdRows } = await supabase
           .from("employer_contributions")
           .select("id, status")
           .eq("clinic_id", clinicId)
-          .eq("lytex_invoice_id", invId)
-          .maybeSingle();
-
-        let target = byId;
+          .eq("lytex_invoice_id", invId);
+        const rowsById = byIdRows || [];
+        let target: any = rowsById.find((r: any) => r.status === "pending" || r.status === "overdue")
+          ?? rowsById.find((r: any) => r.status === "paid") ?? null;
+        if (!target && rowsById.length) { alreadyPaid++; continue; }
 
         if (!target) {
           // fallback: casa por CNPJ do pagador + valor + vencimento aproximado
