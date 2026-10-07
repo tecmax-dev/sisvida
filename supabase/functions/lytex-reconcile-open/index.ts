@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
       for (const inv of items) {
         const invId = inv?._id || inv?.id;
         if (!invId) continue;
+        if (body.onlyCnpj && String(inv?.client?.cpfCnpj || "").replace(/\D/g, "") !== body.onlyCnpj) continue;
         const { data: byId } = await supabase
           .from("employer_contributions")
           .select("id, status")
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
 
         if (!target) {
           notFound++;
-          if (unmatchedSamples.length < 5) unmatchedSamples.push({ invId, cnpj: inv?.client?.cpfCnpj, dueDate: inv?.dueDate, items: inv?.items });
+          if (unmatchedSamples.length < (body.onlyCnpj ? 200 : 5)) unmatchedSamples.push({ invId, cnpj: inv?.client?.cpfCnpj, dueDate: inv?.dueDate, items: inv?.items });
           continue;
         }
         if (target.status === "paid") {
