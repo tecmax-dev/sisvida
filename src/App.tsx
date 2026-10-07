@@ -127,6 +127,7 @@ const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"))
 const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
 const MobileWaitingListPage = lazy(() => import("./pages/mobile/MobileWaitingListPage"));
 const MobilePasswordResetPage = lazy(() => import("./pages/mobile/MobilePasswordResetPage"));
+const ProfessionalAgendaPage = lazy(() => import("./pages/public/ProfessionalAgendaPage"));
 const MobileDependentsPage = lazy(() => import("./pages/mobile/MobileDependentsPage"));
 const MobileChangePasswordPage = lazy(() => import("./pages/mobile/MobileChangePasswordPage"));
 const MobileCardPage = lazy(() => import("./pages/mobile/MobileCardPage"));
@@ -448,6 +449,7 @@ function App() {
                 <Route path="/sindicato/app/*" element={<Navigate to="/app" replace />} />
                 <Route path="/sindicato/recuperar-senha" element={<MobilePasswordResetPage />} />
                 <Route path="/sindicato/nova-senha/:token" element={<MobilePasswordResetPage />} />
+                <Route path="/agenda-profissional/:token" element={<ProfessionalAgendaPage />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
                 <Route path="/sindicato/portal-contador" element={<Navigate to="/portal-contador" replace />} />
                 <Route path="/sindicato/portal-contador/:clinicSlug" element={<AccountingOfficePortal />} />
