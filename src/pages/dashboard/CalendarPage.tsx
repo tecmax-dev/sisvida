@@ -3320,74 +3320,25 @@ const updateData: Record<string, any> = {
     setSendingAgenda(professionalId);
 
     try {
-      const { data: latestProfessional, error: professionalError } = await supabase
-        .from('professionals')
-        .select('name, phone, whatsapp')
-        .eq('id', professionalId)
-        .eq('clinic_id', currentClinic.id)
-        .maybeSingle();
-
-      if (professionalError) {
-        throw professionalError;
-      }
-
-      const professionalName = latestProfessional?.name || professional.name;
-      const professionalPhone = ((latestProfessional?.phone || latestProfessional?.whatsapp || '') as string).trim();
-
-      if (!professionalPhone) {
-        toast({
-          title: "Telefone não cadastrado",
-          description: `O profissional ${professionalName} não possui telefone/WhatsApp cadastrado.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const appointmentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-      const formattedDate = appointmentDate.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+      const y = selectedDate.getFullYear();
+      const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const d = String(selectedDate.getDate()).padStart(2, '0');
+      const { data, error } = await supabase.functions.invoke('send-professional-agenda', {
+        body: { action: 'send', professional_id: professionalId, clinic_id: currentClinic.id, date: `${y}-${m}-${d}` },
       });
+      let errMsg: string | null = null;
+      if (error) {
+        errMsg = 'Erro desconhecido';
+        try { errMsg = JSON.parse(await (error as any).context.text()).error || errMsg; } catch { /* noop */ }
+      } else if (!data?.success) errMsg = data?.error || 'Erro desconhecido';
 
-      const activeApts = appointmentsList
-        .filter(a => a.status !== 'cancelled')
-        .sort((a, b) => a.start_time.localeCompare(b.start_time));
-
-      const agendaItems = activeApts.map(apt => ({
-        time: apt.start_time.slice(0, 5),
-        patientName: getAppointmentDisplayName(apt),
-        type: apt.type,
-        status: apt.status,
-        procedure: apt.procedure?.name || null,
-      }));
-
-      const message = formatDailyAgenda(
-        professionalName,
-        currentClinic?.name || 'Clínica',
-        formattedDate,
-        agendaItems
-      );
-
-      const result = await sendWhatsAppMessage({
-        phone: professionalPhone,
-        message,
-        clinicId: currentClinic.id,
-        type: 'custom',
-      });
-
-      if (result.success) {
+      if (!errMsg) {
         toast({
           title: "Agenda enviada ✅",
-          description: `Agenda do dia enviada para ${professional.name} com ${agendaItems.length} atendimento(s).`,
+          description: `Link da agenda enviado para ${professional.name} (${data.total} atendimento(s)).`,
         });
       } else {
-        toast({
-          title: "Erro ao enviar agenda",
-          description: result.error || 'Erro desconhecido',
-          variant: "destructive",
-        });
+        toast({ title: "Erro ao enviar agenda", description: errMsg, variant: "destructive" });
       }
     } catch (err) {
       console.error('[SEND AGENDA] Error:', err);

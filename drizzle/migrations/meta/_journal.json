@@ -141,6 +141,13 @@
       "when": 1791365988175,
       "tag": "0019_set_patient_password_service",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791368469414,
+      "tag": "0020_professional_agenda_links",
+      "breakpoints": true
     }
   ]
 }

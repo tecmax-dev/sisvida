@@ -10025,6 +10025,57 @@ export type Database = {
           },
         ]
       }
+      professional_agenda_links: {
+        Row: {
+          agenda_date: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          last_opened_at: string | null
+          professional_id: string
+          token_hash: string
+        }
+        Insert: {
+          agenda_date: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          last_opened_at?: string | null
+          professional_id: string
+          token_hash: string
+        }
+        Update: {
+          agenda_date?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          last_opened_at?: string | null
+          professional_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_agenda_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_agenda_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_commissions: {
         Row: {
           amount: number
