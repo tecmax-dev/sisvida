@@ -39,7 +39,7 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
   const [status, setStatus] = useState<"all" | "valid" | "invalid">("all");
   const [year, setYear] = useState<string>("all");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [viewer, setViewer] = useState<{ url: string; name: string; isPdf: boolean } | null>(null);
+  const [viewer, setViewer] = useState<{ url: string; name: string; isPdf: boolean; isHtml?: boolean } | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
 
   const load = async () => {
@@ -120,7 +120,20 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
 
   const view = async (r: Row) => {
     const url = await signedUrl(r);
-    if (url) setViewer({ url, name: r.file_name || "Lista de trabalhadores", isPdf: /\.pdf$/i.test(r.file_path) });
+    if (!url) return;
+    const name = r.file_name || "Lista de trabalhadores";
+    // Listas montadas no sistema (HTML): o armazenamento entrega como texto puro,
+    // então lemos o conteúdo em UTF-8 e exibimos como página formatada.
+    if (/\.html?$/i.test(r.file_path)) {
+      try {
+        const buf = await (await fetch(url)).arrayBuffer();
+        const html = new TextDecoder("utf-8").decode(buf);
+        const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+        setViewer({ url: blobUrl, name, isPdf: false, isHtml: true });
+      } catch { toast.error("Não foi possível abrir o arquivo."); }
+      return;
+    }
+    setViewer({ url, name, isPdf: /\.pdf$/i.test(r.file_path) });
   };
   const download = async (r: Row) => {
     const url = await signedUrl(r);
@@ -354,8 +367,8 @@ export default function EmployerWorkerListsTab({ employerId }: { employerId: str
       <Dialog open={!!viewer} onOpenChange={(o) => !o && setViewer(null)}>
         <DialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col">
           <DialogHeader><DialogTitle className="truncate pr-6">{viewer?.name}</DialogTitle></DialogHeader>
-          {viewer && (viewer.isPdf ? (
-            <iframe src={viewer.url} title={viewer.name} className="flex-1 w-full rounded border" />
+          {viewer && (viewer.isPdf || viewer.isHtml ? (
+            <iframe src={viewer.url} title={viewer.name} className="flex-1 w-full rounded border bg-background" sandbox={viewer.isHtml ? "" : undefined} />
           ) : (
             <div className="flex-1 overflow-auto flex items-start justify-center bg-muted/30 rounded">
               <img src={viewer.url} alt={viewer.name} className="max-w-full h-auto" />
