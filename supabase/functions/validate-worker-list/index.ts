@@ -268,7 +268,10 @@ Deno.serve(async (req) => {
       // Registros antigos (anteriores a esta correção) foram salvos com um file_path
       // fictício e sem mime_type, sem nenhum arquivo físico no Storage — para esses,
       // devolvemos a relação de nomes já extraída em vez de tentar abrir um arquivo inexistente.
-      if (!v.file_path || (!v.mime_type && v.file_path.startsWith("roster/"))) {
+      // Listas montadas no sistema (HTML) aparecem como relação de nomes legível:
+      // o armazenamento entrega HTML como texto puro, o que mostraria o código-fonte.
+      const rosterNames = (v.extracted_data as any)?.trabalhadores || [];
+      if (!v.file_path || (!v.mime_type && v.file_path.startsWith("roster/")) || (v.mime_type === "text/html" && rosterNames.length > 0)) {
         const workers = (v.extracted_data as any)?.trabalhadores || [];
         return json({ roster: true, workers, file_name: v.file_name || "Lista de trabalhadores" });
       }
