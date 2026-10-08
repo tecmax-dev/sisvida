@@ -55,6 +55,7 @@ import { ChatwootIntegrationConfig } from "@/components/portals/ChatwootIntegrat
 
 import { STATUS_CONFIG } from "./employer-portal/employerPortalTypes";
 import type { Clinic, Employer, Contribution, ReissueRequest, ActiveView, ContributionTab } from "./employer-portal/employerPortalTypes";
+import { PortalAlertDialog } from "./employer-portal/PortalAlertDialog";
 
 export default function EmployerPortal() {
   const { clinicSlug } = useParams();
@@ -691,24 +692,7 @@ const [showTutorial, setShowTutorial] = useState(false);
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
       {/* Dialogs */}
-      <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
-            <DialogTitle className="text-center text-xl text-slate-900">Atenção!</DialogTitle>
-            <DialogDescription className="text-center text-base text-slate-600">
-              {alertMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center">
-            <Button onClick={() => setShowAlertDialog(false)} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
-              Entendi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PortalAlertDialog open={showAlertDialog} onOpenChange={setShowAlertDialog} message={alertMessage} />
 
       <Dialog open={showReissueDialog} onOpenChange={(open) => {
         setShowReissueDialog(open);
