@@ -561,7 +561,7 @@ export default function UnionMembersListPage() {
     onInsert: () => fetchMembers(),
     onUpdate: () => fetchMembers(),
     onDelete: () => fetchMembers(),
-    enabled: !!resolvedClinic,
+    enabled: false, // atualização ao vivo desligada para aliviar o servidor
   });
 
   const handleOpenEdit = (member: UnionMember) => {

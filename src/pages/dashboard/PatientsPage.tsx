@@ -599,7 +599,7 @@ export default function PatientsPage() {
     onInsert: () => fetchPatients(),
     onUpdate: () => fetchPatients(),
     onDelete: () => fetchPatients(),
-    enabled: !!currentClinic,
+    enabled: false, // atualização ao vivo desligada para aliviar o servidor
   });
 
 

@@ -43,12 +43,12 @@ export function MessageHistoryPanel({ clinicId }: MessageHistoryPanelProps) {
   useRealtimeSubscription({ 
     table: 'message_logs', 
     filter: { column: 'clinic_id', value: clinicId },
-    showToast: false
+    showToast: false, enabled: false
   });
   useRealtimeSubscription({ 
     table: 'birthday_message_logs', 
     filter: { column: 'clinic_id', value: clinicId },
-    showToast: false
+    showToast: false, enabled: false
   });
 
   const fetchLogs = async () => {
