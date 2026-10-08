@@ -200,7 +200,7 @@ export default function ProfessionalsPage() {
     onInsert: () => fetchProfessionals(),
     onUpdate: () => fetchProfessionals(),
     onDelete: () => fetchProfessionals(),
-    enabled: !!currentClinic,
+    enabled: false, // atualização ao vivo desligada para aliviar o servidor
   });
 
   const fetchClinicUsers = async () => {

@@ -76,7 +76,7 @@ export default function BirthdayMessagesHistory() {
     filter: currentClinic ? { column: 'clinic_id', value: currentClinic.id } : undefined,
     onInsert: () => fetchLogs(),
     showToast: false,
-    enabled: !!currentClinic,
+    enabled: false, // atualização ao vivo desligada para aliviar o servidor
   });
 
   useEffect(() => {
