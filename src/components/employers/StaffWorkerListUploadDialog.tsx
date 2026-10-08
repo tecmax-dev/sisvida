@@ -58,7 +58,7 @@ export function StaffWorkerListUploadDialog({
 
   const pickFile = (f: File | null) => {
     if (!f) return setFile(null);
-    if (!/\.(pdf|jpe?g|png)$/i.test(f.name)) { toast.error("Formato inválido. Envie PDF, JPG, JPEG ou PNG."); return; }
+    if (!/\.(pdf|jpe?g|png|docx?|txt)$/i.test(f.name)) { toast.error("Formato inválido. Envie PDF, JPG, PNG, DOC, DOCX ou TXT."); return; }
     if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo maior que 10 MB."); return; }
     setFile(f);
   };
@@ -123,10 +123,10 @@ export function StaffWorkerListUploadDialog({
           </div>
           <div>
             <Label>Relação de trabalhadores *</Label>
-            <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => pickFile(e.target.files?.[0] || null)} />
+            <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt" className="hidden" onChange={(e) => pickFile(e.target.files?.[0] || null)} />
             <Button type="button" variant="outline" className="mt-2 w-full justify-start" onClick={() => inputRef.current?.click()} disabled={saving}>
               {file ? <FileText className="h-4 w-4 mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-              <span className="truncate">{file ? file.name : "Selecionar arquivo (PDF, JPG, JPEG ou PNG — até 10 MB)"}</span>
+              <span className="truncate">{file ? file.name : "Selecionar arquivo (PDF, JPG, PNG, DOC, DOCX ou TXT — até 10 MB)"}</span>
             </Button>
           </div>
         </div>

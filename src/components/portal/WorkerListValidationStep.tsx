@@ -34,7 +34,7 @@ interface Props {
   typeBlockedMessage?: string | null;
 }
 
-const ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+const ACCEPT = ".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,application/pdf,image/jpeg,image/png,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const STEPS = ["Empresa", "Tipo de contribuição", "Lista de trabalhadores", "Validação IA", "Valor", "Finalização"];
 
 const formatCnpj = (c: string) => {
@@ -100,8 +100,8 @@ export function WorkerListValidationStep({
   const handleFile = (f: File | null) => {
     reset();
     if (!f) { setFile(null); return; }
-    const ok = ["application/pdf", "image/jpeg", "image/png"].includes(f.type) || /\.(pdf|jpe?g|png)$/i.test(f.name);
-    if (!ok) { setError("Formato inválido. Envie PDF, JPG, JPEG ou PNG."); setFile(null); return; }
+    const ok =  /\.(pdf|jpe?g|png|docx?|txt)$/i.test(f.name);
+    if (!ok) { setError("Formato inválido. Envie PDF, JPG, PNG, DOC, DOCX ou TXT."); setFile(null); return; }
     if (f.size > 10 * 1024 * 1024) { setError("Arquivo maior que 10 MB."); setFile(null); return; }
     setFile(f);
   };
@@ -112,7 +112,7 @@ export function WorkerListValidationStep({
     reset();
     setAnalyzing(true);
     try {
-      const mime = file.type || (/\.pdf$/i.test(file.name) ? "application/pdf" : /\.png$/i.test(file.name) ? "image/png" : "image/jpeg");
+      const mime = (/\.pdf$/i.test(file.name) ? "application/pdf" : /\.png$/i.test(file.name) ? "image/png" : /\.txt$/i.test(file.name) ? "text/plain" : /\.docx$/i.test(file.name) ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : /\.doc$/i.test(file.name) ? "application/msword" : "image/jpeg");
       const { data, error: fnErr } = await supabase.functions.invoke("validate-worker-list", {
         body: {
           contribution_id: contributionId, contribution_type_id: typeId, portal_type: portalType, portal_id: portalId,
@@ -190,7 +190,7 @@ export function WorkerListValidationStep({
         <input ref={inputRef} type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleFile(e.target.files?.[0] || null)} />
         <Button type="button" variant="outline" className="mt-2 w-full justify-start" onClick={() => inputRef.current?.click()} disabled={analyzing}>
           {file ? <FileText className="h-4 w-4 mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-          <span className="truncate">{file ? file.name : "Selecionar arquivo (PDF, JPG, JPEG ou PNG)"}</span>
+          <span className="truncate">{file ? file.name : "Selecionar arquivo (PDF, JPG, PNG, DOC, DOCX ou TXT)"}</span>
         </Button>
       </div>
 

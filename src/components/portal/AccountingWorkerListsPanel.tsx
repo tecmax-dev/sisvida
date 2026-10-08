@@ -22,12 +22,12 @@ interface Emp { id: string; name: string; trade_name?: string | null; cnpj: stri
 
 type Status = "Aguardando envio" | "Arquivo recebido" | "Validando" | "Validada" | "Reprovada" | "Divergência encontrada" | "Necessita correção";
 
-const ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+const ACCEPT = ".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,application/pdf,image/jpeg,image/png,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const digits = (s: string) => (s || "").replace(/\D/g, "");
 const fmtCnpj = (c: string) => { const d = digits(c); return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5") : c; };
 const comp = (i: Item) => `${String(i.competence_month).padStart(2, "0")}/${i.competence_year}`;
 const toBase64 = (f: File) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = () => rej(new Error("read")); r.readAsDataURL(f); });
-const mimeOf = (f: File) => f.type || (/\.pdf$/i.test(f.name) ? "application/pdf" : /\.png$/i.test(f.name) ? "image/png" : "image/jpeg");
+const mimeOf = (f: File) => (/\.pdf$/i.test(f.name) ? "application/pdf" : /\.png$/i.test(f.name) ? "image/png" : /\.txt$/i.test(f.name) ? "text/plain" : /\.docx$/i.test(f.name) ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : /\.doc$/i.test(f.name) ? "application/msword" : "image/jpeg");
 const isDivergence = (r?: string | null) => !!r && /(CNPJ do documento|Empresa do documento|não corresponde ao tipo)/i.test(r);
 
 function statusOf(v: Validation | null, running?: boolean): Status {
@@ -73,7 +73,7 @@ export function AccountingWorkerListsPanel({ accountingOfficeId }: { accountingO
   const validateOne = async (itemId: string, file: File) => {
     const it = items.find((i) => i.id === itemId);
     if (!it) return { ok: false, error: "Lançamento não encontrado." };
-    if (!/\.(pdf|jpe?g|png)$/i.test(file.name) && !["application/pdf", "image/jpeg", "image/png"].includes(file.type)) return { ok: false, error: "Formato inválido. Envie PDF, JPG, JPEG ou PNG." };
+    if (!/\.(pdf|jpe?g|png|docx?|txt)$/i.test(file.name) && true) return { ok: false, error: "Formato inválido. Envie PDF, JPG, PNG, DOC, DOCX ou TXT." };
     if (file.size > 10 * 1024 * 1024) return { ok: false, error: "Arquivo maior que 10 MB." };
     const { data, error } = await supabase.functions.invoke("validate-worker-list", {
       body: {
@@ -264,7 +264,7 @@ export function AccountingWorkerListsPanel({ accountingOfficeId }: { accountingO
             <DialogDescription>Selecione vários arquivos. Confira a empresa sugerida de cada um (ou escolha manualmente) antes de validar.</DialogDescription>
           </DialogHeader>
           <input ref={batchInput} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => { onBatchFiles(e.target.files); e.target.value = ""; }} />
-          <Button variant="outline" onClick={() => batchInput.current?.click()} disabled={batchRunning}><Upload className="h-4 w-4 mr-2" />Selecionar arquivos (PDF, JPG, JPEG, PNG)</Button>
+          <Button variant="outline" onClick={() => batchInput.current?.click()} disabled={batchRunning}><Upload className="h-4 w-4 mr-2" />Selecionar arquivos (PDF, JPG, PNG, DOC, DOCX, TXT)</Button>
 
           {batch.length > 0 && (
             <div className="overflow-x-auto rounded-lg border">
