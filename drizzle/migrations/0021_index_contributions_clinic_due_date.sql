@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_employer_contributions_clinic_due_date ON public.employer_contributions (clinic_id, due_date, id);
