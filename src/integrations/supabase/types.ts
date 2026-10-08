@@ -20457,6 +20457,7 @@ export type Database = {
       }
     }
     Functions: {
+      accessible_clinic_ids: { Args: { _user_id: string }; Returns: string[] }
       act_on_appointment_by_token: {
         Args: { _action: string; _reason?: string; _token: string }
         Returns: string
@@ -20464,6 +20465,10 @@ export type Database = {
       act_on_homologacao_by_token: {
         Args: { _action: string; _reason?: string; _token: string }
         Returns: string
+      }
+      admin_contribution_clinic_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
       }
       authenticate_patient_hybrid: {
         Args: { p_cpf: string; p_password: string }

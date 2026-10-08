@@ -155,6 +155,13 @@
       "when": 1791452390443,
       "tag": "0021_index_contributions_clinic_due_date",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791452647263,
+      "tag": "0022_optimize_employer_contributions_rls",
+      "breakpoints": true
     }
   ]
 }
