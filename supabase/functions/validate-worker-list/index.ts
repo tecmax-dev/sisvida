@@ -7,7 +7,27 @@ const corsHeaders = {
 };
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+const TEXT_MIME = ["text/plain", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/jpg", "image/png", ...TEXT_MIME];
+const EXT_BY_MIME: Record<string, string> = { "application/pdf": "pdf", "image/png": "png", "text/plain": "txt", "application/msword": "doc", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx" };
+
+async function extractDocText(bytes: Uint8Array, mime: string): Promise<string> {
+  if (mime === "text/plain") {
+    const utf = new TextDecoder("utf-8").decode(bytes);
+    return utf.includes("\uFFFD") ? new TextDecoder("windows-1252").decode(bytes) : utf;
+  }
+  if (mime.includes("openxmlformats")) {
+    const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
+    const zip = await JSZip.loadAsync(bytes);
+    const xml = (await zip.file("word/document.xml")?.async("string")) || "";
+    return xml.replace(/<\/w:p>/g, "\n").replace(/<w:tab\/>/g, "\t").replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+  }
+  // .doc antigo (binário): extrai trechos legíveis (UTF-16LE e Latin-1)
+  const u16 = new TextDecoder("utf-16le").decode(bytes).match(/[\p{L}\p{N} .,\-\/()]{4,}/gu) || [];
+  const l1 = new TextDecoder("windows-1252").decode(bytes).match(/[A-Za-zÀ-ÿ0-9 .,\-\/()]{4,}/g) || [];
+  return (u16.join("\n").length > l1.join("\n").length ? u16 : l1).join("\n");
+}
 const MAX_BYTES = 10 * 1024 * 1024;
 
 const json = (body: unknown, status = 200) =>
@@ -119,10 +139,11 @@ Responda SOMENTE com JSON, sem markdown:
 }`;
 }
 
-async function callOpenAI(prompt: string, base64: string, mime: string, fileName: string) {
+async function callOpenAI(prompt: string, base64: string, mime: string, fileName: string, docText?: string) {
   const dataUrl = `data:${mime};base64,${base64}`;
-  const filePart =
-    mime === "application/pdf"
+  const filePart = docText !== undefined
+      ? { type: "text", text: `Conteúdo do arquivo ${fileName || "lista"}:\n\n${docText.slice(0, 60000)}` }
+      : mime === "application/pdf"
       ? { type: "file", file: { filename: fileName || "lista.pdf", file_data: dataUrl } }
       : { type: "image_url", image_url: { url: dataUrl } };
 
@@ -606,7 +627,7 @@ Deno.serve(async (req) => {
     if (!contribution_type_id) return json({ error: "Selecione o tipo de contribuição." }, 400);
     if (!file_base64) return json({ error: "Envie a relação de trabalhadores." }, 400);
     const mime = String(mime_type || "").toLowerCase();
-    if (!ALLOWED_MIME.includes(mime)) return json({ error: "Formato inválido. Envie PDF, JPG, JPEG ou PNG." }, 400);
+    if (!ALLOWED_MIME.includes(mime)) return json({ error: "Formato inválido. Envie PDF, JPG, JPEG, PNG, DOC, DOCX ou TXT." }, 400);
     const bytes = Uint8Array.from(atob(file_base64), (c) => c.charCodeAt(0));
     if (bytes.length > MAX_BYTES) return json({ error: "Arquivo maior que 10 MB." }, 400);
 
@@ -642,7 +663,12 @@ Deno.serve(async (req) => {
 
     const employer: any = contribution.employer;
     const competence = `${String(contribution.competence_month).padStart(2, "0")}/${contribution.competence_year}`;
-    const ext = mime === "application/pdf" ? "pdf" : mime === "image/png" ? "png" : "jpg";
+    const ext = EXT_BY_MIME[mime] || "jpg";
+    let docText: string | undefined;
+    if (TEXT_MIME.includes(mime)) {
+      try { docText = await extractDocText(bytes, mime); } catch (e) { console.error("[validate-worker-list] extract", e); }
+      if (!docText || docText.trim().length < 3) return json({ error: "Não foi possível ler o texto do arquivo. Salve como PDF ou DOCX e tente novamente." }, 200);
+    }
     const filePath = `${contribution.employer_id}/${contribution.id}/${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage.from("worker-lists").upload(filePath, bytes, { contentType: mime });
     if (upErr) {
@@ -655,6 +681,7 @@ Deno.serve(async (req) => {
       file_base64,
       mime,
       file_name,
+      docText,
     );
 
     const { valido, confianca, allInconsistencies, motivo, result } = evaluateAi(ai, employer);
