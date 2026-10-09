@@ -51,7 +51,6 @@ import { PortalConventionsSection } from "@/components/portal/PortalServicesSect
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { PortalTutorialVideo } from "@/components/portal/PortalTutorialVideo";
 import { PlayCircle } from "lucide-react";
-import { ChatwootIntegrationConfig } from "@/components/portals/ChatwootIntegrationConfig";
 
 import { STATUS_CONFIG } from "./employer-portal/employerPortalTypes";
 import type { Clinic, Employer, Contribution, ReissueRequest, ActiveView, ContributionTab } from "./employer-portal/employerPortalTypes";
@@ -1404,9 +1403,6 @@ const [showTutorial, setShowTutorial] = useState(false);
 
             {clinic?.id && (
               <>
-                <div className="mt-8 mb-8">
-                  <ChatwootIntegrationConfig clinicId={employer.clinic_id} />
-                </div>
                 <PortalConventionsSection 
                   clinicId={clinic.id} 
                   employerCategoryId={employer?.category_id}
