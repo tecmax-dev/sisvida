@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TrendingUp, Loader2, RefreshCw, ExternalLink, Printer, FileDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ const TYPES: Record<string, string> = {
 const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "A vencer", variant: "default" },
   overdue: { label: "Vencido", variant: "destructive" },
+  paid: { label: "Pago", variant: "secondary" },
 };
 
 interface Row {
@@ -42,6 +44,22 @@ const fmtDate = (d: string | null) => (d ? parseDateOnlyToLocalNoon(d).toLocaleD
 
 export default function UnionReceivablesForecastPage() {
   const navigate = useNavigate();
+  const [syncing, setSyncing] = useState(false);
+  const syncPayments = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", { body: { action: "sync_all_pending", clinicId: SINDICATO_CLINIC_ID } });
+      if (error) throw error;
+      const n = (data as { updated?: number })?.updated ?? 0;
+      if (n > 0) toast.success(`${n} contribuição(ões) atualizada(s) como pagas`);
+      else toast.info("Nenhum novo pagamento encontrado");
+      await load();
+    } catch (e) {
+      toast.error(`Erro ao sincronizar: ${e instanceof Error ? e.message : "erro desconhecido"}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
   const [boletoUrl, setBoletoUrl] = useState<string | null>(null);
   const [companyRow, setCompanyRow] = useState<Row | null>(null);
   const openBoleto = (url: string | null) => { if (url) setBoletoUrl(url); };
@@ -67,7 +85,7 @@ export default function UnionReceivablesForecastPage() {
         .select("id, employer_id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, employers(name, cnpj)")
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .in("contribution_type_id", Object.keys(TYPES))
-        .in("status", ["pending", "overdue"])
+        .or("status.in.(pending,overdue),and(status.eq.paid,competence_year.gte.2026)")
         .gt("value", 0)
         .order("due_date", { ascending: true })
         .order("id", { ascending: true })
@@ -78,7 +96,7 @@ export default function UnionReceivablesForecastPage() {
     }
     // Boletos já criados e não pagos (a vencer/vencidos) + todos criados a partir de 09/2026
     setRows(
-all.filter((r) => Number(r.value) > 0),
+all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_year * 100 + r.competence_month >= 202609)),
     );
     setLoading(false);
   };
@@ -123,9 +141,11 @@ all.filter((r) => Number(r.value) > 0),
   const totals = useMemo(() => {
     const byType: Record<string, { count: number; value: number }> = {};
     const byMonth: Record<string, { count: number; value: number }> = {};
-    let total = 0, overdue = 0, upcoming = 0, awaiting = 0;
+    let total = 0, overdue = 0, upcoming = 0, awaiting = 0, received = 0, open = 0;
     for (const r of filtered) {
       const v = Number(r.value) || 0;
+      if (r.status === "paid") { received += v; continue; }
+      open++;
       total += v;
       if (r.status === "overdue") overdue += v;
       else if (r.status === "pending") upcoming += v;
@@ -138,7 +158,7 @@ all.filter((r) => Number(r.value) > 0),
       byMonth[mk].count++;
       byMonth[mk].value += v;
     }
-    return { byType, byMonth, total, overdue, upcoming, awaiting };
+    return { byType, byMonth, total, overdue, upcoming, awaiting, received, open };
   }, [filtered]);
 
   const exportPdf = () => {
@@ -186,6 +206,9 @@ all.filter((r) => Number(r.value) > 0),
         <Button variant="outline" onClick={exportPdf} disabled={loading}>
           <FileDown className="mr-2 h-4 w-4" /> PDF
         </Button>
+        <Button onClick={() => void syncPayments()} disabled={loading || syncing}>
+          {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />} Sincronizar pagamentos
+        </Button>
         <Button variant="outline" onClick={() => void load()} disabled={loading}>
           <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
         </Button>
@@ -200,7 +223,7 @@ all.filter((r) => Number(r.value) > 0),
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total previsto</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.total)}</CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">A vencer</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.upcoming)}</CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Vencidos</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-destructive">{brl(totals.overdue)}</CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Boletos</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{filtered.length}</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Recebido (a partir de 09/2026)</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.received)}</CardContent></Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
