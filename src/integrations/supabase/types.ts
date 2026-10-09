@@ -2748,6 +2748,51 @@ export type Database = {
           },
         ]
       }
+      contribution_value_email_logs: {
+        Row: {
+          clinic_id: string
+          contribution_id: string | null
+          created_at: string
+          document_number: string | null
+          employer_id: string | null
+          employer_name: string | null
+          error_message: string | null
+          id: string
+          invoice_url: string | null
+          portal_type: string | null
+          recipient: string | null
+          status: string
+        }
+        Insert: {
+          clinic_id: string
+          contribution_id?: string | null
+          created_at?: string
+          document_number?: string | null
+          employer_id?: string | null
+          employer_name?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_url?: string | null
+          portal_type?: string | null
+          recipient?: string | null
+          status?: string
+        }
+        Update: {
+          clinic_id?: string
+          contribution_id?: string | null
+          created_at?: string
+          document_number?: string | null
+          employer_id?: string | null
+          employer_name?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_url?: string | null
+          portal_type?: string | null
+          recipient?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       contribution_worker_list_validations: {
         Row: {
           ai_result: Json | null
