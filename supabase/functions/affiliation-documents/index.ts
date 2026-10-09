@@ -297,11 +297,25 @@ serve(async (req) => {
       const ids = body.employer_id ? allowed.filter((i) => i === body.employer_id) : allowed;
       if (!ids.length) return json({ success: true, documents: [] });
       const { data } = await db.from("affiliation_company_documents")
-        .select("id, employer_id, employer_cnpj, worker_name, source, title, version, approved_at, made_available_at, opened_at, ack_status, ack_at, ack_by_name, classification_notice")
+        .select("id, employer_id, employer_cnpj, worker_name, worker_cpf, source, title, version, approved_at, made_available_at, opened_at, ack_status, ack_at, ack_by_name, classification_notice")
         .in("employer_id", ids).order("made_available_at", { ascending: false }).limit(500);
       const { data: emps } = await db.from("employers").select("id, name").in("id", ids);
       const names = new Map((emps ?? []).map((e: any) => [e.id, e.name]));
-      return json({ success: true, documents: (data ?? []).map((d: any) => ({ ...d, employers: { name: names.get(d.employer_id) ?? "" } })) });
+      // Verificação automática: ficha em nome de trabalhador da lista importada que não está na Mensalidade
+      const { data: workers } = await db.from("employer_workers").select("employer_id, cpf, name_norm, contribution_types(name)")
+        .in("employer_id", ids).eq("active", true);
+      const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+      const docs = (data ?? []).map((d: any) => {
+        const cpf = digits(d.worker_cpf); const nm = norm(d.worker_name);
+        const hits = (workers ?? []).filter((w: any) => w.employer_id === d.employer_id &&
+          ((cpf.length === 11 && digits(w.cpf) === cpf) || (nm && norm(w.name_norm) === nm)));
+        const inMens = hits.some((w: any) => /mensal/i.test(w.contribution_types?.name ?? ""));
+        const other = hits.find((w: any) => !/mensal/i.test(w.contribution_types?.name ?? ""));
+        const { worker_cpf: _c, ...rest } = d;
+        return { ...rest, classification_notice: !!other && !inMens, list_type: other && !inMens ? (other.contribution_types?.name ?? "outra lista") : null,
+          employers: { name: names.get(d.employer_id) ?? "" } };
+      });
+      return json({ success: true, documents: docs });
     }
 
     if (action === "open") {
