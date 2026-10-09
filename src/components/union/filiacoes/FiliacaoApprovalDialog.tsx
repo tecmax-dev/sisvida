@@ -92,6 +92,21 @@ export function FiliacaoApprovalDialog({
           console.error("Error syncing to patients:", syncErr);
         }
 
+        // Automação: carteirinha de 30 dias + ficha na Central da empresa + pendência de ciência
+        let automationNotice = "";
+        try {
+          const { data: proc, error: procErr } = await supabase.functions.invoke("affiliation-documents", {
+            body: { action: "process", associadoId: filiacao.id },
+          });
+          automationNotice = procErr || !proc?.success
+            ? "Automação pendente: reprocesse pela lista de filiações."
+            : proc.status === "needs_employer"
+              ? "Empresa não identificada: corrija o vínculo/CNPJ e reprocesse."
+              : proc.errors?.length ? `Atenção: ${proc.errors.join("; ")}` : "Carteirinha e ficha da empresa geradas.";
+        } catch {
+          automationNotice = "Automação pendente: reprocesse pela lista de filiações.";
+        }
+
         let whatsappNotice = "";
         if (sendWhatsApp) {
           const { data: result, error: notifError } = await supabase.functions.invoke("send-affiliation-welcome", {
@@ -114,7 +129,7 @@ export function FiliacaoApprovalDialog({
 
         toast({
           title: "Filiação aprovada com sucesso!",
-          description: `Status atualizado e matrícula gerada. ${whatsappNotice}`,
+          description: `Status atualizado e matrícula gerada. ${automationNotice} ${whatsappNotice}`,
         });
       } else {
         // Reject

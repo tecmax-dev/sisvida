@@ -497,6 +497,21 @@ serve(async (req) => {
       );
     }
 
+    // Ciência obrigatória de nova ficha de filiação (bloqueio individual por empresa).
+    if ((portal_type === "employer" || portal_type === "accounting_office") && contribution.employer_id) {
+      const { count: pendingAffiliations } = await supabase
+        .from("affiliation_company_documents")
+        .select("id", { count: "exact", head: true })
+        .eq("employer_id", contribution.employer_id)
+        .eq("ack_status", "pending");
+      if ((pendingAffiliations ?? 0) > 0) {
+        return new Response(
+          JSON.stringify({ error: "ATENÇÃO — CIÊNCIA DE FILIAÇÃO PENDENTE. Visualize a ficha de filiação em 'Filiações Recebidas' e confirme sua ciência para continuar.", code: "AFFILIATION_ACK_PENDING" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Etapa obrigatória: relação de trabalhadores validada por IA,
     // vinculada à MESMA empresa, ao MESMO lançamento e ao mesmo portal.
     let workerListValidationId: string | null = null;

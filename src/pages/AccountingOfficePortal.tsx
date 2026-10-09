@@ -1,4 +1,5 @@
  import { useState, useEffect, useMemo, useRef } from "react";
+import { PortalAffiliationsPanel } from "@/components/affiliations/PortalAffiliationsPanel";
  import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkerListValidationStep } from "@/components/portal/WorkerListValidationStep";
@@ -137,6 +138,7 @@ export default function AccountingOfficePortal() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   
   // Views
+  const [affiliationPending, setAffiliationPending] = useState<string[]>([]);
   const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao" | "cobranca" | "listas">("home");
   
   // Filters
@@ -757,6 +759,7 @@ export default function AccountingOfficePortal() {
           />
 
           <SindicatoWhatsappBanner />
+          {accountingOffice?.id && <PortalAffiliationsPanel portalType="accounting_office" portalId={accountingOffice.id} onPendingChange={setAffiliationPending} />}
 
           {/* 5 Service Cards - SindSystem style */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
@@ -1234,6 +1237,14 @@ export default function AccountingOfficePortal() {
           subtitle="Gerenciamento e consulta de boletos."
           onBack={() => setActiveView("home")}
         />
+
+        {affiliationPending.length > 0 && (
+          <div className="mb-4 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-bold">ATENÇÃO — CIÊNCIA DE FILIAÇÃO PENDENTE</p>
+            <p>{affiliationPending.length} empresa(s) com nova ficha de filiação. A geração de boletos fica bloqueada apenas para essas empresas até a confirmação de ciência; as demais seguem liberadas.</p>
+            <button className="mt-2 font-semibold underline" onClick={() => setActiveView("home")}>Ir para Filiações Recebidas</button>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
           <PortalContributionsList
