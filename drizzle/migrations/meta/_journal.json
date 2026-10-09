@@ -176,6 +176,13 @@
       "when": 1791505381611,
       "tag": "0024_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791505746562,
+      "tag": "0025_one_dependent_per_titular_per_professional",
+      "breakpoints": true
     }
   ]
 }
