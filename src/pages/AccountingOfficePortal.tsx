@@ -32,7 +32,7 @@ import {
   Calendar,
   AlertTriangle,
   MessageCircle,
-  TrendingUp
+  TrendingUp,
   FileSignature,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
