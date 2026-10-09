@@ -302,8 +302,7 @@ export function FiliacaoDetailDialog({
     }
   };
 
-  if (!data) {
-    const [exportingEmployer, setExportingEmployer] = useState(false);
+  const [exportingEmployer, setExportingEmployer] = useState(false);
   const handleExportToEmployer = async () => {
     if (!data?.id) return;
     setExportingEmployer(true);
@@ -322,6 +321,7 @@ export function FiliacaoDetailDialog({
     }
   };
 
+  if (!data) {
   return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-3xl">
