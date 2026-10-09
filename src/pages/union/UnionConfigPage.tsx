@@ -142,6 +142,8 @@ export default function UnionConfigPage() {
               <TitularBookingLimitSettings
                 clinicId={resolvedClinic.id}
                 currentEnabled={(clinicSettings as any)?.titular_booking_limit_enabled ?? true}
+                currentPeriod={(clinicSettings as any)?.titular_booking_period ?? "monthly"}
+                currentLimit={(clinicSettings as any)?.max_appointments_per_cpf_month ?? 1}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
