@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           error: "already_scheduled_this_month",
           message:
-            "Você já tem uma consulta marcada com este profissional neste mês. Cada associado pode ter apenas 1 consulta por mês com o mesmo profissional, por isso a fila de espera dele fica disponível para você somente a partir do próximo mês.",
+            "Você já atingiu o limite de consultas com este profissional no período definido pelo sindicato. A fila de espera dele fica disponível para você quando esse período terminar.",
         }), { status: 409, headers: jsonHeaders });
       }
 
