@@ -18,6 +18,55 @@ async function logEvent(db: DB, e: { clinic_id: string; document_id?: string | n
   await db.from("affiliation_document_events").insert({ details: {}, ...e });
 }
 
+
+async function toDataUrl(db: DB, url: string | null | undefined): Promise<string | null> {
+  if (!url) return null;
+  if (url.startsWith("data:image/")) return url;
+  const fetchB64 = async (u: string) => {
+    try {
+      const r = await fetch(u); if (!r.ok) return null;
+      const buf = new Uint8Array(await r.arrayBuffer());
+      let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      return `data:${r.headers.get("content-type") || "image/png"};base64,${btoa(bin)}`;
+    } catch { return null; }
+  };
+  if (url.startsWith("http")) return await fetchB64(url);
+  const clean = url.replace(/^\/+/, "");
+  for (const bucket of ["patient-signatures", "signatures", "sindical-documentos", "patient-documents", "patient-photos"]) {
+    const path = clean.startsWith(`${bucket}/`) ? clean.slice(bucket.length + 1) : clean;
+    const { data } = await db.storage.from(bucket).createSignedUrl(path, 60);
+    if (!data?.signedUrl) continue;
+    const d = await fetchB64(data.signedUrl);
+    if (d) return d;
+  }
+  return null;
+}
+
+/** Dados completos para gerar a MESMA ficha PDF impressa pelo sindicato. */
+async function buildPdfData(db: DB, associadoId: string | null) {
+  if (!associadoId) return null;
+  const { data: a } = await db.from("sindical_associados").select("*").eq("id", associadoId).maybeSingle();
+  if (!a) return null;
+  const [{ data: deps }, { data: ue }] = await Promise.all([
+    db.from("sindical_associado_dependentes").select("*").eq("associado_id", associadoId),
+    db.from("union_entities").select("razao_social, clinic_id, logo_url, cnpj, cidade, estado").eq("id", a.sindicato_id).maybeSingle(),
+  ]);
+  let photo = a.foto_url || a.documento_foto_url || null;
+  let sig = a.assinatura_digital_url || null;
+  if (ue?.clinic_id && (!photo || !sig)) {
+    const cpf = digits(a.cpf);
+    const { data: pts } = await db.from("patients").select("photo_url, signature_url").eq("clinic_id", ue.clinic_id).in("cpf", [cpf, a.cpf].filter(Boolean)).limit(3);
+    photo = photo || pts?.find((p: any) => p.photo_url)?.photo_url || null;
+    sig = sig || pts?.find((p: any) => p.signature_url)?.signature_url || null;
+  }
+  const [photoData, sigData] = await Promise.all([toDataUrl(db, photo), toDataUrl(db, sig)]);
+  return {
+    filiacao: { ...a, foto_url: photoData, documento_foto_url: null, assinatura_digital_url: sigData },
+    dependents: deps ?? [],
+    sindicato: ue ? { razao_social: ue.razao_social, logo_url: ue.logo_url, cnpj: ue.cnpj, cidade: ue.cidade, uf: ue.estado } : null,
+  };
+}
+
 async function canAccessClinic(db: DB, userId: string, isSuperAdmin: boolean, clinicId: string) {
   if (isSuperAdmin) return true;
   const { data } = await db.from("user_roles").select("id").eq("user_id", userId).eq("clinic_id", clinicId).limit(1);
@@ -177,6 +226,15 @@ serve(async (req) => {
       return json({ success: true, ...r });
     }
 
+    // Dados da ficha completa para o sindicato (aba Filiações e Documentos)
+    if (action === "pdf_data") {
+      const ctx = await getAuthContext(req);
+      if (!ctx?.isStaff) return json({ success: false, error: "UNAUTHORIZED" }, 401);
+      const { data: doc } = await db.from("affiliation_company_documents").select("clinic_id, associado_id").eq("id", body.document_id).maybeSingle();
+      if (!doc || !(await canAccessClinic(db, ctx.userId, ctx.isSuperAdmin, doc.clinic_id))) return json({ success: false, error: "FORBIDDEN" }, 403);
+      return json({ success: true, pdf_data: await buildPdfData(db, doc.associado_id) });
+    }
+
     // Exporta a ficha assinada de UMA filiação aprovada para a empresa (sem carteirinha nem envio externo)
     if (action === "export_associado") {
       const ctx = await getAuthContext(req);
@@ -239,9 +297,11 @@ serve(async (req) => {
       const ids = body.employer_id ? allowed.filter((i) => i === body.employer_id) : allowed;
       if (!ids.length) return json({ success: true, documents: [] });
       const { data } = await db.from("affiliation_company_documents")
-        .select("id, employer_id, employer_cnpj, worker_name, source, title, version, approved_at, made_available_at, opened_at, ack_status, ack_at, ack_by_name, classification_notice, employers(name)")
+        .select("id, employer_id, employer_cnpj, worker_name, source, title, version, approved_at, made_available_at, opened_at, ack_status, ack_at, ack_by_name, classification_notice")
         .in("employer_id", ids).order("made_available_at", { ascending: false }).limit(500);
-      return json({ success: true, documents: data ?? [] });
+      const { data: emps } = await db.from("employers").select("id, name").in("id", ids);
+      const names = new Map((emps ?? []).map((e: any) => [e.id, e.name]));
+      return json({ success: true, documents: (data ?? []).map((d: any) => ({ ...d, employers: { name: names.get(d.employer_id) ?? "" } })) });
     }
 
     if (action === "open") {
@@ -257,7 +317,8 @@ serve(async (req) => {
         fileUrl = s?.signedUrl ?? null;
       }
       const { snapshot, ...rest } = doc;
-      return json({ success: true, document: { ...rest, snapshot, file_url: fileUrl } });
+      const pdf_data = fileUrl ? null : await buildPdfData(db, doc.associado_id);
+      return json({ success: true, document: { ...rest, snapshot, file_url: fileUrl, pdf_data } });
     }
 
     if (action === "acknowledge") {
