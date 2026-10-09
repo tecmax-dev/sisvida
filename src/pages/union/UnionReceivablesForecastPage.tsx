@@ -74,6 +74,8 @@ export default function UnionReceivablesForecastPage() {
   const [dueTo, setDueTo] = useState("");
   const [valueFilter, setValueFilter] = useState("all");
   const [quick, setQuick] = useState("all");
+  const [page, setPage] = useState(1);
+  const [showMore, setShowMore] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -185,31 +187,36 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
     doc.save("previsao-recebimento.pdf");
   };
 
+  const PAGE_SIZE = 20;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const monthLabel = (k: string) => (k === "sem-data" ? "Sem vencimento" : `${k.slice(5, 7)}/${k.slice(0, 4)}`);
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">Previsão de recebimento</h1>
+            <h1 className="text-xl font-semibold">Previsão de recebimento</h1>
             <p className="text-sm text-muted-foreground">
               Boletos não pagos (a vencer e vencidos) e contribuições criadas a partir de 09/2026 — tipos 124, 125 e 126.
             </p>
           </div>
         </div>
         <div className="flex gap-2 print:hidden">
-        <Button variant="outline" onClick={() => window.print()} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={() => window.print()} disabled={loading}>
           <Printer className="mr-2 h-4 w-4" /> Imprimir
         </Button>
-        <Button variant="outline" onClick={exportPdf} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={exportPdf} disabled={loading}>
           <FileDown className="mr-2 h-4 w-4" /> PDF
         </Button>
-        <Button onClick={() => void syncPayments()} disabled={loading || syncing}>
+        <Button size="sm" onClick={() => void syncPayments()} disabled={loading || syncing}>
           {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />} Sincronizar pagamentos
         </Button>
-        <Button variant="outline" onClick={() => void load()} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
           <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
         </Button>
         </div>
@@ -219,112 +226,134 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
         <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total previsto</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.total)}</CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">A vencer</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.upcoming)}</CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Vencidos</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-destructive">{brl(totals.overdue)}</CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Recebido (a partir de 09/2026)</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.received)}</CardContent></Card>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              ["Total previsto", brl(totals.total), ""],
+              ["A vencer", brl(totals.upcoming), ""],
+              ["Vencidos", brl(totals.overdue), "text-destructive"],
+              ["Recebido (desde 09/2026)", brl(totals.received), "text-primary"],
+            ].map(([l, v, c]) => (
+              <div key={l} className="rounded-lg border bg-card px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{l}</p>
+                <p className={`mt-1 text-xl font-semibold tabular-nums ${c}`}>{v}</p>
+              </div>
+            ))}
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Por tipo</CardTitle></CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead className="text-right">Qtd.</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {Object.entries(TYPES).map(([id, label]) => (
-                      <TableRow key={id}><TableCell>{label}</TableCell><TableCell className="text-right">{totals.byType[id]?.count ?? 0}</TableCell><TableCell className="text-right">{brl(totals.byType[id]?.value ?? 0)}</TableCell></TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Por mês de vencimento</CardTitle></CardHeader>
-              <CardContent className="max-h-80 overflow-auto">
-                <Table>
-                  <TableHeader><TableRow><TableHead>Mês</TableHead><TableHead className="text-right">Qtd.</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
-                  <TableBody>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-lg border bg-card">
+              <p className="border-b px-4 py-2 text-sm font-semibold">Por tipo</p>
+              <table className="w-full text-sm">
+                <tbody>
+                  {Object.entries(TYPES).map(([id, label]) => (
+                    <tr key={id} className="border-b last:border-0">
+                      <td className="px-4 py-1.5">{label}</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums text-muted-foreground">{totals.byType[id]?.count ?? 0}</td>
+                      <td className="px-4 py-1.5 text-right font-medium tabular-nums">{brl(totals.byType[id]?.value ?? 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="rounded-lg border bg-card">
+              <p className="border-b px-4 py-2 text-sm font-semibold">Por mês de vencimento</p>
+              <div className="max-h-[118px] overflow-auto">
+                <table className="w-full text-sm">
+                  <tbody>
                     {Object.entries(totals.byMonth).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => (
-                      <TableRow key={k}><TableCell>{monthLabel(k)}</TableCell><TableCell className="text-right">{v.count}</TableCell><TableCell className="text-right">{brl(v.value)}</TableCell></TableRow>
+                      <tr key={k} className="border-b last:border-0">
+                        <td className="px-4 py-1.5">{monthLabel(k)}</td>
+                        <td className="px-4 py-1.5 text-right tabular-nums text-muted-foreground">{v.count}</td>
+                        <td className="px-4 py-1.5 text-right font-medium tabular-nums">{brl(v.value)}</td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <Card>
-            <CardHeader className="space-y-3">
-              <CardTitle className="text-base">Boletos ({filtered.length})</CardTitle>
-              <div className="flex flex-wrap gap-2">
-                <Input className="max-w-xs" placeholder="Buscar empresa ou CNPJ" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+          <div className="rounded-lg border bg-card">
+            <div className="space-y-3 border-b p-4 print:hidden">
+              <div className="flex flex-wrap items-center gap-2">
+                <Input className="h-9 w-full sm:w-64" placeholder="Buscar empresa ou CNPJ" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                   <option value="all">Todos os tipos</option>
                   {Object.entries(TYPES).map(([id, l]) => <option key={id} value={id}>{l}</option>)}
                 </select>
-                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                   <option value="all">Todas as situações</option>
                   {Object.entries(STATUS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
                 </select>
+                <Button size="sm" variant="outline" className="h-9" onClick={() => setShowMore((v) => !v)}>{showMore ? "Menos filtros" : "Mais filtros"}</Button>
+                <Button size="sm" variant="ghost" className="h-9" onClick={() => { setSearch(""); setTypeFilter("all"); setStatusFilter("all"); setCompFrom(""); setCompTo(""); setDueFrom(""); setDueTo(""); setValueFilter("all"); setQuick("all"); }}>Limpar</Button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {[["all","Tudo"],["overdue","Vencidos"],["month","Vence este mês"],["next30","Próximos 30 dias"],["new2026","A partir de 09/2026"]].map(([k,l]) => (
-                  <Button key={k} size="sm" variant={quick === k ? "default" : "outline"} onClick={() => setQuick(k)}>{l}</Button>
+                  <Button key={k} size="sm" className="h-7 rounded-full px-3 text-xs" variant={quick === k ? "default" : "outline"} onClick={() => setQuick(k)}>{l}</Button>
                 ))}
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <label className="text-xs text-muted-foreground">Competência de
-                  <Input type="month" value={compFrom} onChange={(e) => setCompFrom(e.target.value)} /></label>
-                <label className="text-xs text-muted-foreground">Competência até
-                  <Input type="month" value={compTo} onChange={(e) => setCompTo(e.target.value)} /></label>
-                <label className="text-xs text-muted-foreground">Vencimento de
-                  <Input type="date" value={dueFrom} onChange={(e) => setDueFrom(e.target.value)} /></label>
-                <label className="text-xs text-muted-foreground">Vencimento até
-                  <Input type="date" value={dueTo} onChange={(e) => setDueTo(e.target.value)} /></label>
-                <label className="text-xs text-muted-foreground">Valor
-                  <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground" value={valueFilter} onChange={(e) => setValueFilter(e.target.value)}>
-                    <option value="all">Todos</option>
-                    <option value="with">Com valor</option>
-                    <option value="high">A partir de R$ 1.000</option>
-                  </select></label>
-              </div>
-              <div>
-                <Button size="sm" variant="ghost" onClick={() => { setSearch(""); setTypeFilter("all"); setStatusFilter("all"); setCompFrom(""); setCompTo(""); setDueFrom(""); setDueTo(""); setValueFilter("all"); setQuick("all"); }}>Limpar filtros</Button>
-              </div>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Empresa</TableHead><TableHead>Tipo</TableHead><TableHead>Competência</TableHead>
-                    <TableHead>Vencimento</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Situação</TableHead><TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.slice(0, 500).map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="cursor-pointer" onClick={() => setCompanyRow(r)}><div className="font-medium text-primary hover:underline">{r.employers?.name ?? "-"}</div><div className="text-xs text-muted-foreground">{r.employers?.cnpj ?? ""}</div></TableCell>
-                      <TableCell className="text-sm">{TYPES[r.contribution_type_id]}</TableCell>
-                      <TableCell>{String(r.competence_month).padStart(2, "0")}/{r.competence_year}</TableCell>
-                      <TableCell>{fmtDate(r.due_date)}</TableCell>
-                      <TableCell className={`text-right ${r.lytex_invoice_url ? "cursor-pointer text-primary hover:underline" : ""}`} onClick={() => openBoleto(r.lytex_invoice_url)}>{r.value ? brl(Number(r.value)) : "-"}</TableCell>
-                      <TableCell><Badge variant={STATUS[r.status]?.variant ?? "secondary"}>{STATUS[r.status]?.label ?? r.status}</Badge></TableCell>
-                      <TableCell>
+              {showMore && (
+                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                  <label className="text-xs text-muted-foreground">Competência de<Input className="h-9" type="month" value={compFrom} onChange={(e) => setCompFrom(e.target.value)} /></label>
+                  <label className="text-xs text-muted-foreground">Competência até<Input className="h-9" type="month" value={compTo} onChange={(e) => setCompTo(e.target.value)} /></label>
+                  <label className="text-xs text-muted-foreground">Vencimento de<Input className="h-9" type="date" value={dueFrom} onChange={(e) => setDueFrom(e.target.value)} /></label>
+                  <label className="text-xs text-muted-foreground">Vencimento até<Input className="h-9" type="date" value={dueTo} onChange={(e) => setDueTo(e.target.value)} /></label>
+                  <label className="text-xs text-muted-foreground">Valor
+                    <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground" value={valueFilter} onChange={(e) => setValueFilter(e.target.value)}>
+                      <option value="all">Todos</option>
+                      <option value="with">Com valor</option>
+                      <option value="high">A partir de R$ 1.000</option>
+                    </select></label>
+                </div>
+              )}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Empresa</th>
+                    <th className="px-3 py-2 text-left font-medium">Tipo</th>
+                    <th className="px-3 py-2 text-left font-medium">Comp.</th>
+                    <th className="px-3 py-2 text-left font-medium">Vencimento</th>
+                    <th className="px-3 py-2 text-right font-medium">Valor</th>
+                    <th className="px-3 py-2 text-left font-medium">Situação</th>
+                    <th className="w-10 px-2 py-2 print:hidden" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((r) => (
+                    <tr key={r.id} className="border-t hover:bg-muted/30">
+                      <td className="max-w-[280px] px-4 py-2">
+                        <button className="block w-full truncate text-left font-medium text-primary hover:underline" title={r.employers?.name ?? ""} onClick={() => setCompanyRow(r)}>{r.employers?.name ?? "-"}</button>
+                        <span className="text-xs text-muted-foreground">{r.employers?.cnpj ?? ""}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{TYPES[r.contribution_type_id]?.slice(0, 3)} · {TYPES[r.contribution_type_id]?.split(" - ")[1]?.replace("Taxa Negocial ", "TN ")}</td>
+                      <td className="px-3 py-2 tabular-nums">{String(r.competence_month).padStart(2, "0")}/{r.competence_year}</td>
+                      <td className="px-3 py-2 tabular-nums">{fmtDate(r.due_date)}</td>
+                      <td className="px-3 py-2 text-right font-medium tabular-nums">{r.value ? brl(Number(r.value)) : "-"}</td>
+                      <td className="px-3 py-2"><Badge className="text-[11px]" variant={STATUS[r.status]?.variant ?? "secondary"}>{STATUS[r.status]?.label ?? r.status}</Badge></td>
+                      <td className="px-2 py-2 print:hidden">
                         {r.lytex_invoice_url && (
-                          <Button size="sm" variant="ghost" title="Abrir boleto" onClick={() => openBoleto(r.lytex_invoice_url)}>
-                            <ExternalLink className="h-4 w-4" />
+                          <Button size="icon" variant="ghost" className="h-7 w-7" title="Abrir boleto" onClick={() => openBoleto(r.lytex_invoice_url)}>
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
-              {filtered.length > 500 && <p className="mt-3 text-sm text-muted-foreground">Mostrando os 500 primeiros. Use a busca ou os filtros para refinar.</p>}
-            </CardContent>
-          </Card>
+                  {pageRows.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Nenhum boleto encontrado.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-sm text-muted-foreground print:hidden">
+              <span>{filtered.length} boleto(s) · página {safePage} de {pageCount}</span>
+              <div className="flex gap-1">
+                <Button size="sm" variant="outline" className="h-8" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Anterior</Button>
+                <Button size="sm" variant="outline" className="h-8" disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)}>Próxima</Button>
+              </div>
+            </div>
+          </div>
         </>
       )}
           <Dialog open={!!boletoUrl} onOpenChange={(o) => !o && setBoletoUrl(null)}>
