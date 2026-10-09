@@ -3,10 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, FileSignature, History, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { AffiliationFichaView, fmtDate } from "./AffiliationFichaView";
+import { AffiliationFichaView, fmtDate, printPdf, useFichaPdfUrl } from "./AffiliationFichaView";
 
 const EVENT_LABELS: Record<string, string> = {
   approved: "Filiação aprovada", card_issued: "Carteirinha emitida", made_available: "Ficha disponibilizada à empresa",
@@ -23,6 +23,8 @@ export default function EmployerAffiliationsTab({ employerId, employerCnpj, clin
   const [uploading, setUploading] = useState(false);
   const [workerName, setWorkerName] = useState("");
   const [exporting, setExporting] = useState(false);
+  const { url: pdfUrl } = useFichaPdfUrl(viewing?.pdf_data);
+  const printUrl = viewing?.file_url || pdfUrl;
 
   async function exportSigned() {
     setExporting(true);
@@ -49,7 +51,12 @@ export default function EmployerAffiliationsTab({ employerId, employerCnpj, clin
       const { data } = await supabase.storage.from("affiliation-documents").createSignedUrl(d.file_path, 3600);
       fileUrl = data?.signedUrl ?? null;
     }
-    setViewing({ ...d, file_url: fileUrl });
+    setViewing({ ...d, file_url: fileUrl, pdf_data: undefined });
+    if (!fileUrl && d.associado_id) {
+      const { data } = await supabase.functions.invoke("affiliation-documents", { body: { action: "pdf_data", document_id: d.id } });
+      if (data?.pdf_data) setViewing((v: any) => (v?.id === d.id ? { ...v, pdf_data: data.pdf_data } : v));
+      else setViewing((v: any) => (v?.id === d.id ? { ...v, pdf_data: null } : v));
+    }
   }
 
   async function history(d: any) {
@@ -143,7 +150,11 @@ export default function EmployerAffiliationsTab({ employerId, employerCnpj, clin
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader><DialogTitle>{viewing?.title} — {viewing?.worker_name}</DialogTitle></DialogHeader>
-          {viewing && <AffiliationFichaView snapshot={viewing.snapshot} fileUrl={viewing.file_url} />}
+          {viewing && <AffiliationFichaView snapshot={viewing.snapshot} fileUrl={viewing.file_url} pdfUrl={pdfUrl} pdfLoading={viewing.pdf_data === undefined && !viewing.file_url && !!viewing.associado_id} />}
+          <DialogFooter>
+            <Button variant="outline" disabled={!printUrl} onClick={() => printUrl && printPdf(printUrl)}>Imprimir</Button>
+            {printUrl && <Button variant="outline" asChild><a href={printUrl} download={`ficha-filiacao-${viewing?.worker_name ?? ""}.pdf`}>Baixar PDF</a></Button>}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

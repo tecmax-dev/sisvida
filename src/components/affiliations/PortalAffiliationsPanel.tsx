@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertTriangle, CheckCircle2, Eye, FileSignature, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { AffiliationFichaView, fmtDate } from "./AffiliationFichaView";
+import { AffiliationFichaView, fmtDate, printPdf, useFichaPdfUrl } from "./AffiliationFichaView";
 
 type Doc = {
   id: string; employer_id: string; employer_cnpj: string | null; worker_name: string; title: string;
@@ -39,6 +39,8 @@ export function PortalAffiliationsPanel({
   const [ackChecked, setAckChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const { url: pdfUrl } = useFichaPdfUrl(viewing?.pdf_data);
+  const printUrl = viewing?.file_url || pdfUrl;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -166,9 +168,10 @@ export function PortalAffiliationsPanel({
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader><DialogTitle>{viewing?.title} — {viewing?.worker_name}</DialogTitle></DialogHeader>
-          {viewing && <AffiliationFichaView snapshot={viewing.snapshot} fileUrl={viewing.file_url} />}
+          {viewing && <AffiliationFichaView snapshot={viewing.snapshot} fileUrl={viewing.file_url} pdfUrl={pdfUrl} pdfLoading={!!viewing.pdf_data && !pdfUrl} />}
           <DialogFooter>
-            <Button variant="outline" onClick={() => window.print()}>Imprimir</Button>
+            <Button variant="outline" disabled={!printUrl} onClick={() => printUrl && printPdf(printUrl)}>Imprimir</Button>
+            {printUrl && <Button variant="outline" asChild><a href={printUrl} download={`ficha-filiacao-${viewing?.worker_name ?? ""}.pdf`}>Baixar PDF</a></Button>}
             {viewing?.ack_status === "pending" && (
               <Button onClick={() => { setAckName(""); setAckChecked(false); setAckOpen([viewing.id]); }}>Confirmar ciência</Button>
             )}
