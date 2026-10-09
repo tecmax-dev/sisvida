@@ -1299,8 +1299,7 @@ serve(async (req) => {
       return await answer(
         "Entendido. Como você não autorizou o uso do seu WhatsApp, não podemos continuar o atendimento por este canal, conforme a Lei Geral de Proteção de Dados (LGPD) e as regras do WhatsApp.\n\n" +
           "Este atendimento foi encerrado e você não receberá mensagens automáticas neste número.\n\n" +
-          "📞 Para falar com o Sindicato, ligue para o nosso telefone fixo: (73) 3231-1784.\n\n" +
-          "Se mudar de ideia, basta enviar uma nova mensagem e responder SIM.",
+          "📞 Para falar com o Sindicato, ligue para o nosso telefone fixo: (73) 3231-1784.",
         "OPT_OUT",
         "CONSENT_DECLINED_BUTTON",
         null,
