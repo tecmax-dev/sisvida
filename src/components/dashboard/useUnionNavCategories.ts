@@ -97,6 +97,7 @@ export const unionNavCategories: UnionNavCategory[] = [
     items: [
       { href: "/union/contribuicoes", icon: Receipt, label: "Gerenciamento", permission: "union_view_contributions" },
       { href: "/union/contribuicoes/relatorios", icon: FileBarChart, label: "Relatórios", permission: "union_view_contribution_reports" },
+      { href: "/union/contribuicoes/emails", icon: Mail, label: "E-mails de alteração", permission: "union_view_contributions" },
     ],
   },
   {

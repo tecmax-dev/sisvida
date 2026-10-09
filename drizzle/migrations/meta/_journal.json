@@ -190,6 +190,13 @@
       "when": 1791506023867,
       "tag": "0026_dependent_limit_bypass_administrativo_group",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791522563372,
+      "tag": "0027_contribution_value_email_logs",
+      "breakpoints": true
     }
   ]
 }
