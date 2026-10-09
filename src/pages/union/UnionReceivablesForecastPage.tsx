@@ -45,6 +45,7 @@ interface Row {
 
 const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (d: string | null) => (d ? parseDateOnlyToLocalNoon(d).toLocaleDateString("pt-BR") : "-");
+const fmtPaid = (d: string | null) => (d ? fmtDate(d.slice(0, 10)) : "-");
 
 export default function UnionReceivablesForecastPage() {
   const navigate = useNavigate();
@@ -202,10 +203,10 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
       styles: { fontSize: 9 },
     });
     autoTable(doc, {
-      head: [["Empresa", "CNPJ", "Tipo", "Comp.", "Vencimento", "Valor bruto", ...(showFee ? ["Taxa Lytex", "Líquido"] : []), "Situação"]],
+      head: [["Empresa", "CNPJ", "Tipo", "Comp.", "Vencimento", "Pago em", "Valor bruto", ...(showFee ? ["Taxa Lytex", "Líquido"] : []), "Situação"]],
       body: filtered.map((r) => [
         r.employers?.name ?? "-", r.employers?.cnpj ?? "", TYPES[r.contribution_type_id],
-        `${String(r.competence_month).padStart(2, "0")}/${r.competence_year}`, fmtDate(r.due_date),
+        `${String(r.competence_month).padStart(2, "0")}/${r.competence_year}`, fmtDate(r.due_date), fmtPaid(r.paid_at),
         brl(Number(r.value) || 0),
         ...(showFee ? [r.lytex_fee_amount != null ? brl(Number(r.lytex_fee_amount)) : "-", netOf(r)] : []),
         STATUS[r.status]?.label ?? r.status,
@@ -350,6 +351,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
                     <th className="px-3 py-2 text-left font-medium">Tipo</th>
                     <th className="px-3 py-2 text-left font-medium">Comp.</th>
                     <th className="px-3 py-2 text-left font-medium">Vencimento</th>
+                    <th className="px-3 py-2 text-left font-medium">Pago em</th>
                     <th className="px-3 py-2 text-right font-medium">Valor bruto</th>
                     {showFee && <th className="px-3 py-2 text-right font-medium">Taxa Lytex</th>}
                     {showFee && <th className="px-3 py-2 text-right font-medium">Líquido</th>}
@@ -367,6 +369,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
                       <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{TYPES[r.contribution_type_id]?.slice(0, 3)} · {TYPES[r.contribution_type_id]?.split(" - ")[1]?.replace("Taxa Negocial ", "TN ")}</td>
                       <td className="px-3 py-2 tabular-nums">{String(r.competence_month).padStart(2, "0")}/{r.competence_year}</td>
                       <td className="px-3 py-2 tabular-nums">{fmtDate(r.due_date)}</td>
+                      <td className="px-3 py-2 tabular-nums">{r.status === "paid" ? fmtPaid(r.paid_at) : "-"}</td>
                       <td className="px-3 py-2 text-right font-medium tabular-nums">{r.value ? brl(Number(r.value)) : "-"}</td>
                       {showFee && <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.lytex_fee_amount != null ? brl(Number(r.lytex_fee_amount)) : "-"}</td>}
                       {showFee && <td className="px-3 py-2 text-right font-medium tabular-nums">{netOf(r)}</td>}
@@ -380,7 +383,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
                       </td>
                     </tr>
                   ))}
-                  {pageRows.length === 0 && <tr><td colSpan={showFee ? 9 : 7} className="px-4 py-10 text-center text-muted-foreground">Nenhum boleto encontrado.</td></tr>}
+                  {pageRows.length === 0 && <tr><td colSpan={showFee ? 10 : 8} className="px-4 py-10 text-center text-muted-foreground">Nenhum boleto encontrado.</td></tr>}
                 </tbody>
               </table>
             </div>
