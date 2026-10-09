@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Save, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { BOOKING_PERIOD_OPTIONS, bookingPeriodShort, normalizeBookingPeriod } from "./bookingPeriodOptions";
 
 interface DependentBookingLimitSettingsProps {
   clinicId: string;
@@ -18,11 +19,7 @@ interface DependentBookingLimitSettingsProps {
   isAdmin: boolean;
 }
 
-const PERIOD_OPTIONS = [
-  { value: "daily", label: "Diário" },
-  { value: "weekly", label: "Semanal" },
-  { value: "monthly", label: "Mensal" },
-];
+const PERIOD_OPTIONS = BOOKING_PERIOD_OPTIONS;
 
 export function DependentBookingLimitSettings({
   clinicId,
@@ -33,7 +30,7 @@ export function DependentBookingLimitSettings({
   isAdmin,
 }: DependentBookingLimitSettingsProps) {
   const [enabled, setEnabled] = useState(currentEnabled);
-  const [period, setPeriod] = useState(currentPeriod || "monthly");
+  const [period, setPeriod] = useState(normalizeBookingPeriod(currentPeriod));
   const [limit, setLimit] = useState(currentLimit ?? 1);
   const [saving, setSaving] = useState(false);
 
@@ -64,7 +61,7 @@ export function DependentBookingLimitSettings({
     }
   };
 
-  const periodLabel = PERIOD_OPTIONS.find((p) => p.value === period)?.label?.toLowerCase() || "mês";
+  const periodLabel = bookingPeriodShort(period);
 
   return (
     <Card>
@@ -74,7 +71,7 @@ export function DependentBookingLimitSettings({
           Limite de Agendamento por Dependente
         </CardTitle>
         <CardDescription>
-          Configure a quantidade máxima de agendamentos que os dependentes de um titular podem fazer por profissional em um determinado período
+          Quantas consultas cada dependente pode marcar com o mesmo profissional em cada período
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -128,9 +125,10 @@ export function DependentBookingLimitSettings({
         </div>
 
         <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-          <strong>Regra atual:</strong> Cada titular poderá agendar no máximo{" "}
-          <strong>{limit === 0 ? "ilimitados" : limit}</strong> dependente(s) por profissional por{" "}
-          <strong>{periodLabel}</strong>.
+          <strong>Regra atual:</strong> cada dependente pode ter no máximo{" "}
+          <strong>{limit === 0 ? "ilimitadas" : limit}</strong> consulta(s) com o mesmo profissional{" "}
+          {period === "monthly" ? <>por <strong>mês</strong></> : <>dentro de qualquer intervalo de <strong>{periodLabel}</strong></>}.
+          Continua valendo: 1 dependente do mesmo titular por semana com o mesmo profissional.
         </div>
 
         {isAdmin && (

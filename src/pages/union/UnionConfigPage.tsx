@@ -43,7 +43,7 @@ export default function UnionConfigPage() {
       if (!resolvedClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled, payslip_acceptance_days, reminder_interval")
+        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled, titular_booking_period, max_appointments_per_cpf_month, payslip_acceptance_days, reminder_interval")
         .eq("id", resolvedClinic.id)
         .single();
       if (error) throw error;
@@ -142,6 +142,8 @@ export default function UnionConfigPage() {
               <TitularBookingLimitSettings
                 clinicId={resolvedClinic.id}
                 currentEnabled={(clinicSettings as any)?.titular_booking_limit_enabled ?? true}
+                currentPeriod={(clinicSettings as any)?.titular_booking_period ?? "monthly"}
+                currentLimit={(clinicSettings as any)?.max_appointments_per_cpf_month ?? 1}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
