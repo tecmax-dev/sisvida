@@ -186,9 +186,10 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
     doc.setFontSize(14);
     doc.text("Previsão de recebimento - Contribuições 124, 125 e 126", 14, 14);
     doc.setFontSize(10);
-    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}  |  Total: ${brl(totals.total)}  |  A vencer: ${brl(totals.upcoming)}  |  Vencidos: ${brl(totals.overdue)}  |  Recebido bruto: ${brl(totals.received)}  |  Taxas Lytex: ${brl(totals.fees)}  |  Líquido: ${brl(totals.net)}  |  Boletos: ${filtered.length}`, 14, 21);
+    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}  |  Total: ${brl(totals.total)}  |  A vencer: ${brl(totals.upcoming)}  |  Vencidos: ${brl(totals.overdue)}  |  Boletos: ${filtered.length}`, 14, 21);
+    doc.text(`Recebido bruto: ${brl(totals.received)}  |  Taxas Lytex: ${brl(totals.fees)}  |  Líquido: ${brl(totals.net)}`, 14, 27);
     autoTable(doc, {
-      startY: 26,
+      startY: 32,
       head: [["Tipo", "Qtd.", "Valor"]],
       body: Object.entries(TYPES).map(([id, l]) => [l, String(totals.byType[id]?.count ?? 0), brl(totals.byType[id]?.value ?? 0)]),
       styles: { fontSize: 9 },
