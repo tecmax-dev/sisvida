@@ -1,0 +1,220 @@
+import { useEffect, useMemo, useState } from "react";
+import { TrendingUp, Loader2, RefreshCw, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
+
+const TYPES: Record<string, string> = {
+  "48bda88b-1cf9-47b6-b930-781d8a0eb55a": "124 - Mensalidade Sindical",
+  "b9c234de-e13b-4c10-a880-616ec4abc66b": "125 - Taxa Negocial (Mercados)",
+  "575887e1-45d3-41e1-9249-5581fe657f54": "126 - Taxa Negocial (Com. Varej.)",
+};
+
+const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  pending: { label: "A vencer", variant: "default" },
+  overdue: { label: "Vencido", variant: "destructive" },
+  awaiting_value: { label: "Aguardando valor", variant: "outline" },
+};
+
+interface Row {
+  id: string;
+  contribution_type_id: string;
+  competence_month: number;
+  competence_year: number;
+  value: number | null;
+  due_date: string | null;
+  status: string;
+  lytex_invoice_url: string | null;
+  employers: { name: string | null; cnpj: string | null } | null;
+}
+
+const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fmtDate = (d: string | null) => (d ? parseDateOnlyToLocalNoon(d).toLocaleDateString("pt-BR") : "-");
+
+export default function UnionReceivablesForecastPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const load = async () => {
+    setLoading(true);
+    const all: Row[] = [];
+    const page = 1000;
+    for (let from = 0; ; from += page) {
+      const { data, error } = await supabase
+        .from("employer_contributions")
+        .select("id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, employers(name, cnpj)")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .in("contribution_type_id", Object.keys(TYPES))
+        .in("status", ["pending", "overdue", "awaiting_value"])
+        .order("due_date", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, from + page - 1);
+      if (error || !data) break;
+      all.push(...(data as unknown as Row[]));
+      if (data.length < page) break;
+    }
+    // Boletos já criados e não pagos (a vencer/vencidos) + todos criados a partir de 09/2026
+    setRows(
+      all.filter((r) => {
+        const key = r.competence_year * 100 + r.competence_month;
+        if (r.status === "awaiting_value") return key >= 202609;
+        return true;
+      }),
+    );
+    setLoading(false);
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const qd = q.replace(/\D/g, "");
+    return rows.filter((r) => {
+      if (typeFilter !== "all" && r.contribution_type_id !== typeFilter) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!q) return true;
+      const name = (r.employers?.name ?? "").toLowerCase();
+      const cnpj = (r.employers?.cnpj ?? "").replace(/\D/g, "");
+      return name.includes(q) || (qd.length > 0 && cnpj.includes(qd));
+    });
+  }, [rows, search, typeFilter, statusFilter]);
+
+  const totals = useMemo(() => {
+    const byType: Record<string, { count: number; value: number }> = {};
+    const byMonth: Record<string, { count: number; value: number }> = {};
+    let total = 0, overdue = 0, upcoming = 0, awaiting = 0;
+    for (const r of filtered) {
+      const v = Number(r.value) || 0;
+      total += v;
+      if (r.status === "overdue") overdue += v;
+      else if (r.status === "pending") upcoming += v;
+      else awaiting += 1;
+      byType[r.contribution_type_id] ??= { count: 0, value: 0 };
+      byType[r.contribution_type_id].count++;
+      byType[r.contribution_type_id].value += v;
+      const mk = r.due_date ? r.due_date.slice(0, 7) : "sem-data";
+      byMonth[mk] ??= { count: 0, value: 0 };
+      byMonth[mk].count++;
+      byMonth[mk].value += v;
+    }
+    return { byType, byMonth, total, overdue, upcoming, awaiting };
+  }, [filtered]);
+
+  const monthLabel = (k: string) => (k === "sem-data" ? "Sem vencimento" : `${k.slice(5, 7)}/${k.slice(0, 4)}`);
+
+  return (
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Previsão de recebimento</h1>
+            <p className="text-sm text-muted-foreground">
+              Boletos não pagos (a vencer e vencidos) e contribuições criadas a partir de 09/2026 — tipos 124, 125 e 126.
+            </p>
+          </div>
+        </div>
+        <Button variant="outline" onClick={() => void load()} disabled={loading}>
+          <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total previsto</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.total)}</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">A vencer</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.upcoming)}</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Vencidos</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-destructive">{brl(totals.overdue)}</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Aguardando valor</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{totals.awaiting} boletos</CardContent></Card>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader><CardTitle className="text-base">Por tipo</CardTitle></CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead className="text-right">Qtd.</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {Object.entries(TYPES).map(([id, label]) => (
+                      <TableRow key={id}><TableCell>{label}</TableCell><TableCell className="text-right">{totals.byType[id]?.count ?? 0}</TableCell><TableCell className="text-right">{brl(totals.byType[id]?.value ?? 0)}</TableCell></TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-base">Por mês de vencimento</CardTitle></CardHeader>
+              <CardContent className="max-h-80 overflow-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Mês</TableHead><TableHead className="text-right">Qtd.</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {Object.entries(totals.byMonth).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => (
+                      <TableRow key={k}><TableCell>{monthLabel(k)}</TableCell><TableCell className="text-right">{v.count}</TableCell><TableCell className="text-right">{brl(v.value)}</TableCell></TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader className="space-y-3">
+              <CardTitle className="text-base">Boletos ({filtered.length})</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <Input className="max-w-xs" placeholder="Buscar empresa ou CNPJ" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                  <option value="all">Todos os tipos</option>
+                  {Object.entries(TYPES).map(([id, l]) => <option key={id} value={id}>{l}</option>)}
+                </select>
+                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="all">Todas as situações</option>
+                  {Object.entries(STATUS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
+                </select>
+              </div>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead><TableHead>Tipo</TableHead><TableHead>Competência</TableHead>
+                    <TableHead>Vencimento</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Situação</TableHead><TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.slice(0, 500).map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell><div className="font-medium">{r.employers?.name ?? "-"}</div><div className="text-xs text-muted-foreground">{r.employers?.cnpj ?? ""}</div></TableCell>
+                      <TableCell className="text-sm">{TYPES[r.contribution_type_id]}</TableCell>
+                      <TableCell>{String(r.competence_month).padStart(2, "0")}/{r.competence_year}</TableCell>
+                      <TableCell>{fmtDate(r.due_date)}</TableCell>
+                      <TableCell className="text-right">{r.value ? brl(Number(r.value)) : "-"}</TableCell>
+                      <TableCell><Badge variant={STATUS[r.status]?.variant ?? "secondary"}>{STATUS[r.status]?.label ?? r.status}</Badge></TableCell>
+                      <TableCell>
+                        {r.lytex_invoice_url && (
+                          <Button size="sm" variant="ghost" asChild>
+                            <a href={r.lytex_invoice_url} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {filtered.length > 500 && <p className="mt-3 text-sm text-muted-foreground">Mostrando os 500 primeiros. Use a busca ou os filtros para refinar.</p>}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
