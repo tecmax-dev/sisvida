@@ -32,7 +32,8 @@ import {
   Calendar,
   AlertTriangle,
   MessageCircle,
-  TrendingUp
+  TrendingUp,
+  FileSignature,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SindicatoWhatsappBanner } from "@/components/portals/SindicatoWhatsappBanner";
@@ -138,7 +139,7 @@ export default function AccountingOfficePortal() {
   
   // Views
   const [affiliationPending, setAffiliationPending] = useState<string[]>([]);
-  const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao" | "cobranca" | "listas">("home");
+  const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao" | "cobranca" | "listas" | "filiacoes">("home");
   
   // Filters
   const [filterEmployer, setFilterEmployer] = useState<string>("all");
@@ -758,7 +759,7 @@ export default function AccountingOfficePortal() {
           />
 
           <SindicatoWhatsappBanner />
-          {accountingOffice?.id && <PortalAffiliationsPanel portalType="accounting_office" portalId={accountingOffice.id} onPendingChange={setAffiliationPending} />}
+          {accountingOffice?.id && <PortalAffiliationsPanel mode="alert" onOpenList={() => setActiveView("filiacoes")} portalType="accounting_office" portalId={accountingOffice.id} onPendingChange={setAffiliationPending} />}
 
           {/* 5 Service Cards - SindSystem style */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
@@ -792,6 +793,14 @@ export default function AccountingOfficePortal() {
               color="green"
             />
             <SindSystemServiceCard
+              icon={<FileSignature className="h-12 w-12" />}
+              title="FICHAS DE FILIAÇÃO"
+              description="Filiações recebidas e ciência."
+              onClick={() => setActiveView("filiacoes")}
+              color="green"
+              badge={affiliationPending.length > 0 ? affiliationPending.length : undefined}
+            />
+            <SindSystemServiceCard
               icon={<FolderOpen className="h-12 w-12" />}
               title="DOCUMENTOS COLETIVOS"
               description="Listagem de documentos coletivos."
@@ -806,6 +815,19 @@ export default function AccountingOfficePortal() {
               color="blue"
             />
           </div>
+        </SindSystemMain>
+      </SindSystemContainer>
+    );
+  }
+
+  if (activeView === "filiacoes" && accountingOffice) {
+    return (
+      <SindSystemContainer>
+        <SindSystemHeader logoUrl={clinic?.logo_url} entityName={accountingOffice?.name || "Escritório"} entityEmail={accountingOffice?.email} onLogout={handleLogout} />
+        <SindSystemMain>
+          <SindSystemPageHeader icon={<FileSignature className="h-6 w-6" />} title="Fichas de Filiação" subtitle="Fichas de filiação sindical das empresas vinculadas." onBack={() => setActiveView("home")} />
+          <PortalAffiliationsPanel portalType="accounting_office" portalId={accountingOffice.id} onPendingChange={setAffiliationPending} />
+          <div className="mt-6"><SindSystemBackButton onClick={() => setActiveView("home")} /></div>
         </SindSystemMain>
       </SindSystemContainer>
     );

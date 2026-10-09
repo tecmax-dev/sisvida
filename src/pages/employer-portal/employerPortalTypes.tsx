@@ -86,5 +86,5 @@ export const STATUS_CONFIG: Record<string, { label: string; color: string; bgCol
   },
 };
 
-export type ActiveView = "home" | "contributions" | "documents" | "history" | "homologacao" | "cobranca";
+export type ActiveView = "home" | "contributions" | "documents" | "history" | "homologacao" | "cobranca" | "filiacoes";
 export type ContributionTab = "pending" | "overdue" | "paid" | "all";

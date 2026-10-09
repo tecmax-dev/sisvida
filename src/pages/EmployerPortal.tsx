@@ -50,7 +50,7 @@ import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { PortalTutorialVideo } from "@/components/portal/PortalTutorialVideo";
-import { PlayCircle } from "lucide-react";
+import { PlayCircle, FileSignature } from "lucide-react";
 
 import { STATUS_CONFIG } from "./employer-portal/employerPortalTypes";
 import type { Clinic, Employer, Contribution, ReissueRequest, ActiveView, ContributionTab } from "./employer-portal/employerPortalTypes";
@@ -937,7 +937,7 @@ const [showTutorial, setShowTutorial] = useState(false);
         {activeView === "home" && (
           <>
             <SindicatoWhatsappBanner />
-            {employer?.id && <PortalAffiliationsPanel portalType="employer" portalId={employer.id} onPendingChange={setAffiliationPending} />}
+            {employer?.id && <PortalAffiliationsPanel mode="alert" onOpenList={() => setActiveView("filiacoes")} portalType="employer" portalId={employer.id} onPendingChange={setAffiliationPending} />}
             {/* Welcome Section */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-2">
@@ -987,6 +987,24 @@ const [showTutorial, setShowTutorial] = useState(false);
                     {overdueContributions.length}
                   </span>
                 )}
+              </button>
+
+              {/* Fichas de Filiação Card */}
+              <button
+                onClick={() => setActiveView("filiacoes")}
+                className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-[#16a394]/40 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#16a394]"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#16a394]/10 transition-colors group-hover:bg-[#16a394]/15">
+                  <FileSignature className="h-5 w-5 text-[#16a394]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800">Fichas de Filiação</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Filiações recebidas e ciência</p>
+                </div>
+                {affiliationPending.length > 0 && (
+                  <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">Pendente</span>
+                )}
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-[#16a394]" />
               </button>
 
               {/* Documentos Coletivos Card */}
@@ -1388,6 +1406,24 @@ const [showTutorial, setShowTutorial] = useState(false);
             </div>
             {employer?.id && <PortalSentWorkerLists portalType="employer" portalId={employer.id} />}
             {employer?.id && <div className="mt-8"><WorkerRosterEditor employerId={employer.id} portalType="employer" portalId={employer.id} /></div>}
+          </>
+        )}
+
+        {activeView === "filiacoes" && employer?.id && (
+          <>
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <FileSignature className="h-6 w-6 text-[#16a394]" />
+                <h1 className="text-2xl font-semibold text-slate-800">Fichas de Filiação</h1>
+              </div>
+              <p className="text-slate-500">Fichas de filiação sindical dos trabalhadores da empresa.</p>
+            </div>
+            <PortalAffiliationsPanel portalType="employer" portalId={employer.id} onPendingChange={setAffiliationPending} />
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" onClick={() => setActiveView("home")} className="border-[#607d8b] text-[#607d8b] hover:bg-[#607d8b]/10">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+              </Button>
+            </div>
           </>
         )}
 
