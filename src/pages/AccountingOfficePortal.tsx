@@ -1238,6 +1238,14 @@ export default function AccountingOfficePortal() {
           onBack={() => setActiveView("home")}
         />
 
+        {affiliationPending.length > 0 && (
+          <div className="mb-4 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-bold">ATENÇÃO — CIÊNCIA DE FILIAÇÃO PENDENTE</p>
+            <p>{affiliationPending.length} empresa(s) com nova ficha de filiação. A geração de boletos fica bloqueada apenas para essas empresas até a confirmação de ciência; as demais seguem liberadas.</p>
+            <button className="mt-2 font-semibold underline" onClick={() => setActiveView("home")}>Ir para Filiações Recebidas</button>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
           <PortalContributionsList
             contributions={contributions.map(c => ({
