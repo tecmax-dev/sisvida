@@ -36,6 +36,8 @@ interface Row {
   due_date: string | null;
   status: string;
   lytex_invoice_url: string | null;
+  paid_value: number | null;
+  paid_at: string | null;
   employers: { name: string | null; cnpj: string | null } | null;
 }
 
@@ -84,7 +86,7 @@ export default function UnionReceivablesForecastPage() {
     for (let from = 0; ; from += page) {
       const { data, error } = await supabase
         .from("employer_contributions")
-        .select("id, employer_id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, employers(name, cnpj)")
+        .select("id, employer_id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, paid_value, paid_at, employers(name, cnpj)")
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .in("contribution_type_id", Object.keys(TYPES))
         .or("status.in.(pending,overdue),and(status.eq.paid,competence_year.gte.2026)")
@@ -145,7 +147,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
     const byMonth: Record<string, { count: number; value: number }> = {};
     let total = 0, overdue = 0, upcoming = 0, awaiting = 0, received = 0, open = 0;
     for (const r of filtered) {
-      const v = Number(r.value) || 0;
+      const v = r.status === "paid" ? Number(r.paid_value ?? r.value) || 0 : Number(r.value) || 0;
       if (r.status === "paid") {
         received += v;
         if (statusFilter !== "paid") continue;
