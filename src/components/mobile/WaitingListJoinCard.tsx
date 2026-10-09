@@ -59,9 +59,9 @@ export function WaitingListJoinCard({ professionalId, clinicId: clinicIdProp, sp
         try { payload = await (error as any)?.context?.json?.(); } catch { /* ignore */ }
         if (payload?.error === "already_scheduled_this_month") {
           toast({
-            title: "Você já tem consulta com este profissional neste mês",
+            title: "Você já atingiu o limite de consultas com este profissional",
             description:
-              "Cada associado pode ter apenas 1 consulta por mês com o mesmo profissional. Por isso não é possível entrar na fila de espera dele agora — você poderá entrar a partir do próximo mês.",
+              "O sindicato limita a quantidade de consultas com o mesmo profissional em cada período. Por isso não é possível entrar na fila de espera dele agora — você poderá entrar quando o período da sua consulta atual terminar.",
             variant: "destructive",
           });
           return;
@@ -71,9 +71,9 @@ export function WaitingListJoinCard({ professionalId, clinicId: clinicIdProp, sp
       const result = data as any;
       if (result?.success === false && result?.error === "already_scheduled_this_month") {
         toast({
-          title: "Você já tem consulta com este profissional neste mês",
+          title: "Você já atingiu o limite de consultas com este profissional",
           description:
-            "Cada associado pode ter apenas 1 consulta por mês com o mesmo profissional. Por isso não é possível entrar na fila de espera dele agora — você poderá entrar a partir do próximo mês.",
+            "O sindicato limita a quantidade de consultas com o mesmo profissional em cada período. Por isso não é possível entrar na fila de espera dele agora — você poderá entrar quando o período da sua consulta atual terminar.",
           variant: "destructive",
         });
         return;
