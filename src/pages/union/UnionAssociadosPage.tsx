@@ -161,6 +161,13 @@ export default function UnionAssociadosPage() {
         await syncAssociadoToPatient(associado.id, clinicId);
       }
 
+       // Automação pós-aprovação: carteirinha inicial, ficha na empresa e pendência de ciência
+       try {
+         await supabase.functions.invoke("affiliation-documents", { body: { action: "process", associadoId: associado.id } });
+       } catch (e) {
+         console.error("affiliation automation failed", e);
+       }
+
        const { data: welcome, error: welcomeError } = await supabase.functions.invoke("send-affiliation-welcome", {
          body: { associadoId: associado.id },
        });
