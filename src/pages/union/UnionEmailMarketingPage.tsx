@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { normalizeEmailHtml } from "./email-marketing/normalizeEmailHtml";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Mail, Send, Users, Building2, Briefcase, Eye, RefreshCw,
-  CheckCircle2, AlertCircle, Clock, XCircle, Loader2, Save, CalendarClock, Pencil, Sparkles, BarChart3, Paperclip, X,
+  CheckCircle2, AlertCircle, Clock, XCircle, Loader2, Save, CalendarClock, Pencil, Sparkles, BarChart3, Paperclip, X, Wand2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -142,6 +143,8 @@ export default function UnionEmailMarketingPage() {
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [detailRecipients, setDetailRecipients] = useState<any[]>([]);
+  const [detailBody, setDetailBody] = useState("");
+  const pastedRef = useRef(false);
 
   // Lookups
   const [plans, setPlans] = useState<{ id: string; name: string }[]>([]);
@@ -509,6 +512,9 @@ export default function UnionEmailMarketingPage() {
 
   async function openCampaignDetails(c: Campaign) {
     setSelectedCampaign(c);
+    setDetailBody("");
+    void supabase.from("email_campaigns").select("body_html").eq("id", c.id).maybeSingle()
+      .then(({ data }) => setDetailBody((data as any)?.body_html || "<p>Sem conteúdo salvo.</p>"));
     const { data } = await supabase
       .from("email_campaign_recipients")
       .select("recipient_name, recipient_email, status, error_message, sent_at")
@@ -711,13 +717,26 @@ export default function UnionEmailMarketingPage() {
                 <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex: {{nome}}, convocação para assembleia" />
               </div>
               <div>
-                <Label>Conteúdo do e-mail</Label>
-                <RichTextEditor
-                  value={bodyHtml}
-                  onChange={setBodyHtml}
-                  minHeight={360}
-                  placeholder="Escreva sua mensagem... use a barra acima para formatar (negrito, cores, listas, links, imagens, etc.)"
-                />
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                  <Label>Conteúdo do e-mail</Label>
+                  <Button type="button" size="sm" variant="outline" onClick={() => { setBodyHtml(normalizeEmailHtml(bodyHtml)); toast({ title: "Conteúdo organizado", description: "Margens e tabelas ajustadas." }); }}>
+                    <Wand2 className="h-4 w-4 mr-1" /> Organizar conteúdo
+                  </Button>
+                </div>
+                <div onPasteCapture={() => { pastedRef.current = true; }}>
+                  <RichTextEditor
+                    value={bodyHtml}
+                    onChange={(v) => {
+                      if (pastedRef.current) {
+                        pastedRef.current = false;
+                        setBodyHtml(normalizeEmailHtml(v));
+                      } else setBodyHtml(v);
+                    }}
+                    minHeight={360}
+                    placeholder="Escreva ou cole sua mensagem. Ao colar, margens e tabelas são ajustadas automaticamente."
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Dica: ao colar do Word ou Excel, colunas separadas por tabulação viram tabela automaticamente.</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Variáveis disponíveis: <code className="bg-muted px-1 rounded">{"{{nome}}"}</code>
                   {targetType === "associados" && <> <code className="bg-muted px-1 rounded">{"{{plano}}"}</code></>}
@@ -952,11 +971,37 @@ export default function UnionEmailMarketingPage() {
           {selectedCampaign && (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="bg-emerald-50 p-2 rounded"><b>{selectedCampaign.sent_count}</b> enviados</div>
-                <div className="bg-red-50 p-2 rounded"><b>{selectedCampaign.failed_count}</b> falhas</div>
-                <div className="bg-amber-50 p-2 rounded"><b>{selectedCampaign.skipped_count}</b> pulados</div>
+                <div className="bg-muted p-2 rounded"><b>{selectedCampaign.sent_count}</b> enviados</div>
+                <div className="bg-muted p-2 rounded"><b>{selectedCampaign.failed_count}</b> falhas</div>
+                <div className="bg-muted p-2 rounded"><b>{selectedCampaign.skipped_count}</b> pulados</div>
               </div>
               <p className="text-xs text-muted-foreground">Assunto: {selectedCampaign.subject}</p>
+              <Tabs defaultValue="content">
+                <TabsList>
+                  <TabsTrigger value="content">Conteúdo enviado</TabsTrigger>
+                  <TabsTrigger value="recipients">Destinatários ({detailRecipients.length})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="content" className="space-y-2">
+                  {detailBody ? (
+                    <>
+                      <iframe title="Conteúdo enviado" srcDoc={detailBody} className="w-full h-[50vh] rounded-md border bg-background" sandbox="" />
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => {
+                          const w = window.open("", "_blank");
+                          if (w) { w.document.write(detailBody); w.document.close(); w.print(); }
+                        }}>Imprimir</Button>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setName(`${selectedCampaign.name} (cópia)`);
+                          setSubject(selectedCampaign.subject || "");
+                          const parsed = splitAttachments(detailBody);
+                          setBodyHtml(parsed.body); setAttachments(parsed.attachments);
+                          setEditingId(null); setSelectedCampaign(null); setTab("compose");
+                        }}>Reutilizar conteúdo</Button>
+                      </div>
+                    </>
+                  ) : <p className="text-sm text-muted-foreground py-6 text-center">Carregando conteúdo…</p>}
+                </TabsContent>
+                <TabsContent value="recipients">
               <table className="w-full text-xs">
                 <thead className="border-b text-muted-foreground"><tr>
                   <th className="text-left py-1">Nome</th>
@@ -975,6 +1020,8 @@ export default function UnionEmailMarketingPage() {
                   ))}
                 </tbody>
               </table>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </DialogContent>
