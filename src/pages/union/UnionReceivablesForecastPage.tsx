@@ -146,9 +146,13 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
     let total = 0, overdue = 0, upcoming = 0, awaiting = 0, received = 0, open = 0;
     for (const r of filtered) {
       const v = Number(r.value) || 0;
-      if (r.status === "paid") { received += v; continue; }
-      open++;
-      total += v;
+      if (r.status === "paid") {
+        received += v;
+        if (statusFilter !== "paid") continue;
+      } else {
+        open++;
+        total += v;
+      }
       if (r.status === "overdue") overdue += v;
       else if (r.status === "pending") upcoming += v;
       else awaiting += 1;
@@ -161,14 +165,14 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
       byMonth[mk].value += v;
     }
     return { byType, byMonth, total, overdue, upcoming, awaiting, received, open };
-  }, [filtered]);
+  }, [filtered, statusFilter]);
 
   const exportPdf = () => {
     const doc = new jsPDF({ orientation: "landscape" });
     doc.setFontSize(14);
     doc.text("Previsão de recebimento - Contribuições 124, 125 e 126", 14, 14);
     doc.setFontSize(10);
-    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}  |  Total: ${brl(totals.total)}  |  A vencer: ${brl(totals.upcoming)}  |  Vencidos: ${brl(totals.overdue)}  |  Boletos: ${filtered.length}`, 14, 21);
+    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}  |  Total: ${brl(totals.total)}  |  A vencer: ${brl(totals.upcoming)}  |  Vencidos: ${brl(totals.overdue)}  |  Recebido: ${brl(totals.received)}  |  Boletos: ${filtered.length}`, 14, 21);
     autoTable(doc, {
       startY: 26,
       head: [["Tipo", "Qtd.", "Valor"]],
