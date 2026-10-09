@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, History, Loader2, Upload } from "lucide-react";
+import { Eye, FileSignature, History, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AffiliationFichaView, fmtDate } from "./AffiliationFichaView";
 
@@ -22,6 +22,17 @@ export default function EmployerAffiliationsTab({ employerId, employerCnpj, clin
   const [events, setEvents] = useState<any[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const [workerName, setWorkerName] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  async function exportSigned() {
+    setExporting(true);
+    const { data, error } = await supabase.functions.invoke("affiliation-documents", { body: { action: "export_employer", employer_id: employerId } });
+    setExporting(false);
+    if (error || !data?.success) return toast.error("Não foi possível exportar as fichas.");
+    if (!data.found) return toast.info("Nenhuma filiação aprovada com assinatura digital para esta empresa.");
+    toast.success(data.exported ? `${data.exported} ficha(s) assinada(s) exportada(s) para a empresa.` : "Todas as fichas assinadas já estavam na empresa.");
+    void load();
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,6 +93,9 @@ export default function EmployerAffiliationsTab({ employerId, employerCnpj, clin
           <p className="text-sm text-muted-foreground">{docs.length} documento(s) · {pending} aguardando ciência</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" className="h-9" onClick={exportSigned} disabled={exporting}>
+            {exporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileSignature className="mr-1 h-4 w-4" />} Exportar fichas assinadas
+          </Button>
           <Input className="h-9 w-56" placeholder="Nome do trabalhador (envio manual)" value={workerName} onChange={(e) => setWorkerName(e.target.value)} />
           <label className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border px-3 text-sm hover:bg-muted">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Enviar ficha antiga
