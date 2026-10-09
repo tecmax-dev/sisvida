@@ -76,6 +76,45 @@ Deno.serve(async (req) => {
     const token = await getToken(clientId, clientSecret);
     const H = { Authorization: `Bearer ${token}` };
 
+    // MODO 3: busca valor pago e taxa Lytex das contribuições já pagas (bruto, taxa, líquido)
+    if (body.mode === "fees") {
+      const fromYear = Number(body.fromYear ?? 2026);
+      const fromMonth = Number(body.fromMonth ?? 9);
+      const typeIds: string[] = Array.isArray(body.typeIds) ? body.typeIds.slice(0, 10) : [];
+      let q = supabase
+        .from("employer_contributions")
+        .select("id, lytex_invoice_id, competence_year, competence_month")
+        .eq("clinic_id", clinicId)
+        .eq("status", "paid")
+        .not("lytex_invoice_id", "is", null)
+        .gte("competence_year", fromYear)
+        .order("id")
+        .range(offset, offset + limit - 1);
+      if (typeIds.length) q = q.in("contribution_type_id", typeIds);
+      const { data: rows, error: qErr } = await q;
+      if (qErr) throw qErr;
+      let updated = 0, failed = 0;
+      for (const r of (rows || []).filter((x: any) => x.competence_year * 100 + x.competence_month >= fromYear * 100 + fromMonth)) {
+        const res = await fetch(`${LYTEX_BASE}/v2/invoices/${r.lytex_invoice_id}`, { headers: H });
+        const inv: any = await res.json().catch(() => null);
+        if (!res.ok || !inv) { failed++; continue; }
+        const pd = inv.paymentData || {};
+        const tx = (inv.transactions || []).find((t: any) => t?.status === "paid") || {};
+        const paid = Number(pd.payedValue ?? tx.payedValue ?? inv.lastPayment?.payedValue);
+        const fee = Number(pd.metadata?.rates ?? tx.rates ?? 0);
+        if (!Number.isFinite(paid) || paid <= 0) { failed++; continue; }
+        const { error: uErr } = await supabase.from("employer_contributions").update({
+          paid_value: paid,
+          lytex_fee_amount: Number.isFinite(fee) ? fee : 0,
+          net_value: paid - (Number.isFinite(fee) ? fee : 0),
+          lytex_fee_details: { rates: fee, discount: pd.metadata?.discount ?? 0, mulct: pd.metadata?.mulct ?? 0, interest: pd.metadata?.interest ?? 0, creditAt: pd.metadata?.creditAt ?? tx.creditAt ?? null, method: pd.method ?? tx.paymentMethod ?? null },
+        }).eq("id", r.id);
+        if (uErr) failed++; else updated++;
+      }
+      const n = (rows || []).length;
+      return new Response(JSON.stringify({ success: true, mode: "fees", processed: n, updated, failed, done: n < limit, nextOffset: offset + n }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // MODO 2: varre faturas PAGAS na Lytex e concilia com contribuições abertas no sistema
     if (body.mode === "paid_scan") {
       const page = Number(body.page ?? 1);

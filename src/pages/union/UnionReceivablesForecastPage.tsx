@@ -38,6 +38,8 @@ interface Row {
   lytex_invoice_url: string | null;
   paid_value: number | null;
   paid_at: string | null;
+  lytex_fee_amount: number | null;
+  net_value: number | null;
   employers: { name: string | null; cnpj: string | null } | null;
 }
 
@@ -55,6 +57,13 @@ export default function UnionReceivablesForecastPage() {
       const n = (data as { updated?: number })?.updated ?? 0;
       if (n > 0) toast.success(`${n} contribuição(ões) atualizada(s) como pagas`);
       else toast.info("Nenhum novo pagamento encontrado");
+      for (let off = 0, i = 0; i < 30; i++) {
+        const { data: fd, error: fe } = await supabase.functions.invoke("lytex-reconcile-open", { body: { clinicId: SINDICATO_CLINIC_ID, mode: "fees", offset: off, limit: 100, typeIds: Object.keys(TYPES) } });
+        if (fe) break;
+        const res = fd as { done?: boolean; nextOffset?: number };
+        if (res?.done || res?.nextOffset == null) break;
+        off = res.nextOffset;
+      }
       await load();
     } catch (e) {
       toast.error(`Erro ao sincronizar: ${e instanceof Error ? e.message : "erro desconhecido"}`);
@@ -86,7 +95,7 @@ export default function UnionReceivablesForecastPage() {
     for (let from = 0; ; from += page) {
       const { data, error } = await supabase
         .from("employer_contributions")
-        .select("id, employer_id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, paid_value, paid_at, employers(name, cnpj)")
+        .select("id, employer_id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, paid_value, paid_at, lytex_fee_amount, net_value, employers(name, cnpj)")
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .in("contribution_type_id", Object.keys(TYPES))
         .or("status.in.(pending,overdue),and(status.eq.paid,competence_year.gte.2026)")
@@ -145,11 +154,14 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
   const totals = useMemo(() => {
     const byType: Record<string, { count: number; value: number }> = {};
     const byMonth: Record<string, { count: number; value: number }> = {};
-    let total = 0, overdue = 0, upcoming = 0, awaiting = 0, received = 0, open = 0;
+    let total = 0, overdue = 0, upcoming = 0, awaiting = 0, received = 0, open = 0, fees = 0, net = 0;
     for (const r of filtered) {
       const v = r.status === "paid" ? Number(r.paid_value ?? r.value) || 0 : Number(r.value) || 0;
       if (r.status === "paid") {
         received += v;
+        const f = Number(r.lytex_fee_amount) || 0;
+        fees += f;
+        net += r.net_value != null ? Number(r.net_value) : v - f;
         if (statusFilter !== "paid") continue;
       } else {
         open++;
@@ -166,7 +178,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
       byMonth[mk].count++;
       byMonth[mk].value += v;
     }
-    return { byType, byMonth, total, overdue, upcoming, awaiting, received, open };
+    return { byType, byMonth, total, overdue, upcoming, awaiting, received, open, fees, net };
   }, [filtered, statusFilter]);
 
   const exportPdf = () => {
@@ -174,9 +186,10 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
     doc.setFontSize(14);
     doc.text("Previsão de recebimento - Contribuições 124, 125 e 126", 14, 14);
     doc.setFontSize(10);
-    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}  |  Total: ${brl(totals.total)}  |  A vencer: ${brl(totals.upcoming)}  |  Vencidos: ${brl(totals.overdue)}  |  Recebido: ${brl(totals.received)}  |  Boletos: ${filtered.length}`, 14, 21);
+    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}  |  Total: ${brl(totals.total)}  |  A vencer: ${brl(totals.upcoming)}  |  Vencidos: ${brl(totals.overdue)}  |  Boletos: ${filtered.length}`, 14, 21);
+    doc.text(`Recebido bruto: ${brl(totals.received)}  |  Taxas Lytex: ${brl(totals.fees)}  |  Líquido: ${brl(totals.net)}`, 14, 27);
     autoTable(doc, {
-      startY: 26,
+      startY: 32,
       head: [["Tipo", "Qtd.", "Valor"]],
       body: Object.entries(TYPES).map(([id, l]) => [l, String(totals.byType[id]?.count ?? 0), brl(totals.byType[id]?.value ?? 0)]),
       styles: { fontSize: 9 },
@@ -232,12 +245,14 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
         <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {[
               ["Total previsto", brl(totals.total), ""],
               ["A vencer", brl(totals.upcoming), ""],
               ["Vencidos", brl(totals.overdue), "text-destructive"],
-              ["Recebido (desde 09/2026)", brl(totals.received), "text-primary"],
+              ["Recebido bruto (desde 09/2026)", brl(totals.received), "text-primary"],
+              ["Taxas Lytex", brl(totals.fees), "text-muted-foreground"],
+              ["Recebido líquido", brl(totals.net), "text-primary"],
             ].map(([l, v, c]) => (
               <div key={l} className="rounded-lg border bg-card px-4 py-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{l}</p>
