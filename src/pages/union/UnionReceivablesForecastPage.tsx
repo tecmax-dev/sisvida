@@ -42,6 +42,12 @@ export default function UnionReceivablesForecastPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [compFrom, setCompFrom] = useState("");
+  const [compTo, setCompTo] = useState("");
+  const [dueFrom, setDueFrom] = useState("");
+  const [dueTo, setDueTo] = useState("");
+  const [valueFilter, setValueFilter] = useState("all");
+  const [quick, setQuick] = useState("all");
 
   const load = async () => {
     setLoading(true);
@@ -80,12 +86,34 @@ export default function UnionReceivablesForecastPage() {
     return rows.filter((r) => {
       if (typeFilter !== "all" && r.contribution_type_id !== typeFilter) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      const ck = `${r.competence_year}-${String(r.competence_month).padStart(2, "0")}`;
+      if (compFrom && ck < compFrom) return false;
+      if (compTo && ck > compTo) return false;
+      const due = r.due_date ?? "";
+      if (dueFrom && (!due || due < dueFrom)) return false;
+      if (dueTo && (!due || due > dueTo)) return false;
+      const v = Number(r.value) || 0;
+      if (valueFilter === "with" && v <= 0) return false;
+      if (valueFilter === "without" && v > 0) return false;
+      if (valueFilter === "high" && v < 1000) return false;
+      if (quick !== "all") {
+        const t = new Date();
+        const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const today = iso(t);
+        if (quick === "overdue" && !(r.status === "overdue" || (due && due < today && r.status === "pending"))) return false;
+        if (quick === "month" && due.slice(0, 7) !== today.slice(0, 7)) return false;
+        if (quick === "next30") {
+          const lim = new Date(t); lim.setDate(lim.getDate() + 30);
+          if (!due || due < today || due > iso(lim)) return false;
+        }
+        if (quick === "new2026" && ck < "2026-09") return false;
+      }
       if (!q) return true;
       const name = (r.employers?.name ?? "").toLowerCase();
       const cnpj = (r.employers?.cnpj ?? "").replace(/\D/g, "");
       return name.includes(q) || (qd.length > 0 && cnpj.includes(qd));
     });
-  }, [rows, search, typeFilter, statusFilter]);
+  }, [rows, search, typeFilter, statusFilter, compFrom, compTo, dueFrom, dueTo, valueFilter, quick]);
 
   const totals = useMemo(() => {
     const byType: Record<string, { count: number; value: number }> = {};
@@ -180,6 +208,31 @@ export default function UnionReceivablesForecastPage() {
                   <option value="all">Todas as situações</option>
                   {Object.entries(STATUS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
                 </select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[["all","Tudo"],["overdue","Vencidos"],["month","Vence este mês"],["next30","Próximos 30 dias"],["new2026","A partir de 09/2026"]].map(([k,l]) => (
+                  <Button key={k} size="sm" variant={quick === k ? "default" : "outline"} onClick={() => setQuick(k)}>{l}</Button>
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <label className="text-xs text-muted-foreground">Competência de
+                  <Input type="month" value={compFrom} onChange={(e) => setCompFrom(e.target.value)} /></label>
+                <label className="text-xs text-muted-foreground">Competência até
+                  <Input type="month" value={compTo} onChange={(e) => setCompTo(e.target.value)} /></label>
+                <label className="text-xs text-muted-foreground">Vencimento de
+                  <Input type="date" value={dueFrom} onChange={(e) => setDueFrom(e.target.value)} /></label>
+                <label className="text-xs text-muted-foreground">Vencimento até
+                  <Input type="date" value={dueTo} onChange={(e) => setDueTo(e.target.value)} /></label>
+                <label className="text-xs text-muted-foreground">Valor
+                  <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground" value={valueFilter} onChange={(e) => setValueFilter(e.target.value)}>
+                    <option value="all">Todos</option>
+                    <option value="with">Com valor</option>
+                    <option value="without">Sem valor</option>
+                    <option value="high">A partir de R$ 1.000</option>
+                  </select></label>
+              </div>
+              <div>
+                <Button size="sm" variant="ghost" onClick={() => { setSearch(""); setTypeFilter("all"); setStatusFilter("all"); setCompFrom(""); setCompTo(""); setDueFrom(""); setDueTo(""); setValueFilter("all"); setQuick("all"); }}>Limpar filtros</Button>
               </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
