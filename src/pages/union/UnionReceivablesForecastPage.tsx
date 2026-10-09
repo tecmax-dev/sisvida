@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { TrendingUp, Loader2, RefreshCw, ExternalLink } from "lucide-react";
+import { TrendingUp, Loader2, RefreshCw, ExternalLink, Printer, FileDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const TYPES: Record<string, string> = {
   "48bda88b-1cf9-47b6-b930-781d8a0eb55a": "124 - Mensalidade Sindical",
@@ -18,7 +20,6 @@ const TYPES: Record<string, string> = {
 const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "A vencer", variant: "default" },
   overdue: { label: "Vencido", variant: "destructive" },
-  awaiting_value: { label: "Aguardando valor", variant: "outline" },
 };
 
 interface Row {
@@ -33,7 +34,7 @@ interface Row {
   employers: { name: string | null; cnpj: string | null } | null;
 }
 
-const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (d: string | null) => (d ? parseDateOnlyToLocalNoon(d).toLocaleDateString("pt-BR") : "-");
 
 export default function UnionReceivablesForecastPage() {
@@ -59,7 +60,8 @@ export default function UnionReceivablesForecastPage() {
         .select("id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, employers(name, cnpj)")
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .in("contribution_type_id", Object.keys(TYPES))
-        .in("status", ["pending", "overdue", "awaiting_value"])
+        .in("status", ["pending", "overdue"])
+        .gt("value", 0)
         .order("due_date", { ascending: true })
         .order("id", { ascending: true })
         .range(from, from + page - 1);
@@ -69,11 +71,7 @@ export default function UnionReceivablesForecastPage() {
     }
     // Boletos já criados e não pagos (a vencer/vencidos) + todos criados a partir de 09/2026
     setRows(
-      all.filter((r) => {
-        const key = r.competence_year * 100 + r.competence_month;
-        if (r.status === "awaiting_value") return key >= 202609;
-        return true;
-      }),
+all.filter((r) => Number(r.value) > 0),
     );
     setLoading(false);
   };
@@ -95,7 +93,7 @@ export default function UnionReceivablesForecastPage() {
       const v = Number(r.value) || 0;
       if (valueFilter === "with" && v <= 0) return false;
       if (valueFilter === "without" && v > 0) return false;
-      if (valueFilter === "high" && v < 1000) return false;
+      if (valueFilter === "high" && v < 100000) return false;
       if (quick !== "all") {
         const t = new Date();
         const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -136,6 +134,30 @@ export default function UnionReceivablesForecastPage() {
     return { byType, byMonth, total, overdue, upcoming, awaiting };
   }, [filtered]);
 
+  const exportPdf = () => {
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text("Previsão de recebimento - Contribuições 124, 125 e 126", 14, 14);
+    doc.setFontSize(10);
+    doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}  |  Total: ${brl(totals.total)}  |  A vencer: ${brl(totals.upcoming)}  |  Vencidos: ${brl(totals.overdue)}  |  Boletos: ${filtered.length}`, 14, 21);
+    autoTable(doc, {
+      startY: 26,
+      head: [["Tipo", "Qtd.", "Valor"]],
+      body: Object.entries(TYPES).map(([id, l]) => [l, String(totals.byType[id]?.count ?? 0), brl(totals.byType[id]?.value ?? 0)]),
+      styles: { fontSize: 9 },
+    });
+    autoTable(doc, {
+      head: [["Empresa", "CNPJ", "Tipo", "Comp.", "Vencimento", "Valor", "Situação"]],
+      body: filtered.map((r) => [
+        r.employers?.name ?? "-", r.employers?.cnpj ?? "", TYPES[r.contribution_type_id],
+        `${String(r.competence_month).padStart(2, "0")}/${r.competence_year}`, fmtDate(r.due_date),
+        brl(Number(r.value) || 0), STATUS[r.status]?.label ?? r.status,
+      ]),
+      styles: { fontSize: 8 },
+    });
+    doc.save("previsao-recebimento.pdf");
+  };
+
   const monthLabel = (k: string) => (k === "sem-data" ? "Sem vencimento" : `${k.slice(5, 7)}/${k.slice(0, 4)}`);
 
   return (
@@ -150,9 +172,17 @@ export default function UnionReceivablesForecastPage() {
             </p>
           </div>
         </div>
+        <div className="flex gap-2 print:hidden">
+        <Button variant="outline" onClick={() => window.print()} disabled={loading}>
+          <Printer className="mr-2 h-4 w-4" /> Imprimir
+        </Button>
+        <Button variant="outline" onClick={exportPdf} disabled={loading}>
+          <FileDown className="mr-2 h-4 w-4" /> PDF
+        </Button>
         <Button variant="outline" onClick={() => void load()} disabled={loading}>
           <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
         </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -163,7 +193,7 @@ export default function UnionReceivablesForecastPage() {
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total previsto</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.total)}</CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">A vencer</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{brl(totals.upcoming)}</CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Vencidos</CardTitle></CardHeader><CardContent className="text-2xl font-bold text-destructive">{brl(totals.overdue)}</CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Aguardando valor</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{totals.awaiting} boletos</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Boletos</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{filtered.length}</CardContent></Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -227,7 +257,6 @@ export default function UnionReceivablesForecastPage() {
                   <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground" value={valueFilter} onChange={(e) => setValueFilter(e.target.value)}>
                     <option value="all">Todos</option>
                     <option value="with">Com valor</option>
-                    <option value="without">Sem valor</option>
                     <option value="high">A partir de R$ 1.000</option>
                   </select></label>
               </div>
