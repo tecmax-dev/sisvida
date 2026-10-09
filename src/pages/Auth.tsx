@@ -278,11 +278,11 @@ export default function Auth() {
     try {
       const redirectUrl = `${getAppBaseUrl()}/auth`;
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
+      const { data, error } = await supabase.functions.invoke("staff-password-reset", {
+        body: { email, redirectTo: redirectUrl },
       });
 
-      if (error) throw error;
+      if (error || !data?.success) throw new Error(data?.error || "Não foi possível enviar o e-mail agora.");
 
       toast({
         title: "Email enviado!",
