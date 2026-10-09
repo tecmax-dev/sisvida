@@ -687,10 +687,16 @@ export default function MobileBookingPage() {
       navigate("/app/agendamentos");
     } catch (err: any) {
       console.error("Error creating appointment:", err);
+      const rawMsg: string = String(err?.message || "");
+      const cleanMsg = rawMsg.replace(/^[A-Z_]+:\s*/, "").trim();
+      const isRule = /^[A-Z_]{4,}:/.test(rawMsg) ||
+        /limite|já possui|já tem|já existe|não é permitido|nao e permitido|regra|carteirinha|bloquead|antecedência|período/i.test(rawMsg);
       toast({
-        title: "Erro ao agendar",
-        description: err.message || "Não foi possível realizar o agendamento.",
-        variant: "destructive",
+        title: isRule ? "Agendamento não permitido pelas regras do sindicato" : "Não foi possível concluir o agendamento",
+        description: isRule
+          ? cleanMsg
+          : (cleanMsg || "Tente novamente em alguns instantes."),
+        variant: isRule ? "default" : "destructive",
       });
     } finally {
       setSubmitting(false);
