@@ -44,7 +44,7 @@ function scheduleSlots(prof: any, date: string): Array<{ start: number; dur: num
   return [...out.entries()].sort((a, b) => a[0] - b[0]).map(([start, dur]) => ({ start, dur }));
 }
 
-export async function listFreeSlots(admin: any, clinicId: string, professionalId: string, daysAhead = 15): Promise<FreeSlot[]> {
+export async function listFreeSlots(admin: any, clinicId: string, professionalId: string, daysAhead = 15, freed?: { date: string; time: string } | null): Promise<FreeSlot[]> {
   const { data: prof } = await admin.from("professionals")
     .select("id, schedule, appointment_duration, is_active").eq("id", professionalId).maybeSingle();
   if (!prof || prof.is_active === false) return [];
@@ -66,7 +66,9 @@ export async function listFreeSlots(admin: any, clinicId: string, professionalId
     if (!slots.length) continue;
     const { data: hol } = await admin.rpc("is_holiday", { p_clinic_id: clinicId, p_date: date });
     if ((hol as any)?.[0]?.is_holiday) continue;
-    const dayAppts = (appts || []).filter((a: any) => a.appointment_date === date);
+    // A vaga que acabou de ser liberada conta como livre mesmo que o cancelamento ainda não tenha sido gravado.
+    const freedTime = freed && freed.date === date ? String(freed.time).slice(0, 5) : null;
+    const dayAppts = (appts || []).filter((a: any) => a.appointment_date === date && String(a.start_time).slice(0, 5) !== freedTime);
     const dayBlocks = new Set((blocks || []).filter((b: any) => b.block_date === date).map((b: any) => String(b.start_time).slice(0, 5)));
     for (const { start, dur } of slots) {
       if (date === now.date && start <= now.minutes) continue;

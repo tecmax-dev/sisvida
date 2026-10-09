@@ -11,7 +11,7 @@ const cors = {
   "Content-Type": "application/json",
 };
 
-const BUILD = "WAITLIST-SLOT-2026-10-04-OPCOES";
+const BUILD = "WAITLIST-SLOT-2026-10-09-FREED";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
 const TEMPLATE_NAME = "vaga_disponivel_v1";
@@ -111,7 +111,7 @@ serve(async (req) => {
       headers: { Authorization: `Bearer ${metaToken}` },
     }).then((r) => r.json()).catch(() => ({}));
     const approved = (tplRes?.data || []).some((t: any) => t.name === OPTIONS_TEMPLATE && t.status === "APPROVED");
-    const slots = await listFreeSlots(admin, String(entry.clinic_id), profId, 15);
+    const slots = await listFreeSlots(admin, String(entry.clinic_id), profId, 15, { date: appointmentDate, time: startTime });
     freeCount = slots.length;
     if (approved && freeCount > 0) {
       const raw = crypto.getRandomValues(new Uint8Array(32));
