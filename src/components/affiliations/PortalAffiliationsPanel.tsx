@@ -14,7 +14,7 @@ type Doc = {
   id: string; employer_id: string; employer_cnpj: string | null; worker_name: string; title: string;
   version: number; approved_at: string | null; made_available_at: string; opened_at: string | null;
   ack_status: "pending" | "confirmed"; ack_at: string | null; ack_by_name: string | null;
-  classification_notice: boolean; employers?: { name: string } | null;
+  classification_notice: boolean; list_type?: string | null; employers?: { name: string } | null;
 };
 
 const DECLARATION =
@@ -118,12 +118,12 @@ export function PortalAffiliationsPanel({
               <div className="space-y-1">
                 <h2 className="font-bold uppercase">Revisão de classificação necessária</h2>
                 <p className="text-sm">
-                  {reclass.length} trabalhador(es) filiado(s) estavam cadastrados na <strong>Taxa Negocial</strong>. Como agora são associados, verifique se devem passar para a <strong>Mensalidade Sindical</strong> (conforme a CCT, a autorização de desconto e a competência de início), evitando cobrança em duplicidade.
+                  {reclass.length} trabalhador(es) que agora são associados ao sindicato constam na lista de trabalhadores fora da <strong>Mensalidade Sindical</strong>. É necessário mover o nome para a lista da Mensalidade Sindical (conforme a CCT, a autorização de desconto e a competência de início), evitando cobrança em duplicidade.
                 </p>
                 <p className="text-sm font-semibold">Essa alteração deve ser feita pela empresa ou pela contabilidade, na lista de trabalhadores e na folha de pagamento. O sindicato não altera a classificação automaticamente.</p>
                 <ul className="list-disc pl-5 text-sm">
                   {reclass.map((d) => (
-                    <li key={d.id}>{d.worker_name}{portalType === "accounting_office" && d.employers?.name ? ` — ${d.employers.name}` : ""}</li>
+                    <li key={d.id}>{d.worker_name}{portalType === "accounting_office" && d.employers?.name ? ` — ${d.employers.name}` : ""}{d.list_type ? ` (hoje em: ${d.list_type})` : ""}</li>
                   ))}
                 </ul>
               </div>
@@ -167,7 +167,7 @@ export function PortalAffiliationsPanel({
                 </p>
                 {d.classification_notice && (
                   <p className="mt-1 flex items-center gap-1 text-xs text-amber-700">
-                    <AlertTriangle className="h-3 w-3" /> Trabalhador estava na Taxa Negocial: revise a classificação para Mensalidade Sindical (CCT, autorização e competência de início) e evite cobrança simultânea.
+                    <AlertTriangle className="h-3 w-3" /> Associado consta na lista {d.list_type ?? "de outra contribuição"}: mova o nome para a lista da Mensalidade Sindical e evite cobrança simultânea.
                   </p>
                 )}
               </div>
