@@ -207,16 +207,16 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
           </div>
         </div>
         <div className="flex gap-2 print:hidden">
-        <Button variant="outline" onClick={() => window.print()} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={() => window.print()} disabled={loading}>
           <Printer className="mr-2 h-4 w-4" /> Imprimir
         </Button>
-        <Button variant="outline" onClick={exportPdf} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={exportPdf} disabled={loading}>
           <FileDown className="mr-2 h-4 w-4" /> PDF
         </Button>
-        <Button onClick={() => void syncPayments()} disabled={loading || syncing}>
+        <Button size="sm" onClick={() => void syncPayments()} disabled={loading || syncing}>
           {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />} Sincronizar pagamentos
         </Button>
-        <Button variant="outline" onClick={() => void load()} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
           <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
         </Button>
         </div>
