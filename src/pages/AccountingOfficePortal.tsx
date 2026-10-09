@@ -51,7 +51,6 @@ import { PortalContributionsList } from "@/components/portal/PortalContributions
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { formatCompetence } from "@/lib/competence-format";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
-import { ChatwootIntegrationConfig } from "@/components/portals/ChatwootIntegrationConfig";
 
 interface AccountingOffice {
 
@@ -946,9 +945,6 @@ export default function AccountingOfficePortal() {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
               {clinic?.id && (
                 <>
-                  <div className="mt-8 mb-8">
-                    <ChatwootIntegrationConfig clinicId={accountingOffice.clinic_id} />
-                  </div>
                   <PortalConventionsSection 
                     clinicId={clinic.id} 
                     employerCategoryId={selectedEmployerForDocuments.category_id}
