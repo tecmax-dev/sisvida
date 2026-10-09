@@ -22,8 +22,10 @@ const DECLARATION =
 
 /** "Filiações Recebidas" para Portal da Empresa e Portal do Contador. */
 export function PortalAffiliationsPanel({
-  portalType, portalId, onPendingChange,
+  portalType, portalId, onPendingChange, mode = "full", onOpenList,
 }: {
+  mode?: "full" | "alert";
+  onOpenList?: () => void;
   portalType: "employer" | "accounting_office";
   portalId: string;
   onPendingChange?: (pendingEmployerIds: string[]) => void;
@@ -77,7 +79,8 @@ export function PortalAffiliationsPanel({
   }
 
   if (loading && !docs.length) return null;
-  if (!docs.length) return null;
+  if (!docs.length) return mode === "full" ? <p className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">Nenhuma ficha de filiação recebida.</p> : null;
+  if (mode === "alert" && !pending.length) return null;
 
   const visible = showAll ? docs : pending.length ? pending : docs.slice(0, 5);
 
@@ -95,11 +98,15 @@ export function PortalAffiliationsPanel({
                 <p className="text-sm font-semibold">{pendingEmployers} empresa(s) com novas filiações — {pending.length} ficha(s) aguardando ciência.</p>
               )}
               <p className="text-xs">Enquanto houver ficha pendente, a geração de boletos da empresa correspondente fica bloqueada. Consultas e documentos continuam liberados.</p>
+              {mode === "alert" && onOpenList && (
+                <Button size="sm" className="mt-2" onClick={onOpenList}>Ver fichas de filiação</Button>
+              )}
             </div>
           </div>
         </div>
       )}
 
+      {mode === "full" && (<>
       <div className="rounded-xl border bg-card p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-semibold">Filiações Recebidas</h3>
@@ -153,6 +160,8 @@ export function PortalAffiliationsPanel({
           ))}
         </ul>
       </div>
+
+      </>)}
 
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
