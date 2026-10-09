@@ -1,4 +1,5 @@
  import { useState, useEffect, useMemo, useRef } from "react";
+import { PortalAffiliationsPanel } from "@/components/affiliations/PortalAffiliationsPanel";
  import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkerListValidationStep } from "@/components/portal/WorkerListValidationStep";
@@ -137,6 +138,7 @@ export default function AccountingOfficePortal() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   
   // Views
+  const [affiliationPending, setAffiliationPending] = useState<string[]>([]);
   const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao" | "cobranca" | "listas">("home");
   
   // Filters
@@ -757,6 +759,7 @@ export default function AccountingOfficePortal() {
           />
 
           <SindicatoWhatsappBanner />
+          {accountingOffice?.id && <PortalAffiliationsPanel portalType="accounting_office" portalId={accountingOffice.id} onPendingChange={setAffiliationPending} />}
 
           {/* 5 Service Cards - SindSystem style */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">

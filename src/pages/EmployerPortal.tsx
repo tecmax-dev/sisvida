@@ -56,6 +56,7 @@ import { ChatwootIntegrationConfig } from "@/components/portals/ChatwootIntegrat
 import { STATUS_CONFIG } from "./employer-portal/employerPortalTypes";
 import type { Clinic, Employer, Contribution, ReissueRequest, ActiveView, ContributionTab } from "./employer-portal/employerPortalTypes";
 import { PortalAlertDialog } from "./employer-portal/PortalAlertDialog";
+import { PortalAffiliationsPanel } from "@/components/affiliations/PortalAffiliationsPanel";
 
 export default function EmployerPortal() {
   const { clinicSlug } = useParams();
@@ -86,6 +87,7 @@ export default function EmployerPortal() {
   const [isChangingDueDate, setIsChangingDueDate] = useState(false);
   const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ActiveView>("home");
+  const [affiliationPending, setAffiliationPending] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<ContributionTab>("pending");
   const [searchTerm, setSearchTerm] = useState("");
 const [showTutorial, setShowTutorial] = useState(false);
@@ -936,6 +938,7 @@ const [showTutorial, setShowTutorial] = useState(false);
         {activeView === "home" && (
           <>
             <SindicatoWhatsappBanner />
+            {employer?.id && <PortalAffiliationsPanel portalType="employer" portalId={employer.id} onPendingChange={setAffiliationPending} />}
             {/* Welcome Section */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-2">
@@ -1037,6 +1040,13 @@ const [showTutorial, setShowTutorial] = useState(false);
 
         {activeView === "contributions" && (
           <>
+            {affiliationPending.length > 0 && (
+              <div className="mb-4 rounded-xl border-2 border-amber-400 bg-amber-50 p-4 text-sm text-amber-950">
+                <p className="font-bold">ATENÇÃO — CIÊNCIA DE FILIAÇÃO PENDENTE</p>
+                <p>Existe uma nova ficha de filiação disponibilizada pelo SECMI. Para continuar com a geração das contribuições sindicais, visualize o documento e confirme sua ciência.</p>
+                <button className="mt-2 font-semibold underline" onClick={() => setActiveView("home")}>Ir para Filiações Recebidas</button>
+              </div>
+            )}
             {/* Header */}
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
