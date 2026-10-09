@@ -757,7 +757,9 @@ serve(async (req) => {
         let logId: string | null = null;
         const docNum = String(
           invoice.boleto?.ourNumber || invoice.boleto?.nossoNumero || invoice.boleto?.documentNumber ||
-          lytexResp?.invoice?.referenceId || invoice._id || contribution.id,
+          lytexResp?.invoice?.transactions?.[0]?.boleto?.ourNumber ||
+          lytexResp?.invoice?.transactions?.[0]?.boleto?.digitableLine ||
+          invoice._id || contribution.id,
         );
         try {
           const { data: logRow } = await supabase.from("contribution_value_email_logs").insert({
@@ -775,10 +777,7 @@ serve(async (req) => {
             clinicEmail: clinicData?.email || null,
             employerId: contribution.employer_id,
             employerName: employer?.name || contribution.employer?.name || "Empresa",
-            documentNumber: String(
-              invoice.boleto?.ourNumber || invoice.boleto?.nossoNumero || invoice.boleto?.documentNumber ||
-              lytexResp?.invoice?.referenceId || invoice._id || contribution.id,
-            ),
+            documentNumber: docNum,
             invoiceUrl: invoice.invoiceUrl,
             byAccounting: portal_type === "accounting_office",
           });
