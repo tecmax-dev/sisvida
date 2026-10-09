@@ -297,9 +297,11 @@ serve(async (req) => {
       const ids = body.employer_id ? allowed.filter((i) => i === body.employer_id) : allowed;
       if (!ids.length) return json({ success: true, documents: [] });
       const { data } = await db.from("affiliation_company_documents")
-        .select("id, employer_id, employer_cnpj, worker_name, source, title, version, approved_at, made_available_at, opened_at, ack_status, ack_at, ack_by_name, classification_notice, employers(name)")
+        .select("id, employer_id, employer_cnpj, worker_name, source, title, version, approved_at, made_available_at, opened_at, ack_status, ack_at, ack_by_name, classification_notice")
         .in("employer_id", ids).order("made_available_at", { ascending: false }).limit(500);
-      return json({ success: true, documents: data ?? [] });
+      const { data: emps } = await db.from("employers").select("id, name").in("id", ids);
+      const names = new Map((emps ?? []).map((e: any) => [e.id, e.name]));
+      return json({ success: true, documents: (data ?? []).map((d: any) => ({ ...d, employers: { name: names.get(d.employer_id) ?? "" } })) });
     }
 
     if (action === "open") {
