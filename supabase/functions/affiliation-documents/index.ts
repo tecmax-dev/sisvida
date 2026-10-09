@@ -318,6 +318,35 @@ serve(async (req) => {
       return json({ success: true, documents: docs });
     }
 
+    // Transfere o trabalhador filiado da lista atual (ex.: Taxa Negocial) para a lista da Mensalidade Sindical.
+    // Não apaga nada: desativa o registro antigo com motivo e cria o da Mensalidade.
+    if (action === "transfer_to_mensalidade") {
+      const { data: doc } = await db.from("affiliation_company_documents").select("id, clinic_id, employer_id, associado_id, worker_name, worker_cpf").eq("id", body.document_id).maybeSingle();
+      if (!doc || !allowed.includes(doc.employer_id)) return json({ success: false, error: "FORBIDDEN" }, 403);
+      const { data: types } = await db.from("contribution_types").select("id, name").eq("clinic_id", doc.clinic_id).eq("is_active", true).ilike("name", "%mensal%");
+      const mens = (types ?? []).find((t: any) => /^\s*124/.test(t.name)) ?? (types ?? [])[0];
+      if (!mens) return json({ success: false, error: "Tipo Mensalidade Sindical não encontrado." });
+      const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+      const cpf = digits(doc.worker_cpf); const nm = norm(doc.worker_name);
+      const { data: ws } = await db.from("employer_workers").select("id, name, name_norm, cpf, contribution_type_id, contribution_types(name)").eq("employer_id", doc.employer_id).eq("active", true);
+      const hits = (ws ?? []).filter((w: any) => (cpf.length === 11 && digits(w.cpf) === cpf) || (nm && norm(w.name_norm) === nm));
+      if (hits.some((w: any) => w.contribution_type_id === mens.id)) return json({ success: true, already: true });
+      const olds = hits.filter((w: any) => !/mensal/i.test(w.contribution_types?.name ?? ""));
+      if (!olds.length) return json({ success: false, error: "Trabalhador não encontrado na lista desta empresa." });
+      const who = portalType === "accounting_office" ? "contabilidade" : "empresa";
+      const now = new Date().toISOString();
+      const { error: insErr } = await db.from("employer_workers").insert({
+        clinic_id: doc.clinic_id, employer_id: doc.employer_id, name: olds[0].name, name_norm: olds[0].name_norm,
+        cpf: olds[0].cpf || doc.worker_cpf || null, contribution_type_id: mens.id, active: true,
+      });
+      if (insErr) return json({ success: false, error: insErr.message });
+      await db.from("employer_workers").update({ active: false, inactive_at: now, inactive_reason: "transferido_mensalidade",
+        inactive_note: `Filiação sindical aprovada; transferido para ${mens.name} pela ${who}.` }).in("id", olds.map((w: any) => w.id));
+      await logEvent(db, { clinic_id: doc.clinic_id, document_id: doc.id, associado_id: doc.associado_id, employer_id: doc.employer_id,
+        event: "transferred_to_mensalidade", actor: `${who}:${portalId}`, details: { from: olds.map((w: any) => w.contribution_types?.name), to: mens.name } });
+      return json({ success: true, to: mens.name });
+    }
+
     if (action === "open") {
       const { data: doc } = await db.from("affiliation_company_documents").select("*").eq("id", body.document_id).maybeSingle();
       if (!doc || !allowed.includes(doc.employer_id)) return json({ success: false, error: "FORBIDDEN" }, 403);

@@ -67,6 +67,19 @@ export function PortalAffiliationsPanel({
     setDocs((p) => p.map((d) => (d.id === id && !d.opened_at ? { ...d, opened_at: new Date().toISOString() } : d)));
   }
 
+  const [moving, setMoving] = useState<string | null>(null);
+  async function transfer(d: Doc) {
+    if (!window.confirm(`Transferir ${d.worker_name} para a lista da Mensalidade Sindical? O registro em ${d.list_type ?? "outra lista"} será desativado (não é apagado).`)) return;
+    setMoving(d.id);
+    const { data, error } = await supabase.functions.invoke("affiliation-documents", {
+      body: { action: "transfer_to_mensalidade", portal_type: portalType, portal_id: portalId, document_id: d.id },
+    });
+    setMoving(null);
+    if (error || !data?.success) return toast.error(data?.error || "Não foi possível transferir.");
+    toast.success(data.already ? "Trabalhador já está na Mensalidade Sindical." : `${d.worker_name} transferido para ${data.to}.`);
+    void load();
+  }
+
   async function confirm() {
     if (!ackOpen?.length) return;
     setSaving(true);
@@ -121,9 +134,14 @@ export function PortalAffiliationsPanel({
                   {reclass.length} trabalhador(es) que agora são associados ao sindicato constam na lista de trabalhadores fora da <strong>Mensalidade Sindical</strong>. É necessário mover o nome para a lista da Mensalidade Sindical (conforme a CCT, a autorização de desconto e a competência de início), evitando cobrança em duplicidade.
                 </p>
                 <p className="text-sm font-semibold">Essa alteração deve ser feita pela empresa ou pela contabilidade, na lista de trabalhadores e na folha de pagamento. O sindicato não altera a classificação automaticamente.</p>
-                <ul className="list-disc pl-5 text-sm">
+                <ul className="space-y-1 text-sm">
                   {reclass.map((d) => (
-                    <li key={d.id}>{d.worker_name}{portalType === "accounting_office" && d.employers?.name ? ` — ${d.employers.name}` : ""}{d.list_type ? ` (hoje em: ${d.list_type})` : ""}</li>
+                    <li key={d.id} className="flex flex-wrap items-center gap-2">
+                      <span>{d.worker_name}{portalType === "accounting_office" && d.employers?.name ? ` — ${d.employers.name}` : ""}{d.list_type ? ` (hoje em: ${d.list_type})` : ""}</span>
+                      <Button size="sm" variant="outline" className="h-7" disabled={moving === d.id} onClick={() => transfer(d)}>
+                        {moving === d.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Transferir para Mensalidade
+                      </Button>
+                    </li>
                   ))}
                 </ul>
               </div>

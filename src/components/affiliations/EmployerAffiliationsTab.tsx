@@ -11,7 +11,7 @@ import { AffiliationFichaView, fmtDate, printPdf, useFichaPdfUrl } from "./Affil
 const EVENT_LABELS: Record<string, string> = {
   approved: "Filiação aprovada", card_issued: "Carteirinha emitida", made_available: "Ficha disponibilizada à empresa",
   opened: "Ficha aberta", acknowledged: "Ciência confirmada", employer_link_failed: "Falha no vínculo da empresa",
-  manual_upload: "Documento enviado manualmente",
+  manual_upload: "Documento enviado manualmente", transferred_to_mensalidade: "Transferido para a Mensalidade Sindical",
 };
 
 /** Aba "Filiações e Documentos" no cadastro da empresa (/sindicato). */
