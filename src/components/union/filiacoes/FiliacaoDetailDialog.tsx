@@ -303,7 +303,26 @@ export function FiliacaoDetailDialog({
   };
 
   if (!data) {
-    return (
+    const [exportingEmployer, setExportingEmployer] = useState(false);
+  const handleExportToEmployer = async () => {
+    if (!data?.id) return;
+    setExportingEmployer(true);
+    try {
+      const { data: r, error } = await supabase.functions.invoke("affiliation-documents", { body: { action: "export_associado", associadoId: data.id } });
+      if (error || !r?.success) {
+        const msg = r?.error === "NO_SIGNATURE" ? "Esta filiação não tem assinatura digital."
+          : r?.error === "NO_EMPLOYER" ? "Empresa não identificada pelo vínculo/CNPJ. Corrija o cadastro da empresa."
+          : "Não foi possível exportar a ficha.";
+        toast({ title: "Exportação não concluída", description: msg, variant: "destructive" });
+        return;
+      }
+      toast({ title: r.already ? "Ficha já estava na empresa" : "Ficha exportada para a empresa", description: r.already ? "Nada foi duplicado." : "A empresa e o contador precisam confirmar a ciência no portal." });
+    } finally {
+      setExportingEmployer(false);
+    }
+  };
+
+  return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-3xl">
           <div className="flex items-center justify-center py-12">
@@ -626,6 +645,10 @@ export function FiliacaoDetailDialog({
               <Button onClick={handleDownloadPDF} variant="outline" className="gap-2" disabled={generatingPDF}>
                 {generatingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Baixar Ficha PDF
+              </Button>
+              <Button onClick={handleExportToEmployer} variant="outline" className="gap-2" disabled={exportingEmployer}>
+                {exportingEmployer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Building2 className="h-4 w-4" />}
+                Exportar ficha para a empresa
               </Button>
               <Button onClick={handleSendEmail} variant="outline" className="gap-2" disabled={sendingEmail}>
                 {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}

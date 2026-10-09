@@ -177,6 +177,33 @@ serve(async (req) => {
       return json({ success: true, ...r });
     }
 
+    // Exporta a ficha assinada de UMA filiação aprovada para a empresa (sem carteirinha nem envio externo)
+    if (action === "export_associado") {
+      const ctx = await getAuthContext(req);
+      if (!ctx?.isStaff) return json({ success: false, error: "UNAUTHORIZED" }, 401);
+      const { data: a } = await db.from("sindical_associados").select("*").eq("id", body.associadoId).maybeSingle();
+      if (!a || a.status !== "ativo") return json({ success: false, error: "NOT_APPROVED" });
+      const { data: ue } = await db.from("union_entities").select("clinic_id").eq("id", a.sindicato_id).maybeSingle();
+      const clinicId = ue?.clinic_id;
+      if (!clinicId || !(await canAccessClinic(db, ctx.userId, ctx.isSuperAdmin, clinicId))) return json({ success: false, error: "FORBIDDEN" }, 403);
+      if (!a.assinatura_digital_url) return json({ success: false, error: "NO_SIGNATURE" });
+      const cnpj = digits(a.empresa_cnpj);
+      let employer: any = null;
+      if (a.employer_id) {
+        const { data } = await db.from("employers").select("id, cnpj, name, clinic_id").eq("id", a.employer_id).maybeSingle();
+        if (data && data.clinic_id === clinicId && (!cnpj || digits(data.cnpj) === cnpj)) employer = data;
+      }
+      if (!employer && cnpj.length === 14) {
+        const { data } = await db.from("employers").select("id, cnpj, name, clinic_id").eq("clinic_id", clinicId);
+        const m = (data ?? []).filter((e: any) => digits(e.cnpj) === cnpj);
+        if (m.length === 1) employer = m[0];
+      }
+      if (!employer) return json({ success: false, error: "NO_EMPLOYER" });
+      const { data: prev } = await db.from("affiliation_company_documents").select("id").eq("associado_id", a.id).eq("source", "auto").maybeSingle();
+      const id = await ensureCompanyDoc(db, a, employer, clinicId, a.id, ctx.email ?? ctx.userId);
+      return json({ success: true, document_id: id, already: !!prev, employer: employer.name });
+    }
+
     // Exporta fichas assinadas de filiações já aprovadas para o cadastro da empresa (sem carteirinha nem envio externo)
     if (action === "export_employer") {
       const ctx = await getAuthContext(req);
