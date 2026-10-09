@@ -87,6 +87,7 @@ export default function UnionReceivablesForecastPage() {
   const [quick, setQuick] = useState("all");
   const [page, setPage] = useState(1);
   const [showMore, setShowMore] = useState(false);
+  const [showFee, setShowFee] = useState(true);
 
   const load = async () => {
     setLoading(true);
@@ -195,11 +196,13 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
       styles: { fontSize: 9 },
     });
     autoTable(doc, {
-      head: [["Empresa", "CNPJ", "Tipo", "Comp.", "Vencimento", "Valor", "Situação"]],
+      head: [["Empresa", "CNPJ", "Tipo", "Comp.", "Vencimento", "Valor", ...(showFee ? ["Taxa Lytex"] : []), "Situação"]],
       body: filtered.map((r) => [
         r.employers?.name ?? "-", r.employers?.cnpj ?? "", TYPES[r.contribution_type_id],
         `${String(r.competence_month).padStart(2, "0")}/${r.competence_year}`, fmtDate(r.due_date),
-        brl(Number(r.value) || 0), STATUS[r.status]?.label ?? r.status,
+        brl(Number(r.value) || 0),
+        ...(showFee ? [r.lytex_fee_amount != null ? brl(Number(r.lytex_fee_amount)) : "-"] : []),
+        STATUS[r.status]?.label ?? r.status,
       ]),
       styles: { fontSize: 8 },
     });
@@ -306,6 +309,10 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
                   <option value="all">Todas as situações</option>
                   {Object.entries(STATUS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
                 </select>
+                <label className="flex h-9 items-center gap-2 rounded-md border border-input px-3 text-sm">
+                  <input type="checkbox" checked={showFee} onChange={(e) => setShowFee(e.target.checked)} />
+                  Mostrar taxa Lytex
+                </label>
                 <Button size="sm" variant="outline" className="h-9" onClick={() => setShowMore((v) => !v)}>{showMore ? "Menos filtros" : "Mais filtros"}</Button>
                 <Button size="sm" variant="ghost" className="h-9" onClick={() => { setSearch(""); setTypeFilter("all"); setStatusFilter("all"); setCompFrom(""); setCompTo(""); setDueFrom(""); setDueTo(""); setValueFilter("all"); setQuick("all"); }}>Limpar</Button>
               </div>
@@ -338,6 +345,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
                     <th className="px-3 py-2 text-left font-medium">Comp.</th>
                     <th className="px-3 py-2 text-left font-medium">Vencimento</th>
                     <th className="px-3 py-2 text-right font-medium">Valor</th>
+                    {showFee && <th className="px-3 py-2 text-right font-medium">Taxa Lytex</th>}
                     <th className="px-3 py-2 text-left font-medium">Situação</th>
                     <th className="w-10 px-2 py-2 print:hidden" />
                   </tr>
@@ -353,6 +361,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
                       <td className="px-3 py-2 tabular-nums">{String(r.competence_month).padStart(2, "0")}/{r.competence_year}</td>
                       <td className="px-3 py-2 tabular-nums">{fmtDate(r.due_date)}</td>
                       <td className="px-3 py-2 text-right font-medium tabular-nums">{r.value ? brl(Number(r.value)) : "-"}</td>
+                      {showFee && <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.lytex_fee_amount != null ? brl(Number(r.lytex_fee_amount)) : "-"}</td>}
                       <td className="px-3 py-2"><Badge className="text-[11px]" variant={STATUS[r.status]?.variant ?? "secondary"}>{STATUS[r.status]?.label ?? r.status}</Badge></td>
                       <td className="px-2 py-2 print:hidden">
                         {r.lytex_invoice_url && (
@@ -363,7 +372,7 @@ all.filter((r) => Number(r.value) > 0 && (r.status !== "paid" || r.competence_ye
                       </td>
                     </tr>
                   ))}
-                  {pageRows.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Nenhum boleto encontrado.</td></tr>}
+                  {pageRows.length === 0 && <tr><td colSpan={showFee ? 8 : 7} className="px-4 py-10 text-center text-muted-foreground">Nenhum boleto encontrado.</td></tr>}
                 </tbody>
               </table>
             </div>
