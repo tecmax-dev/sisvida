@@ -67,7 +67,8 @@ async function notifyUnionValueChange(p: {
   documentNumber: string;
   invoiceUrl: string | null;
   byAccounting: boolean;
-}): Promise<void> {
+  logId?: string | null;
+}): Promise<string> {
   const { data: ue } = await p.supabase
     .from("union_entities")
     .select("email_institucional, email_contato")
@@ -75,7 +76,8 @@ async function notifyUnionValueChange(p: {
     .limit(1)
     .maybeSingle();
   const to = p.clinicEmail || ue?.email_institucional || ue?.email_contato;
-  if (!to) { console.log("[SetValue] Sindicato sem e-mail cadastrado; notificacao ignorada"); return; }
+  if (p.logId && to) await p.supabase.from("contribution_value_email_logs").update({ recipient: to }).eq("id", p.logId);
+  if (!to) throw new Error("Sindicato sem e-mail cadastrado");
 
   let regNumber = "";
   if (p.employerId) {
@@ -88,7 +90,7 @@ async function notifyUnionValueChange(p: {
   const pass = Deno.env.get("SMTP_PASSWORD");
   const from = Deno.env.get("SMTP_FROM") || "noreply@prosindweb.com.br";
   const port = Number(Deno.env.get("SMTP_PORT") || "587");
-  if (!host || !user || !pass) { console.log("[SetValue] SMTP nao configurado"); return; }
+  if (!host || !user || !pass) throw new Error("Envio de e-mail não configurado");
 
   const who = p.byAccounting ? "um escritório de contabilidade" : "uma empresa";
   const link = p.invoiceUrl
@@ -114,6 +116,7 @@ ${link}
   } finally {
     await client.close();
   }
+  return to;
 }
 
 async function sendManagerNotification(params: {
@@ -751,8 +754,22 @@ serve(async (req) => {
 
       // Notificar o sindicato por e-mail quando empresa/contador informa valor pelo portal
       if ((portal_type === "employer" || portal_type === "accounting_office") && clinicId) {
+        let logId: string | null = null;
+        const docNum = String(
+          invoice.boleto?.ourNumber || invoice.boleto?.nossoNumero || invoice.boleto?.documentNumber ||
+          lytexResp?.invoice?.referenceId || invoice._id || contribution.id,
+        );
+        try {
+          const { data: logRow } = await supabase.from("contribution_value_email_logs").insert({
+            clinic_id: clinicId, contribution_id: contribution.id, employer_id: contribution.employer_id,
+            employer_name: employer?.name || contribution.employer?.name || null, portal_type,
+            document_number: docNum, invoice_url: invoice.invoiceUrl, status: "pending",
+          }).select("id").maybeSingle();
+          logId = logRow?.id ?? null;
+        } catch (_) { /* log não crítico */ }
         try {
           await notifyUnionValueChange({
+            logId,
             supabase,
             clinicId,
             clinicEmail: clinicData?.email || null,
@@ -765,8 +782,10 @@ serve(async (req) => {
             invoiceUrl: invoice.invoiceUrl,
             byAccounting: portal_type === "accounting_office",
           });
-        } catch (notifError) {
+          if (logId) await supabase.from("contribution_value_email_logs").update({ status: "sent" }).eq("id", logId);
+        } catch (notifError: any) {
           console.error("[SetValue] Erro ao notificar sindicato (nao critico):", notifError);
+          if (logId) await supabase.from("contribution_value_email_logs").update({ status: "failed", error_message: String(notifError?.message || notifError).slice(0, 500) }).eq("id", logId);
         }
       }
 
