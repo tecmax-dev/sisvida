@@ -329,6 +329,165 @@ export type Database = {
           },
         ]
       }
+      affiliation_company_documents: {
+        Row: {
+          ack_at: string | null
+          ack_by_name: string | null
+          ack_document_version: number | null
+          ack_portal_id: string | null
+          ack_portal_type: string | null
+          ack_status: string
+          approved_at: string | null
+          associado_id: string | null
+          classification_notice: boolean
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          employer_cnpj: string | null
+          employer_id: string
+          file_path: string | null
+          id: string
+          made_available_at: string
+          opened_at: string | null
+          opened_by_portal: string | null
+          snapshot: Json
+          source: string
+          title: string
+          updated_at: string
+          version: number
+          worker_cpf: string | null
+          worker_name: string
+        }
+        Insert: {
+          ack_at?: string | null
+          ack_by_name?: string | null
+          ack_document_version?: number | null
+          ack_portal_id?: string | null
+          ack_portal_type?: string | null
+          ack_status?: string
+          approved_at?: string | null
+          associado_id?: string | null
+          classification_notice?: boolean
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          employer_cnpj?: string | null
+          employer_id: string
+          file_path?: string | null
+          id?: string
+          made_available_at?: string
+          opened_at?: string | null
+          opened_by_portal?: string | null
+          snapshot?: Json
+          source?: string
+          title?: string
+          updated_at?: string
+          version?: number
+          worker_cpf?: string | null
+          worker_name: string
+        }
+        Update: {
+          ack_at?: string | null
+          ack_by_name?: string | null
+          ack_document_version?: number | null
+          ack_portal_id?: string | null
+          ack_portal_type?: string | null
+          ack_status?: string
+          approved_at?: string | null
+          associado_id?: string | null
+          classification_notice?: boolean
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          employer_cnpj?: string | null
+          employer_id?: string
+          file_path?: string | null
+          id?: string
+          made_available_at?: string
+          opened_at?: string | null
+          opened_by_portal?: string | null
+          snapshot?: Json
+          source?: string
+          title?: string
+          updated_at?: string
+          version?: number
+          worker_cpf?: string | null
+          worker_name?: string
+        }
+        Relationships: []
+      }
+      affiliation_document_events: {
+        Row: {
+          actor: string | null
+          associado_id: string | null
+          clinic_id: string
+          created_at: string
+          details: Json
+          document_id: string | null
+          employer_id: string | null
+          event: string
+          id: string
+        }
+        Insert: {
+          actor?: string | null
+          associado_id?: string | null
+          clinic_id: string
+          created_at?: string
+          details?: Json
+          document_id?: string | null
+          employer_id?: string | null
+          event: string
+          id?: string
+        }
+        Update: {
+          actor?: string | null
+          associado_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          details?: Json
+          document_id?: string | null
+          employer_id?: string | null
+          event?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      affiliation_processing_jobs: {
+        Row: {
+          associado_id: string
+          attempts: number
+          card_id: string | null
+          clinic_id: string
+          created_at: string
+          document_id: string | null
+          last_error: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          associado_id: string
+          attempts?: number
+          card_id?: string | null
+          clinic_id: string
+          created_at?: string
+          document_id?: string | null
+          last_error?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          associado_id?: string
+          attempts?: number
+          card_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          document_id?: string | null
+          last_error?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       anamnese_answers: {
         Row: {
           answer_option_ids: string[] | null
