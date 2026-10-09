@@ -19,10 +19,32 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Mail, Send, Users, Building2, Briefcase, Eye, RefreshCw,
-  CheckCircle2, AlertCircle, Clock, XCircle, Loader2, Save, CalendarClock, Pencil, Sparkles, BarChart3,
+  CheckCircle2, AlertCircle, Clock, XCircle, Loader2, Save, CalendarClock, Pencil, Sparkles, BarChart3, Paperclip, X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+type Attachment = { name: string; url: string; size: number };
+const ATT_START = "<!--anexos-->";
+const ATT_END = "<!--/anexos-->";
+const escAtt = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+function splitAttachments(html: string): { body: string; attachments: Attachment[] } {
+  const i = html.indexOf(ATT_START);
+  if (i < 0) return { body: html, attachments: [] };
+  const j = html.indexOf(ATT_END, i);
+  const block = html.slice(i, j < 0 ? undefined : j);
+  const attachments: Attachment[] = [];
+  for (const m of block.matchAll(/<a href="([^"]+)"[^>]*data-size="(\d+)"[^>]*>([^<]+)<\/a>/g)) {
+    attachments.push({ url: m[1], size: Number(m[2]), name: m[3].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"') });
+  }
+  return { body: html.slice(0, i) + (j < 0 ? "" : html.slice(j + ATT_END.length)), attachments };
+}
+function withAttachments(body: string, atts: Attachment[]): string {
+  const clean = splitAttachments(body).body;
+  if (atts.length === 0) return clean;
+  const items = atts.map((a) => `<li style="margin:4px 0"><a href="${escAtt(a.url)}" data-size="${a.size}" target="_blank" style="color:#0f766e">${escAtt(a.name)}</a></li>`).join("");
+  return `${clean}${ATT_START}<div style="margin-top:24px;padding:16px;border:1px solid #e5e7eb;border-radius:8px"><p style="margin:0 0 8px;font-weight:600">Anexos</p><ul style="margin:0;padding-left:18px">${items}</ul></div>${ATT_END}`;
+}
 
 type TargetType = "associados" | "empresas" | "escritorios" | "custom";
 
@@ -70,6 +92,31 @@ export default function UnionEmailMarketingPage() {
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState(DEFAULT_TEMPLATE);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploadingAtt, setUploadingAtt] = useState(false);
+
+  async function handleAttach(files: FileList | null) {
+    if (!files?.length) return;
+    setUploadingAtt(true);
+    try {
+      const added: Attachment[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast({ title: `${file.name} passa de 10 MB`, variant: "destructive" });
+          continue;
+        }
+        const safe = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w.\-]+/g, "_");
+        const path = `campanhas/anexos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+        const { error } = await supabase.storage.from("email-assets").upload(path, file, { contentType: file.type || undefined });
+        if (error) { toast({ title: `Falha ao anexar ${file.name}`, description: error.message, variant: "destructive" }); continue; }
+        const { data } = supabase.storage.from("email-assets").getPublicUrl(path);
+        added.push({ name: file.name, url: data.publicUrl, size: file.size });
+      }
+      setAttachments((prev) => [...prev, ...added]);
+    } finally {
+      setUploadingAtt(false);
+    }
+  }
   const [targetType, setTargetType] = useState<TargetType>("associados");
 
   // Filters
@@ -128,7 +175,7 @@ export default function UnionEmailMarketingPage() {
 
   function resetCompose() {
     setEditingId(null);
-    setName(""); setSubject(""); setBodyHtml(DEFAULT_TEMPLATE);
+    setName(""); setSubject(""); setBodyHtml(DEFAULT_TEMPLATE); setAttachments([]);
     setTargetType("associados");
     setFilterPlan("all"); setFilterCity(""); setFilterActive("active");
     setFilterEmployerId("all"); setCustomEmails("");
@@ -145,7 +192,9 @@ export default function UnionEmailMarketingPage() {
     setEditingId(full.id);
     setName(full.name || "");
     setSubject(full.subject || "");
-    setBodyHtml(full.body_html || DEFAULT_TEMPLATE);
+    const parsed = splitAttachments(full.body_html || DEFAULT_TEMPLATE);
+    setBodyHtml(parsed.body);
+    setAttachments(parsed.attachments);
     setTargetType((full.target_type as TargetType) || "associados");
     const f = (full.filters as any) || {};
     setFilterPlan(f.plan || "all");
@@ -185,7 +234,7 @@ export default function UnionEmailMarketingPage() {
     if (!clinicId) throw new Error("Sem clínica");
     const payload: any = {
       clinic_id: clinicId,
-      name, subject, body_html: bodyHtml,
+      name, subject, body_html: withAttachments(bodyHtml, attachments),
       target_type: targetType,
       filters: getFilters(),
       status,
@@ -675,6 +724,33 @@ export default function UnionEmailMarketingPage() {
                   {targetType === "empresas" && <> <code className="bg-muted px-1 rounded">{"{{empresa}}"}</code></>}
                   {targetType === "escritorios" && <> <code className="bg-muted px-1 rounded">{"{{escritorio}}"}</code></>}
                 </p>
+                <div className="mt-3 rounded-md border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="flex items-center gap-1"><Paperclip className="h-4 w-4" /> Anexos</Label>
+                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border px-3 py-1.5 text-sm hover:bg-muted">
+                      {uploadingAtt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                      Adicionar arquivos
+                      <input type="file" multiple className="hidden" disabled={uploadingAtt}
+                        onChange={(e) => { void handleAttach(e.target.files); e.target.value = ""; }} />
+                    </label>
+                  </div>
+                  {attachments.length > 0 ? (
+                    <ul className="mt-2 space-y-1">
+                      {attachments.map((a, i) => (
+                        <li key={a.url} className="flex items-center justify-between gap-2 rounded bg-muted/50 px-2 py-1 text-sm">
+                          <a href={a.url} target="_blank" rel="noreferrer" className="truncate text-primary hover:underline">{a.name}</a>
+                          <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                            {(a.size / 1024 / 1024).toFixed(2)} MB
+                            <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => setAttachments((p) => p.filter((_, k) => k !== i))}><X className="h-3.5 w-3.5" /></Button>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">Até 10 MB por arquivo. Vários arquivos permitidos.</p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">Cada destinatário recebe os anexos como links para baixar, no fim do e-mail.</p>
+                </div>
                 <details className="mt-2">
                   <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
                     Ver/editar HTML bruto (avançado)
