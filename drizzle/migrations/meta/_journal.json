@@ -204,6 +204,13 @@
       "when": 1791568105690,
       "tag": "0028_affiliation_company_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791568199921,
+      "tag": "0029_affiliation_documents_storage",
+      "breakpoints": true
     }
   ]
 }
