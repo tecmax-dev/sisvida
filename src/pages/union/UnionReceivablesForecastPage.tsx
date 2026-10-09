@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { TrendingUp, Loader2, RefreshCw, ExternalLink, Printer, FileDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,11 +42,9 @@ const fmtDate = (d: string | null) => (d ? parseDateOnlyToLocalNoon(d).toLocaleD
 
 export default function UnionReceivablesForecastPage() {
   const navigate = useNavigate();
-  const openBoleto = (url: string | null) => {
-    if (!url) return;
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w) window.location.href = url;
-  };
+  const [boletoUrl, setBoletoUrl] = useState<string | null>(null);
+  const [companyRow, setCompanyRow] = useState<Row | null>(null);
+  const openBoleto = (url: string | null) => { if (url) setBoletoUrl(url); };
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -283,7 +282,7 @@ all.filter((r) => Number(r.value) > 0),
                 <TableBody>
                   {filtered.slice(0, 500).map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="cursor-pointer" onClick={() => navigate(`/union/empresas/${r.employer_id}`)}><div className="font-medium text-primary hover:underline">{r.employers?.name ?? "-"}</div><div className="text-xs text-muted-foreground">{r.employers?.cnpj ?? ""}</div></TableCell>
+                      <TableCell className="cursor-pointer" onClick={() => setCompanyRow(r)}><div className="font-medium text-primary hover:underline">{r.employers?.name ?? "-"}</div><div className="text-xs text-muted-foreground">{r.employers?.cnpj ?? ""}</div></TableCell>
                       <TableCell className="text-sm">{TYPES[r.contribution_type_id]}</TableCell>
                       <TableCell>{String(r.competence_month).padStart(2, "0")}/{r.competence_year}</TableCell>
                       <TableCell>{fmtDate(r.due_date)}</TableCell>
@@ -305,6 +304,52 @@ all.filter((r) => Number(r.value) > 0),
           </Card>
         </>
       )}
-    </div>
+          <Dialog open={!!boletoUrl} onOpenChange={(o) => !o && setBoletoUrl(null)}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader><DialogTitle>Boleto</DialogTitle></DialogHeader>
+          {boletoUrl && <iframe src={boletoUrl} title="Boleto" className="h-[75vh] w-full rounded-md border" />}
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => boletoUrl && window.open(boletoUrl, "_blank", "noopener,noreferrer")}>
+              <ExternalLink className="mr-2 h-4 w-4" /> Abrir em nova aba
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!companyRow} onOpenChange={(o) => !o && setCompanyRow(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>{companyRow?.employers?.name ?? "Empresa"}</DialogTitle></DialogHeader>
+          {companyRow && (() => {
+            const list = rows.filter((x) => x.employer_id === companyRow.employer_id);
+            const sum = list.reduce((a, x) => a + (Number(x.value) || 0), 0);
+            return (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">CNPJ: {companyRow.employers?.cnpj ?? "-"} · {list.length} boleto(s) em aberto · Total {brl(sum)}</p>
+                <div className="max-h-[55vh] overflow-auto">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead>Comp.</TableHead><TableHead>Vencimento</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Situação</TableHead><TableHead /></TableRow></TableHeader>
+                    <TableBody>
+                      {list.map((x) => (
+                        <TableRow key={x.id}>
+                          <TableCell className="text-sm">{TYPES[x.contribution_type_id]}</TableCell>
+                          <TableCell>{String(x.competence_month).padStart(2, "0")}/{x.competence_year}</TableCell>
+                          <TableCell>{fmtDate(x.due_date)}</TableCell>
+                          <TableCell className="text-right">{brl(Number(x.value) || 0)}</TableCell>
+                          <TableCell><Badge variant={STATUS[x.status]?.variant ?? "secondary"}>{STATUS[x.status]?.label ?? x.status}</Badge></TableCell>
+                          <TableCell>{x.lytex_invoice_url && <Button size="sm" variant="ghost" onClick={() => openBoleto(x.lytex_invoice_url)}><ExternalLink className="h-4 w-4" /></Button>}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={() => window.open(`/union/empresas/${companyRow.employer_id}`, "_blank")}>Ver cadastro completo</Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+</div>
   );
 }
