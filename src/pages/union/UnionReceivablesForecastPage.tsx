@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { TrendingUp, Loader2, RefreshCw, ExternalLink, Printer, FileDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ const STATUS: Record<string, { label: string; variant: "default" | "secondary" |
 
 interface Row {
   id: string;
+  employer_id: string;
   contribution_type_id: string;
   competence_month: number;
   competence_year: number;
@@ -38,6 +40,12 @@ const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "c
 const fmtDate = (d: string | null) => (d ? parseDateOnlyToLocalNoon(d).toLocaleDateString("pt-BR") : "-");
 
 export default function UnionReceivablesForecastPage() {
+  const navigate = useNavigate();
+  const openBoleto = (url: string | null) => {
+    if (!url) return;
+    const w = window.open(url, "_blank", "noopener,noreferrer");
+    if (!w) window.location.href = url;
+  };
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -57,7 +65,7 @@ export default function UnionReceivablesForecastPage() {
     for (let from = 0; ; from += page) {
       const { data, error } = await supabase
         .from("employer_contributions")
-        .select("id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, employers(name, cnpj)")
+        .select("id, employer_id, contribution_type_id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, employers(name, cnpj)")
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .in("contribution_type_id", Object.keys(TYPES))
         .in("status", ["pending", "overdue"])
@@ -275,16 +283,16 @@ all.filter((r) => Number(r.value) > 0),
                 <TableBody>
                   {filtered.slice(0, 500).map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell><div className="font-medium">{r.employers?.name ?? "-"}</div><div className="text-xs text-muted-foreground">{r.employers?.cnpj ?? ""}</div></TableCell>
+                      <TableCell className="cursor-pointer" onClick={() => navigate(`/union/empresas/${r.employer_id}`)}><div className="font-medium text-primary hover:underline">{r.employers?.name ?? "-"}</div><div className="text-xs text-muted-foreground">{r.employers?.cnpj ?? ""}</div></TableCell>
                       <TableCell className="text-sm">{TYPES[r.contribution_type_id]}</TableCell>
                       <TableCell>{String(r.competence_month).padStart(2, "0")}/{r.competence_year}</TableCell>
                       <TableCell>{fmtDate(r.due_date)}</TableCell>
-                      <TableCell className="text-right">{r.value ? brl(Number(r.value)) : "-"}</TableCell>
+                      <TableCell className={`text-right ${r.lytex_invoice_url ? "cursor-pointer text-primary hover:underline" : ""}`} onClick={() => openBoleto(r.lytex_invoice_url)}>{r.value ? brl(Number(r.value)) : "-"}</TableCell>
                       <TableCell><Badge variant={STATUS[r.status]?.variant ?? "secondary"}>{STATUS[r.status]?.label ?? r.status}</Badge></TableCell>
                       <TableCell>
                         {r.lytex_invoice_url && (
-                          <Button size="sm" variant="ghost" asChild>
-                            <a href={r.lytex_invoice_url} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                          <Button size="sm" variant="ghost" title="Abrir boleto" onClick={() => openBoleto(r.lytex_invoice_url)}>
+                            <ExternalLink className="h-4 w-4" />
                           </Button>
                         )}
                       </TableCell>
