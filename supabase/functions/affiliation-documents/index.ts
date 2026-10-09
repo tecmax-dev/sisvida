@@ -35,6 +35,49 @@ async function portalEmployerIds(db: DB, portalType: string, portalId: string): 
   return [];
 }
 
+async function ensureCompanyDoc(db: DB, a: any, employer: any, clinicId: string, associadoId: string, actor: string): Promise<string> {
+  let documentId: string;
+  const { data: existing } = await db.from("affiliation_company_documents").select("id").eq("associado_id", associadoId).eq("source", "auto").maybeSingle();
+  if (existing) {
+    documentId = existing.id;
+  } else {
+    const snapshot = {
+      nome: a.nome, cpf: a.cpf, rg: a.rg, data_nascimento: a.data_nascimento, sexo: a.sexo,
+      estado_civil: a.estado_civil, nome_mae: a.nome_mae, telefone: a.telefone, email: a.email,
+      endereco: [a.logradouro, a.numero, a.bairro, a.cidade, a.uf].filter(Boolean).join(", "),
+      cargo: a.cargo ?? a.funcao, data_admissao: a.data_admissao, salario: a.salario,
+      empresa_razao_social: a.empresa_razao_social || employer.name, empresa_cnpj: employer.cnpj,
+      matricula: a.matricula, forma_pagamento: a.forma_pagamento, valor_contribuicao: a.valor_contribuicao,
+      assinatura_digital_url: a.assinatura_digital_url, assinatura_aceite_desconto: a.assinatura_aceite_desconto,
+      assinatura_aceite_at: a.assinatura_aceite_at, aprovado_at: a.aprovado_at, created_at: a.created_at,
+    };
+    // Aviso de reclassificação: trabalhador estava na Taxa Negocial
+    let notice = false;
+    const { data: workers } = await db.from("employer_workers").select("cpf, name_norm, contribution_types(name)")
+      .eq("employer_id", employer.id).eq("active", true);
+    const nameNorm = String(a.nome ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+    notice = (workers ?? []).some((w: any) =>
+      ((w.cpf && digits(w.cpf) === digits(a.cpf)) || (w.name_norm && String(w.name_norm).toUpperCase() === nameNorm)) &&
+      /negocial/i.test(w.contribution_types?.name ?? ""));
+    const { data: doc, error: docErr } = await db.from("affiliation_company_documents").insert({
+      clinic_id: clinicId, associado_id: associadoId, employer_id: employer.id, employer_cnpj: employer.cnpj,
+      worker_name: a.nome, worker_cpf: a.cpf, source: "auto", snapshot, approved_at: a.aprovado_at,
+      classification_notice: notice,
+    }).select("id").single();
+    if (docErr) {
+      // corrida: outro processamento já criou
+      const { data: again } = await db.from("affiliation_company_documents").select("id").eq("associado_id", associadoId).eq("source", "auto").maybeSingle();
+      if (!again) throw docErr;
+      documentId = again.id;
+    } else {
+      documentId = doc.id;
+      await logEvent(db, { clinic_id: clinicId, document_id: documentId, associado_id: associadoId, employer_id: employer.id, event: "made_available", actor, details: { employer_cnpj: employer.cnpj, classification_notice: notice } });
+    }
+  }
+
+  return documentId;
+}
+
 async function processApproval(db: DB, associadoId: string, actor: string) {
   const { data: a, error } = await db.from("sindical_associados").select("*").eq("id", associadoId).maybeSingle();
   if (error || !a) throw new Error("Associado não encontrado");
@@ -108,43 +151,7 @@ async function processApproval(db: DB, associadoId: string, actor: string) {
   }
 
   // 3) Ficha na Central da empresa (uma por filiação)
-  const { data: existing } = await db.from("affiliation_company_documents").select("id").eq("associado_id", associadoId).eq("source", "auto").maybeSingle();
-  if (existing) {
-    documentId = existing.id;
-  } else {
-    const snapshot = {
-      nome: a.nome, cpf: a.cpf, rg: a.rg, data_nascimento: a.data_nascimento, sexo: a.sexo,
-      estado_civil: a.estado_civil, nome_mae: a.nome_mae, telefone: a.telefone, email: a.email,
-      endereco: [a.logradouro, a.numero, a.bairro, a.cidade, a.uf].filter(Boolean).join(", "),
-      cargo: a.cargo ?? a.funcao, data_admissao: a.data_admissao, salario: a.salario,
-      empresa_razao_social: a.empresa_razao_social || employer.name, empresa_cnpj: employer.cnpj,
-      matricula: a.matricula, forma_pagamento: a.forma_pagamento, valor_contribuicao: a.valor_contribuicao,
-      assinatura_digital_url: a.assinatura_digital_url, assinatura_aceite_desconto: a.assinatura_aceite_desconto,
-      assinatura_aceite_at: a.assinatura_aceite_at, aprovado_at: a.aprovado_at, created_at: a.created_at,
-    };
-    // Aviso de reclassificação: trabalhador estava na Taxa Negocial
-    let notice = false;
-    const { data: workers } = await db.from("employer_workers").select("cpf, name_norm, contribution_types(name)")
-      .eq("employer_id", employer.id).eq("active", true);
-    const nameNorm = String(a.nome ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-    notice = (workers ?? []).some((w: any) =>
-      ((w.cpf && digits(w.cpf) === digits(a.cpf)) || (w.name_norm && String(w.name_norm).toUpperCase() === nameNorm)) &&
-      /negocial/i.test(w.contribution_types?.name ?? ""));
-    const { data: doc, error: docErr } = await db.from("affiliation_company_documents").insert({
-      clinic_id: clinicId, associado_id: associadoId, employer_id: employer.id, employer_cnpj: employer.cnpj,
-      worker_name: a.nome, worker_cpf: a.cpf, source: "auto", snapshot, approved_at: a.aprovado_at,
-      classification_notice: notice,
-    }).select("id").single();
-    if (docErr) {
-      // corrida: outro processamento já criou
-      const { data: again } = await db.from("affiliation_company_documents").select("id").eq("associado_id", associadoId).eq("source", "auto").maybeSingle();
-      if (!again) throw docErr;
-      documentId = again.id;
-    } else {
-      documentId = doc.id;
-      await logEvent(db, { clinic_id: clinicId, document_id: documentId, associado_id: associadoId, employer_id: employer.id, event: "made_available", actor, details: { employer_cnpj: employer.cnpj, classification_notice: notice } });
-    }
-  }
+  documentId = await ensureCompanyDoc(db, a, employer, clinicId, associadoId, actor);
 
   await db.from("affiliation_processing_jobs").update({
     status: errors.length ? "error" : "done", card_id: result.card_id ?? null, document_id: documentId,
@@ -168,6 +175,31 @@ serve(async (req) => {
       if (!ue?.clinic_id || !(await canAccessClinic(db, ctx.userId, ctx.isSuperAdmin, ue.clinic_id))) return json({ success: false, error: "FORBIDDEN" }, 403);
       const r = await processApproval(db, String(body.associadoId), ctx.email ?? ctx.userId);
       return json({ success: true, ...r });
+    }
+
+    // Exporta fichas assinadas de filiações já aprovadas para o cadastro da empresa (sem carteirinha nem envio externo)
+    if (action === "export_employer") {
+      const ctx = await getAuthContext(req);
+      if (!ctx?.isStaff) return json({ success: false, error: "UNAUTHORIZED" }, 401);
+      const { data: employer } = await db.from("employers").select("id, cnpj, name, clinic_id").eq("id", body.employer_id).maybeSingle();
+      if (!employer || !(await canAccessClinic(db, ctx.userId, ctx.isSuperAdmin, employer.clinic_id))) return json({ success: false, error: "FORBIDDEN" }, 403);
+      const { data: ues } = await db.from("union_entities").select("id").eq("clinic_id", employer.clinic_id);
+      const ueIds = (ues ?? []).map((u: any) => u.id);
+      if (!ueIds.length) return json({ success: true, exported: 0, already: 0 });
+      const cnpj = digits(employer.cnpj);
+      const { data: assoc } = await db.from("sindical_associados").select("*").in("sindicato_id", ueIds)
+        .eq("status", "ativo").not("assinatura_digital_url", "is", null);
+      const mine = (assoc ?? []).filter((a: any) => a.employer_id === employer.id || (cnpj.length === 14 && digits(a.empresa_cnpj) === cnpj));
+      const { data: existing } = await db.from("affiliation_company_documents").select("associado_id")
+        .in("associado_id", mine.length ? mine.map((a: any) => a.id) : ["00000000-0000-0000-0000-000000000000"]).eq("source", "auto");
+      const have = new Set((existing ?? []).map((r: any) => r.associado_id));
+      let exported = 0;
+      for (const a of mine) {
+        if (have.has(a.id)) continue;
+        await ensureCompanyDoc(db, a, employer, employer.clinic_id, a.id, ctx.email ?? ctx.userId);
+        exported++;
+      }
+      return json({ success: true, exported, already: have.size, found: mine.length });
     }
 
     // Ações de portal (empresa/contador)
