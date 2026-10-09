@@ -162,6 +162,13 @@
       "when": 1791452647263,
       "tag": "0022_optimize_employer_contributions_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791504493038,
+      "tag": "0023_migration",
+      "breakpoints": true
     }
   ]
 }

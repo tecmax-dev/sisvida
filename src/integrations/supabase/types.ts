@@ -2371,6 +2371,7 @@ export type Database = {
           slug: string
           state_code: string | null
           titular_booking_limit_enabled: boolean | null
+          titular_booking_period: string
           updated_at: string
           use_ai_booking: boolean | null
           waiting_list_enabled: boolean
@@ -2428,6 +2429,7 @@ export type Database = {
           slug: string
           state_code?: string | null
           titular_booking_limit_enabled?: boolean | null
+          titular_booking_period?: string
           updated_at?: string
           use_ai_booking?: boolean | null
           waiting_list_enabled?: boolean
@@ -2485,6 +2487,7 @@ export type Database = {
           slug?: string
           state_code?: string | null
           titular_booking_limit_enabled?: boolean | null
+          titular_booking_period?: string
           updated_at?: string
           use_ai_booking?: boolean | null
           waiting_list_enabled?: boolean
@@ -20473,6 +20476,10 @@ export type Database = {
       authenticate_patient_hybrid: {
         Args: { p_cpf: string; p_password: string }
         Returns: Json
+      }
+      booking_period_bounds: {
+        Args: { p_date: string; p_period: string }
+        Returns: Record<string, unknown>
       }
       calc_interaction_score: {
         Args: { _clinic_id: string; _phone: string }
