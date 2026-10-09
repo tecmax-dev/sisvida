@@ -107,7 +107,7 @@ export function FiliacaoApprovalDialog({
           automationNotice = "Automação pendente: reprocesse pela lista de filiações.";
         }
 
-        let whatsappNotice = automationNotice;
+        let whatsappNotice = "";
         if (sendWhatsApp) {
           const { data: result, error: notifError } = await supabase.functions.invoke("send-affiliation-welcome", {
             body: { associadoId: filiacao.id },
@@ -129,7 +129,7 @@ export function FiliacaoApprovalDialog({
 
         toast({
           title: "Filiação aprovada com sucesso!",
-          description: `Status atualizado e matrícula gerada. ${whatsappNotice}`,
+          description: `Status atualizado e matrícula gerada. ${automationNotice} ${whatsappNotice}`,
         });
       } else {
         // Reject
