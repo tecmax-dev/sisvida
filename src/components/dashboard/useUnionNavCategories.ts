@@ -87,6 +87,7 @@ export const unionNavCategories: UnionNavCategory[] = [
       { href: "/union/autorizacoes", icon: FileCheck2, label: "Autorizações", permission: "union_view_members" },
       { href: "/union/associados", icon: UserPlus, label: "Filiações Públicas", permission: "union_view_members" },
       { href: "/union/filiacoes", icon: ClipboardList, label: "Aprovação de Filiações", permission: "union_view_members" },
+      { href: "/union/filiacoes/ciencia", icon: ClipboardList, label: "Ciência das Fichas", permission: "union_view_members" },
     ],
   },
   {
