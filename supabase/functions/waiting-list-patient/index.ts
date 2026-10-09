@@ -89,14 +89,28 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "invalid professionalId" }), { status: 400, headers: jsonHeaders });
       }
 
-      // Regra: associado que já possui agendamento no mês corrente com o mesmo
-      // profissional não pode entrar na fila de espera desse profissional no mês.
+      // Regra: segue o período configurado em /sindicato (mensal ou a cada N dias).
+      // Quem já atingiu o limite com o profissional nesse período não entra na fila.
+      const { data: rule } = await supabase.from("clinics")
+        .select("titular_booking_period, max_appointments_per_cpf_month").eq("id", clinicId).maybeSingle();
+      const period = String((rule as any)?.titular_booking_period || "monthly");
+      const rawLimit = (rule as any)?.max_appointments_per_cpf_month;
+      const limit = rawLimit === 0 ? 0 : Math.max(1, Number(rawLimit ?? 1));
       const now = new Date();
-      const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
-      const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-      const monthEnd = nextMonth.toISOString().slice(0, 10);
+      const iso = (d: Date) => d.toISOString().slice(0, 10);
+      let monthStart: string, monthEnd: string;
+      const m = /^days_(\d+)$/.exec(period);
+      if (m) {
+        const n = Number(m[1]);
+        const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        monthStart = iso(new Date(today - (n - 1) * 86400000));
+        monthEnd = iso(new Date(today + n * 86400000)); // exclusivo
+      } else {
+        monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+        monthEnd = iso(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)));
+      }
 
-      const { count: attendedCount } = await supabase
+      const { count: attendedCount } = limit === 0 ? { count: 0 } : await supabase
         .from("appointments")
         .select("id", { count: "exact", head: true })
         .eq("clinic_id", clinicId)
@@ -106,7 +120,7 @@ Deno.serve(async (req) => {
         .lt("appointment_date", monthEnd)
         .not("status", "in", '("cancelled","blocked")');
 
-      if ((attendedCount ?? 0) > 0) {
+      if (limit > 0 && (attendedCount ?? 0) >= limit) {
         return new Response(JSON.stringify({
           error: "already_scheduled_this_month",
           message:
