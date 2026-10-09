@@ -108,6 +108,31 @@ export function PortalAffiliationsPanel({
         </div>
       )}
 
+      {(() => {
+        const reclass = docs.filter((d) => d.classification_notice);
+        if (!reclass.length) return null;
+        return (
+          <div className="rounded-xl border-2 border-orange-400 bg-orange-50 p-4 text-orange-950">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-orange-600" />
+              <div className="space-y-1">
+                <h2 className="font-bold uppercase">Revisão de classificação necessária</h2>
+                <p className="text-sm">
+                  {reclass.length} trabalhador(es) filiado(s) estavam cadastrados na <strong>Taxa Negocial</strong>. Como agora são associados, verifique se devem passar para a <strong>Mensalidade Sindical</strong> (conforme a CCT, a autorização de desconto e a competência de início), evitando cobrança em duplicidade.
+                </p>
+                <p className="text-sm font-semibold">Essa alteração deve ser feita pela empresa ou pela contabilidade, na lista de trabalhadores e na folha de pagamento. O sindicato não altera a classificação automaticamente.</p>
+                <ul className="list-disc pl-5 text-sm">
+                  {reclass.map((d) => (
+                    <li key={d.id}>{d.worker_name}{portalType === "accounting_office" && d.employers?.name ? ` — ${d.employers.name}` : ""}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+
       {mode === "full" && (<>
       <div className="rounded-xl border bg-card p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
