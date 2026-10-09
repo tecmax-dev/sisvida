@@ -74,7 +74,7 @@ async function notifyUnionValueChange(p: {
     .eq("clinic_id", p.clinicId)
     .limit(1)
     .maybeSingle();
-  const to = ue?.email_institucional || ue?.email_contato || p.clinicEmail;
+  const to = p.clinicEmail || ue?.email_institucional || ue?.email_contato;
   if (!to) { console.log("[SetValue] Sindicato sem e-mail cadastrado; notificacao ignorada"); return; }
 
   let regNumber = "";
