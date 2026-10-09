@@ -20498,6 +20498,10 @@ export type Database = {
         Args: { object_name: string }
         Returns: boolean
       }
+      can_bypass_dependent_booking_limit: {
+        Args: { _clinic_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_mobile_cancel_homologacao: {
         Args: { p_appointment_id: string; p_employee_cpf: string }
         Returns: boolean
