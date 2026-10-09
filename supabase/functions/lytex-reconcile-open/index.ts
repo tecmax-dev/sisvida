@@ -2,6 +2,7 @@
 // Percorre em lotes todas as employer_contributions com lytex_invoice_id e
 // atualiza status/pagamento conforme a fatura real na Lytex.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAuthContext, isInternalCaller, adminClient } from "../_shared/authGuard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,6 +64,26 @@ Deno.serve(async (req) => {
     const limit = Math.min(Number(body.limit ?? 100), 200);
     const statuses: string[] = body.statuses ?? ["pending", "overdue"];
     if (!clinicId) throw new Error("clinicId obrigatório");
+
+    // Dados financeiros: somente administrador do sistema (super admin ou admin/owner sem grupo de acesso)
+    if (!isInternalCaller(req)) {
+      const ctx = await getAuthContext(req);
+      if (!ctx) {
+        return new Response(JSON.stringify({ success: false, error: "Não autorizado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      let allowed = ctx.isSuperAdmin;
+      if (!allowed) {
+        const { data: roles } = await adminClient()
+          .from("user_roles")
+          .select("role, access_group_id")
+          .eq("user_id", ctx.userId)
+          .eq("clinic_id", clinicId);
+        allowed = (roles || []).some((r: any) => (r.role === "owner" || r.role === "admin") && !r.access_group_id);
+      }
+      if (!allowed) {
+        return new Response(JSON.stringify({ success: false, error: "Acesso restrito ao administrador do sistema" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
