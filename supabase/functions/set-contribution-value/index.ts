@@ -54,6 +54,68 @@ function formatBRL(cents: number): string {
   return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 }
 
+const escHtml = (s: string) =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+// E-mail ao sindicato: empresa/contador informou valor de contribuição zerada pelo portal.
+async function notifyUnionValueChange(p: {
+  supabase: any;
+  clinicId: string;
+  clinicEmail: string | null;
+  employerId: string | null;
+  employerName: string;
+  documentNumber: string;
+  invoiceUrl: string | null;
+  byAccounting: boolean;
+}): Promise<void> {
+  const { data: ue } = await p.supabase
+    .from("union_entities")
+    .select("email_institucional, email_contato")
+    .eq("clinic_id", p.clinicId)
+    .limit(1)
+    .maybeSingle();
+  const to = ue?.email_institucional || ue?.email_contato || p.clinicEmail;
+  if (!to) { console.log("[SetValue] Sindicato sem e-mail cadastrado; notificacao ignorada"); return; }
+
+  let regNumber = "";
+  if (p.employerId) {
+    const { data: emp } = await p.supabase.from("employers").select("registration_number").eq("id", p.employerId).maybeSingle();
+    regNumber = emp?.registration_number ? `${emp.registration_number} - ` : "";
+  }
+
+  const host = Deno.env.get("SMTP_HOST");
+  const user = Deno.env.get("SMTP_USER");
+  const pass = Deno.env.get("SMTP_PASSWORD");
+  const from = Deno.env.get("SMTP_FROM") || "noreply@prosindweb.com.br";
+  const port = Number(Deno.env.get("SMTP_PORT") || "587");
+  if (!host || !user || !pass) { console.log("[SetValue] SMTP nao configurado"); return; }
+
+  const who = p.byAccounting ? "um escritório de contabilidade" : "uma empresa";
+  const link = p.invoiceUrl
+    ? `<p style="margin:24px 0"><a href="${escHtml(p.invoiceUrl)}" target="_blank" style="display:inline-block;padding:12px 28px;background:#16a394;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600">Imprimir boleto</a></p>`
+    : "";
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:24px;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937">
+<div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;padding:28px">
+<h2 style="margin:0 0 16px;color:#0f766e">Alteração do valor do boleto</h2>
+<p>Prezado(s),</p>
+<p>Estou passando aqui para notificar que ${who} alterou o valor do boleto.</p>
+<p>A empresa <strong>${escHtml(regNumber + p.employerName)}</strong> acabou de alterar o valor do boleto.</p>
+<p>N° documento <strong>${escHtml(p.documentNumber)}</strong></p>
+${p.invoiceUrl ? "<p>Segue abaixo link para acessar o boleto:</p>" : ""}
+${link}
+<p style="margin-top:24px;font-size:12px;color:#9ca3af">Notificação automática do sistema.</p>
+</div></body></html>`;
+
+  const { SMTPClient } = await import("https://deno.land/x/denomailer@1.6.0/mod.ts");
+  const client = new SMTPClient({ connection: { hostname: host, port, tls: port === 465, auth: { username: user, password: pass } } });
+  try {
+    await client.send({ from, to, subject: "Alteração do valor do boleto", html, content: "auto" });
+  } finally {
+    await client.close();
+  }
+}
+
 async function sendManagerNotification(params: {
   managerEmail: string;
   clinicName: string;
@@ -684,6 +746,27 @@ serve(async (req) => {
         } catch (notifError) {
           console.error("[SetValue] Erro ao enviar notificacao (nao critico):", notifError);
           // Não bloqueia o fluxo principal
+        }
+      }
+
+      // Notificar o sindicato por e-mail quando empresa/contador informa valor pelo portal
+      if ((portal_type === "employer" || portal_type === "accounting_office") && clinicId) {
+        try {
+          await notifyUnionValueChange({
+            supabase,
+            clinicId,
+            clinicEmail: clinicData?.email || null,
+            employerId: contribution.employer_id,
+            employerName: employer?.name || contribution.employer?.name || "Empresa",
+            documentNumber: String(
+              invoice.boleto?.ourNumber || invoice.boleto?.nossoNumero || invoice.boleto?.documentNumber ||
+              lytexResp?.invoice?.referenceId || invoice._id || contribution.id,
+            ),
+            invoiceUrl: invoice.invoiceUrl,
+            byAccounting: portal_type === "accounting_office",
+          });
+        } catch (notifError) {
+          console.error("[SetValue] Erro ao notificar sindicato (nao critico):", notifError);
         }
       }
 
