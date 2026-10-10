@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
 import { MobileCarousel } from "@/components/mobile/MobileCarousel";
-import { MobileServiceGrid } from "@/components/mobile/MobileServiceGrid";
-import { MobileFeaturedServices } from "@/components/mobile/MobileFeaturedServices";
-import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicationSection";
+import { Link } from "react-router-dom";
+import { MobileCardStatus, MobilePriorityCards, MobileNextAppointment } from "@/components/mobile/home/MobileHomeHighlights";
+import { MobileAllServices } from "@/components/mobile/home/MobileAllServices";
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
 import { Loader2 } from "lucide-react";
@@ -134,48 +134,44 @@ export default function MobileHomePage() {
 
       <MobileQueueCallCard />
 
-      {/* Welcome Card */}
-      <div className="mx-4 mt-4">
-        <div className="bg-mobile-soft border border-mobile/15 rounded-lg p-4 flex items-center gap-4 shadow-sm">
-          <div className="w-14 h-14 rounded-full overflow-hidden bg-muted flex-shrink-0 ring-2 ring-card">
+      {/* Saudação + status da carteirinha */}
+      <section className="bg-mobile text-mobile-foreground px-4 pt-4 pb-10 rounded-b-[28px]">
+        <div className="flex items-center gap-3.5">
+          <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-mobile-foreground/30">
             {patient?.photo_url ? (
-              <img 
-                src={patient.photo_url} 
-                alt={patient.name} 
-                className="w-full h-full object-cover"
-              />
+              <img src={patient.photo_url} alt={patient.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-mobile flex items-center justify-center text-mobile-foreground font-bold text-xl">
+              <div className="w-full h-full bg-mobile-foreground/20 flex items-center justify-center font-bold text-xl">
                 {firstName.charAt(0)}
               </div>
             )}
           </div>
-          
-          <div className="flex-1">
-            <h2 className="text-lg font-bold text-foreground">
-              Olá, {firstName.toUpperCase()} 👋
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl font-bold leading-tight truncate">
+              Olá, {firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase()}! 👋
             </h2>
-            <p className="text-sm text-muted-foreground">Que bom ter você conosco!</p>
+            <p className="text-sm opacity-85">Que bom ter você conosco</p>
           </div>
         </div>
-      </div>
+        {patient?.id && <div className="mt-4"><MobileCardStatus patientId={patient.id} /></div>}
+      </section>
 
-      {/* Featured Services - Quick access */}
-      <MobileFeaturedServices 
-        dependentsCount={dependentsCount}
-        registrationNumber={patient?.registration_number}
-      />
+      <MobilePriorityCards dependentsCount={dependentsCount} />
 
-      {/* Carousel Banners */}
-      <MobileCarousel />
+      {patient?.id && <MobileNextAppointment patientId={patient.id} />}
 
-      {/* Services Grid */}
-      <MobileServiceGrid />
+      {/* Notícias SECMI */}
+      <section className="mt-6">
+        <div className="px-4 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-foreground">Notícias SECMI</h3>
+          <Link to="/app/comunicacao/jornais" className="text-sm font-medium text-mobile">Ver todas</Link>
+        </div>
+        <MobileCarousel />
+      </section>
 
-      {/* Communication Section */}
-      <MobileCommunicationSection />
+      <MobileAllServices />
 
-      {/* Help Section */}
+      <div className="h-4" />
       <MobileHelpSection />
 
       {/* Footer */}

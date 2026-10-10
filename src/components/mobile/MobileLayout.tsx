@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, User, Menu } from "lucide-react";
+import { Home, CalendarDays, IdCard, Newspaper, Menu } from "lucide-react";
 import { MobileDrawer } from "./MobileDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -90,8 +90,10 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
 
   const navItems = [
     { path: "/app", icon: Home, label: "Início" },
-    { path: "/app/agendamentos", icon: Calendar, label: "Consultas" },
-    { path: "/app/perfil", icon: User, label: "Perfil" },
+    { path: "/app/agendamentos", icon: CalendarDays, label: "Agendar" },
+    { path: "/app/carteirinha", icon: IdCard, label: "Carteirinha" },
+    { path: "/app/comunicacao/jornais", icon: Newspaper, label: "Notícias" },
+    { path: "#menu", icon: Menu, label: "Menu" },
   ];
 
   return (
@@ -147,23 +149,25 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
 
       {/* Bottom Navigation - Simple clean design */}
       {showBottomNav && (
-        <nav aria-label="Navegação do aplicativo" className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 flex justify-around z-50 shadow-[0_-8px_24px_hsl(var(--foreground)/0.06)]">
+        <nav aria-label="Navegação do aplicativo" className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border px-2 gap-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 flex justify-around z-50 shadow-[0_-8px_24px_hsl(var(--foreground)/0.06)]">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path || 
-              (item.path === "/app" && location.pathname === "/app/home");
+            const isMenu = item.path === "#menu";
+            const isActive = isMenu ? drawerOpen : (location.pathname === item.path ||
+              (item.path === "/app" && location.pathname === "/app/home") ||
+              (item.path === "/app/agendamentos" && location.pathname === "/app/agendar"));
             return (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => (isMenu ? setDrawerOpen(true) : navigate(item.path))}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative flex min-w-[76px] flex-col items-center gap-1 rounded-md py-1.5 px-3 transition-colors duration-200 ${
+                className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-1.5 px-1 transition-colors duration-200 ${
                   isActive 
                     ? "bg-mobile-soft text-mobile font-semibold" 
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 <item.icon className="h-5 w-5" />
-                <span className="text-[11px] font-medium">
+                <span className="text-[10.5px] font-medium truncate max-w-full">
                   {item.label}
                 </span>
               </button>
