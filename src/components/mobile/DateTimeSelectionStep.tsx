@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -39,6 +39,9 @@ interface DateTimeSelectionStepProps {
   onSubmit: () => void;
   bookingMonthsAhead?: number;
   queueLocked?: boolean;
+  summary?: ReactNode;
+  professionalName?: string;
+  submitLabel?: string;
 }
 
 export function DateTimeSelectionStep({
@@ -55,6 +58,9 @@ export function DateTimeSelectionStep({
   onSubmit,
   bookingMonthsAhead = 1,
   queueLocked = false,
+  summary,
+  professionalName,
+  submitLabel = "Confirmar Agendamento",
 }: DateTimeSelectionStepProps) {
   const professional = professionals.find(p => p.id === selectedProfessionalId);
 
@@ -104,11 +110,12 @@ export function DateTimeSelectionStep({
   const hasMonthRestriction = bookingMonthsAhead < 12;
   return (
     <div className="space-y-6">
+      {summary}
       {/* Mensagem de restrição de período (se aplicável) */}
       {hasMonthRestriction && (
-        <Alert className="bg-amber-50 border-amber-200">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800 text-sm">
+        <Alert className="bg-warning/5 border-warning/30 rounded-xl">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertDescription className="text-foreground text-sm">
             Agendamentos disponíveis apenas até {format(lastAllowedDate, "dd/MM/yyyy", { locale: ptBR })}
           </AlertDescription>
         </Alert>
@@ -117,12 +124,12 @@ export function DateTimeSelectionStep({
       {/* Date Selection */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <CalendarDays className="h-5 w-5 text-emerald-600" />
-          <h2 className="text-lg font-semibold text-foreground">Escolha a data</h2>
+          <CalendarDays className="h-5 w-5 text-mobile" />
+          <h2 className="text-base font-semibold text-foreground">Datas disponíveis{professionalName ? ` com ${professionalName}` : ""}</h2>
         </div>
         
         {availableDates.length > 0 ? (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2 min-[480px]:grid-cols-5">
             {availableDates.map((date) => {
               const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
               return (
@@ -131,22 +138,22 @@ export function DateTimeSelectionStep({
                   type="button"
                   className={`rounded-xl border-2 p-2 text-center transition-all ${
                     isSelected 
-                      ? "border-emerald-600 bg-emerald-50 shadow-md" 
-                      : "border-border bg-card hover:border-emerald-300"
+                      ? "border-mobile bg-mobile-soft shadow-sm" 
+                      : "border-border bg-card hover:border-mobile/40"
                   }`}
                   onClick={() => setSelectedDate(date)}
                 >
-                  <p className={`text-[10px] font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                  <p className={`text-[10px] font-medium uppercase ${isSelected ? "text-mobile" : "text-muted-foreground"}`}>
                     {format(date, "EEE", { locale: ptBR })}
                   </p>
-                  <p className={`text-lg font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
+                  <p className={`text-lg font-bold ${isSelected ? "text-mobile" : "text-foreground"}`}>
                     {format(date, "dd")}
                   </p>
-                  <p className={`text-[10px] ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                  <p className={`text-[10px] ${isSelected ? "text-mobile" : "text-muted-foreground"}`}>
                     {format(date, "MMM", { locale: ptBR })}
                   </p>
                   {isSelected && (
-                    <Check className="h-3 w-3 text-emerald-600 mx-auto mt-1" />
+                    <Check className="h-3 w-3 text-mobile mx-auto mt-1" />
                   )}
                 </button>
               );
@@ -174,16 +181,17 @@ export function DateTimeSelectionStep({
       {selectedDate && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-foreground">Escolha o horário</h2>
+            <Clock className="h-5 w-5 text-mobile" />
+            <h2 className="text-base font-semibold text-foreground">Horários disponíveis para este profissional</h2>
           </div>
           
           <p className="text-sm text-muted-foreground mb-3">
-            {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            <span className="capitalize">{format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</span>
+            {professionalName && <> · {professionalName}</>}
           </p>
 
           {availableTimeSlots.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2 min-[480px]:grid-cols-4">
               {availableTimeSlots.map((slot) => {
                 const isSelected = selectedTime === slot.time;
                 return (
@@ -192,12 +200,12 @@ export function DateTimeSelectionStep({
                     type="button"
                     className={`rounded-xl border-2 py-3 px-2 text-center transition-all ${
                       isSelected 
-                        ? "border-emerald-600 bg-emerald-600 text-white shadow-md" 
-                        : "border-border bg-card hover:border-emerald-300"
+                        ? "border-mobile bg-mobile text-mobile-foreground shadow-sm" 
+                        : "border-border bg-card hover:border-mobile/40"
                     }`}
                     onClick={() => setSelectedTime(slot.time)}
                   >
-                    <p className={`text-base font-semibold ${isSelected ? "text-white" : "text-foreground"}`}>
+                    <p className={`text-base font-semibold ${isSelected ? "text-mobile-foreground" : "text-foreground"}`}>
                       {slot.time}
                     </p>
                   </button>
@@ -224,7 +232,7 @@ export function DateTimeSelectionStep({
 
       {/* Submit Button */}
       <Button 
-        className="w-full bg-emerald-600 hover:bg-emerald-700"
+        className="h-12 w-full rounded-xl bg-mobile text-mobile-foreground hover:bg-mobile/90 text-base"
         disabled={!selectedDate || !selectedTime || submitting}
         onClick={onSubmit}
       >
@@ -234,7 +242,7 @@ export function DateTimeSelectionStep({
             Agendando...
           </>
         ) : (
-          "Confirmar Agendamento"
+          submitLabel
         )}
       </Button>
     </div>
