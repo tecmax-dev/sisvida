@@ -225,6 +225,7 @@ export function HomologacaoSendNotificationDialog({
           const targets: string[] = [];
           if (parties.some((p) => p.checked && p.phone && p.key === "company")) targets.push("company");
           if (parties.some((p) => p.checked && p.phone && p.key === "worker")) targets.push("employee");
+          if (parties.some((p) => p.checked && p.phone && p.key === "professional")) targets.push("professional");
           if (targets.length) {
             const { data, error } = await supabase.functions.invoke("send-homologacao-protocol", {
               body: { appointmentId: appointment.id, targets },
@@ -235,18 +236,18 @@ export function HomologacaoSendNotificationDialog({
                 ? "Modelo de protocolo ainda não aprovado pela Meta. WhatsApp não enviado."
                 : data?.reason === "NO_PROTOCOL" ? "Agendamento sem número de protocolo." : `WhatsApp não enviado: ${data?.error || error?.message || "falha"}`);
             } else {
-              const labels: Record<string, string> = { company: "Empresa", employee: "Trabalhador" };
+              const labels: Record<string, string> = { company: "Empresa", employee: "Trabalhador", professional: "Profissional" };
               const reasons: Record<string, string> = { NO_CONSENT: "sem autorização de WhatsApp", OPT_OUT: "pediu para não receber", INVALID_PHONE: "telefone inválido", SEND_FAILED: "a Meta não confirmou" };
               for (const [t, r] of Object.entries((data?.results || {}) as Record<string, { ok: boolean; reason?: string }>)) {
-                const phone = t === "company" ? appointment.company_phone : (appointment as any).employee_phone;
+                const phone = t === "company" ? appointment.company_phone : t === "professional" ? (professionalPhone || undefined) : (appointment as any).employee_phone;
                 await logHomologacaoNotification(appointment.id, currentClinic.id, "whatsapp", r.ok ? "sent" : "failed",
                   phone, undefined, "Protocolo oficial (modelo aprovado Meta)", r.ok ? undefined : r.reason, true);
                 if (r.ok) successCount++; else { errorCount++; notices.push(`${labels[t]}: ${reasons[r.reason || ""] || r.reason}`); }
               }
             }
           }
-          if (parties.some((p) => p.checked && p.phone && (p.key === "manager" || p.key === "professional"))) {
-            notices.push("No WhatsApp oficial o protocolo vai só para empresa e trabalhador.");
+          if (parties.some((p) => p.checked && p.phone && p.key === "manager")) {
+            notices.push("No WhatsApp oficial o protocolo vai para empresa, trabalhador e profissional.");
           }
         }
       }

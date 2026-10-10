@@ -66,6 +66,8 @@ export function HomologacaoEditDialog({
   const { currentClinic } = useAuth();
   const [workerConsent, setWorkerConsent] = useState<"unknown" | "granted" | "none">("unknown");
   const [authorizing, setAuthorizing] = useState(false);
+  const [profConsent, setProfConsent] = useState<"unknown" | "granted" | "none">("unknown");
+  const [authorizingProf, setAuthorizingProf] = useState(false);
   
   const [formData, setFormData] = useState({
     employee_name: "",
@@ -111,7 +113,7 @@ export function HomologacaoEditDialog({
       if (!currentClinic?.id) return [];
       const { data, error } = await supabase
         .from("homologacao_professionals")
-        .select("id, name")
+        .select("id, name, phone")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
         .order("name");
@@ -195,6 +197,45 @@ export function HomologacaoEditDialog({
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, currentClinic?.id, workerDigits]);
+
+  const selectedProf = (professionals as any[] | undefined)?.find((p) => p.id === formData.professional_id);
+  const profDigits = String(selectedProf?.phone || "").replace(/\D/g, "");
+  const profVariants = profDigits
+    ? Array.from(new Set([profDigits, profDigits.startsWith("55") ? profDigits.slice(2) : `55${profDigits}`]))
+    : [];
+
+  useEffect(() => {
+    let active = true;
+    if (!open || !currentClinic?.id || profDigits.length < 10) { setProfConsent("none"); return; }
+    setProfConsent("unknown");
+    supabase.from("whatsapp_consents").select("id").eq("tenant_id", currentClinic.id)
+      .in("phone", profVariants).eq("consent_status", "granted").is("revoked_at", null).limit(1)
+      .then(({ data }) => { if (active) setProfConsent(data && data.length ? "granted" : "none"); });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentClinic?.id, profDigits]);
+
+  const handleAuthorizeProfessional = async () => {
+    if (!appointment?.id || !currentClinic?.id || !selectedProf) return;
+    if (profDigits.length < 10) { toast.error("A profissional não tem telefone válido no cadastro."); return; }
+    if (!window.confirm(`Confirma que ${selectedProf.name} autorizou receber confirmação e protocolo da homologação pelo WhatsApp neste número?`)) return;
+    setAuthorizingProf(true);
+    const { error } = await supabase.from("whatsapp_consents").insert({
+      tenant_id: currentClinic.id,
+      phone: profDigits,
+      consent_status: "granted",
+      purpose: "SERVICE_OPERATIONAL",
+      source: "HOMOLOGACAO_EDIT_PROFESSIONAL",
+      term_version: "whatsapp_homologacao_v1_2026",
+      consent_text: "Autorizo o envio de confirmação e atualizações da homologação por WhatsApp.",
+      person_id: selectedProf.id,
+      user_agent: navigator.userAgent,
+    } as any);
+    setAuthorizingProf(false);
+    if (error) { toast.error(`Não foi possível registrar a autorização: ${error.message}`); return; }
+    setProfConsent("granted");
+    toast.success("Autorização da profissional registrada.");
+  };
 
   const handleAuthorizeWorker = async () => {
     if (!appointment?.id || !currentClinic?.id) return;
@@ -418,6 +459,19 @@ export function HomologacaoEditDialog({
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedProf && (
+                  profConsent === "granted" ? (
+                    <p className="flex items-center gap-1 text-xs text-primary"><CheckCircle2 className="h-3 w-3" /> Profissional autorizou WhatsApp</p>
+                  ) : profDigits.length < 10 ? (
+                    <p className="text-xs text-muted-foreground">Profissional sem telefone no cadastro.</p>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" className="w-full" onClick={handleAuthorizeProfessional}
+                      disabled={authorizingProf || profConsent === "unknown"}>
+                      {authorizingProf ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MessageCircle className="h-4 w-4 mr-2" />}
+                      Autorizar WhatsApp à profissional
+                    </Button>
+                  )
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Tipo de Serviço</Label>
