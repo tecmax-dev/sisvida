@@ -253,6 +253,13 @@
       "when": 1791645063408,
       "tag": "0035_app_availability_requires_mobile_app_feature",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791645933302,
+      "tag": "0036_sync_union_entity_plan_to_subscription",
+      "breakpoints": true
     }
   ]
 }
