@@ -45,10 +45,10 @@ export type UnionPermission =
 
 export function useUnionPermissions() {
   const { hasPermission, isAdmin, permissionsLoading } = usePermissions();
-  const { isSuperAdmin, userRoles } = useAuth();
+  const { isSuperAdmin, userRoles, isUnionEntityAdmin: hasUnionEntityRole } = useAuth();
   
   // Check if user has entidade_sindical_admin role (using type assertion for union entity role)
-  const isUnionEntityAdmin = userRoles.some(r => (r.role as string) === "entidade_sindical_admin");
+  const isUnionEntityAdmin = hasUnionEntityRole || userRoles.some(r => (r.role as string) === "entidade_sindical_admin");
 
   const hasUnionPermission = (permission: UnionPermission): boolean => {
     // Super admins, clinic admins, and union entity admins have all union permissions
