@@ -54,8 +54,8 @@ export function useAppAvailability(): AppAvailabilityData {
       }
 
       setData({
-        isUnavailable: !!(clinic?.app_unavailable || (clinic? as any)?.is_maintenance),
-        message: clinic?.app_unavailable_message || (clinic? as any)?.maintenance_reason || null,
+        isUnavailable: !!(clinic?.app_unavailable || (clinic as any)?.is_maintenance),
+        message: clinic?.app_unavailable_message || (clinic as any)?.maintenance_reason || null,
         clinicName: clinic?.name || "Sindicato",
         clinicPhone: clinic?.phone || null,
         loading: false,
