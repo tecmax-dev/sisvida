@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, MessageCircle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface HomologacaoAppointment {
@@ -63,6 +64,8 @@ export function HomologacaoEditDialog({
   isSaving = false,
 }: HomologacaoEditDialogProps) {
   const { currentClinic } = useAuth();
+  const [workerConsent, setWorkerConsent] = useState<"unknown" | "granted" | "none">("unknown");
+  const [authorizing, setAuthorizing] = useState(false);
   
   const [formData, setFormData] = useState({
     employee_name: "",
@@ -177,6 +180,44 @@ export function HomologacaoEditDialog({
     { value: "no_show", label: "Faltou" },
   ];
 
+  const workerDigits = (formData.employee_phone || "").replace(/\D/g, "");
+  const workerVariants = workerDigits
+    ? Array.from(new Set([workerDigits, workerDigits.startsWith("55") ? workerDigits.slice(2) : `55${workerDigits}`]))
+    : [];
+
+  useEffect(() => {
+    let active = true;
+    if (!open || !currentClinic?.id || workerDigits.length < 10) { setWorkerConsent(workerDigits.length < 10 ? "none" : "unknown"); return; }
+    setWorkerConsent("unknown");
+    supabase.from("whatsapp_consents").select("id").eq("tenant_id", currentClinic.id)
+      .in("phone", workerVariants).eq("consent_status", "granted").is("revoked_at", null).limit(1)
+      .then(({ data }) => { if (active) setWorkerConsent(data && data.length ? "granted" : "none"); });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentClinic?.id, workerDigits]);
+
+  const handleAuthorizeWorker = async () => {
+    if (!appointment?.id || !currentClinic?.id) return;
+    if (workerDigits.length < 10) { toast.error("Informe um telefone válido do trabalhador."); return; }
+    if (!window.confirm("Confirma que o trabalhador autorizou receber confirmação e protocolo da homologação pelo WhatsApp neste número?")) return;
+    setAuthorizing(true);
+    const { error } = await supabase.from("whatsapp_consents").insert({
+      tenant_id: currentClinic.id,
+      phone: workerDigits,
+      consent_status: "granted",
+      purpose: "SERVICE_OPERATIONAL",
+      source: "HOMOLOGACAO_EDIT",
+      term_version: "whatsapp_homologacao_v1_2026",
+      consent_text: "Autorizo o envio de confirmação e atualizações da homologação por WhatsApp.",
+      person_id: appointment.id,
+      user_agent: navigator.userAgent,
+    } as any);
+    setAuthorizing(false);
+    if (error) { toast.error(`Não foi possível registrar a autorização: ${error.message}`); return; }
+    setWorkerConsent("granted");
+    toast.success("Autorização registrada. Lembre de salvar se alterou o telefone.");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -239,6 +280,24 @@ export function HomologacaoEditDialog({
                   placeholder="(00) 00000-0000"
                 />
               </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3">
+              {workerConsent === "granted" ? (
+                <span className="flex items-center gap-2 text-sm text-primary">
+                  <CheckCircle2 className="h-4 w-4" /> Trabalhador autorizou receber WhatsApp neste número
+                </span>
+              ) : (
+                <>
+                  <span className="text-sm text-muted-foreground flex-1 min-w-[200px]">
+                    Use somente se o trabalhador autorizou receber confirmação e protocolo pelo WhatsApp.
+                  </span>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAuthorizeWorker}
+                    disabled={authorizing || !formData.employee_phone || workerConsent === "unknown"}>
+                    {authorizing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MessageCircle className="h-4 w-4 mr-2" />}
+                    Autorizar envio WhatsApp ao trabalhador
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
