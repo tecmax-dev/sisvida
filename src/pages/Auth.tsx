@@ -85,6 +85,7 @@ export default function Auth() {
   // A canonicalização deve ser feita via redirecionamento no provedor de hosting/DNS,
   // não no cliente durante o fluxo de OAuth.
 
+  const recoveryTokenRef = useRef<string | null>(null);
   // Verificar URL hash IMEDIATAMENTE na inicialização - antes de qualquer coisa
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -93,6 +94,14 @@ export default function Auth() {
     
     // Se for recovery flow, marcar ref IMEDIATAMENTE
     if (type === "recovery" && accessToken) {
+      isRecoveryFlowRef.current = true;
+      setView("reset-password");
+    }
+    // Link de e-mail seguro: token só é consumido ao salvar a nova senha
+    // (evita "link expirado" causado por antivírus/Outlook que abrem o link antes)
+    const rt = new URLSearchParams(window.location.search).get("recovery_token");
+    if (rt) {
+      recoveryTokenRef.current = rt;
       isRecoveryFlowRef.current = true;
       setView("reset-password");
     }
@@ -310,6 +319,11 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      if (recoveryTokenRef.current) {
+        const { error: vErr } = await supabase.auth.verifyOtp({ token_hash: recoveryTokenRef.current, type: "recovery" });
+        if (vErr) throw new Error("Link expirado ou já utilizado. Solicite um novo link.");
+        recoveryTokenRef.current = null;
+      }
       const { error } = await supabase.auth.updateUser({
         password: password,
       });

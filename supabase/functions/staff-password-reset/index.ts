@@ -30,7 +30,7 @@ serve(async (req) => {
     const db = adminClient();
     const { data, error } = await db.auth.admin.generateLink({ type: "recovery", email: addr, options: { redirectTo: safeRedirect(redirectTo) } });
     // Não revela se o e-mail existe
-    if (error || !data?.properties?.action_link) {
+    if (error || !data?.properties?.hashed_token) {
       console.log("[staff-password-reset] no link:", error?.message);
       return json({ success: true });
     }
@@ -42,7 +42,10 @@ serve(async (req) => {
     const port = Number(Deno.env.get("SMTP_PORT") || "587");
     if (!host || !user || !pass) throw new Error("Envio de e-mail não configurado");
 
-    const link = data.properties.action_link;
+    // Link próprio com token_hash: só é consumido quando o usuário salva a nova senha
+    const target = new URL(safeRedirect(redirectTo));
+    target.searchParams.set("recovery_token", data.properties.hashed_token);
+    const link = target.toString();
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:24px;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937">
 <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:8px;padding:28px">
