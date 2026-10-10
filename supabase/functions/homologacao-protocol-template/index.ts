@@ -58,7 +58,7 @@ serve(async (req) => {
   const action = String(body.action ?? "status");
 
   if (action === "status") {
-    const r = await fetch(`${GRAPH}/${WABA_ID}/message_templates?name=${TEMPLATE_NAME}&limit=5`, { headers: { Authorization: `Bearer ${token}` } });
+    const r = await fetch(`${GRAPH}/${WABA_ID}/message_templates?name=${TEMPLATE_NAME}&fields=name,status,rejected_reason,category,quality_score&limit=5`, { headers: { Authorization: `Bearer ${token}` } });
     const b = await r.json().catch(() => ({}));
     const tpl = (b?.data ?? []).find((t: any) => t.name === TEMPLATE_NAME) ?? null;
     return json({ success: r.ok, template: TEMPLATE_NAME, status: tpl?.status ?? "NOT_FOUND", raw: tpl, error: r.ok ? undefined : b });
