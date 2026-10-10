@@ -39,7 +39,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const taskKey = Deno.env.get("TEMPLATE_TASK_KEY");
-  const machineAuthorized = (!!taskKey && req.headers.get("x-template-task-key") === taskKey) || req.headers.get("x-once") === "c91f-once-proto-55ab";
+  const machineAuthorized = !!taskKey && req.headers.get("x-template-task-key") === taskKey;
   if (!machineAuthorized) {
     try {
       await requireStaff(req);
