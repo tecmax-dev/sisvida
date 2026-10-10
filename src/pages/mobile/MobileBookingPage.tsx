@@ -16,6 +16,12 @@ import {
   Check,
   CreditCard,
   Upload,
+  Users,
+  Stethoscope,
+  CalendarDays,
+  Clock,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 import {
   Select,
@@ -195,6 +201,9 @@ export default function MobileBookingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<{ date: string; time: string; professional: string; specialty: string; patient: string } | null>(null);
+  const slotReqRef = useRef(0);
+  const bookingLockRef = useRef(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -233,6 +242,10 @@ export default function MobileBookingPage() {
   }, [isReschedule, professionals, rescheduleState]);
 
   useEffect(() => {
+    // Invalida respostas antigas e limpa horários ao trocar profissional/data
+    slotReqRef.current += 1;
+    setAvailableSlots([]);
+    setQueueLocked(false);
     if (selectedProfessionalId && selectedDate) {
       loadAvailableSlots();
     }
@@ -462,6 +475,7 @@ export default function MobileBookingPage() {
 
   const loadAvailableSlots = async () => {
     if (!selectedProfessionalId || !selectedDate) return;
+    const reqId = slotReqRef.current;
 
     try {
       const professional = professionals.find(p => p.id === selectedProfessionalId);
@@ -483,6 +497,8 @@ export default function MobileBookingPage() {
         }
       );
       const slotData = slotResponse.ok ? await slotResponse.json() : { appointments: [] };
+      // Resposta obsoleta (usuário trocou profissional ou data): ignorar
+      if (reqId !== slotReqRef.current) return;
       const existingAppointments = slotData.appointments || [];
       const isQueueLocked = slotData.queueLocked === true;
       setQueueLocked(isQueueLocked);
@@ -618,6 +634,8 @@ export default function MobileBookingPage() {
   };
 
   const performBooking = async () => {
+    if (bookingLockRef.current) return;
+    bookingLockRef.current = true;
     setSubmitting(true);
 
     try {
@@ -684,7 +702,14 @@ export default function MobileBookingPage() {
         description: `Consulta agendada para ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} às ${selectedTime}.`,
       });
 
-      navigate("/app/agendamentos");
+      setSuccess({
+        date: format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR }),
+        time: selectedTime,
+        professional: professional.name,
+        specialty: professional.specialties?.map(s => s.name).join(", ") || professional.specialty || "",
+        patient: bookingPatientName,
+      });
+      setStep(5);
     } catch (err: any) {
       console.error("Error creating appointment:", err);
       const rawMsg: string = String(err?.message || "");
@@ -699,9 +724,47 @@ export default function MobileBookingPage() {
         variant: isRule ? "default" : "destructive",
       });
     } finally {
+      bookingLockRef.current = false;
       setSubmitting(false);
     }
   };
+
+  const selectedProf = professionals.find(p => p.id === selectedProfessionalId);
+  const selectedDepObj = dependents.find(d => d.id === selectedDependentId);
+  const bookingPatientName = patientType === "dependent" && selectedDepObj ? selectedDepObj.name : "Você (titular)";
+  const selectedProfSpecialty = selectedProf?.specialties?.map(s => s.name).join(", ") || selectedProf?.specialty || "";
+  const STEP_LABELS = ["Paciente", "Profissional", "Data e hora", "Confirmar"];
+
+  const BookingSummary = ({ showDate = false }: { showDate?: boolean }) => (
+    <div className="rounded-2xl border border-mobile/20 bg-mobile-soft p-3.5 space-y-2.5">
+      <div className="flex items-center gap-3">
+        {selectedProf?.avatar_url ? (
+          <img src={selectedProf.avatar_url} alt={selectedProf.name} className="h-11 w-11 rounded-full object-cover border border-card" />
+        ) : (
+          <div className="h-11 w-11 rounded-full bg-mobile text-mobile-foreground flex items-center justify-center"><Stethoscope className="h-5 w-5" /></div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Profissional</p>
+          <p className="truncate font-semibold text-foreground">{selectedProf?.name || "—"}{selectedProfSpecialty ? <span className="font-normal text-muted-foreground"> — {selectedProfSpecialty}</span> : null}</p>
+        </div>
+        {step === 3 && !isReschedule && (
+          <button onClick={() => setStep(2)} className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-mobile hover:bg-card">Trocar</button>
+        )}
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <User className="h-4 w-4 text-mobile shrink-0" />
+        <span className="text-muted-foreground">Paciente:</span>
+        <span className="truncate font-medium text-foreground">{bookingPatientName}</span>
+      </div>
+      {showDate && selectedDate && (
+        <div className="flex items-center gap-2 text-sm">
+          <CalendarDays className="h-4 w-4 text-mobile shrink-0" />
+          <span className="text-muted-foreground">Data:</span>
+          <span className="font-medium text-foreground capitalize">{format(selectedDate, "EEEE, dd/MM/yyyy", { locale: ptBR })}</span>
+        </div>
+      )}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -816,140 +879,135 @@ export default function MobileBookingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
-        <button onClick={() => step > 1 ? setStep(step - 1) : navigate("/app")} className="p-1">
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-        <h1 className="text-lg font-semibold flex-1 text-center pr-8">{isReschedule ? "Remarcar Consulta" : "Agendar Consulta"}</h1>
+      {/* Cabeçalho + etapas */}
+      <div className="sticky top-0 z-30 bg-mobile text-mobile-foreground shadow-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <div className="flex items-center gap-2 px-3 py-3">
+          <button
+            onClick={() => (step > 1 && step < 5 && !(isReschedule && step === 3) ? setStep(step - 1) : navigate(step === 5 ? "/app/agendamentos" : "/app"))}
+            className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-mobile-foreground/10"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="flex-1 text-center text-base font-semibold pr-10">{isReschedule ? "Remarcar consulta" : "Agendar consulta"}</h1>
+        </div>
+        {step <= 4 && (
+          <ol className="grid grid-cols-4 gap-1 px-3 pb-3" aria-label="Etapas do agendamento">
+            {STEP_LABELS.map((label, i) => {
+              const n = i + 1;
+              const done = n < step;
+              const active = n === step;
+              return (
+                <li key={label} className="flex flex-col items-center gap-1" aria-current={active ? "step" : undefined}>
+                  <span className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition",
+                    active ? "bg-card text-mobile" : done ? "bg-mobile-foreground/30" : "bg-mobile-foreground/10 opacity-70"
+                  )}>
+                    {done ? <Check className="h-3.5 w-3.5" /> : n}
+                  </span>
+                  <span className={cn("text-[10.5px] leading-tight text-center", active ? "font-semibold" : "opacity-75")}>{label}</span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
       </div>
 
-      {/* Progress - now 3 steps */}
-      <div className="px-4 py-3 flex items-center gap-2">
-        {[1, 2, 3].map((s) => (
-          <div 
-            key={s} 
-            className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'bg-gray-200'}`}
-          />
-        ))}
-      </div>
-
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <div className="p-4">
-          {/* Step 1: Patient Type */}
+      <div className="mx-auto w-full max-w-xl">
+        <div className="p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          {/* Etapa 1: Quem será atendido */}
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-base font-semibold text-foreground">Para quem é a consulta?</h2>
-              
-              <RadioGroup 
-                value={patientType} 
-                onValueChange={(v) => setPatientType(v as "titular" | "dependent")}
-                className="space-y-3"
-              >
-                <Card className={`cursor-pointer ${patientType === "titular" ? "border-emerald-600" : ""}`}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <RadioGroupItem value="titular" id="titular" />
-                    <Label htmlFor="titular" className="flex-1 cursor-pointer">
-                      <span className="font-medium">Para mim (Titular)</span>
-                    </Label>
-                  </CardContent>
-                </Card>
-                
-                {dependents.length > 0 && (
-                  <Card className={`cursor-pointer ${patientType === "dependent" ? "border-emerald-600" : ""}`}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <RadioGroupItem value="dependent" id="dependent" />
-                      <Label htmlFor="dependent" className="flex-1 cursor-pointer">
-                        <span className="font-medium">Para um dependente</span>
-                      </Label>
-                    </CardContent>
-                  </Card>
-                )}
-              </RadioGroup>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Quem será atendido?</h2>
+                <p className="text-sm text-muted-foreground">Escolha para quem é a consulta.</p>
+              </div>
+
+              <div className="grid gap-3" role="radiogroup">
+                {[
+                  { v: "titular" as const, icon: User, title: "Para mim", sub: "Consulta para o titular" },
+                  ...(dependents.length > 0 ? [{ v: "dependent" as const, icon: Users, title: "Para um dependente", sub: `${dependents.length} dependente${dependents.length > 1 ? "s" : ""} cadastrado${dependents.length > 1 ? "s" : ""}` }] : []),
+                ].map((o) => {
+                  const active = patientType === o.v;
+                  return (
+                    <button
+                      key={o.v}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setPatientType(o.v)}
+                      className={cn(
+                        "flex items-center gap-3.5 rounded-2xl border-2 bg-card p-4 text-left transition active:scale-[0.99]",
+                        active ? "border-mobile shadow-sm" : "border-border"
+                      )}
+                    >
+                      <span className={cn("flex h-11 w-11 items-center justify-center rounded-xl", active ? "bg-mobile text-mobile-foreground" : "bg-mobile-soft text-mobile")}>
+                        <o.icon className="h-5 w-5" />
+                      </span>
+                      <span className="flex-1">
+                        <span className="block font-semibold text-foreground">{o.title}</span>
+                        <span className="block text-xs text-muted-foreground">{o.sub}</span>
+                      </span>
+                      <span className={cn("flex h-5 w-5 items-center justify-center rounded-full border-2", active ? "border-mobile bg-mobile" : "border-muted-foreground/40")}>
+                        {active && <Check className="h-3 w-3 text-mobile-foreground" />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
               {patientType === "dependent" && dependents.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Selecione o dependente</Label>
-                  <Select value={selectedDependentId} onValueChange={setSelectedDependentId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha o dependente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dependents.map((dep) => {
-                        const age = dep.birth_date ? calculateAge(dep.birth_date) : null;
-                        const isOverAge =
-                          age !== null &&
-                          age > DEPENDENT_MAX_AGE &&
-                          isAgeRestrictedDependent(dep);
-                        
-                        return (
-                          <SelectItem 
-                            key={dep.id} 
-                            value={dep.id}
-                            disabled={isOverAge}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span>{dep.name}</span>
-                              {isOverAge && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Acima de {DEPENDENT_MAX_AGE} anos
-                                </Badge>
-                              )}
-                              {age !== null && !isOverAge && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({age} anos)
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  
-                  {/* Show warning if selected dependent has no gender */}
-                  {selectedDependentId && (() => {
-                    const selectedDep = dependents.find(d => d.id === selectedDependentId);
-                    if (selectedDep && !(selectedDep.gender || "").trim()) {
-                      return (
-                        <Card className="border-amber-200 bg-amber-50">
-                          <CardContent className="p-3 flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                            <p className="text-sm text-amber-800">
-                              Informe o sexo deste dependente na tela de dependentes para liberar agendamentos.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      );
-                    }
-                    return null;
-                  })()}
-
-                  {/* Show warning if selected dependent is over age limit */}
-                  {selectedDependentId && (() => {
-                    const selectedDep = dependents.find(d => d.id === selectedDependentId);
-                    if (selectedDep?.birth_date) {
-                      const age = calculateAge(selectedDep.birth_date);
-                      if (age > DEPENDENT_MAX_AGE && isAgeRestrictedDependent(selectedDep)) {
-                        return (
-                          <Card className="border-amber-200 bg-amber-50">
-                            <CardContent className="p-3 flex items-center gap-2">
-                              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                              <p className="text-sm text-amber-800">
-                                Dependentes acima de {DEPENDENT_MAX_AGE} anos não podem agendar consultas.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        );
-                      }
-                    }
-                    return null;
-                  })()}
+                  <p className="text-sm font-semibold text-foreground">Selecione o dependente</p>
+                  {dependents.map((dep) => {
+                    const age = dep.birth_date ? calculateAge(dep.birth_date) : null;
+                    const isOverAge = age !== null && age > DEPENDENT_MAX_AGE && isAgeRestrictedDependent(dep);
+                    const noGender = !(dep.gender || "").trim();
+                    const reason = isOverAge
+                      ? `Acima de ${DEPENDENT_MAX_AGE} anos: não pode agendar consultas.`
+                      : noGender
+                        ? "Informe o sexo deste dependente em Dependentes para liberar agendamentos."
+                        : null;
+                    const active = selectedDependentId === dep.id;
+                    return (
+                      <button
+                        key={dep.id}
+                        type="button"
+                        disabled={isOverAge}
+                        onClick={() => {
+                          if (selectedDependentId !== dep.id) {
+                            setSelectedDependentId(dep.id);
+                            setSelectedProfessionalId("");
+                            setSelectedDate(undefined);
+                            setSelectedTime("");
+                          }
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-2xl border-2 bg-card p-3.5 text-left transition",
+                          active ? "border-mobile bg-mobile-soft" : "border-border",
+                          isOverAge && "opacity-60 cursor-not-allowed"
+                        )}
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-foreground">
+                          {dep.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-foreground">{dep.name}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {[dep.relationship, age !== null ? `${age} anos` : null].filter(Boolean).join(" · ") || "Dependente"}
+                          </span>
+                          {reason && <span className="mt-1 flex items-start gap-1 text-xs text-warning"><AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" />{reason}</span>}
+                        </span>
+                        {active && <CheckCircle2 className="h-5 w-5 shrink-0 text-mobile" />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
               <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className="h-12 w-full rounded-xl bg-mobile text-mobile-foreground hover:bg-mobile/90 text-base"
+                disabled={patientType === "dependent" && !selectedDependentId}
                 onClick={() => {
                   if (patientType === "dependent" && !selectedDependentId) {
                     toast({
@@ -996,7 +1054,10 @@ export default function MobileBookingPage() {
           {/* Step 2: Professional Selection - Single List */}
           {step === 2 && (
             <div className="space-y-3">
-              <h2 className="text-base font-semibold text-foreground">Escolha o profissional</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Escolha o profissional</h2>
+                <p className="text-sm text-muted-foreground">Atendimento para <span className="font-medium text-foreground">{bookingPatientName}</span></p>
+              </div>
               
               {/* Professionals List */}
               <div className="space-y-2">
@@ -1065,13 +1126,13 @@ export default function MobileBookingPage() {
                       <Card 
                         key={prof.id}
                         className={cn(
-                          "transition-colors",
+                          "rounded-2xl border-2 transition",
                           isBlockedFinal
                             ? "opacity-50 cursor-not-allowed" 
                             : "cursor-pointer active:scale-[0.98]",
                           selectedProfessionalId === prof.id && !isBlockedFinal
-                            ? "border-emerald-600 bg-emerald-50" 
-                            : ""
+                            ? "border-mobile bg-mobile-soft shadow-sm" 
+                            : "border-border"
                         )}
                         onClick={() => {
                           if (isBlockedFinal) {
@@ -1086,8 +1147,10 @@ export default function MobileBookingPage() {
                             });
                             return;
                           }
+                          if (selectedProfessionalId !== prof.id) {
+                            setSelectedDate(undefined);
+                          }
                           setSelectedProfessionalId(prof.id);
-                          setSelectedDate(undefined);
                           setSelectedTime("");
                           setAvailableSlots([]);
                         }}
@@ -1097,11 +1160,11 @@ export default function MobileBookingPage() {
                             <img 
                               src={prof.avatar_url} 
                               alt={prof.name}
-                              className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
+                              className="w-12 h-12 rounded-full object-cover border border-border flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                              <User className="h-5 w-5 text-emerald-600" />
+                            <div className="w-12 h-12 rounded-full bg-mobile-soft flex items-center justify-center flex-shrink-0">
+                              <User className="h-5 w-5 text-mobile" />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
@@ -1110,17 +1173,17 @@ export default function MobileBookingPage() {
                               {prof.specialties?.map(s => s.name).join(', ') || prof.specialty || ''}
                             </p>
                             {isAgeBlocked && (
-                              <p className="text-xs text-red-500 font-medium mt-0.5">
+                              <p className="text-xs text-destructive font-medium mt-0.5">
                                 ⚠️ {ageBlockReason}
                               </p>
                             )}
                             {isNoShowBlocked && (
-                              <p className="text-xs text-red-500 font-medium mt-0.5">
+                              <p className="text-xs text-destructive font-medium mt-0.5">
                                 ⚠️ {noShowReason}
                               </p>
                             )}
                             {isGenderBlocked && (
-                              <p className="text-xs text-red-500 font-medium mt-0.5">
+                              <p className="text-xs text-destructive font-medium mt-0.5">
                                 ⚠️ {FEMALE_ONLY_MESSAGE}
                               </p>
                             )}
@@ -1136,7 +1199,7 @@ export default function MobileBookingPage() {
                             )}
                           </div>
                           {selectedProfessionalId === prof.id && !isBlockedFinal && (
-                            <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                            <CheckCircle2 className="h-5 w-5 text-mobile flex-shrink-0" />
                           )}
                         </CardContent>
                       </Card>
@@ -1146,7 +1209,7 @@ export default function MobileBookingPage() {
               </div>
 
               <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className="h-12 w-full rounded-xl bg-mobile text-mobile-foreground hover:bg-mobile/90 text-base sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
                 disabled={!selectedProfessionalId}
                 onClick={() => {
                   // Double-check age restriction before proceeding
@@ -1193,13 +1256,14 @@ export default function MobileBookingPage() {
             </div>
           )}
 
-          {/* Step 3: Date and Time in same screen */}
+          {/* Etapa 3: Data e horário */}
           {step === 3 && (
             <DateTimeSelectionStep
+              summary={<BookingSummary />}
               selectedDate={selectedDate}
               setSelectedDate={(date) => {
                 setSelectedDate(date);
-                setSelectedTime(""); // Reset time when changing date
+                setSelectedTime("");
               }}
               selectedTime={selectedTime}
               setSelectedTime={setSelectedTime}
@@ -1207,15 +1271,90 @@ export default function MobileBookingPage() {
               queueLocked={queueLocked}
               professionals={professionals}
               selectedProfessionalId={selectedProfessionalId}
+              professionalName={selectedProf?.name}
               clinicId={clinicIdRef.current}
               isDateEnabled={isDateEnabled}
-              submitting={submitting}
-              onSubmit={handleSubmit}
+              submitting={false}
+              submitLabel="Revisar agendamento"
+              onSubmit={() => setStep(4)}
               bookingMonthsAhead={bookingMonthsAhead}
             />
           )}
+
+          {/* Etapa 4: Revisar e confirmar */}
+          {step === 4 && selectedDate && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Revise seu agendamento</h2>
+                <p className="text-sm text-muted-foreground">Confira os dados antes de confirmar.</p>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                <div className="flex items-center gap-3 border-b border-border p-4">
+                  {selectedProf?.avatar_url ? (
+                    <img src={selectedProf.avatar_url} alt={selectedProf.name} className="h-14 w-14 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-mobile-soft text-mobile"><Stethoscope className="h-6 w-6" /></div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">{selectedProf?.name}</p>
+                    {selectedProfSpecialty && <p className="text-sm text-muted-foreground">{selectedProfSpecialty}</p>}
+                  </div>
+                </div>
+                <dl className="divide-y divide-border">
+                  {[
+                    { icon: User, label: "Paciente", value: bookingPatientName },
+                    { icon: CalendarDays, label: "Data", value: format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR }) },
+                    { icon: Clock, label: "Horário", value: selectedTime },
+                  ].map((r) => (
+                    <div key={r.label} className="flex items-center gap-3 px-4 py-3">
+                      <r.icon className="h-4 w-4 shrink-0 text-mobile" />
+                      <dt className="w-20 shrink-0 text-sm text-muted-foreground">{r.label}</dt>
+                      <dd className="min-w-0 flex-1 text-sm font-semibold text-foreground capitalize">{r.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              <div className="flex gap-2.5 rounded-2xl bg-muted/60 p-3.5 text-xs text-muted-foreground">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+                <p>Chegue com antecedência e leve sua carteirinha digital. Se não puder comparecer, cancele pelo app em "Meus agendamentos".</p>
+              </div>
+              <Button
+                className="h-12 w-full rounded-xl bg-mobile text-mobile-foreground hover:bg-mobile/90 text-base"
+                disabled={submitting || !selectedTime}
+                onClick={handleSubmit}
+              >
+                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirmando...</> : isReschedule ? "Confirmar remarcação" : "Confirmar agendamento"}
+              </Button>
+              <Button variant="ghost" className="w-full" disabled={submitting} onClick={() => setStep(3)}>
+                Alterar data ou horário
+              </Button>
+            </div>
+          )}
+
+          {/* Etapa 5: Sucesso */}
+          {step === 5 && success && (
+            <div className="space-y-5 pt-4 text-center">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-mobile-soft">
+                <CheckCircle2 className="h-11 w-11 text-mobile" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">{isReschedule ? "Consulta remarcada!" : "Agendamento confirmado!"}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Você receberá os lembretes pelos canais autorizados.</p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card p-4 text-left text-sm space-y-2">
+                <p><span className="text-muted-foreground">Paciente: </span><span className="font-semibold">{success.patient}</span></p>
+                <p><span className="text-muted-foreground">Profissional: </span><span className="font-semibold">{success.professional}{success.specialty ? ` — ${success.specialty}` : ""}</span></p>
+                <p className="capitalize"><span className="text-muted-foreground normal-case">Data: </span><span className="font-semibold">{success.date}</span></p>
+                <p><span className="text-muted-foreground">Horário: </span><span className="font-semibold">{success.time}</span></p>
+              </div>
+              <Button className="h-12 w-full rounded-xl bg-mobile text-mobile-foreground hover:bg-mobile/90" onClick={() => navigate("/app/agendamentos")}>
+                Meus agendamentos <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => navigate("/app")}>Voltar ao início</Button>
+            </div>
+          )}
         </div>
-      </ScrollArea>
+      </div>
       <AlertDialog open={massageConfirmOpen} onOpenChange={setMassageConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
