@@ -11,7 +11,7 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Content-Type": "application/json",
 };
-const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-A";
+const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-B";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
 const TEMPLATE = "protocolo_homologacao_v1";
@@ -37,7 +37,7 @@ serve(async (req) => {
 
   const { data: appt } = await admin
     .from("homologacao_appointments")
-    .select("id, clinic_id, appointment_date, protocol_number, employee_name, company_name, company_phone, employee_phone, service_type:homologacao_service_types(name)")
+    .select("id, clinic_id, appointment_date, protocol_number, employee_name, company_name, company_phone, employee_phone, professional:homologacao_professionals(id, name, phone), service_type:homologacao_service_types(name)")
     .eq("id", appointmentId)
     .maybeSingle();
   if (!appt) return json({ ok: false, error: "APPOINTMENT_NOT_FOUND", build: BUILD }, 404);
@@ -69,8 +69,9 @@ serve(async (req) => {
   const sentPhones = new Set<string>();
 
   for (const target of targets) {
-    if (target !== "company" && target !== "employee") continue;
-    const raw = target === "company" ? appt.company_phone : appt.employee_phone;
+    if (target !== "company" && target !== "employee" && target !== "professional") continue;
+    const prof = (appt as any).professional;
+    const raw = target === "company" ? appt.company_phone : target === "professional" ? prof?.phone : appt.employee_phone;
     const { valid, e164 } = normalizeBrPhone(raw);
     const log = (decision: string, extra: Record<string, unknown> = {}) =>
       admin.from("whatsapp_compliance_logs").insert({ intent: INTENT, decision, metadata: { build: BUILD, appointment_id: appt.id, target, ...extra } });
@@ -89,7 +90,7 @@ serve(async (req) => {
       headers: { Authorization: `Bearer ${metaToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         messaging_product: "whatsapp", recipient_type: "individual", to: e164, type: "template",
-        template: { name: TEMPLATE, language: { code: "pt_BR" }, components: [{ type: "body", parameters: buildParams(target === "company" ? (appt.company_name || "") : (appt.employee_name || "")) }] },
+        template: { name: TEMPLATE, language: { code: "pt_BR" }, components: [{ type: "body", parameters: buildParams(target === "company" ? (appt.company_name || "") : target === "professional" ? (prof?.name || "") : (appt.employee_name || "")) }] },
       }),
     });
     const result = await res.json().catch(() => ({} as any));
