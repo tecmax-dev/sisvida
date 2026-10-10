@@ -879,140 +879,135 @@ export default function MobileBookingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
-        <button onClick={() => step > 1 ? setStep(step - 1) : navigate("/app")} className="p-1">
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-        <h1 className="text-lg font-semibold flex-1 text-center pr-8">{isReschedule ? "Remarcar Consulta" : "Agendar Consulta"}</h1>
+      {/* Cabeçalho + etapas */}
+      <div className="sticky top-0 z-30 bg-mobile text-mobile-foreground shadow-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <div className="flex items-center gap-2 px-3 py-3">
+          <button
+            onClick={() => (step > 1 && step < 5 && !(isReschedule && step === 3) ? setStep(step - 1) : navigate(step === 5 ? "/app/agendamentos" : "/app"))}
+            className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-mobile-foreground/10"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="flex-1 text-center text-base font-semibold pr-10">{isReschedule ? "Remarcar consulta" : "Agendar consulta"}</h1>
+        </div>
+        {step <= 4 && (
+          <ol className="grid grid-cols-4 gap-1 px-3 pb-3" aria-label="Etapas do agendamento">
+            {STEP_LABELS.map((label, i) => {
+              const n = i + 1;
+              const done = n < step;
+              const active = n === step;
+              return (
+                <li key={label} className="flex flex-col items-center gap-1" aria-current={active ? "step" : undefined}>
+                  <span className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition",
+                    active ? "bg-card text-mobile" : done ? "bg-mobile-foreground/30" : "bg-mobile-foreground/10 opacity-70"
+                  )}>
+                    {done ? <Check className="h-3.5 w-3.5" /> : n}
+                  </span>
+                  <span className={cn("text-[10.5px] leading-tight text-center", active ? "font-semibold" : "opacity-75")}>{label}</span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
       </div>
 
-      {/* Progress - now 3 steps */}
-      <div className="px-4 py-3 flex items-center gap-2">
-        {[1, 2, 3].map((s) => (
-          <div 
-            key={s} 
-            className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'bg-gray-200'}`}
-          />
-        ))}
-      </div>
-
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <div className="p-4">
-          {/* Step 1: Patient Type */}
+      <div className="mx-auto w-full max-w-xl">
+        <div className="p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          {/* Etapa 1: Quem será atendido */}
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-base font-semibold text-foreground">Para quem é a consulta?</h2>
-              
-              <RadioGroup 
-                value={patientType} 
-                onValueChange={(v) => setPatientType(v as "titular" | "dependent")}
-                className="space-y-3"
-              >
-                <Card className={`cursor-pointer ${patientType === "titular" ? "border-emerald-600" : ""}`}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <RadioGroupItem value="titular" id="titular" />
-                    <Label htmlFor="titular" className="flex-1 cursor-pointer">
-                      <span className="font-medium">Para mim (Titular)</span>
-                    </Label>
-                  </CardContent>
-                </Card>
-                
-                {dependents.length > 0 && (
-                  <Card className={`cursor-pointer ${patientType === "dependent" ? "border-emerald-600" : ""}`}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <RadioGroupItem value="dependent" id="dependent" />
-                      <Label htmlFor="dependent" className="flex-1 cursor-pointer">
-                        <span className="font-medium">Para um dependente</span>
-                      </Label>
-                    </CardContent>
-                  </Card>
-                )}
-              </RadioGroup>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Quem será atendido?</h2>
+                <p className="text-sm text-muted-foreground">Escolha para quem é a consulta.</p>
+              </div>
+
+              <div className="grid gap-3" role="radiogroup">
+                {[
+                  { v: "titular" as const, icon: User, title: "Para mim", sub: "Consulta para o titular" },
+                  ...(dependents.length > 0 ? [{ v: "dependent" as const, icon: Users, title: "Para um dependente", sub: `${dependents.length} dependente${dependents.length > 1 ? "s" : ""} cadastrado${dependents.length > 1 ? "s" : ""}` }] : []),
+                ].map((o) => {
+                  const active = patientType === o.v;
+                  return (
+                    <button
+                      key={o.v}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setPatientType(o.v)}
+                      className={cn(
+                        "flex items-center gap-3.5 rounded-2xl border-2 bg-card p-4 text-left transition active:scale-[0.99]",
+                        active ? "border-mobile shadow-sm" : "border-border"
+                      )}
+                    >
+                      <span className={cn("flex h-11 w-11 items-center justify-center rounded-xl", active ? "bg-mobile text-mobile-foreground" : "bg-mobile-soft text-mobile")}>
+                        <o.icon className="h-5 w-5" />
+                      </span>
+                      <span className="flex-1">
+                        <span className="block font-semibold text-foreground">{o.title}</span>
+                        <span className="block text-xs text-muted-foreground">{o.sub}</span>
+                      </span>
+                      <span className={cn("flex h-5 w-5 items-center justify-center rounded-full border-2", active ? "border-mobile bg-mobile" : "border-muted-foreground/40")}>
+                        {active && <Check className="h-3 w-3 text-mobile-foreground" />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
               {patientType === "dependent" && dependents.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Selecione o dependente</Label>
-                  <Select value={selectedDependentId} onValueChange={setSelectedDependentId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha o dependente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dependents.map((dep) => {
-                        const age = dep.birth_date ? calculateAge(dep.birth_date) : null;
-                        const isOverAge =
-                          age !== null &&
-                          age > DEPENDENT_MAX_AGE &&
-                          isAgeRestrictedDependent(dep);
-                        
-                        return (
-                          <SelectItem 
-                            key={dep.id} 
-                            value={dep.id}
-                            disabled={isOverAge}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span>{dep.name}</span>
-                              {isOverAge && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Acima de {DEPENDENT_MAX_AGE} anos
-                                </Badge>
-                              )}
-                              {age !== null && !isOverAge && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({age} anos)
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  
-                  {/* Show warning if selected dependent has no gender */}
-                  {selectedDependentId && (() => {
-                    const selectedDep = dependents.find(d => d.id === selectedDependentId);
-                    if (selectedDep && !(selectedDep.gender || "").trim()) {
-                      return (
-                        <Card className="border-amber-200 bg-amber-50">
-                          <CardContent className="p-3 flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                            <p className="text-sm text-amber-800">
-                              Informe o sexo deste dependente na tela de dependentes para liberar agendamentos.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      );
-                    }
-                    return null;
-                  })()}
-
-                  {/* Show warning if selected dependent is over age limit */}
-                  {selectedDependentId && (() => {
-                    const selectedDep = dependents.find(d => d.id === selectedDependentId);
-                    if (selectedDep?.birth_date) {
-                      const age = calculateAge(selectedDep.birth_date);
-                      if (age > DEPENDENT_MAX_AGE && isAgeRestrictedDependent(selectedDep)) {
-                        return (
-                          <Card className="border-amber-200 bg-amber-50">
-                            <CardContent className="p-3 flex items-center gap-2">
-                              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                              <p className="text-sm text-amber-800">
-                                Dependentes acima de {DEPENDENT_MAX_AGE} anos não podem agendar consultas.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        );
-                      }
-                    }
-                    return null;
-                  })()}
+                  <p className="text-sm font-semibold text-foreground">Selecione o dependente</p>
+                  {dependents.map((dep) => {
+                    const age = dep.birth_date ? calculateAge(dep.birth_date) : null;
+                    const isOverAge = age !== null && age > DEPENDENT_MAX_AGE && isAgeRestrictedDependent(dep);
+                    const noGender = !(dep.gender || "").trim();
+                    const reason = isOverAge
+                      ? `Acima de ${DEPENDENT_MAX_AGE} anos: não pode agendar consultas.`
+                      : noGender
+                        ? "Informe o sexo deste dependente em Dependentes para liberar agendamentos."
+                        : null;
+                    const active = selectedDependentId === dep.id;
+                    return (
+                      <button
+                        key={dep.id}
+                        type="button"
+                        disabled={isOverAge}
+                        onClick={() => {
+                          if (selectedDependentId !== dep.id) {
+                            setSelectedDependentId(dep.id);
+                            setSelectedProfessionalId("");
+                            setSelectedDate(undefined);
+                            setSelectedTime("");
+                          }
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-2xl border-2 bg-card p-3.5 text-left transition",
+                          active ? "border-mobile bg-mobile-soft" : "border-border",
+                          isOverAge && "opacity-60 cursor-not-allowed"
+                        )}
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-foreground">
+                          {dep.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-foreground">{dep.name}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {[dep.relationship, age !== null ? `${age} anos` : null].filter(Boolean).join(" · ") || "Dependente"}
+                          </span>
+                          {reason && <span className="mt-1 flex items-start gap-1 text-xs text-warning"><AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" />{reason}</span>}
+                        </span>
+                        {active && <CheckCircle2 className="h-5 w-5 shrink-0 text-mobile" />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
               <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className="h-12 w-full rounded-xl bg-mobile text-mobile-foreground hover:bg-mobile/90 text-base"
+                disabled={patientType === "dependent" && !selectedDependentId}
                 onClick={() => {
                   if (patientType === "dependent" && !selectedDependentId) {
                     toast({
@@ -1278,7 +1273,7 @@ export default function MobileBookingPage() {
             />
           )}
         </div>
-      </ScrollArea>
+      </div>
       <AlertDialog open={massageConfirmOpen} onOpenChange={setMassageConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
