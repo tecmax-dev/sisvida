@@ -99,6 +99,7 @@ interface Clinic {
   maintenance_at: string | null;
   maintenance_reason: string | null;
   maintenance_by: string | null;
+  clinic_module_enabled?: boolean;
 }
 
 interface SubscriptionPlan {
@@ -556,6 +557,19 @@ export default function ClinicsManagement() {
     },
   });
 
+  // Liga/desliga o Módulo Clínica (contas de entidade sindical)
+  const clinicModuleMutation = useMutation({
+    mutationFn: async ({ clinicId, enabled }: { clinicId: string; enabled: boolean }) => {
+      const { error } = await supabase.from('clinics').update({ clinic_module_enabled: enabled } as any).eq('id', clinicId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success(v.enabled ? "Módulo Clínica ativado" : "Módulo Clínica desativado");
+    },
+    onError: (error: Error) => toast.error(`Erro ao alterar Módulo Clínica: ${error.message}`),
+  });
+
   // Remove maintenance mutation
   const removeMaintenanceMutation = useMutation({
     mutationFn: async (clinicId: string) => {
@@ -711,6 +725,7 @@ export default function ClinicsManagement() {
       blocked_reason: clinic.blocked_reason,
       is_maintenance: clinic.is_maintenance,
       maintenance_reason: clinic.maintenance_reason,
+      clinic_module_enabled: clinic.clinic_module_enabled,
     });
     
     toast.success(`Acessando: ${clinic.name}`);
@@ -1175,6 +1190,12 @@ export default function ClinicsManagement() {
                                       Ativar Manutenção
                                     </DropdownMenuItem>
                                   )}
+                                  <DropdownMenuItem
+                                    onClick={() => clinicModuleMutation.mutate({ clinicId: clinic.id, enabled: clinic.clinic_module_enabled === false })}
+                                  >
+                                    <Stethoscope className="h-4 w-4 mr-2" />
+                                    {clinic.clinic_module_enabled === false ? "Ativar Módulo Clínica" : "Desativar Módulo Clínica"}
+                                  </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem 
                                     onClick={() => handleOpenWelcomeDialog(clinic)}
