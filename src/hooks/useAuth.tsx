@@ -33,6 +33,7 @@ interface Clinic {
   is_maintenance?: boolean;
   maintenance_reason?: string | null;
   entity_nomenclature?: string | null;
+  clinic_module_enabled?: boolean;
 }
 
 interface UserRole {
@@ -136,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clinic:clinics (
             id, name, slug, address, phone, cnpj, logo_url,
             whatsapp_header_image_url, is_blocked, blocked_reason,
-            is_maintenance, maintenance_reason, entity_nomenclature
+            is_maintenance, maintenance_reason, entity_nomenclature, clinic_module_enabled
           )
         `)
         .eq('user_id', userId);
@@ -185,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadAllClinicsForSuperAdmin = useCallback(async () => {
     const { data: clinics } = await supabase
       .from('clinics')
-      .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature')
+      .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature, clinic_module_enabled')
       .order('name');
 
     if (clinics && clinics.length > 0) {
