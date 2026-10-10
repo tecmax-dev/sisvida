@@ -5,13 +5,14 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { validateConsentForCurrentPhone, normalizeBrPhone } from "../_shared/whatsappConsentGate.ts";
 import { requireStaff, authErrorResponse } from "../_shared/authGuard.ts";
+import { chatwootMirrorTemplateSent } from "../_shared/chatwoot-client.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Content-Type": "application/json",
 };
-const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-B";
+const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-C";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
 const TEMPLATE = "protocolo_homologacao_v1";
@@ -98,6 +99,10 @@ serve(async (req) => {
     if (res.ok && messageId) {
       sentPhones.add(e164);
       await log("SENT", { template: TEMPLATE, message_id: messageId });
+      // Espelho no ZapResponde: nota privada (o envio real já saiu pela Meta; não reenvia).
+      const recipientName = target === "company" ? (appt.company_name || null) : target === "professional" ? (prof?.name || null) : (appt.employee_name || null);
+      await chatwootMirrorTemplateSent(admin as any, String(appt.clinic_id), e164, recipientName,
+        `📄 [Modelo oficial enviado: ${TEMPLATE}]\nProtocolo de homologação ${appt.protocol_number}\nEmpresa: ${appt.company_name || "-"}\nData: ${d}/${m}/${y}\nDestinatário: ${target === "company" ? "Empresa" : target === "professional" ? "Profissional" : "Trabalhador"}`);
       results[target] = { ok: true, message_id: messageId };
     } else {
       await log("SEND_FAILED", { template: TEMPLATE, http: res.status, response: result });
