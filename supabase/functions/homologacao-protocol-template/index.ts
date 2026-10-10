@@ -11,17 +11,17 @@ const corsHeaders = {
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const WABA_ID = "2063797207822998";
-const TEMPLATE_NAME = "homologacao_protocolo";
+const TEMPLATE_NAME = "protocolo_homologacao_v1";
 const LANGUAGE = "pt_BR";
 
 // Deve casar com os 4 parâmetros enviados por send-homologacao-protocol.
 const BODY_TEXT =
-  "Protocolo de Homologação: seu atendimento de homologação foi registrado no Sindicato dos Comerciários.\n\n" +
-  "Funcionário: {{1}}\n" +
+  "Olá, {{1}}.\n" +
+  "Segue o protocolo do atendimento de homologação que você agendou no Sindicato dos Comerciários.\n\n" +
   "Empresa: {{2}}\n" +
-  "Data: {{3}}\n" +
-  "Protocolo: {{4}}\n\n" +
-  "Guarde este número de protocolo para consultas futuras sobre este atendimento.";
+  "Data do atendimento: {{3}}\n" +
+  "Número do protocolo: {{4}}\n\n" +
+  "Esta é uma comunicação automática referente a um serviço previamente agendado.";
 
 const TEMPLATE_COMPONENTS = [
   {

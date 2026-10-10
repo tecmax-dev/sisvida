@@ -14,7 +14,7 @@ const cors = {
 const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-A";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
-const TEMPLATE = "homologacao_protocolo";
+const TEMPLATE = "protocolo_homologacao_v1";
 const GRAPH = "https://graph.facebook.com/v21.0";
 const INTENT = "HOMOLOGACAO_PROTOCOL";
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
@@ -60,7 +60,7 @@ serve(async (req) => {
     return json({ ok: false, blocked: true, reason: "TEMPLATE_NOT_APPROVED", build: BUILD });
   }
 
-  // 4 parâmetros, na ordem do template homologacao_protocolo (homologacao-protocol-template)
+  // 4 parâmetros, na ordem do template protocolo_homologacao_v1 (homologacao-protocol-template)
   const [y, m, d] = String(appt.appointment_date).split("-");
   const params = [appt.employee_name || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number]
     .map((t) => ({ type: "text", text: String(t) }));
