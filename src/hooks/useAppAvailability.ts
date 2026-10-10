@@ -43,7 +43,7 @@ export function useAppAvailability(): AppAvailabilityData {
       const clinicId = localStorage.getItem('mobile_clinic_id') || SINDICATO_CLINIC_ID;
       const { data: clinic, error } = await supabase
         .from("clinics")
-        .select("name, phone, app_unavailable, app_unavailable_message")
+        .select("name, phone, app_unavailable, app_unavailable_message, is_maintenance, maintenance_reason")
         .eq("id", clinicId)
         .single();
 
@@ -54,8 +54,8 @@ export function useAppAvailability(): AppAvailabilityData {
       }
 
       setData({
-        isUnavailable: clinic?.app_unavailable || false,
-        message: clinic?.app_unavailable_message || null,
+        isUnavailable: !!(clinic?.app_unavailable || (clinic? as any)?.is_maintenance),
+        message: clinic?.app_unavailable_message || (clinic? as any)?.maintenance_reason || null,
         clinicName: clinic?.name || "Sindicato",
         clinicPhone: clinic?.phone || null,
         loading: false,
