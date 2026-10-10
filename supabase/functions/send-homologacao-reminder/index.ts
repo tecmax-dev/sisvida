@@ -10,12 +10,13 @@ const cors = {
   "Content-Type": "application/json",
 };
 
-const BUILD = "HOMOLOG-REMINDER-2026-09-20-A";
+const BUILD = "HOMOLOG-REMINDER-2026-10-10-SVC";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
 // Template exclusivo da homologação: mesmo padrão do lembrete de consulta,
 // porém SEM o aviso de bloqueio por falta.
-const TEMPLATE_PREFERRED = "lembrete_homologacao_v1";
+const TEMPLATE_PREFERRED = "lembrete_atendimento_sindical_v2"; // {{2}} = nome do serviço
+const TEMPLATE_LEGACY_HOMOLOG = "lembrete_homologacao_v1"; // texto fixo "homologação": só para serviço de homologação
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
@@ -50,7 +51,7 @@ serve(async (req) => {
     .select(
       "id, clinic_id, status, appointment_date, start_time, reminder_sent_at, confirmation_token, " +
         "employee_name, company_name, company_contact_name, company_phone, employee_phone, " +
-        "professional:professionals(id, name)",
+        "professional:professionals(id, name), service_type:homologacao_service_types(id, name)",
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -120,12 +121,22 @@ serve(async (req) => {
   const metaToken = secret ? String(secret) : Deno.env.get("META_WHATSAPP_TOKEN_V2");
   if (!metaToken) return json({ ok: false, error: "META_TOKEN_NOT_CONFIGURED", build: BUILD }, 400);
 
-  const bodyParams = [
-    { type: "text", text: displayName.split(" ").slice(0, 2).join(" ") },
+  const serviceRaw = String((appt as any).service_type?.name || "").trim();
+  const serviceLower = serviceRaw.toLowerCase();
+  const isJuridico = serviceLower.includes("assessoria") || serviceLower.includes("jurídic") || serviceLower.includes("juridic");
+  const serviceLabel = isJuridico
+    ? "Assessoria Jurídica"
+    : (serviceRaw || "Homologação de Rescisão");
+
+  const baseName = { type: "text", text: displayName.split(" ").slice(0, 2).join(" ") };
+  const legacyParams = [
+    baseName,
     { type: "text", text: formatDatePt(String(appt.appointment_date)) },
     { type: "text", text: String(appt.start_time).slice(0, 5) },
     { type: "text", text: String(professional?.name || "Profissional") },
   ];
+  const v2Params = [baseName, { type: "text", text: serviceLabel }, ...legacyParams.slice(1)];
+  let bodyParams = legacyParams;
 
   const sendOnce = async (templateName: string) => {
     const components: unknown[] = [
@@ -150,7 +161,9 @@ serve(async (req) => {
 
   // Fail-closed: nenhum envio acontece com template PENDING/REJECTED.
   const resolveApprovedTemplate = async (): Promise<string | null> => {
-    for (const name of [TEMPLATE_PREFERRED]) {
+    // Assessoria Jurídica NUNCA usa o template legado (que diz "homologação").
+    const candidates = isJuridico ? [TEMPLATE_PREFERRED] : [TEMPLATE_PREFERRED, TEMPLATE_LEGACY_HOMOLOG];
+    for (const name of candidates) {
       try {
         const r = await fetch(
           `${GRAPH}/${WABA_ID}/message_templates?name=${name}&limit=5`,
@@ -171,10 +184,11 @@ serve(async (req) => {
     await admin.from("whatsapp_compliance_logs").insert({
       intent: "HOMOLOGACAO_REMINDER",
       decision: "TEMPLATE_NOT_AVAILABLE",
-      metadata: { build: BUILD, appointment_id: appt.id, preferred: TEMPLATE_PREFERRED },
+      metadata: { build: BUILD, appointment_id: appt.id, preferred: TEMPLATE_PREFERRED, service: serviceLabel },
     });
     return json({ ok: false, blocked: true, reason: "TEMPLATE_NOT_APPROVED", build: BUILD });
   }
+  bodyParams = templateUsed === TEMPLATE_PREFERRED ? v2Params : legacyParams;
 
   const MAX_ATTEMPTS = 3;
   let res: Response | null = null;
@@ -234,7 +248,8 @@ serve(async (req) => {
     String(appt.clinic_id),
     e164,
     displayName,
-    `[Lembrete de homologação enviado pelo WhatsApp oficial]\n` +
+    `[Lembrete de ${serviceLabel} enviado pelo WhatsApp oficial]\n` +
+      `Serviço: ${serviceLabel}\n` +
       `Funcionário: ${String((appt as any).employee_name || "-")}\n` +
       `Empresa: ${String((appt as any).company_name || "-")}\n` +
       `Data: ${formatDatePt(String(appt.appointment_date))} às ${String(appt.start_time).slice(0, 5)}\n` +
