@@ -12,10 +12,11 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Content-Type": "application/json",
 };
-const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-C";
+const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-SVC";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
-const TEMPLATE = "protocolo_homologacao_v1";
+const TEMPLATE_V2 = "protocolo_atendimento_sindical_v2"; // {{2}} = serviço
+const TEMPLATE_LEGACY = "protocolo_homologacao_v1"; // texto fixo "homologação": nunca para Assessoria Jurídica
 const GRAPH = "https://graph.facebook.com/v21.0";
 const INTENT = "HOMOLOGACAO_PROTOCOL";
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
@@ -49,22 +50,30 @@ serve(async (req) => {
   if (!metaToken) return json({ ok: false, error: "META_TOKEN_NOT_CONFIGURED", build: BUILD }, 400);
 
   // Fail-closed: somente com template APROVADO (consulta read-only)
-  let approved = false;
-  try {
-    const r = await fetch(`${GRAPH}/${WABA_ID}/message_templates?name=${TEMPLATE}&limit=5`, { headers: { Authorization: `Bearer ${metaToken}` } });
-    const b = await r.json().catch(() => ({} as any));
-    const tpl = (b?.data ?? []).find((t: any) => t.name === TEMPLATE);
-    approved = !!tpl && String(tpl.status).toUpperCase() === "APPROVED";
-  } catch { /* fail-closed */ }
-  if (!approved) {
-    await admin.from("whatsapp_compliance_logs").insert({ intent: INTENT, decision: "TEMPLATE_NOT_AVAILABLE", metadata: { build: BUILD, appointment_id: appt.id, template: TEMPLATE } });
+  const svcRaw = String((appt as any).service_type?.name || "").trim();
+  const svcLower = svcRaw.toLowerCase();
+  const isJuridico = svcLower.includes("assessoria") || svcLower.includes("jurídic") || svcLower.includes("juridic");
+  const serviceLabel = isJuridico ? "Assessoria Jurídica" : (svcRaw || "Homologação de Rescisão");
+  let TEMPLATE = "";
+  for (const name of isJuridico ? [TEMPLATE_V2] : [TEMPLATE_V2, TEMPLATE_LEGACY]) {
+    try {
+      const r = await fetch(`${GRAPH}/${WABA_ID}/message_templates?name=${name}&limit=5`, { headers: { Authorization: `Bearer ${metaToken}` } });
+      const b = await r.json().catch(() => ({} as any));
+      const tpl = (b?.data ?? []).find((t: any) => t.name === name);
+      if (tpl && String(tpl.status).toUpperCase() === "APPROVED") { TEMPLATE = name; break; }
+    } catch { /* fail-closed */ }
+  }
+  if (!TEMPLATE) {
+    await admin.from("whatsapp_compliance_logs").insert({ intent: INTENT, decision: "TEMPLATE_NOT_AVAILABLE", metadata: { build: BUILD, appointment_id: appt.id, template: TEMPLATE_V2, service: serviceLabel } });
     return json({ ok: false, blocked: true, reason: "TEMPLATE_NOT_APPROVED", build: BUILD });
   }
 
   // 4 parâmetros, na ordem do template protocolo_homologacao_v1 (homologacao-protocol-template)
   const [y, m, d] = String(appt.appointment_date).split("-");
   const buildParams = (recipientName: string) =>
-    [recipientName || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number].map((t) => ({ type: "text", text: String(t) }));
+    (TEMPLATE === TEMPLATE_V2
+      ? [recipientName || "-", serviceLabel, appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number]
+      : [recipientName || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number]).map((t) => ({ type: "text", text: String(t) }));
 
   const results: Record<string, { ok: boolean; reason?: string; message_id?: string }> = {};
   const sentPhones = new Set<string>();
@@ -102,7 +111,7 @@ serve(async (req) => {
       // Espelho no ZapResponde: nota privada (o envio real já saiu pela Meta; não reenvia).
       const recipientName = target === "company" ? (appt.company_name || null) : target === "professional" ? (prof?.name || null) : (appt.employee_name || null);
       await chatwootMirrorTemplateSent(admin as any, String(appt.clinic_id), e164, recipientName,
-        `📄 [Modelo oficial enviado: ${TEMPLATE}]\nProtocolo de homologação ${appt.protocol_number}\nEmpresa: ${appt.company_name || "-"}\nData: ${d}/${m}/${y}\nDestinatário: ${target === "company" ? "Empresa" : target === "professional" ? "Profissional" : "Trabalhador"}`);
+        `📄 [Modelo oficial enviado: ${TEMPLATE}]\nProtocolo de ${serviceLabel} ${appt.protocol_number}\nEmpresa: ${appt.company_name || "-"}\nData: ${d}/${m}/${y}\nDestinatário: ${target === "company" ? "Empresa" : target === "professional" ? "Profissional" : "Trabalhador"}`);
       results[target] = { ok: true, message_id: messageId };
     } else {
       await log("SEND_FAILED", { template: TEMPLATE, http: res.status, response: result });
