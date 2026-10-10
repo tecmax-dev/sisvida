@@ -3659,11 +3659,16 @@ const updateData: Record<string, any> = {
                 </DropdownMenuItem>
               )}
               
-              {/* Atendido - disponível para todos os usuários marcarem como concluído */}
+              {/* Atendido - somente profissional ou administrador */}
               {(appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived") && (
-                <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "completed")}>
+                <DropdownMenuItem
+                  disabled={!(isAdmin || isProfessionalOnly)}
+                  title={!(isAdmin || isProfessionalOnly) ? "Somente o profissional ou o administrador pode marcar como atendido" : undefined}
+                  onClick={() => { if (isAdmin || isProfessionalOnly) handleUpdateStatus(appointment, "completed"); }}
+                >
                   <Check className="h-4 w-4 mr-2 text-green-600" />
                   Atendido
+                  {!(isAdmin || isProfessionalOnly) && <span className="ml-auto pl-2 text-[10px] text-muted-foreground">restrito</span>}
                 </DropdownMenuItem>
               )}
 
