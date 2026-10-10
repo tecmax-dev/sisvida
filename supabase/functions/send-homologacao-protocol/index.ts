@@ -14,7 +14,7 @@ const cors = {
 const BUILD = "HOMOLOG-PROTOCOL-2026-10-10-A";
 const PHONE_ID = "1213495528515111";
 const WABA_ID = "2063797207822998";
-const TEMPLATE = "homologacao_protocolo";
+const TEMPLATE = "protocolo_homologacao_v1";
 const GRAPH = "https://graph.facebook.com/v21.0";
 const INTENT = "HOMOLOGACAO_PROTOCOL";
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: cors });
@@ -60,10 +60,10 @@ serve(async (req) => {
     return json({ ok: false, blocked: true, reason: "TEMPLATE_NOT_APPROVED", build: BUILD });
   }
 
-  const svc = String((appt as any).service_type?.name || "Homologação");
+  // 4 parâmetros, na ordem do template protocolo_homologacao_v1 (homologacao-protocol-template)
   const [y, m, d] = String(appt.appointment_date).split("-");
-  const params = [svc, appt.employee_name || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number]
-    .map((t) => ({ type: "text", text: String(t) }));
+  const buildParams = (recipientName: string) =>
+    [recipientName || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number].map((t) => ({ type: "text", text: String(t) }));
 
   const results: Record<string, { ok: boolean; reason?: string; message_id?: string }> = {};
   const sentPhones = new Set<string>();
@@ -89,7 +89,7 @@ serve(async (req) => {
       headers: { Authorization: `Bearer ${metaToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         messaging_product: "whatsapp", recipient_type: "individual", to: e164, type: "template",
-        template: { name: TEMPLATE, language: { code: "pt_BR" }, components: [{ type: "body", parameters: params }] },
+        template: { name: TEMPLATE, language: { code: "pt_BR" }, components: [{ type: "body", parameters: buildParams(target === "company" ? (appt.company_name || "") : (appt.employee_name || "")) }] },
       }),
     });
     const result = await res.json().catch(() => ({} as any));
