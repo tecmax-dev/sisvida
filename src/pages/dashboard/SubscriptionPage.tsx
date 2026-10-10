@@ -211,7 +211,7 @@ export default function SubscriptionPage() {
                 Sem assinatura ativa
               </h3>
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Sua clínica não possui uma assinatura vinculada. Entre em contato com o suporte.
+                Sua conta não possui uma assinatura vinculada. Entre em contato com o suporte.
               </p>
             </div>
           </CardContent>
