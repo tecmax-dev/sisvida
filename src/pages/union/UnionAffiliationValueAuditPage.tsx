@@ -108,7 +108,7 @@ export default function UnionAffiliationValueAuditPage() {
         return {
           employerId: id, name: e.trade_name || e.name || "Empresa", cnpj: e.cnpj || "", docs: ds, firstKey,
           baseline, baselineKey, after, lastAfter, diff: baseline != null && lastAfter != null ? lastAfter - baseline : null,
-          status: st, acked: ds.filter((d) => d.ack_status === "acknowledged").length,
+          status: st, acked: ds.filter((d) => d.ack_status === "confirmed").length,
         };
       });
       setRows(out);
@@ -239,7 +239,7 @@ export default function UnionAffiliationValueAuditPage() {
                             const dt = d.made_available_at || d.approved_at;
                             return <TableRow key={i}><TableCell>{d.worker_name || "—"}</TableCell>
                               <TableCell>{dt ? new Date(dt).toLocaleDateString("pt-BR") : "—"}</TableCell>
-                              <TableCell><Badge variant={d.ack_status === "acknowledged" ? "default" : "outline"}>{d.ack_status === "acknowledged" ? "Confirmada" : "Pendente"}</Badge></TableCell></TableRow>;
+                              <TableCell><Badge variant={d.ack_status === "confirmed" ? "default" : "outline"}>{d.ack_status === "confirmed" ? "Confirmada" : "Pendente"}</Badge></TableCell></TableRow>;
                           })}</TableBody></Table>
                       </div>
                     </CollapsibleContent>
