@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireSuperAdmin = false }: ProtectedRouteProps) {
-  const { user, loading, userRoles, isSuperAdmin, currentClinic, rolesLoaded } = useAuth();
+  const { user, loading, userRoles, isSuperAdmin, isUnionEntityAdmin, currentClinic, rolesLoaded } = useAuth();
   const { isProfessionalOnly } = usePermissions();
   const location = useLocation();
 
@@ -70,6 +70,13 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     if (userRoles.length === 0 || !currentClinic) {
       return <Navigate to="/admin" replace />;
     }
+  }
+
+  // Entidade sindical sem clínica: o módulo Clínica é opcional (plano/super admin).
+  // Nunca exigir criação de clínica; levar ao módulo sindical.
+  if (userRoles.length === 0 && isUnionEntityAdmin && !isSuperAdmin) {
+    if (location.pathname.startsWith("/union")) return <>{children}</>;
+    return <Navigate to="/union" replace />;
   }
 
   // If user has no clinic, redirect to setup (unless super admin - handled above)
