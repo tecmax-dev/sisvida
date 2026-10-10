@@ -30,25 +30,6 @@ export function MaintenanceClinicOverlay({ reason }: MaintenanceClinicOverlayPro
           <p className="text-muted-foreground mb-4">{reason}</p>
         )}
 
-
-        <div className="p-4 bg-muted rounded-lg mb-6">
-          <h3 className="font-medium mb-3">Precisa de ajuda urgente?</h3>
-          <div className="space-y-2 text-sm">
-            <a 
-              href="tel:+551151943839" 
-              className="flex items-center justify-center gap-2 text-primary hover:underline"
-            >
-              <Phone className="h-4 w-4" />
-              (11) 5194-3839
-            </a>
-            <a 
-              href="mailto:suporte@prosinge.com.br" 
-              className="flex items-center justify-center gap-2 text-primary hover:underline"
-            >
-              <Mail className="h-4 w-4" />
-              suporte@prosinge.com.br
-            </a>
-          </div>
         </div>
 
         <Button variant="outline" onClick={handleSignOut}>
