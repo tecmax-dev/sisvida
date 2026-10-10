@@ -60,9 +60,9 @@ serve(async (req) => {
     return json({ ok: false, blocked: true, reason: "TEMPLATE_NOT_APPROVED", build: BUILD });
   }
 
-  const svc = String((appt as any).service_type?.name || "Homologação");
+  // 4 parâmetros, na ordem do template homologacao_protocolo (homologacao-protocol-template)
   const [y, m, d] = String(appt.appointment_date).split("-");
-  const params = [svc, appt.employee_name || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number]
+  const params = [appt.employee_name || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number]
     .map((t) => ({ type: "text", text: String(t) }));
 
   const results: Record<string, { ok: boolean; reason?: string; message_id?: string }> = {};
