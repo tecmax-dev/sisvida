@@ -49,6 +49,11 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     return <BlockedClinicOverlay reason={currentClinic.blocked_reason || undefined} />;
   }
 
+  // Conta-base de entidade sindical (Módulo Clínica desligado): sempre módulo sindical
+  if (currentClinic?.clinic_module_enabled === false && !isSuperAdmin && location.pathname.startsWith("/dashboard")) {
+    return <Navigate to="/union" replace />;
+  }
+
   // Redirecionamento específico para Sindicato ao acessar /dashboard ou /union
   // RESTRITO APENAS A USUÁRIOS DE GESTÃO (não aplicado a secretárias/médicos da clínica)
   if (location.pathname === "/dashboard" || location.pathname === "/dashboard/" || location.pathname === "/union" || location.pathname === "/union/") {

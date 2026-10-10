@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { usePermissions, type Permission } from "@/hooks/usePermissions";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface MainNavItem {
   href: string;
@@ -96,6 +97,10 @@ export const mainNavCategories: MainNavCategory[] = [
 export function useMainNavCategories(): MainNavCategory[] {
   const { hasPermission } = usePermissions();
   const { hasAddon, hasFeature } = usePlanFeatures();
+
+  const { currentClinic } = useAuth();
+  // Conta-base de entidade sindical: Módulo Clínica desligado
+  if (currentClinic?.clinic_module_enabled === false) return [];
 
   return mainNavCategories
     .filter((c) => !c.addonKey || hasAddon(c.addonKey))
