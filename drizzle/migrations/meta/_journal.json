@@ -239,6 +239,13 @@
       "when": 1791643944136,
       "tag": "0033_union_entity_base_account_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791643960586,
+      "tag": "0034_union_entity_base_account_admin",
+      "breakpoints": true
     }
   ]
 }
