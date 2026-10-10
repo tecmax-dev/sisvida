@@ -246,26 +246,64 @@ function MobileAppointmentsPageContent() {
     return isPast(date) || ['cancelled', 'no_show', 'attended', 'completed'].includes(apt.status);
   });
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-      scheduled: { label: "Agendado", className: "bg-blue-100 text-blue-800", icon: <Calendar className="h-3 w-3" /> },
-      confirmed: { label: "Confirmado", className: "bg-emerald-100 text-emerald-800", icon: <CheckCircle2 className="h-3 w-3" /> },
-      attended: { label: "Atendido", className: "bg-gray-100 text-gray-800", icon: <CheckCircle2 className="h-3 w-3" /> },
-      completed: { label: "Concluído", className: "bg-gray-100 text-gray-800", icon: <CheckCircle2 className="h-3 w-3" /> },
-      cancelled: { label: "Cancelado", className: "bg-red-100 text-red-800", icon: <XCircle className="h-3 w-3" /> },
-      no_show: { label: "Falta", className: "bg-orange-100 text-orange-800", icon: <AlertCircle className="h-3 w-3" /> },
-      blocked: { label: "Bloqueado", className: "bg-slate-100 text-slate-800", icon: <XCircle className="h-3 w-3" /> },
-      in_progress: { label: "Em atendimento", className: "bg-purple-100 text-purple-800", icon: <Clock className="h-3 w-3" /> },
-    };
+  const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+    scheduled: { label: "Agendado", className: "bg-primary/10 text-primary", icon: <Calendar className="h-3 w-3" /> },
+    confirmed: { label: "Confirmado", className: "bg-success/10 text-success", icon: <CheckCircle2 className="h-3 w-3" /> },
+    arrived: { label: "Chegou", className: "bg-success/10 text-success", icon: <CheckCircle2 className="h-3 w-3" /> },
+    attended: { label: "Atendido", className: "bg-muted text-foreground", icon: <CheckCircle2 className="h-3 w-3" /> },
+    completed: { label: "Realizado", className: "bg-muted text-foreground", icon: <CheckCircle2 className="h-3 w-3" /> },
+    cancelled: { label: "Cancelado", className: "bg-destructive/10 text-destructive", icon: <XCircle className="h-3 w-3" /> },
+    no_show: { label: "Falta", className: "bg-warning/10 text-warning", icon: <AlertCircle className="h-3 w-3" /> },
+    blocked: { label: "Bloqueado", className: "bg-muted text-muted-foreground", icon: <XCircle className="h-3 w-3" /> },
+    in_progress: { label: "Em atendimento", className: "bg-primary/10 text-primary", icon: <Clock className="h-3 w-3" /> },
+  };
 
-    const config = statusConfig[status] || { label: status, className: "bg-gray-100 text-gray-800", icon: null };
-    
+  const getStatusBadge = (status: string) => {
+    const config = STATUS_CONFIG[status] || { label: status, className: "bg-muted text-foreground", icon: null };
     return (
-      <Badge className={`flex items-center gap-1 text-xs ${config.className}`}>
+      <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${config.className}`}>
         {config.icon}
         {config.label}
-      </Badge>
+      </span>
     );
+  };
+
+  // ===== Histórico: filtros e agrupamento ano > mês =====
+  const [histYear, setHistYear] = useState("all");
+  const [histProf, setHistProf] = useState("all");
+  const [histStatus, setHistStatus] = useState("all");
+  const [histPerson, setHistPerson] = useState("all");
+  const [histSearch, setHistSearch] = useState("");
+
+  const histYears = Array.from(new Set(historyAppointments.map(a => a.appointment_date.slice(0, 4)))).sort().reverse();
+  const histProfs = Array.from(new Map(historyAppointments.filter(a => a.professional?.id).map(a => [a.professional.id, a.professional.name])).entries())
+    .sort((x, y) => x[1].localeCompare(y[1]));
+  const histPeople = Array.from(new Map(historyAppointments.map(a => [a.dependent?.id || "titular", a.dependent?.name || "Titular"])).entries());
+
+  const filteredHistory = historyAppointments
+    .filter(a => histYear === "all" || a.appointment_date.startsWith(histYear))
+    .filter(a => histProf === "all" || a.professional?.id === histProf)
+    .filter(a => histStatus === "all" || (histStatus === "done" ? ["completed", "attended"].includes(a.status) : a.status === histStatus))
+    .filter(a => histPerson === "all" || (a.dependent?.id || "titular") === histPerson)
+    .filter(a => {
+      const q = histSearch.trim().toLowerCase();
+      if (!q) return true;
+      return [a.professional?.name, a.professional?.specialty, a.procedure?.name, a.dependent?.name].some(v => (v || "").toLowerCase().includes(q));
+    })
+    .sort((x, y) => (y.appointment_date + y.start_time).localeCompare(x.appointment_date + x.start_time));
+
+  const groupedHistory = filteredHistory.reduce<Record<string, Record<string, Appointment[]>>>((acc, a) => {
+    const y = a.appointment_date.slice(0, 4);
+    const m = a.appointment_date.slice(5, 7);
+    (acc[y] ||= {});
+    (acc[y][m] ||= []).push(a);
+    return acc;
+  }, {});
+
+  const histStats = {
+    done: historyAppointments.filter(a => ["completed", "attended"].includes(a.status)).length,
+    cancelled: historyAppointments.filter(a => a.status === "cancelled").length,
+    noShow: historyAppointments.filter(a => a.status === "no_show").length,
   };
 
   const canConfirm = (appointment: Appointment) => {
@@ -460,134 +498,112 @@ function MobileAppointmentsPageContent() {
     }
   };
 
-  const renderAppointmentCard = (appointment: Appointment, showActions = true) => {
-    const appointmentDate = parseDateOnlyToLocalNoon(appointment.appointment_date);
-    const isUpcoming = isFuture(appointmentDate) || isToday(appointmentDate);
-    const isPastAppointment = isPast(appointmentDate);
-    
-    return (
-      <Card 
-        key={appointment.id} 
-        className={`mb-3 border-l-4 ${
-          isUpcoming && !['cancelled', 'no_show'].includes(appointment.status)
-            ? 'border-l-emerald-500' 
-            : 'border-l-gray-300'
-        }`}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1">
-              <h3 className="font-medium text-foreground">
-                {appointment.procedure?.name || {
-                  first_visit: "Primeira Consulta",
-                  return: "Retorno",
-                  exam: "Exame",
-                  procedure: "Procedimento",
-                  telemedicine: "Telemedicina"
-                }[appointment.type] || appointment.type}
-              </h3>
-              {appointment.dependent && (
-                <p className="text-sm text-purple-600 font-medium">
-                  👤 {appointment.dependent.name}
-                </p>
-              )}
-            </div>
-            {getStatusBadge(appointment.status)}
-          </div>
-          
-          <div className="space-y-1 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span>
-                {format(appointmentDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>{appointment.start_time.slice(0, 5)} - {appointment.end_time.slice(0, 5)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span>
-                {appointment.professional?.name || "Profissional não informado"}
-                {appointment.professional?.specialty && ` • ${appointment.professional.specialty}`}
-              </span>
-            </div>
-          </div>
+  const typeLabel = (apt: Appointment) =>
+    apt.procedure?.name || ({
+      first_visit: "Consulta",
+      return: "Retorno",
+      exam: "Exame",
+      procedure: "Procedimento",
+      telemedicine: "Telemedicina",
+    } as Record<string, string>)[apt.type] || apt.type;
 
-          {/* Ações visíveis diretamente no card */}
-          {showActions && (canConfirm(appointment) || canCancel(appointment) || canReschedule(appointment)) && (
-            <div className="mt-3 pt-3 border-t flex flex-wrap items-center gap-2">
-              {canConfirm(appointment) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 min-w-[90px] text-blue-700 border-blue-300 hover:bg-blue-50"
-                  onClick={() => handleConfirmAppointment(appointment)}
-                  disabled={confirming === appointment.id}
-                >
-                  {confirming === appointment.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
-                  Confirmar
-                </Button>
-              )}
-              {canReschedule(appointment) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 min-w-[90px] text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                  onClick={() => handleReschedule(appointment)}
-                  disabled={checkingAvailability}
-                >
-                  {checkingAvailability ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CalendarClock className="h-4 w-4 mr-1" />}
-                  Reagendar
-                </Button>
-              )}
-              {canCancel(appointment) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 min-w-[90px] text-red-600 border-red-300 hover:bg-red-50"
-                  onClick={() => {
-                    setSelectedAppointment(appointment);
-                    setShowCancelDialog(true);
-                  }}
-                >
-                  <CalendarX className="h-4 w-4 mr-1" />
-                  Cancelar
-                </Button>
-              )}
+  const renderAppointmentCard = (appointment: Appointment, showActions = true, compact = false) => {
+    const d = parseDateOnlyToLocalNoon(appointment.appointment_date);
+    const inactive = ["cancelled", "no_show"].includes(appointment.status);
+    const today = isToday(d);
+    const hasActions = showActions && (canConfirm(appointment) || canCancel(appointment) || canReschedule(appointment));
+
+    return (
+      <div
+        key={appointment.id}
+        className={`overflow-hidden rounded-2xl border bg-card shadow-sm transition ${inactive ? "border-border opacity-80" : today ? "border-mobile/40" : "border-border"}`}
+      >
+        <button
+          type="button"
+          onClick={() => { setSelectedAppointment(appointment); setShowDetails(true); }}
+          className="flex w-full items-stretch gap-3 p-3.5 text-left"
+          aria-label={`Ver detalhes do agendamento de ${format(d, "dd/MM/yyyy")}`}
+        >
+          <div className={`flex ${compact ? "w-12" : "w-14"} shrink-0 flex-col items-center justify-center rounded-xl ${inactive ? "bg-muted text-muted-foreground" : "bg-mobile text-mobile-foreground"}`}>
+            <span className="text-[10px] font-semibold uppercase leading-none">{format(d, "EEE", { locale: ptBR }).replace(".", "")}</span>
+            <span className={`${compact ? "text-lg" : "text-xl"} font-bold leading-tight`}>{format(d, "dd")}</span>
+            {!compact && <span className="text-[10px] uppercase leading-none">{format(d, "MMM", { locale: ptBR }).replace(".", "")}</span>}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <p className={`truncate font-semibold text-foreground ${inactive ? "line-through decoration-muted-foreground/50" : ""}`}>
+                {appointment.professional?.name || "Profissional não informado"}
+              </p>
+              {getStatusBadge(appointment.status)}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="truncate text-xs text-muted-foreground">
+              {[appointment.professional?.specialty, typeLabel(appointment)].filter(Boolean).join(" · ")}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                <Clock className="h-3.5 w-3.5 text-mobile" />
+                {appointment.start_time.slice(0, 5)}–{appointment.end_time.slice(0, 5)}
+              </span>
+              <span className="inline-flex min-w-0 items-center gap-1 text-muted-foreground">
+                <User className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{appointment.dependent?.name || "Titular"}</span>
+              </span>
+              {today && !inactive && <span className="rounded-full bg-mobile-soft px-2 py-0.5 font-semibold text-mobile">Hoje</span>}
+            </div>
+          </div>
+        </button>
+
+        {hasActions && (
+          <div className="grid grid-flow-col auto-cols-fr gap-px border-t border-border bg-border">
+            {canConfirm(appointment) && (
+              <button
+                className="flex items-center justify-center gap-1.5 bg-card py-2.5 text-xs font-semibold text-success disabled:opacity-50"
+                onClick={() => handleConfirmAppointment(appointment)}
+                disabled={confirming === appointment.id}
+              >
+                {confirming === appointment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Confirmar
+              </button>
+            )}
+            {canReschedule(appointment) && (
+              <button
+                className="flex items-center justify-center gap-1.5 bg-card py-2.5 text-xs font-semibold text-mobile disabled:opacity-50"
+                onClick={() => handleReschedule(appointment)}
+                disabled={checkingAvailability}
+              >
+                {checkingAvailability ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
+                Remarcar
+              </button>
+            )}
+            {canCancel(appointment) && (
+              <button
+                className="flex items-center justify-center gap-1.5 bg-card py-2.5 text-xs font-semibold text-destructive"
+                onClick={() => { setSelectedAppointment(appointment); setShowCancelDialog(true); }}
+              >
+                <CalendarX className="h-4 w-4" />
+                Cancelar
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     );
   };
 
   const renderEmptyState = (type: "upcoming" | "history") => (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-        {type === "upcoming" ? (
-          <Calendar className="h-12 w-12 text-gray-400" />
-        ) : (
-          <History className="h-12 w-12 text-gray-400" />
-        )}
+    <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-mobile-soft">
+        {type === "upcoming" ? <Calendar className="h-9 w-9 text-mobile" /> : <History className="h-9 w-9 text-mobile" />}
       </div>
-      <h3 className="text-lg font-semibold text-foreground mb-2">
-        {type === "upcoming" ? "Nenhum agendamento futuro" : "Nenhum histórico"}
+      <h3 className="mb-1 text-base font-semibold text-foreground">
+        {type === "upcoming" ? "Nenhum agendamento futuro" : "Nenhum atendimento encontrado"}
       </h3>
-      <p className="text-muted-foreground text-center text-sm">
-        {type === "upcoming" 
-          ? "Você não possui agendamentos futuros. Agende agora!"
-          : "Você ainda não possui histórico de atendimentos."
-        }
+      <p className="text-sm text-muted-foreground">
+        {type === "upcoming" ? "Que tal agendar sua próxima consulta?" : "Ajuste os filtros ou consulte outro período."}
       </p>
       {type === "upcoming" && (
-        <Button 
-          onClick={() => navigate("/app/agendar")}
-          className="mt-4 bg-emerald-600 hover:bg-emerald-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo agendamento
+        <Button onClick={() => navigate("/app/agendar")} className="mt-4 h-11 rounded-xl bg-mobile text-mobile-foreground hover:bg-mobile/90">
+          <Plus className="mr-2 h-4 w-4" /> Novo agendamento
         </Button>
       )}
     </div>
@@ -642,108 +658,172 @@ function MobileAppointmentsPageContent() {
     );
   }
 
+  const nextApt = upcomingAppointments[0];
+  const otherUpcoming = upcomingAppointments.slice(1);
+  const selectCls = "h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none focus:border-mobile focus:ring-2 focus:ring-mobile/20";
+  const activeFilters = [histYear, histProf, histStatus, histPerson].filter(v => v !== "all").length + (histSearch ? 1 : 0);
+
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-20">
-      {/* Header */}
-      <div className="bg-emerald-600 text-white px-4 py-4 sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate("/app/home")} className="p-1">
-            <ArrowLeft className="h-6 w-6" />
+    <div className="min-h-screen bg-muted/30 flex flex-col pb-28">
+      {/* Cabeçalho */}
+      <div className="sticky top-0 z-40 bg-mobile text-mobile-foreground shadow-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <div className="flex items-center gap-2 px-3 py-3">
+          <button onClick={() => navigate("/app/home")} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-mobile-foreground/10" aria-label="Voltar">
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-semibold flex-1">Agendamentos</h1>
-          <button
-            onClick={() => navigate("/app/filas")}
-            className="text-xs font-medium bg-white/20 rounded-full px-3 py-1.5"
-          >
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-semibold leading-tight">Meus agendamentos</h1>
+            <p className="text-xs opacity-80">Consultas suas e dos seus dependentes</p>
+          </div>
+          <button onClick={() => navigate("/app/filas")} className="rounded-full bg-mobile-foreground/15 px-3 py-1.5 text-xs font-semibold">
             Filas de espera
           </button>
+        </div>
+
+        {/* Abas */}
+        <div className="px-4 pb-3">
+          <div className="grid grid-cols-2 rounded-xl bg-mobile-foreground/15 p-1" role="tablist">
+            {[
+              { v: "upcoming", label: "Próximos", count: upcomingAppointments.length, icon: Calendar },
+              { v: "history", label: "Histórico", count: historyAppointments.length, icon: History },
+            ].map(t => (
+              <button
+                key={t.v}
+                role="tab"
+                aria-selected={activeTab === t.v}
+                onClick={() => setActiveTab(t.v)}
+                className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition ${activeTab === t.v ? "bg-card text-mobile shadow-sm" : "opacity-85"}`}
+              >
+                <t.icon className="h-4 w-4" /> {t.label}
+                <span className={`rounded-full px-1.5 text-[11px] ${activeTab === t.v ? "bg-mobile-soft" : "bg-mobile-foreground/20"}`}>{t.count}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <MobileQueueCallCard />
       <MobileQueuePanel clinicId={clinicId} />
 
-      {/* Stats Cards */}
-      <div className="px-4 -mt-2">
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="border shadow-sm">
-            <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-emerald-600">{upcomingAppointments.length}</p>
-              <p className="text-xs text-muted-foreground">Próximos</p>
-            </CardContent>
-          </Card>
-          <Card className="border shadow-sm">
-            <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-gray-600">{historyAppointments.length}</p>
-              <p className="text-xs text-muted-foreground">Histórico</p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="mx-auto w-full max-w-2xl px-4 pt-4">
+        {loading ? (
+          <div className="space-y-3">
+            {[0, 1, 2].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted" />)}
+          </div>
+        ) : loadError ? (
+          renderLoadError()
+        ) : activeTab === "upcoming" ? (
+          upcomingAppointments.length === 0 ? renderEmptyState("upcoming") : (
+            <div className="space-y-5">
+              {nextApt && (
+                <section>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Próximo atendimento</p>
+                  {renderAppointmentCard(nextApt)}
+                </section>
+              )}
+              {otherUpcoming.length > 0 && (
+                <section>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Agendados ({otherUpcoming.length})</p>
+                  <div className="space-y-3">{otherUpcoming.map(a => renderAppointmentCard(a))}</div>
+                </section>
+              )}
+            </div>
+          )
+        ) : historyAppointments.length === 0 ? renderEmptyState("history") : (
+          <div className="space-y-4">
+            {/* Resumo */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Realizados", value: histStats.done, cls: "text-foreground", f: "done" },
+                { label: "Cancelados", value: histStats.cancelled, cls: "text-destructive", f: "cancelled" },
+                { label: "Faltas", value: histStats.noShow, cls: "text-warning", f: "no_show" },
+              ].map(c => (
+                <button
+                  key={c.f}
+                  onClick={() => setHistStatus(histStatus === c.f ? "all" : c.f)}
+                  className={`rounded-2xl border bg-card p-3 text-center transition ${histStatus === c.f ? "border-mobile ring-2 ring-mobile/20" : "border-border"}`}
+                >
+                  <p className={`text-xl font-bold ${c.cls}`}>{c.value}</p>
+                  <p className="text-[11px] text-muted-foreground">{c.label}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Filtros */}
+            <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
+              <input
+                value={histSearch}
+                onChange={e => setHistSearch(e.target.value)}
+                placeholder="Buscar profissional, especialidade ou paciente"
+                aria-label="Buscar no histórico"
+                className={selectCls}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select aria-label="Ano" value={histYear} onChange={e => setHistYear(e.target.value)} className={selectCls}>
+                  <option value="all">Todos os anos</option>
+                  {histYears.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <select aria-label="Situação" value={histStatus} onChange={e => setHistStatus(e.target.value)} className={selectCls}>
+                  <option value="all">Todas as situações</option>
+                  <option value="done">Realizados</option>
+                  <option value="cancelled">Cancelados</option>
+                  <option value="no_show">Faltas</option>
+                </select>
+                <select aria-label="Profissional" value={histProf} onChange={e => setHistProf(e.target.value)} className={selectCls}>
+                  <option value="all">Todos os profissionais</option>
+                  {histProfs.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </select>
+                <select aria-label="Paciente" value={histPerson} onChange={e => setHistPerson(e.target.value)} className={selectCls}>
+                  <option value="all">Todos os pacientes</option>
+                  {histPeople.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </select>
+              </div>
+              {activeFilters > 0 && (
+                <div className="flex items-center justify-between pt-1 text-xs">
+                  <span className="text-muted-foreground">{filteredHistory.length} resultado{filteredHistory.length === 1 ? "" : "s"}</span>
+                  <button
+                    className="font-semibold text-mobile"
+                    onClick={() => { setHistYear("all"); setHistProf("all"); setHistStatus("all"); setHistPerson("all"); setHistSearch(""); }}
+                  >
+                    Limpar filtros
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Lista agrupada por ano e mês */}
+            {filteredHistory.length === 0 ? renderEmptyState("history") : (
+              Object.keys(groupedHistory).sort().reverse().map(year => (
+                <section key={year} className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-bold text-foreground">{year}</h2>
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground">
+                      {Object.values(groupedHistory[year]).reduce((n, l) => n + l.length, 0)} atendimento(s)
+                    </span>
+                  </div>
+                  {Object.keys(groupedHistory[year]).sort().reverse().map(month => (
+                    <div key={month} className="space-y-2">
+                      <p className="sticky top-[118px] z-10 -mx-1 bg-muted/90 px-1 py-1 text-xs font-semibold uppercase tracking-wide text-mobile backdrop-blur">
+                        {format(new Date(Number(year), Number(month) - 1, 15), "MMMM", { locale: ptBR })} · {groupedHistory[year][month].length}
+                      </p>
+                      {groupedHistory[year][month].map(a => renderAppointmentCard(a, false, true))}
+                    </div>
+                  ))}
+                </section>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
-        <TabsList className="w-full rounded-none border-b h-12 bg-background p-0 mx-4" style={{ width: 'calc(100% - 32px)' }}>
-          <TabsTrigger 
-            value="upcoming" 
-            className="flex-1 h-full rounded-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600"
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Próximos
-          </TabsTrigger>
-          <TabsTrigger 
-            value="history" 
-            className="flex-1 h-full rounded-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-600"
-          >
-            <History className="h-4 w-4 mr-2" />
-            Histórico
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="upcoming" className="mt-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-            </div>
-          ) : loadError ? (
-            renderLoadError()
-          ) : upcomingAppointments.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="p-4">
-                {upcomingAppointments.map(apt => renderAppointmentCard(apt))}
-              </div>
-            </ScrollArea>
-          ) : (
-            renderEmptyState("upcoming")
-          )}
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-            </div>
-          ) : loadError ? (
-            renderLoadError()
-          ) : historyAppointments.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="p-4">
-                {historyAppointments.map(apt => renderAppointmentCard(apt, false))}
-              </div>
-            </ScrollArea>
-          ) : (
-            renderEmptyState("history")
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Floating Action Button */}
+      {/* Botão Agendar (acima da barra inferior) */}
       <Button
         onClick={() => navigate("/app/agendar")}
-        className="fixed bottom-6 right-6 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 shadow-lg flex items-center gap-2 px-6 z-50"
+        className="fixed right-4 z-40 h-12 rounded-full bg-mobile text-mobile-foreground px-5 shadow-lg hover:bg-mobile/90"
+        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
       >
-        <Plus className="h-5 w-5" />
-        Agendar
+        <Plus className="mr-1.5 h-5 w-5" /> Agendar
       </Button>
 
       {/* Appointment Details Dialog */}
@@ -833,7 +913,7 @@ function MobileAppointmentsPageContent() {
             <AlertDialogDescription>
               Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
               {selectedAppointment && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                <div className="mt-3 p-3 bg-muted rounded-lg">
                   <p className="font-medium">{selectedAppointment.procedure?.name || selectedAppointment.type}</p>
                   <p className="text-sm">
                     {format(parseDateOnlyToLocalNoon(selectedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedAppointment.start_time.slice(0, 5)}
@@ -847,7 +927,7 @@ function MobileAppointmentsPageContent() {
             <AlertDialogAction
               onClick={handleCancelAppointment}
               disabled={cancelling}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {cancelling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Confirmar cancelamento
