@@ -218,6 +218,13 @@
       "when": 1791614718596,
       "tag": "0030_get_app_availability",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791643338177,
+      "tag": "0031_union_entity_base_account",
+      "breakpoints": true
     }
   ]
 }

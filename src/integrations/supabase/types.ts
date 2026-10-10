@@ -2495,6 +2495,7 @@ export type Database = {
           blocked_reason: string | null
           booking_months_ahead: number | null
           city: string | null
+          clinic_module_enabled: boolean
           closing_time: string | null
           cnpj: string | null
           created_at: string
@@ -2553,6 +2554,7 @@ export type Database = {
           blocked_reason?: string | null
           booking_months_ahead?: number | null
           city?: string | null
+          clinic_module_enabled?: boolean
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
@@ -2611,6 +2613,7 @@ export type Database = {
           blocked_reason?: string | null
           booking_months_ahead?: number | null
           city?: string | null
+          clinic_module_enabled?: boolean
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
