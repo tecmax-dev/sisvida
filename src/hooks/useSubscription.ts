@@ -81,7 +81,8 @@ export function useSubscription(): UseSubscriptionReturn {
             monthly_price,
             features,
             is_public,
-            is_active
+            is_active,
+            category
           )
         `)
         .eq('clinic_id', currentClinic.id)

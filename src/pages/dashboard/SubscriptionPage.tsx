@@ -211,7 +211,7 @@ export default function SubscriptionPage() {
                 Sem assinatura ativa
               </h3>
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Sua clínica não possui uma assinatura vinculada. Entre em contato com o suporte.
+                Sua conta não possui uma assinatura vinculada. Entre em contato com o suporte.
               </p>
             </div>
           </CardContent>
@@ -555,8 +555,11 @@ export default function SubscriptionPage() {
               {/* Upgrade Plans */}
               {(() => {
                 const currentPrice = subscription?.plan?.monthly_price || 0;
-                const upgradePlans = plans.filter(p => p.id !== subscription?.plan_id && p.monthly_price > currentPrice);
-                const downgradePlans = plans.filter(p => p.id !== subscription?.plan_id && p.monthly_price < currentPrice);
+                // Só oferece planos do mesmo produto (sindical x clínica)
+                const currentCategory = (subscription?.plan as any)?.category;
+                const sameProduct = plans.filter(p => !currentCategory || (p as any).category === currentCategory);
+                const upgradePlans = sameProduct.filter(p => p.id !== subscription?.plan_id && p.monthly_price > currentPrice);
+                const downgradePlans = sameProduct.filter(p => p.id !== subscription?.plan_id && p.monthly_price < currentPrice);
 
                 return (
                   <div className="space-y-6 py-4">
