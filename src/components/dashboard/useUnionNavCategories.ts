@@ -1,3 +1,6 @@
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useAuth } from "@/hooks/useAuth";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import {
   Building2,
   Users,
@@ -214,13 +217,22 @@ export const unionNavCategories: UnionNavCategory[] = [
   },
 ];
 
+const APP_ONLY_HREFS = ["/union/conteudo-app", "/union/instalacoes-app", "/union/notificar-app", "/union/avisos-popup"];
+
 export function useUnionNavCategories(): UnionNavCategory[] {
   const { hasUnionPermission } = useUnionPermissions();
+  const { hasFeature, loading } = usePlanFeatures();
+  const { currentClinic } = useAuth();
+  // Recurso adicional "App / PWA" por plano; conta /sindicato sempre ativa
+  const appEnabled = currentClinic?.id === SINDICATO_CLINIC_ID || loading || hasFeature("mobile_app");
 
   return unionNavCategories
     .map((c) => ({
       ...c,
-      items: c.items.filter((i) => !i.permission || hasUnionPermission(i.permission)),
+      items: c.items.filter((i) =>
+        (!i.permission || hasUnionPermission(i.permission)) &&
+        (appEnabled || !APP_ONLY_HREFS.includes(i.href))
+      ),
     }))
     .filter((c) => c.items.length > 0);
 }
