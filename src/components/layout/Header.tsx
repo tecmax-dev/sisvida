@@ -16,7 +16,7 @@ const navLinks = [
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user, isSuperAdmin, userRoles, loading, rolesLoaded } = useAuth();
+  const { user, isSuperAdmin, isUnionEntityAdmin, userRoles, loading, rolesLoaded } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -28,11 +28,13 @@ export function Header() {
         navigate("/admin", { replace: true });
       } else if (userRoles.length > 0) {
         navigate("/dashboard", { replace: true });
+      } else if (isUnionEntityAdmin) {
+        navigate("/union", { replace: true });
       } else {
         navigate("/clinic-setup", { replace: true });
       }
     }
-  }, [user, isSuperAdmin, userRoles, loading, rolesLoaded, navigate, location.pathname]);
+  }, [user, isSuperAdmin, isUnionEntityAdmin, userRoles, loading, rolesLoaded, navigate, location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);

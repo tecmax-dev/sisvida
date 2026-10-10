@@ -50,6 +50,8 @@ interface AuthContextType {
   currentClinic: Clinic | null;
   userRoles: UserRole[];
   isSuperAdmin: boolean;
+  /** Possui papel entidade_sindical_admin (mesmo sem clínica vinculada) */
+  isUnionEntityAdmin: boolean;
   loading: boolean;
   rolesLoaded: boolean;
   signOut: () => Promise<void>;
@@ -66,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentClinic, setCurrentClinic] = useState<Clinic | null>(null);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isUnionEntityAdmin, setIsUnionEntityAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
   
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserRoles([]);
     setCurrentClinic(null);
     setIsSuperAdmin(false);
+    setIsUnionEntityAdmin(false);
     setRolesLoaded(false);
     dataLoadedRef.current = false;
     setSession(null);
@@ -136,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           )
         `)
         .eq('user_id', userId);
+
+      setIsUnionEntityAdmin(!!rolesData?.some((r) => (r.role as string) === 'entidade_sindical_admin'));
 
       if (rolesError) {
         console.error('[AUTH-PANIC] rolesData error:', rolesError);
@@ -264,6 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRoles([]);
           setCurrentClinic(null);
           setIsSuperAdmin(false);
+    setIsUnionEntityAdmin(false);
           setRolesLoaded(false);
           dataLoadedRef.current = false;
         }
@@ -285,6 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentClinic, 
       userRoles, 
       isSuperAdmin,
+      isUnionEntityAdmin,
       loading,
       rolesLoaded,
       signOut,
