@@ -1,5 +1,6 @@
  import { motion } from "motion/react";
-import { WifiOff, Clock, Phone } from "lucide-react";
+import { Clock, Phone } from "lucide-react";
+import maintenanceBanner from "@/assets/prosinge-manutencao.png.asset.json";
 import { Button } from "@/components/ui/button";
 
 interface MobileAppUnavailableProps {
@@ -17,53 +18,15 @@ export function MobileAppUnavailable({
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      {/* Animated Icon */}
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
-          duration: 0.5, 
-          type: "spring",
-          stiffness: 200,
-          damping: 15
-        }}
-        className="mb-8"
-      >
-        <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center shadow-2xl shadow-primary/30">
-          <motion.div
-            animate={{ 
-              rotate: [0, -10, 10, -10, 0],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              repeatDelay: 3
-            }}
-          >
-            <WifiOff className="h-16 w-16 text-white" />
-          </motion.div>
-        </div>
-      </motion.div>
-
-      {/* Title */}
-      <motion.h1
+      <motion.img
+        src={maintenanceBanner.url}
+        alt="Sistema em manutenção"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="text-2xl font-bold text-gray-800 text-center mb-2"
-      >
-        App Temporariamente Indisponível
-      </motion.h1>
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md h-auto rounded-2xl shadow-xl mb-6"
+      />
 
-      {/* Clinic name */}
-      <motion.p
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="text-sm text-gray-500 mb-6"
-      >
-        {clinicName}
-      </motion.p>
 
       {/* Message */}
       <motion.div
