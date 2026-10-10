@@ -41,11 +41,7 @@ export function useAppAvailability(): AppAvailabilityData {
   const fetchAvailability = useCallback(async () => {
     try {
       const clinicId = localStorage.getItem('mobile_clinic_id') || SINDICATO_CLINIC_ID;
-      const { data: clinic, error } = await supabase
-        .from("clinics")
-        .select("name, phone, app_unavailable, app_unavailable_message, is_maintenance, maintenance_reason")
-        .eq("id", clinicId)
-        .single();
+      const { data: clinic, error } = await (supabase as any).rpc("get_app_availability", { _clinic_id: clinicId }).maybeSingle();
 
       if (error) {
         console.error("[useAppAvailability] Error:", error);
@@ -54,8 +50,8 @@ export function useAppAvailability(): AppAvailabilityData {
       }
 
       setData({
-        isUnavailable: !!(clinic?.app_unavailable || (clinic as any)?.is_maintenance),
-        message: clinic?.app_unavailable_message || (clinic as any)?.maintenance_reason || null,
+        isUnavailable: !!clinic?.is_unavailable,
+        message: clinic?.message || null,
         clinicName: clinic?.name || "Sindicato",
         clinicPhone: clinic?.phone || null,
         loading: false,
