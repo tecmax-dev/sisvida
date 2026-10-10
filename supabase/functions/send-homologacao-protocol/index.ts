@@ -62,8 +62,8 @@ serve(async (req) => {
 
   // 4 parâmetros, na ordem do template protocolo_homologacao_v1 (homologacao-protocol-template)
   const [y, m, d] = String(appt.appointment_date).split("-");
-  const params = [appt.employee_name || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number]
-    .map((t) => ({ type: "text", text: String(t) }));
+  const buildParams = (recipientName: string) =>
+    [recipientName || "-", appt.company_name || "-", `${d}/${m}/${y}`, appt.protocol_number].map((t) => ({ type: "text", text: String(t) }));
 
   const results: Record<string, { ok: boolean; reason?: string; message_id?: string }> = {};
   const sentPhones = new Set<string>();
@@ -89,7 +89,7 @@ serve(async (req) => {
       headers: { Authorization: `Bearer ${metaToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         messaging_product: "whatsapp", recipient_type: "individual", to: e164, type: "template",
-        template: { name: TEMPLATE, language: { code: "pt_BR" }, components: [{ type: "body", parameters: params }] },
+        template: { name: TEMPLATE, language: { code: "pt_BR" }, components: [{ type: "body", parameters: buildParams(target === "company" ? (appt.company_name || "") : (appt.employee_name || "")) }] },
       }),
     });
     const result = await res.json().catch(() => ({} as any));
