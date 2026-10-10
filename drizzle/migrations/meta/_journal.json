@@ -232,6 +232,13 @@
       "when": 1791643929353,
       "tag": "0032_union_entity_base_account_admin_role",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791643944136,
+      "tag": "0033_union_entity_base_account_fix",
+      "breakpoints": true
     }
   ]
 }
