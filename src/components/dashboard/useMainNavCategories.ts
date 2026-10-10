@@ -88,6 +88,7 @@ export const mainNavCategories: MainNavCategory[] = [
       { href: "/dashboard/users", icon: UserCog, label: "Usuários", permission: "manage_users" },
       { href: "/dashboard/holidays", icon: CalendarOff, label: "Feriados", permission: "manage_settings" },
       { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
+      { href: "/dashboard/financeiro-prosinge", icon: DollarSign, label: "Financeiro Prosinge", permission: "manage_subscription" },
       { href: "/union/auditoria", icon: ScrollText, label: "Auditoria", permission: "view_audit" },
       { href: "/dashboard/settings", icon: Settings, label: "Configurações", permission: "change_password" },
     ],
