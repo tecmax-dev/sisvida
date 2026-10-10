@@ -266,7 +266,7 @@ export function HomologacaoSendNotificationDialog({
       // Send via Email to company
       if (sendEmail && appointment.company_email) {
         try {
-          const { error } = await supabase.functions.invoke("send-homologacao-email", {
+          const { data: emailRes, error } = await supabase.functions.invoke("send-homologacao-email", {
             body: {
               appointment_id: appointment.id,
               type,
@@ -274,7 +274,7 @@ export function HomologacaoSendNotificationDialog({
             },
           });
 
-          if (error) throw error;
+          if (error || emailRes?.success === false) throw new Error(emailRes?.error || error?.message || "Falha no e-mail");
 
           await logHomologacaoNotification(
             appointment.id,
@@ -304,6 +304,7 @@ export function HomologacaoSendNotificationDialog({
         }
       }
 
+      notices.forEach((n) => toast.info(n));
       if (successCount > 0 && errorCount === 0) {
         toast.success(`${type === "reminder" ? "Lembrete" : "Protocolo"} enviado com sucesso! (${successCount} envio${successCount > 1 ? "s" : ""})`);
         onOpenChange(false);
