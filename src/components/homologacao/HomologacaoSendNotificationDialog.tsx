@@ -24,6 +24,7 @@ import {
   logHomologacaoNotification,
   sendWhatsAppViaEvolution,
 } from "@/lib/homologacaoUtils";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 interface HomologacaoAppointment {
   id: string;
@@ -204,9 +205,27 @@ export function HomologacaoSendNotificationDialog({
     let errorCount = 0;
     const message = customMessage || baseMessage;
 
+    const isSindicato = currentClinic.id === SINDICATO_CLINIC_ID;
+    const notices: string[] = [];
     try {
+      // Sindicato: número oficial Meta só aceita modelo aprovado (lembrete para a empresa, com consentimento).
+      if (isSindicato) {
+        const wantsWa = parties.some((p) => p.checked && p.phone);
+        if (wantsWa && type === "reminder") {
+          const { data, error } = await supabase.functions.invoke("send-homologacao-reminder", {
+            body: { appointmentId: appointment.id, force: true },
+          });
+          const ok = !error && data?.ok;
+          await logHomologacaoNotification(appointment.id, currentClinic.id, "whatsapp", ok ? "sent" : "failed",
+            appointment.company_phone, undefined, "Lembrete oficial (modelo aprovado Meta)", ok ? undefined : (data?.reason || data?.error || error?.message));
+          if (ok) successCount++; else { errorCount++; notices.push(`WhatsApp não enviado: ${data?.reason === "NO_CONSENT" || data?.reason === "CONSENT_NOT_GRANTED" ? "empresa sem autorização de WhatsApp" : data?.reason || data?.error || "falha no envio"}`); }
+          if (parties.some((p) => p.checked && p.phone && p.key !== "company")) notices.push("No WhatsApp oficial o lembrete vai só para a empresa.");
+        } else if (wantsWa) {
+          notices.push("O protocolo não pode ser enviado pelo WhatsApp oficial (sem modelo aprovado pela Meta). Use o e-mail.");
+        }
+      }
       // Send WhatsApp to selected parties
-      for (const party of parties) {
+      for (const party of isSindicato ? [] : parties) {
         if (!party.checked || !party.phone) continue;
 
         const partyMessage = customMessage || (
@@ -247,7 +266,7 @@ export function HomologacaoSendNotificationDialog({
       // Send via Email to company
       if (sendEmail && appointment.company_email) {
         try {
-          const { error } = await supabase.functions.invoke("send-homologacao-email", {
+          const { data: emailRes, error } = await supabase.functions.invoke("send-homologacao-email", {
             body: {
               appointment_id: appointment.id,
               type,
@@ -255,7 +274,7 @@ export function HomologacaoSendNotificationDialog({
             },
           });
 
-          if (error) throw error;
+          if (error || emailRes?.success === false) throw new Error(emailRes?.error || error?.message || "Falha no e-mail");
 
           await logHomologacaoNotification(
             appointment.id,
@@ -285,6 +304,7 @@ export function HomologacaoSendNotificationDialog({
         }
       }
 
+      notices.forEach((n) => toast.info(n));
       if (successCount > 0 && errorCount === 0) {
         toast.success(`${type === "reminder" ? "Lembrete" : "Protocolo"} enviado com sucesso! (${successCount} envio${successCount > 1 ? "s" : ""})`);
         onOpenChange(false);
