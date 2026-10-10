@@ -558,8 +558,10 @@ export default function SubscriptionPage() {
                 // Só oferece planos do mesmo produto (sindical x clínica)
                 const currentCategory = (subscription?.plan as any)?.category;
                 const sameProduct = plans.filter(p => !currentCategory || (p as any).category === currentCategory);
-                const upgradePlans = sameProduct.filter(p => p.id !== subscription?.plan_id && p.monthly_price > currentPrice);
-                const downgradePlans = sameProduct.filter(p => p.id !== subscription?.plan_id && p.monthly_price < currentPrice);
+                // Plano com preço 0 = "Sob Medida" (valor sob consulta): sempre é upgrade
+                const isCustom = (p: { monthly_price: number }) => !p.monthly_price;
+                const upgradePlans = sameProduct.filter(p => p.id !== subscription?.plan_id && (isCustom(p) || p.monthly_price > currentPrice));
+                const downgradePlans = sameProduct.filter(p => p.id !== subscription?.plan_id && !isCustom(p) && p.monthly_price < currentPrice);
 
                 return (
                   <div className="space-y-6 py-4">
@@ -582,7 +584,7 @@ export default function SubscriptionPage() {
                                 <div className="flex items-center justify-between">
                                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                                   <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                                    +{formatPrice(plan.monthly_price - currentPrice)}
+                                    {isCustom(plan) ? "Sob consulta" : `+${formatPrice(plan.monthly_price - currentPrice)}`}
                                   </Badge>
                                 </div>
                                 <CardDescription className="text-xs">
@@ -592,7 +594,7 @@ export default function SubscriptionPage() {
                               <CardContent className="space-y-3">
                                 <div>
                                   <span className="text-2xl font-bold text-green-600">
-                                    {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
+                                    {isCustom(plan) ? "Sob consulta" : formatPrice(plan.monthly_price)}
                                   </span>
                                   {plan.monthly_price > 0 && (
                                     <span className="text-muted-foreground text-sm">/mês</span>
