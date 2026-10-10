@@ -48,19 +48,15 @@ let availabilityPromise: Promise<AppAvailabilityResult> | null = null;
 async function preloadAvailability(): Promise<AppAvailabilityResult> {
   try {
     const clinicId = localStorage.getItem('mobile_clinic_id') || SINDICATO_CLINIC_ID;
-    const { data: clinic, error } = await supabase
-      .from("clinics")
-      .select("name, phone, app_unavailable, app_unavailable_message")
-      .eq("id", clinicId)
-      .single();
+    const { data: clinic, error } = await (supabase as any).rpc("get_app_availability", { _clinic_id: clinicId }).maybeSingle();
 
     if (error || !clinic) {
       return { isUnavailable: false, message: null, clinicName: "Sindicato", clinicPhone: null };
     }
 
     return {
-      isUnavailable: clinic.app_unavailable || false,
-      message: clinic.app_unavailable_message || null,
+      isUnavailable: !!clinic.is_unavailable,
+      message: clinic.message || null,
       clinicName: clinic.name || "Sindicato",
       clinicPhone: clinic.phone || null,
     };

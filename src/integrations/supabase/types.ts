@@ -20840,6 +20840,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_app_availability: {
+        Args: { _clinic_id: string }
+        Returns: {
+          is_unavailable: boolean
+          message: string
+          name: string
+          phone: string
+        }[]
+      }
       get_applicable_repass_rule: {
         Args: {
           p_clinic_id: string
