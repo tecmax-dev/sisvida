@@ -24,6 +24,7 @@ import {
   logHomologacaoNotification,
   sendWhatsAppViaEvolution,
 } from "@/lib/homologacaoUtils";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 interface HomologacaoAppointment {
   id: string;
