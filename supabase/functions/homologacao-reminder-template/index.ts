@@ -10,7 +10,8 @@ const corsHeaders = {
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 const WABA_ID = "2063797207822998";
-const TEMPLATE_NAME = "lembrete_homologacao_v1";
+// v2: o nome do serviço é parâmetro, para diferenciar Homologação de Rescisão e Assessoria Jurídica.
+const TEMPLATE_NAME = "lembrete_atendimento_sindical_v2";
 const LANGUAGE = "pt_BR";
 const PUBLIC_BASE_URL = Deno.env.get("PUBLIC_APP_BASE_URL") || "https://sindexa.com.br";
 const SECURE_ROUTE = "/homologacao/confirmacao";
@@ -19,10 +20,10 @@ const SECURE_ROUTE = "/homologacao/confirmacao";
 // Sem aviso de bloqueio por falta (regra exclusiva da agenda de consultas).
 const BODY_TEXT =
   "Olá, {{1}}.\n" +
-  "Lembramos que você possui um atendimento de homologação agendado para:\n" +
-  "Data: {{2}}\n" +
-  "Horário: {{3}}\n" +
-  "Profissional: {{4}}\n\n" +
+  "Lembramos que você possui um atendimento de {{2}} agendado para:\n" +
+  "Data: {{3}}\n" +
+  "Horário: {{4}}\n" +
+  "Profissional: {{5}}\n\n" +
   "Toque no botão abaixo para CONFIRMAR sua presença, REAGENDAR ou CANCELAR o atendimento.\n" +
   "Esta é uma comunicação automática referente a um serviço previamente agendado.";
 
@@ -30,7 +31,7 @@ const TEMPLATE_COMPONENTS = [
   {
     type: "BODY",
     text: BODY_TEXT,
-    example: { body_text: [["Empresa Exemplo", "quinta-feira, 12 de março", "09:30", "Dr. Elinei Silva"]] },
+    example: { body_text: [["Empresa Exemplo", "Assessoria Jurídica", "quinta-feira, 12 de março", "09:30", "Dra. Maria Silva"]] },
   },
   { type: "FOOTER", text: "Sindicato dos Comerciários" },
   {
