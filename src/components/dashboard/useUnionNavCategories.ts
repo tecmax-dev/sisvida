@@ -204,6 +204,7 @@ export const unionNavCategories: UnionNavCategory[] = [
       { href: "/union/configuracoes", icon: Settings, label: "Geral", permission: "union_module_access" },
       { href: "/union/configuracoes/feriados", icon: CalendarX, label: "Feriados", permission: "union_module_access" },
       { href: "/union/configuracoes/grupos-acesso", icon: Shield, label: "Grupos de Acesso", permission: "union_module_access" },
+      { href: "/union/financeiro-prosinge", icon: Receipt, label: "Financeiro Prosinge", permission: "union_module_access" },
     ],
   },
   {

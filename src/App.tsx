@@ -168,6 +168,7 @@ import WaitingListMemberReportPage from "./pages/dashboard/WaitingListMemberRepo
 import ReportsPage from "./pages/dashboard/ReportsPage";
 import AppointmentReportsPage from "./pages/dashboard/AppointmentReportsPage";
 import SubscriptionPage from "./pages/dashboard/SubscriptionPage";
+import ProsingeBillingPage from "./pages/ProsingeBillingPage";
 import PrescriptionPage from "./pages/dashboard/PrescriptionPage";
 import FinancialsPage from "./pages/dashboard/FinancialsPage";
 import NewTransactionPage from "./pages/dashboard/NewTransactionPage";
@@ -631,6 +632,7 @@ function App() {
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="reports/appointments" element={<AppointmentReportsPage />} />
                   <Route path="subscription" element={<SubscriptionPage />} />
+                  <Route path="financeiro-prosinge" element={<ProsingeBillingPage />} />
                   <Route path="prescriptions" element={<PrescriptionPage />} />
                   <Route path="financials" element={<FinancialsPage />} />
                   <Route path="financials/new" element={<NewTransactionPage />} />
@@ -680,6 +682,7 @@ function App() {
                   <Route path="orcamento" element={<Navigate to="/union/financeiro/orcamento" replace />} />
                   <Route path="orcamento/:id" element={<UnionBudgetLegacyRedirect />} />
                   <Route path="planos" element={<UnionPlansPage />} />
+                  <Route path="financeiro-prosinge" element={<ProsingeBillingPage />} />
                   <Route path="empresas" element={<UnionEmployersPage />} />
                   <Route path="empresas/:id" element={<UnionEmployerDetailPage />} />
                   <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
