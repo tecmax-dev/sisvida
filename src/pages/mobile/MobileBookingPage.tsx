@@ -16,6 +16,12 @@ import {
   Check,
   CreditCard,
   Upload,
+  Users,
+  Stethoscope,
+  CalendarDays,
+  Clock,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 import {
   Select,
@@ -195,6 +201,9 @@ export default function MobileBookingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<{ date: string; time: string; professional: string; specialty: string; patient: string } | null>(null);
+  const slotReqRef = useRef(0);
+  const bookingLockRef = useRef(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -233,6 +242,10 @@ export default function MobileBookingPage() {
   }, [isReschedule, professionals, rescheduleState]);
 
   useEffect(() => {
+    // Invalida respostas antigas e limpa horários ao trocar profissional/data
+    slotReqRef.current += 1;
+    setAvailableSlots([]);
+    setQueueLocked(false);
     if (selectedProfessionalId && selectedDate) {
       loadAvailableSlots();
     }
@@ -462,6 +475,7 @@ export default function MobileBookingPage() {
 
   const loadAvailableSlots = async () => {
     if (!selectedProfessionalId || !selectedDate) return;
+    const reqId = slotReqRef.current;
 
     try {
       const professional = professionals.find(p => p.id === selectedProfessionalId);
@@ -483,6 +497,8 @@ export default function MobileBookingPage() {
         }
       );
       const slotData = slotResponse.ok ? await slotResponse.json() : { appointments: [] };
+      // Resposta obsoleta (usuário trocou profissional ou data): ignorar
+      if (reqId !== slotReqRef.current) return;
       const existingAppointments = slotData.appointments || [];
       const isQueueLocked = slotData.queueLocked === true;
       setQueueLocked(isQueueLocked);
@@ -618,6 +634,8 @@ export default function MobileBookingPage() {
   };
 
   const performBooking = async () => {
+    if (bookingLockRef.current) return;
+    bookingLockRef.current = true;
     setSubmitting(true);
 
     try {
@@ -684,7 +702,14 @@ export default function MobileBookingPage() {
         description: `Consulta agendada para ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} às ${selectedTime}.`,
       });
 
-      navigate("/app/agendamentos");
+      setSuccess({
+        date: format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR }),
+        time: selectedTime,
+        professional: professional.name,
+        specialty: professional.specialties?.map(s => s.name).join(", ") || professional.specialty || "",
+        patient: bookingPatientName,
+      });
+      setStep(5);
     } catch (err: any) {
       console.error("Error creating appointment:", err);
       const rawMsg: string = String(err?.message || "");
@@ -699,9 +724,47 @@ export default function MobileBookingPage() {
         variant: isRule ? "default" : "destructive",
       });
     } finally {
+      bookingLockRef.current = false;
       setSubmitting(false);
     }
   };
+
+  const selectedProf = professionals.find(p => p.id === selectedProfessionalId);
+  const selectedDepObj = dependents.find(d => d.id === selectedDependentId);
+  const bookingPatientName = patientType === "dependent" && selectedDepObj ? selectedDepObj.name : "Você (titular)";
+  const selectedProfSpecialty = selectedProf?.specialties?.map(s => s.name).join(", ") || selectedProf?.specialty || "";
+  const STEP_LABELS = ["Paciente", "Profissional", "Data e hora", "Confirmar"];
+
+  const BookingSummary = ({ showDate = false }: { showDate?: boolean }) => (
+    <div className="rounded-2xl border border-mobile/20 bg-mobile-soft p-3.5 space-y-2.5">
+      <div className="flex items-center gap-3">
+        {selectedProf?.avatar_url ? (
+          <img src={selectedProf.avatar_url} alt={selectedProf.name} className="h-11 w-11 rounded-full object-cover border border-card" />
+        ) : (
+          <div className="h-11 w-11 rounded-full bg-mobile text-mobile-foreground flex items-center justify-center"><Stethoscope className="h-5 w-5" /></div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Profissional</p>
+          <p className="truncate font-semibold text-foreground">{selectedProf?.name || "—"}{selectedProfSpecialty ? <span className="font-normal text-muted-foreground"> — {selectedProfSpecialty}</span> : null}</p>
+        </div>
+        {step === 3 && !isReschedule && (
+          <button onClick={() => setStep(2)} className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-mobile hover:bg-card">Trocar</button>
+        )}
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <User className="h-4 w-4 text-mobile shrink-0" />
+        <span className="text-muted-foreground">Paciente:</span>
+        <span className="truncate font-medium text-foreground">{bookingPatientName}</span>
+      </div>
+      {showDate && selectedDate && (
+        <div className="flex items-center gap-2 text-sm">
+          <CalendarDays className="h-4 w-4 text-mobile shrink-0" />
+          <span className="text-muted-foreground">Data:</span>
+          <span className="font-medium text-foreground capitalize">{format(selectedDate, "EEEE, dd/MM/yyyy", { locale: ptBR })}</span>
+        </div>
+      )}
+    </div>
+  );
 
   if (loading) {
     return (
