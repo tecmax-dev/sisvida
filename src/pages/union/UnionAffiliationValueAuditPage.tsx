@@ -53,7 +53,7 @@ export default function UnionAffiliationValueAuditPage() {
         .from("affiliation_company_documents")
         .select("employer_id, worker_name, worker_cpf, approved_at, made_available_at, ack_status, created_at")
         .eq("clinic_id", clinicId).not("employer_id", "is", null)
-        .gte("created_at", startDate + "T00:00:00").order("created_at").order("id");
+        .gte("approved_at", startDate + "T00:00:00").order("approved_at").order("id");
       const byEmp = new Map<string, Doc[]>();
       (docs || []).forEach((d: any) => {
         const arr = byEmp.get(d.employer_id) || []; arr.push(d); byEmp.set(d.employer_id, arr);
@@ -85,7 +85,7 @@ export default function UnionAffiliationValueAuditPage() {
       const out: Row[] = empIds.map((id) => {
         const e: any = (emps || []).find((x: any) => x.id === id) || {};
         const ds = byEmp.get(id)!;
-        const firstDate = ds.map((d) => d.made_available_at || d.approved_at).filter(Boolean).sort()[0] || startDate;
+        const firstDate = ds.map((d) => d.approved_at || d.made_available_at).filter(Boolean).sort()[0] || startDate;
         const fd = new Date(firstDate);
         const firstKey = ym(fd.getFullYear(), fd.getMonth() + 1);
         const perMonth = new Map<number, number>();
@@ -174,9 +174,9 @@ export default function UnionAffiliationValueAuditPage() {
           <div className="space-y-1 md:col-span-2"><Label className="text-xs">Pesquisar</Label>
             <div className="relative"><Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Empresa, CNPJ ou trabalhador" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
-          <div className="space-y-1"><Label className="text-xs">Fichas enviadas desde</Label>
+          <div className="space-y-1"><Label className="text-xs">Filiações desde</Label>
             <Input type="date" value={startDate} onChange={(e) => e.target.value && setStartDate(e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Mês da 1ª ficha</Label>
+          <div className="space-y-1"><Label className="text-xs">Mês da 1ª filiação</Label>
             <Select value={month} onValueChange={setMonth}><SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="all">Todos</SelectItem>{months.map((m) => <SelectItem key={m} value={String(m)}>{ymLabel(m)}</SelectItem>)}</SelectContent></Select></div>
           <div className="space-y-1"><Label className="text-xs">Ordenar por</Label>
@@ -234,9 +234,9 @@ export default function UnionAffiliationValueAuditPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium mb-2">Fichas enviadas</p>
-                        <Table><TableHeader><TableRow><TableHead>Trabalhador</TableHead><TableHead>Envio</TableHead><TableHead>Ciência</TableHead></TableRow></TableHeader>
+                        <Table><TableHeader><TableRow><TableHead>Trabalhador</TableHead><TableHead>Filiação</TableHead><TableHead>Ciência</TableHead></TableRow></TableHeader>
                           <TableBody>{r.docs.map((d, i) => {
-                            const dt = d.made_available_at || d.approved_at;
+                            const dt = d.approved_at || d.made_available_at;
                             return <TableRow key={i}><TableCell>{d.worker_name || "—"}</TableCell>
                               <TableCell>{dt ? new Date(dt).toLocaleDateString("pt-BR") : "—"}</TableCell>
                               <TableCell><Badge variant={d.ack_status === "confirmed" ? "default" : "outline"}>{d.ack_status === "confirmed" ? "Confirmada" : "Pendente"}</Badge></TableCell></TableRow>;
