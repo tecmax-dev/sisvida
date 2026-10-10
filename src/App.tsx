@@ -221,6 +221,7 @@ import UnionEmployerDetailPage from "./pages/union/UnionEmployerDetailPage";
 import UnionAccountingOfficesPage from "./pages/union/UnionAccountingOfficesPage";
 import UnionValueEmailLogsPage from "./pages/union/UnionValueEmailLogsPage";
 import UnionAffiliationAckPage from "./pages/union/UnionAffiliationAckPage";
+import UnionAffiliationValueAuditPage from "./pages/union/UnionAffiliationValueAuditPage";
 import UnionBookingUsagePage from "./pages/union/UnionBookingUsagePage";
 import UnionReceivablesForecastPage from "./pages/union/UnionReceivablesForecastPage";
 import UnionMembersListPage from "./pages/union/UnionMembersListPage";
@@ -695,6 +696,7 @@ function App() {
                   <Route path="contribuicoes/relatorios" element={<UnionReportsPage />} />
                   <Route path="contribuicoes/emails" element={<UnionValueEmailLogsPage />} />
                   <Route path="filiacoes/ciencia" element={<UnionAffiliationAckPage />} />
+                  <Route path="filiacoes/auditoria-valores" element={<UnionAffiliationValueAuditPage />} />
                   <Route path="relatorios/uso-agendamentos" element={<UnionBookingUsagePage />} />
                   <Route path="contribuicoes/previsao" element={<UnionReceivablesForecastPage />} />
                   <Route path="financeiro" element={<UnionFinancialsPage />} />

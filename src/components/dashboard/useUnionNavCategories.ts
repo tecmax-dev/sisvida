@@ -91,6 +91,7 @@ export const unionNavCategories: UnionNavCategory[] = [
       { href: "/union/associados", icon: UserPlus, label: "Filiações Públicas", permission: "union_view_members" },
       { href: "/union/filiacoes", icon: ClipboardList, label: "Aprovação de Filiações", permission: "union_view_members" },
       { href: "/union/filiacoes/ciencia", icon: ClipboardList, label: "Ciência das Fichas", permission: "union_view_members" },
+      { href: "/union/filiacoes/auditoria-valores", icon: ClipboardList, label: "Auditoria Filiação x Valores", permission: "union_view_members" },
     ],
   },
   {
