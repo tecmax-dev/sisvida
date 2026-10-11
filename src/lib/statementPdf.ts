@@ -110,7 +110,7 @@ export function buildStatementPdf(input: StatementPdfInput): jsPDF {
   doc.setFont("helvetica", "bold");
   doc.text("Período: ", tx, 23);
   doc.setFont("helvetica", "normal");
-  doc.text(period, tx + doc.getTextWidth("Período: "), 23);
+  doc.text(period, tx + doc.getTextWidth("Período: ") + 1.5, 23);
 
   const bw = 62;
   const bx = W - M - bw;
