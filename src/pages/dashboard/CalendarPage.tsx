@@ -4211,18 +4211,17 @@ const updateData: Record<string, any> = {
     >
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border bg-card p-4 shadow-sm">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><CalendarIcon className="h-5 w-5 text-primary" /></span>
-            Agenda
-          </h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 border-b pb-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Agenda</h1>
+            <RealtimeIndicator />
+          </div>
+          <p className="text-sm text-muted-foreground">
             Gerencie os agendamentos da clínica
           </p>
-          <RealtimeIndicator className="mt-1" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Calendar Toggle - apenas em view day */}
           {viewMode === "day" && (
             <Button
