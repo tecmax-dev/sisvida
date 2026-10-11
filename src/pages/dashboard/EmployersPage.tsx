@@ -680,10 +680,10 @@ export default function EmployersPage() {
   return (
     <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Building className="h-6 w-6 text-primary" />
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><Building className="h-5 w-5 text-primary" /></span>
             Empresas
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -840,7 +840,7 @@ export default function EmployersPage() {
 
       {/* Table */}
       {filteredEmployers.length === 0 ? (
-        <Card>
+        <Card className="shadow-sm overflow-hidden">
           <CardContent className="p-8 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
@@ -976,15 +976,15 @@ export default function EmployersPage() {
                           </TableCell>
                           <TableCell className="py-1 text-center">
                             {isVirtual ? (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-amber-50 text-amber-700 border-amber-200 uppercase font-bold">
+                              <Badge variant="warning" className="text-[9px] h-4 px-1.5 uppercase font-bold">
                                 Pendente
                               </Badge>
                             ) : employer.is_active ? (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 uppercase font-bold">
+                              <Badge variant="success" className="text-[9px] h-4 px-1.5 uppercase font-bold">
                                 Ativa
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-rose-50 text-rose-700 border-rose-200 uppercase font-bold">
+                              <Badge variant="destructive" className="text-[9px] h-4 px-1.5 uppercase font-bold">
                                 Inativa
                               </Badge>
                             )}
