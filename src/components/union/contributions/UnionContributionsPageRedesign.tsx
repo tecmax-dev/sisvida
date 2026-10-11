@@ -808,10 +808,10 @@ export default function UnionContributionsPageRedesign() {
     <div className="space-y-4 sm:space-y-6 p-1 sm:p-3 lg:p-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border bg-card p-4 shadow-sm">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-              <Receipt className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+            <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10"><Receipt className="h-5 w-5 text-primary" /></span>
               <span className="truncate">Contribuições Sindicais</span>
             </h1>
             <p className="text-sm text-muted-foreground hidden sm:block">

@@ -178,9 +178,9 @@ export default function HomologacaoServicosPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-xl border bg-card p-4 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Tipos de Serviço</h1>
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground">Tipos de Serviço</h1>
           <p className="text-muted-foreground">Gestão de tipos de homologação e rescisão</p>
         </div>
         <Button onClick={openNewDialog}>
