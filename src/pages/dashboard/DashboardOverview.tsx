@@ -301,6 +301,7 @@ export default function DashboardOverview() {
     }
   };
 
+  const CARD_TONES = ['bg-primary/10 text-primary', 'bg-destructive/10 text-destructive', 'bg-success/10 text-success', 'bg-info/10 text-info'];
   const CHART_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
   
   const getProcedureColor = (item: any, index: number) => {
@@ -400,77 +401,55 @@ export default function DashboardOverview() {
 
   return (
     <div className="min-h-full flex flex-col gap-6 animate-fade-in p-1">
-      {/* Top Row - Main Stats with Gradient Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Cabeçalho */}
+      <div className="border-b border-border/70 pb-4">
+        <p className="mb-1 text-xs font-semibold uppercase text-primary">{(() => { const h = new Date().getHours(); return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; })()}</p>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Módulo Clínica</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Resumo de cadastros, agenda e atendimentos</p>
+      </div>
+
+      {/* Indicadores */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {topCards.map((card, i) => (
-          <Card
-            key={i}
-            className={`relative overflow-hidden border-0 shadow-lg ${card.bgSolid} text-white`}
-          >
-            <CardContent className="p-5 relative">
-              <div className="flex justify-between items-start">
+          <Link key={i} to={card.buttonLink} className="group">
+            <Card className="h-full transition-[border-color,box-shadow] group-hover:border-primary/30 group-hover:shadow-md">
+              <CardContent className="flex items-start justify-between p-5">
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold tracking-wider opacity-90">{card.title}</p>
-                  <p className="text-4xl font-bold">{card.value}</p>
-                  <p className="text-sm opacity-80">{card.subtitle}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{card.title}</p>
+                  <p className="text-3xl font-bold text-foreground">{card.value}</p>
+                  <p className="text-sm text-muted-foreground">{card.subtitle}</p>
+                  <p className="flex items-center gap-1 pt-2 text-xs font-medium text-primary">{card.buttonText} <ArrowRight className="h-3.5 w-3.5" /></p>
                 </div>
-                <div className={`w-12 h-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
-                  <card.icon className="h-6 w-6 text-white/80" />
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${CARD_TONES[i % CARD_TONES.length]}`}>
+                  <card.icon className="h-5 w-5" />
                 </div>
-              </div>
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="mt-4 text-white/90 hover:text-white hover:bg-white/20 px-0"
-              >
-                <Link to={card.buttonLink} className="flex items-center gap-1">
-                  {card.buttonText} <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
-      {/* Second Row - Secondary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Ações e indicadores secundários */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {bottomCards.map((card, i) => (
-          <Card
-            key={i}
-            className={`relative overflow-hidden border ${card.borderColor} shadow-sm ${card.bgColor}`}
-          >
-            <CardContent className="p-5 relative">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold tracking-wider text-muted-foreground">{card.title}</p>
-                  {card.isAction ? (
-                    <div className={`w-14 h-14 rounded-xl ${card.iconBg} flex items-center justify-center`}>
-                      <Plus className={`h-8 w-8 ${card.iconColor}`} />
-                    </div>
-                  ) : (
-                    <p className={`text-4xl font-bold ${card.valueColor || 'text-foreground'}`}>{card.value}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">{card.subtitle}</p>
+          <Link key={i} to={card.buttonLink} className="group">
+            <Card className="h-full transition-[border-color,box-shadow] group-hover:border-primary/30 group-hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-5">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${card.iconBg}`}>
+                  {card.isAction ? <Plus className={`h-5 w-5 ${card.iconColor}`} /> : <card.icon className={`h-5 w-5 ${card.iconColor}`} />}
                 </div>
-                {!card.isAction && (
-                  <div className={`w-12 h-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
-                    <card.icon className={`h-6 w-6 ${card.iconColor}`} />
-                  </div>
-                )}
-              </div>
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="mt-4 text-muted-foreground hover:text-foreground px-0"
-              >
-                <Link to={card.buttonLink} className="flex items-center gap-1">
-                  {card.buttonText} <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{card.title}</p>
+                  {card.isAction ? (
+                    <p className="text-base font-semibold text-foreground">{card.subtitle}</p>
+                  ) : (
+                    <p className="text-2xl font-bold text-foreground">{card.value} <span className="text-sm font-normal text-muted-foreground">{card.subtitle}</span></p>
+                  )}
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
