@@ -906,7 +906,8 @@ export function UnionStatementPanel() {
                   </Popover>
                 </div>
               </div>
-
+            </div>
+          </div>
         </div>
       </div>
 
