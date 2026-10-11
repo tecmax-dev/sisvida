@@ -1,3 +1,4 @@
+import { PageHeader, KpiCard } from "@/components/design-system";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -248,19 +249,28 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
   // Get parent accounts for select
   const parentAccounts = accounts.filter((a) => a.is_synthetic);
 
+  const countBy = (t: string) => accounts.filter((a) => a.account_type === t).length;
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          <FolderTree className="h-5 w-5" />
-          Plano de Contas Sindical
-        </CardTitle>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Conta
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      <PageHeader
+        title="Plano de Contas"
+        description="Estrutura contábil do módulo sindical"
+        primary={
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nova conta
+          </Button>
+        }
+      />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiCard label="Total de contas" value={accounts.length} icon={FolderTree} active={filterType === "all"} onClick={() => setFilterType("all")} />
+        <KpiCard label="Receitas" value={countBy("revenue")} icon={FolderTree} tone="success" active={filterType === "revenue"} onClick={() => setFilterType("revenue")} />
+        <KpiCard label="Despesas" value={countBy("expense")} icon={FolderTree} tone="destructive" active={filterType === "expense"} onClick={() => setFilterType("expense")} />
+        <KpiCard label="Ativas" icon={FolderTree} value={accounts.filter((a) => a.is_active).length} hint={`${accounts.filter((a) => !a.is_active).length} inativas`} />
+      </div>
+    <Card className="shadow-none">
+      <CardContent className="space-y-3 p-3 sm:p-4">
         {/* Migration Alert */}
         {isUsingFallback && accounts.length > 0 && (
           <Alert>
@@ -524,5 +534,6 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
         </DialogContent>
       </Dialog>
     </Card>
+    </div>
   );
 }
