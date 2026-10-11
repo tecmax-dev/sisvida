@@ -48,8 +48,8 @@
     --cta-hover: 214 89% 32%;
     
     /* Background & Surfaces */
-    --background: 216 33% 98%;
-    --foreground: 220 32% 13%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
     
     --card: 0 0% 100%;
     --card-foreground: 220 20% 15%;
@@ -62,8 +62,8 @@
     --secondary-foreground: 220 50% 30%;
     
     /* Muted */
-    --muted: 216 24% 94%;
-    --muted-foreground: 218 12% 43%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
     
     /* Accent - Vermelho Prosinge #E31925 */
     --accent: 356 80% 96%;
@@ -91,7 +91,7 @@
     --mobile-primary-soft: 166 45% 94%;
     
     /* Borders & Inputs */
-    --border: 216 22% 88%;
+    --border: 214 32% 91%;
     --input: 216 22% 84%;
     --ring: 214 89% 42%;
     

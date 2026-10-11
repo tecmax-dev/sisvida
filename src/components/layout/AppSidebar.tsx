@@ -180,11 +180,11 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                         onClick={onNavigate}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
+                          "flex items-center gap-2.5 rounded-md h-9 px-2.5 text-[13px] transition-colors",
                           active ? "bg-shell-active font-medium text-shell-active-foreground" : "text-shell-foreground hover:bg-shell-hover hover:text-shell-active-foreground",
                         )}
                       >
-                        <it.icon className="h-4 w-4 shrink-0" />
+                        <it.icon className="h-[18px] w-[18px] shrink-0" />
                         <span className="flex-1 truncate">{it.label}</span>
                         {!!it.badge && <span className="rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">{it.badge}</span>}
                       </Link>
@@ -199,12 +199,12 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                       onClick={() => setOpen((o) => (o[key] ? {} : { [key]: true }))}
                       aria-expanded={isOpen}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
+                        "flex w-full items-center gap-2.5 rounded-md h-9 px-2.5 text-[13px] transition-colors",
                         catActive ? "font-medium text-shell-active-foreground" : "text-shell-foreground",
                         "hover:bg-shell-hover hover:text-shell-active-foreground",
                       )}
                     >
-                      <cat.icon className={cn("h-4 w-4 shrink-0", catActive && "text-shell-active-foreground")} />
+                      <cat.icon className={cn("h-[18px] w-[18px] shrink-0", catActive && "text-shell-active-foreground")} />
                       <span className="flex-1 truncate text-left">{cat.label}</span>
                       <ChevronDown className={cn("h-3.5 w-3.5 opacity-60 transition-transform", isOpen && "rotate-180")} />
                     </button>
@@ -219,7 +219,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                                 onClick={onNavigate}
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
-                                  "flex items-center gap-2 rounded-md px-2 py-1 text-[12.5px] transition-colors",
+                                  "flex items-center gap-2 rounded-md h-8 px-2 text-[12.5px] transition-colors",
                                   active ? "bg-shell-active/15 font-medium text-shell-active-foreground shadow-[inset_2px_0_0_hsl(var(--shell-active-foreground))]" : "text-shell-muted hover:bg-shell-hover hover:text-shell-active-foreground",
                                 )}
                               >
