@@ -1,7 +1,7 @@
 import { sendOfficialSignatureLink } from "@/lib/sendOfficialSignatureLink";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText, MoreHorizontal, Phone, Mail, Cake, CalendarClock, ShieldCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { extractFunctionsError } from "@/lib/functionsError";
@@ -31,6 +31,7 @@ import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { loadWhatsappConsent, persistWhatsappConsent } from "@/lib/whatsappConsentSave";
 import { z } from "zod";
 import { format } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { ptBR } from "date-fns/locale";
 
 // Components
@@ -628,7 +629,20 @@ export default function UnionMemberDetailPage({
     // Cache/draft desabilitado para edições de cadastro - garante consistência entre usuários
   });
 
+  const hasUnsavedChanges = JSON.stringify(formData) !== JSON.stringify(initialData) && autoSaveStatus !== 'saved';
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedChanges]);
+
   const handleTabChange = (tab: UnionMemberTab) => {
+    if (activeTab === 'cadastro' && tab !== 'cadastro' && tab !== 'carteirinha' && hasUnsavedChanges) {
+      const ok = window.confirm('Há alterações no cadastro que ainda não foram salvas. Deseja sair desta seção mesmo assim? (O salvamento automático pode ainda estar em andamento.)');
+      if (!ok) return;
+    }
     if (tab === 'cadastro' || tab === 'dependentes' || tab === 'sindical' || tab === 'anexos' || tab === 'agendamentos') {
       setActiveTab(tab);
     } else if (tab === 'carteirinha') {
@@ -1088,11 +1102,64 @@ export default function UnionMemberDetailPage({
         </div>
 
         {/* Tab Content */}
-        <div className={isModalMode ? 'lg:col-span-8' : 'min-w-0'}>
+        <div className={isModalMode ? 'lg:col-span-8 space-y-4' : 'min-w-0 space-y-4'}>
+          {(() => {
+            const bd = formData.birthDate ? parseDateOnlyToLocalNoon(formData.birthDate) : null;
+            const now = new Date();
+            let age: number | null = null;
+            if (bd && !isNaN(bd.getTime())) {
+              age = now.getFullYear() - bd.getFullYear();
+              if (now.getMonth() < bd.getMonth() || (now.getMonth() === bd.getMonth() && now.getDate() < bd.getDate())) age--;
+            }
+            const affRaw = formData.affiliationDate || (unionJoinedAt ? unionJoinedAt.slice(0, 10) : '');
+            const aff = affRaw ? parseDateOnlyToLocalNoon(affRaw) : null;
+            let tenure = '—';
+            if (aff && !isNaN(aff.getTime())) {
+              const months = (now.getFullYear() - aff.getFullYear()) * 12 + (now.getMonth() - aff.getMonth()) - (now.getDate() < aff.getDate() ? 1 : 0);
+              const y = Math.floor(Math.max(months, 0) / 12), m = Math.max(months, 0) % 12;
+              tenure = y > 0 ? `${y} ano${y > 1 ? 's' : ''}${m ? ` e ${m} m${m > 1 ? 'eses' : 'ês'}` : ''}` : `${m} m${m === 1 ? 'ês' : 'eses'}`;
+            }
+            const digits = (formData.phone || '').replace(/\D/g, '');
+            const wa = digits ? (digits.startsWith('55') ? digits : `55${digits}`) : '';
+            return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary"><Cake className="h-4 w-4" /></div>
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Idade</p><p className="truncate text-sm font-semibold text-foreground">{age !== null ? `${age} anos` : '—'}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary"><CalendarClock className="h-4 w-4" /></div>
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Tempo de associação</p><p className="truncate text-sm font-semibold text-foreground">{tenure}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary"><ShieldCheck className="h-4 w-4" /></div>
+                    <div className="min-w-0"><p className="text-xs text-muted-foreground">Situação</p><Badge variant="outline" className={currentStatus.color}>{currentStatus.label}</Badge></div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild={!!digits} variant="outline" size="sm" disabled={!digits} className="gap-2">
+                    {digits ? <a href={`tel:${digits}`}><Phone className="h-4 w-4" />Ligar</a> : <span><Phone className="h-4 w-4" />Ligar</span>}
+                  </Button>
+                  <Button asChild={!!wa} variant="outline" size="sm" disabled={!wa} className="gap-2">
+                    {wa ? <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" />WhatsApp</a> : <span><MessageCircle className="h-4 w-4" />WhatsApp</span>}
+                  </Button>
+                  <Button asChild={!!formData.email} variant="outline" size="sm" disabled={!formData.email} className="gap-2">
+                    {formData.email ? <a href={`mailto:${formData.email}`}><Mail className="h-4 w-4" />E-mail</a> : <span><Mail className="h-4 w-4" />E-mail</span>}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
       {activeTab === 'cadastro' && (
         <div className="space-y-6">
           <div className="bg-card rounded-lg border p-4 md:p-5">
             <h2 className="mb-4 text-sm font-semibold text-foreground">Dados pessoais, contato e endereço</h2>
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {[['pessoais','Pessoais'],['endereco','Endereço'],['contato','Contato'],['profissional','Profissional']].map(([k,l]) => (
+                <Button key={k} type="button" variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => document.getElementById(`secao-${k}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{l}</Button>
+              ))}
+            </div>
             <form onSubmit={handleSubmit}>
               {/* Photo Upload Section */}
               <div className="flex items-start gap-6 mb-6 pb-6 border-b">
@@ -1126,6 +1193,7 @@ export default function UnionMemberDetailPage({
                 clinicDefaultLimit={clinicDefaultLimit}
                 canEditConvenio={canEditMemberConvenio()}
                 onNavigateToEmployer={handleNavigateToEmployer}
+                showSectionHeadings
               />
             </form>
             <div className="mt-8 pt-6 border-t flex justify-end">

@@ -34,6 +34,7 @@ interface PatientFormFieldsProps {
   clinicDefaultLimit?: number | null;
   canEditConvenio?: boolean;
   onNavigateToEmployer?: () => void;
+  showSectionHeadings?: boolean;
 }
 
 export interface PatientFormData {
@@ -169,6 +170,7 @@ export function PatientFormFields({
   clinicDefaultLimit,
   canEditConvenio = true,
   onNavigateToEmployer,
+  showSectionHeadings = false,
 }: PatientFormFieldsProps) {
   const updateField = <K extends keyof PatientFormData>(
     field: K,
@@ -220,6 +222,7 @@ export function PatientFormFields({
 
   return (
     <div className="space-y-6">
+      {showSectionHeadings && <h3 id="secao-pessoais" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dados pessoais</h3>}
       {/* Linha 1: Checkboxes, Matrícula e Código Prontuário */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <div className="flex items-center space-x-2">
@@ -477,6 +480,7 @@ export function PatientFormFields({
         </div>
       </div>
 
+      {showSectionHeadings && <h3 id="secao-endereco" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Endereço</h3>}
       {/* Linha 5: CEP, Endereço, Número, Bairro */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
@@ -573,6 +577,7 @@ export function PatientFormFields({
         </div>
       </div>
 
+      {showSectionHeadings && <h3 id="secao-contato" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contato e observações</h3>}
       {/* Linha 7: TAG, Indicação, Avisos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-end">
         <div>
@@ -702,6 +707,7 @@ export function PatientFormFields({
         </div>
       </div>
 
+      {showSectionHeadings && <h3 id="secao-profissional" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dados profissionais e familiares</h3>}
       {/* Linha 9: Profissão, Escolaridade, CNPJ Empresa */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
