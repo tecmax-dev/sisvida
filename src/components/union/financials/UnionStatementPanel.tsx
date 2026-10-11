@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/table";
 import { format, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2, ArrowLeftRight } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2, ArrowLeftRight, Wallet, TrendingDown, TrendingUp, Landmark } from "lucide-react";
+import { KpiCard } from "@/components/design-system";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -741,22 +742,26 @@ export function UnionStatementPanel() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Movimentação e Saldo</h1>
-          <p className="text-muted-foreground">
-            Extrato detalhado de movimentações por portador
-          </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><ArrowLeftRight className="h-5 w-5" /></span>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Movimentação e Saldo</h1>
+            <p className="text-sm text-muted-foreground">Extrato detalhado de movimentações por conta bancária.</p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
-            Transferência
-          </Button>
-          <Button onClick={() => setTransactionDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Lançamento
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-2"><MoreHorizontal className="h-4 w-4" />Mais ações</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setTransferDialogOpen(true)}><ArrowLeftRight className="h-4 w-4 mr-2" />Transferência</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} disabled={!cashRegisterId || !summary}><Download className="h-4 w-4 mr-2" />Exportar PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel} disabled={!cashRegisterId || !summary}><FileText className="h-4 w-4 mr-2" />Exportar Excel</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="sm" onClick={() => setTransactionDialogOpen(true)} className="h-9 gap-1"><Plus className="h-4 w-4" />Novo Lançamento</Button>
         </div>
       </div>
 
@@ -791,14 +796,14 @@ export function UnionStatementPanel() {
       )}
 
       {/* Filters */}
-      <Card className="border-border/50 shadow-sm">
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-6">
+      <div className="rounded-xl border bg-card p-3 shadow-sm">
+        <div>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
             {/* Row 1: Portador selector - full width */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-foreground">Portador Bancário</Label>
+            <div className="space-y-1 lg:min-w-[280px] lg:flex-1">
+              <Label className="text-xs text-muted-foreground">Conta bancária</Label>
               <Select value={cashRegisterId} onValueChange={setCashRegisterId}>
-                <SelectTrigger className="w-full md:max-w-md h-11 bg-background">
+                <SelectTrigger className="w-full h-9 bg-background">
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="Selecione o portador" />
@@ -818,17 +823,17 @@ export function UnionStatementPanel() {
             </div>
 
             {/* Row 2: Date filters and export buttons */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
               {/* Date filters group */}
-              <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-foreground">Data Inicial</Label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Data inicial</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <div className="relative">
                         <input
                           type="text"
-                          className="flex h-11 w-full sm:w-[180px] rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          className="flex h-9 w-full sm:w-[150px] rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           placeholder="dd/mm/aaaa"
                           value={format(startDate, "dd/MM/yyyy")}
                           onChange={(e) => {
@@ -862,14 +867,14 @@ export function UnionStatementPanel() {
                   </Popover>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-foreground">Data Final</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Data final</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <div className="relative">
                         <input
                           type="text"
-                          className="flex h-11 w-full sm:w-[180px] rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          className="flex h-9 w-full sm:w-[150px] rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           placeholder="dd/mm/aaaa"
                           value={format(endDate, "dd/MM/yyyy")}
                           onChange={(e) => {
@@ -901,32 +906,10 @@ export function UnionStatementPanel() {
                   </Popover>
                 </div>
               </div>
-
-              {/* Export buttons */}
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  onClick={handleExportPDF}
-                  disabled={!cashRegisterId || !summary}
-                  className="flex-1 sm:flex-none h-11"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleExportExcel}
-                  disabled={!cashRegisterId || !summary}
-                  className="flex-1 sm:flex-none h-11"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Excel
-                </Button>
-              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Statement Content */}
       {!cashRegisterId ? (
@@ -940,22 +923,11 @@ export function UnionStatementPanel() {
         <Skeleton className="h-96" />
       ) : (
         <>
-          {/* Previous Balance */}
+          {/* Indicadores */}
           {summary && (
-            <Card>
-              <CardContent className="p-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-blue-500/10">
-                      <TableHead className="font-bold">DATA</TableHead>
-                      <TableHead className="text-right font-bold">SALDO ANTERIOR</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium">{previousBalanceDateLabel}</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <KpiCard label="Saldo anterior" value={formatCurrency(summary.initialBalance)} icon={Wallet}
+                hint={<span className="flex flex-wrap items-center gap-1"><span>{previousBalanceDateLabel}</span>
                           {isEditingInitialBalanceDate ? (
                             <div className="flex items-center gap-1">
                               <input
@@ -1001,33 +973,27 @@ export function UnionStatementPanel() {
                               Base: {formatDateBR(String((selectedRegister as any).initial_balance_date))}
                               <Pencil className="h-3 w-3" />
                             </button>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {formatCurrency(summary.initialBalance)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                          ) : null}</span>} />
+              <KpiCard label="Débitos" tone="destructive" value={formatCurrency(summary.totalDebits)} icon={TrendingDown} hint={`${summary.totalRecords} registros no período`} />
+              <KpiCard label="Créditos" tone="success" value={formatCurrency(summary.totalCredits)} icon={TrendingUp} />
+              <KpiCard label="Saldo final" tone="primary" value={formatCurrency(summary.finalBalance)} icon={Landmark} />
+            </div>
           )}
 
           {/* Transactions Table */}
-          <Card>
+          <Card className="rounded-xl shadow-sm">
             <CardContent className="p-0">
-              <div className="max-h-[600px] overflow-auto">
+              <div className="max-h-[calc(100vh-360px)] min-h-[320px] overflow-auto">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10">
-                     <TableRow className="bg-blue-500/10">
+                  <TableHeader className="sticky top-0 bg-card z-10">
+                     <TableRow className="text-[11px] uppercase tracking-wide [&>th]:font-medium [&>th]:text-muted-foreground">
                        <TableHead className="font-bold w-[100px]">DATA</TableHead>
                        <TableHead className="font-bold">DESCRIÇÃO</TableHead>
                        <TableHead className="font-bold w-[90px] text-center">CONC.</TableHead>
                        <TableHead className="font-bold w-[100px]">Nº CHEQUE</TableHead>
                        <TableHead className="font-bold w-[150px]">FORNECEDOR</TableHead>
-                       <TableHead className="text-right font-bold text-red-600 w-[120px]">DÉBITO</TableHead>
-                       <TableHead className="text-right font-bold text-emerald-600 w-[120px]">CRÉDITO</TableHead>
+                       <TableHead className="text-right font-bold w-[120px]">DÉBITO</TableHead>
+                       <TableHead className="text-right font-bold w-[120px]">CRÉDITO</TableHead>
                        <TableHead className="text-right font-bold w-[140px]">SALDO</TableHead>
                        <TableHead className="w-[50px]"></TableHead>
                      </TableRow>
@@ -1040,7 +1006,7 @@ export function UnionStatementPanel() {
                             <TableCell className="font-medium">
                               {idx === 0 ? format(group.date, "dd/MM/yyyy") : ""}
                             </TableCell>
-                            <TableCell className="text-sm uppercase">{t.description}</TableCell>
+                            <TableCell className="text-sm font-medium text-foreground">{t.description}</TableCell>
                             <TableCell className="text-center">
                               <span
                                 className={cn(
@@ -1056,10 +1022,10 @@ export function UnionStatementPanel() {
                             </TableCell>
                              <TableCell className="text-sm">{t.check_number || ""}</TableCell>
                              <TableCell className="text-sm">{t.supplier_name || ""}</TableCell>
-                             <TableCell className="text-right text-red-600">
+                             <TableCell className="text-right tabular-nums text-destructive">
                               {t.type === "expense" ? formatCurrency(t.amount) : ""}
                             </TableCell>
-                            <TableCell className="text-right text-emerald-600">
+                            <TableCell className="text-right tabular-nums text-success">
                               {t.type === "income" ? formatCurrency(t.amount) : ""}
                             </TableCell>
                             <TableCell className="text-right font-medium">
@@ -1110,12 +1076,12 @@ export function UnionStatementPanel() {
                           </TableRow>
                         ))}
                         {/* Daily subtotal */}
-                        <TableRow className="bg-muted/50 border-b-2">
-                          <TableCell colSpan={9} className="font-bold text-sm py-2">
+                        <TableRow className="bg-muted/40">
+                          <TableCell colSpan={9} className="py-1.5 text-xs font-medium text-muted-foreground">
                             Total do dia {format(group.date, "dd/MM/yyyy")}:{" "}
-                            <span className="text-red-600">Débito: {formatCurrency(-group.totalDebit)}</span>
+                            <span className="text-destructive">Débito: {formatCurrency(-group.totalDebit)}</span>
                             {" - "}
-                            <span className="text-emerald-600">Crédito: {formatCurrency(group.totalCredit)}</span>
+                            <span className="text-success">Crédito: {formatCurrency(group.totalCredit)}</span>
                             {" - "}
                             Saldo: {formatCurrency(group.endDayBalance)}
                           </TableCell>
@@ -1136,40 +1102,6 @@ export function UnionStatementPanel() {
             </CardContent>
           </Card>
 
-          {/* Summary */}
-          {summary && dailyGroups.length > 0 && (
-            <Card>
-              <CardContent className="p-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-emerald-500/10">
-                      <TableHead className="font-bold text-center">REGISTROS</TableHead>
-                      <TableHead className="font-bold text-right">TOTAL INICIAL</TableHead>
-                      <TableHead className="font-bold text-right text-red-600">TOTAL DÉBITOS</TableHead>
-                      <TableHead className="font-bold text-right text-emerald-600">TOTAL CRÉDITO</TableHead>
-
-                      <TableHead className="font-bold text-right text-blue-600">TOTAL FINAL</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="text-center font-bold">{summary.totalRecords}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(summary.initialBalance)}</TableCell>
-                      <TableCell className="text-right text-red-600">
-                        {formatCurrency(summary.totalDebits)}
-                      </TableCell>
-                      <TableCell className="text-right text-emerald-600">
-                        {formatCurrency(summary.totalCredits)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-blue-600">
-                        {formatCurrency(summary.finalBalance)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
       {/* Transaction Dialog */}
