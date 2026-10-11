@@ -225,6 +225,7 @@ import UnionAffiliationValueAuditPage from "./pages/union/UnionAffiliationValueA
 import UnionBookingUsagePage from "./pages/union/UnionBookingUsagePage";
 import UnionReceivablesForecastPage from "./pages/union/UnionReceivablesForecastPage";
 import UnionMembersListPage from "./pages/union/UnionMembersListPage";
+import UnionMembersV2Page from "./pages/union/members-v2/UnionMembersV2Page";
 import UnionMemberDetailPage from "./pages/union/UnionMemberDetailPage";
 import UnionMemberNewPage from "./pages/union/UnionMemberNewPage";
 import UnionContributionsPage from "./pages/union/UnionContributionsPage";
@@ -688,6 +689,7 @@ function App() {
                   <Route path="empresas/:id" element={<UnionEmployerDetailPage />} />
                   <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
                   <Route path="socios" element={<UnionMembersListPage />} />
+                  <Route path="socios-v2" element={<UnionMembersV2Page />} />
                   <Route path="socios/novo" element={<UnionMemberNewPage />} />
                   <Route path="socios/contracheques" element={<UnionPayslipApprovalsPage />} />
                   <Route path="socios/:id" element={<UnionMemberDetailPage />} />
