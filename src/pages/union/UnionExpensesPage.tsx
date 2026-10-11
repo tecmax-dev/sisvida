@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { RefreshDataButton } from "@/components/common/RefreshDataButton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,7 +35,9 @@ import { UnionCheckPrintDialog } from "@/components/union/financials/UnionCheckP
 import { UnionCopyExpensesDialog } from "@/components/union/financials/UnionCopyExpensesDialog";
 import { UnionBatchCheckPrintDialog } from "@/components/union/financials/UnionBatchCheckPrintDialog";
 import { toast } from "sonner";
-import { format, parseISO, startOfDay, isAfter } from "date-fns";
+import { format, parseISO, startOfDay, isAfter, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { KpiCard, CountTabs, StatusBadge } from "@/components/design-system";
 import { ptBR } from "date-fns/locale";
 import {
   Plus,
@@ -60,6 +62,11 @@ import {
   Tag,
   Copy,
   Undo2,
+  Wallet,
+  MoreVertical,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +95,10 @@ export default function UnionExpensesPage() {
   const [cashRegisterFilter, setCashRegisterFilter] = useState<string>("all");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [checkNumberFilter, setCheckNumberFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [startDateInput, setStartDateInput] = useState("");
   const [endDateInput, setEndDateInput] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
@@ -198,7 +209,7 @@ export default function UnionExpensesPage() {
   }, [transactions]);
 
   // Filter transactions
-  const filteredTransactions = useMemo(() => {
+  const filteredTransactionsNoStatus = useMemo(() => {
     const normalize = (value: unknown) => String(value ?? "").toLowerCase();
     const searchTerm = normalize(search);
     const searchDigits = String(search ?? "").replace(/\D/g, "");
@@ -220,9 +231,8 @@ export default function UnionExpensesPage() {
         normalize(t.check_number).includes(searchTerm) ||
         normalize(t.document_number).includes(searchTerm);
 
-      // Status filter
-      const matchesStatus =
-        statusFilter === "all" || t.effectiveStatus === statusFilter;
+      const matchesStatus = true;
+      const matchesCategory = categoryFilter === "all" || t.category_id === categoryFilter || t.category?.id === categoryFilter;
 
       // Supplier filter
       const matchesSupplier =
@@ -246,6 +256,7 @@ export default function UnionExpensesPage() {
       return (
         matchesSearch &&
         matchesStatus &&
+        matchesCategory &&
         matchesSupplier &&
         matchesCashRegister &&
         matchesPaymentMethod &&
@@ -270,7 +281,7 @@ export default function UnionExpensesPage() {
   }, [
     processedTransactions,
     search,
-    statusFilter,
+    categoryFilter,
     supplierFilter,
     cashRegisterFilter,
     paymentMethodFilter,
@@ -278,6 +289,19 @@ export default function UnionExpensesPage() {
     startDateFilter,
     endDateFilter,
   ]);
+
+  const filteredTransactions = useMemo(
+    () => (statusFilter === "all" ? filteredTransactionsNoStatus : filteredTransactionsNoStatus.filter((t) => t.effectiveStatus === statusFilter)),
+    [filteredTransactionsNoStatus, statusFilter]
+  );
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter, supplierFilter, cashRegisterFilter, paymentMethodFilter, checkNumberFilter, startDateFilter, endDateFilter]);
+
+  const categoryOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    processedTransactions.forEach((t) => { if (t.category?.id) m.set(t.category.id, t.category.name); });
+    return Array.from(m, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [processedTransactions]);
 
   const deleteMutation = useMutation({
     mutationFn: async (transaction: any) => {
@@ -382,63 +406,74 @@ export default function UnionExpensesPage() {
     setSupplierFilter("all");
     setCashRegisterFilter("all");
     setPaymentMethodFilter("all");
+    setCategoryFilter("all");
     setCheckNumberFilter("");
     setStartDateInput("");
     setEndDateInput("");
     setStartDateFilter("");
     setEndDateFilter("");
+    setSearch("");
   };
 
-  // Summary calculations
-  const totalExpenses = processedTransactions.reduce(
-    (sum, t) => sum + Number(t.net_value || t.amount),
-    0
-  );
-  const pendingExpenses = processedTransactions
-    .filter((t) => t.effectiveStatus === "pending")
-    .reduce((sum, t) => sum + Number(t.net_value || t.amount), 0);
-  const overdueExpenses = processedTransactions
-    .filter((t) => t.effectiveStatus === "overdue")
-    .reduce((sum, t) => sum + Number(t.net_value || t.amount), 0);
-  const paidExpenses = processedTransactions
-    .filter((t) => t.effectiveStatus === "paid")
-    .reduce((sum, t) => sum + Number(t.net_value || t.amount), 0);
-
-  const pendingCount = processedTransactions.filter((t) => t.effectiveStatus === "pending").length;
-  const overdueCount = processedTransactions.filter((t) => t.effectiveStatus === "overdue").length;
-  const paidCount = processedTransactions.filter((t) => t.effectiveStatus === "paid").length;
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "paid":
-        return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 text-xs px-2 py-0.5">Pago</Badge>;
-      case "pending":
-        return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 text-xs px-2 py-0.5">Pendente</Badge>;
-      case "overdue":
-        return <Badge className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800 text-xs px-2 py-0.5">Vencido</Badge>;
-      case "cancelled":
-        return <Badge className="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-xs px-2 py-0.5">Cancelado</Badge>;
-      case "reversed":
-        return <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800 text-xs px-2 py-0.5">Estornado</Badge>;
-      default:
-        return <Badge variant="secondary" className="text-xs px-2 py-0.5">{status}</Badge>;
+  const applyPeriod = (start: string, end: string) => {
+    setStartDateInput(start); setEndDateInput(end);
+    setStartDateFilter(start); setEndDateFilter(end);
+    setPeriodOpen(false);
+  };
+  const periodLabel = (() => {
+    if (!startDateFilter && !endDateFilter) return "Todo o período";
+    const f = (d: string) => { try { return format(parseISO(d), "dd/MM/yyyy"); } catch { return d; } };
+    if (startDateFilter && endDateFilter) {
+      const s = parseISO(startDateFilter), e = parseISO(endDateFilter);
+      if (s.getDate() === 1 && e.getMonth() === s.getMonth() && e.getFullYear() === s.getFullYear() && endOfMonth(s).getDate() === e.getDate()) {
+        const l = format(s, "MMMM 'de' yyyy", { locale: ptBR });
+        return l.charAt(0).toUpperCase() + l.slice(1);
+      }
+      return `${f(startDateFilter)} – ${f(endDateFilter)}`;
     }
+    return startDateFilter ? `A partir de ${f(startDateFilter)}` : `Até ${f(endDateFilter)}`;
+  })();
+
+  const amountOf = (t: any) => Number(t.net_value || t.amount);
+  // Indicadores e abas respeitam os filtros (exceto a própria situação)
+  const baseFiltered = useMemo(
+    () => filteredTransactionsNoStatus,
+    [filteredTransactionsNoStatus]
+  );
+  const sumBy = (st?: string) => baseFiltered.filter((t) => !st || t.effectiveStatus === st).reduce((s, t) => s + amountOf(t), 0);
+  const countBy = (st?: string) => (st ? baseFiltered.filter((t) => t.effectiveStatus === st).length : baseFiltered.length);
+  const totalExpenses = sumBy();
+  const pendingExpenses = sumBy("pending");
+  const overdueExpenses = sumBy("overdue");
+  const paidExpenses = sumBy("paid");
+  const pendingCount = countBy("pending");
+  const overdueCount = countBy("overdue");
+  const paidCount = countBy("paid");
+  const cancelledCount = countBy("cancelled");
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filteredTransactions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const statusTone: Record<string, "success" | "warning" | "destructive" | "default" | "primary"> = {
+    paid: "success", pending: "warning", overdue: "destructive", cancelled: "default", reversed: "primary",
   };
+  const statusLabel: Record<string, string> = { paid: "Paga", pending: "Pendente", overdue: "Vencida", cancelled: "Cancelada", reversed: "Estornada" };
+  const getStatusBadge = (status: string) => <StatusBadge tone={statusTone[status] ?? "default"}>{statusLabel[status] ?? status}</StatusBadge>;
 
   const getPaymentMethodLabel = (method: string) => {
     const methods: Record<string, string> = {
-      pix: "PIX",
-      cash: "Dinheiro",
-      bank_transfer: "Transferência",
-      credit_card: "Cartão Crédito",
-      debit_card: "Cartão Débito",
-      check: "Cheque",
-      boleto: "Boleto",
-      reimbursement: "Ressarcimento",
-      chargeback: "Estorno",
-      compensation: "Compensação",
+      pix: "PIX", cash: "Dinheiro", bank_transfer: "Transferência", credit_card: "Cartão Crédito", debit_card: "Cartão Débito",
+      check: "Cheque", boleto: "Boleto", reimbursement: "Ressarcimento", chargeback: "Estorno", compensation: "Compensação",
     };
     return methods[method] || method;
+  };
+
+  const formatDoc = (raw: unknown) => {
+    const doc = String(raw || "").replace(/\D/g, "");
+    if (doc.length === 14) return doc.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    if (doc.length === 11) return doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    return "";
   };
 
   if (!clinicId) return null;
@@ -446,211 +481,135 @@ export default function UnionExpensesPage() {
   if (isLoading) {
     return (
       <div className="space-y-4 p-1">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-9 w-28" />
-        </div>
-        <div className="grid grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-16" />
-          ))}
-        </div>
+        <Skeleton className="h-14 w-full" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20" />)}</div>
         <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
+  const today = new Date();
+  const ym = (d: Date) => format(d, "yyyy-MM-dd");
+  const activeExtraFilters = [paymentMethodFilter !== "all", !!checkNumberFilter].filter(Boolean).length;
+
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Despesas</h1>
-          <p className="text-sm text-muted-foreground">
-            {filteredTransactions.length} de {processedTransactions.length} registros
-          </p>
+      {/* Cabeçalho */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Wallet className="h-5 w-5" /></span>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Despesas</h1>
+            <p className="text-sm text-muted-foreground">Cadastre, acompanhe e gerencie as despesas do sindicato.</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <RefreshDataButton
-            queryKeys={[["union-financial-transactions"], ["union-suppliers"], ["union-cash-registers"]]}
-          />
-        {canManageExpenses() && (
-          <Button size="sm" onClick={() => { setEditingTransaction(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nova Despesa
-          </Button>
-        )}
-        </div>
-      </div>
-
-      {/* Compact Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-muted-foreground bg-muted/30">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total</p>
-                <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{formatCurrency(totalExpenses)}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Popover open={periodOpen} onOpenChange={setPeriodOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-2"><Calendar className="h-4 w-4" />{periodLabel}<ChevronDown className="h-3.5 w-3.5 opacity-60" /></Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="secondary" size="sm" onClick={() => applyPeriod(ym(startOfMonth(today)), ym(endOfMonth(today)))}>Este mês</Button>
+                <Button variant="secondary" size="sm" onClick={() => { const p = subMonths(today, 1); applyPeriod(ym(startOfMonth(p)), ym(endOfMonth(p))); }}>Mês anterior</Button>
+                <Button variant="secondary" size="sm" onClick={() => applyPeriod(`${today.getFullYear()}-01-01`, `${today.getFullYear()}-12-31`)}>Este ano</Button>
+                <Button variant="secondary" size="sm" onClick={() => applyPeriod("", "")}>Todo o período</Button>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-slate-500 dark:text-slate-400" />
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label className="text-xs">De</Label><Input type="date" value={startDateInput} onChange={(e) => setStartDateInput(e.target.value)} className="mt-1 h-8 text-sm" /></div>
+                <div><Label className="text-xs">Até</Label><Input type="date" value={endDateInput} onChange={(e) => setEndDateInput(e.target.value)} className="mt-1 h-8 text-sm" /></div>
               </div>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">{processedTransactions.length} lançamentos</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-warning bg-warning/5">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Pendentes</p>
-                <p className="text-lg font-bold text-amber-700 dark:text-amber-300">{formatCurrency(pendingExpenses)}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-              </div>
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">{pendingCount} despesas</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-destructive bg-destructive/5">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wide">Vencidas</p>
-                <p className="text-lg font-bold text-rose-700 dark:text-rose-300">{formatCurrency(overdueExpenses)}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-rose-500 dark:text-rose-400" />
-              </div>
-            </div>
-            <p className="text-xs text-rose-600 dark:text-rose-500 mt-1">{overdueCount} despesas</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-success bg-success/5">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Pagas</p>
-                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(paidExpenses)}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
-              </div>
-            </div>
-            <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-1">{paidCount} despesas</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por descrição, razão social, nome fantasia ou CNPJ..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-9 text-sm"
-          />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setFiltersOpen(!filtersOpen)}
-            className={cn("h-9", filtersOpen && "bg-accent")}
-          >
-            <Filter className="h-4 w-4 mr-1.5" />
-            Filtros
-            <ChevronDown className={cn("h-3.5 w-3.5 ml-1 transition-transform", filtersOpen && "rotate-180")} />
-          </Button>
-          <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckPrintDialogOpen(true)}>
-            <Printer className="h-4 w-4 mr-1.5" />
-            Cópia Cheque
-          </Button>
-          <Button variant="outline" size="sm" className="h-9" onClick={() => setBatchPrintDialogOpen(true)}>
-            <Printer className="h-4 w-4 mr-1.5" />
-            Lote Cheques
-          </Button>
+              <Button size="sm" className="w-full" onClick={() => applyPeriod(startDateInput, endDateInput)}>Aplicar período</Button>
+            </PopoverContent>
+          </Popover>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-2"><MoreHorizontal className="h-4 w-4" />Mais ações<ChevronDown className="h-3.5 w-3.5 opacity-60" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => setCheckPrintDialogOpen(true)}><Printer className="h-4 w-4 mr-2" />Cópia de cheque</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setBatchPrintDialogOpen(true)}><Printer className="h-4 w-4 mr-2" />Lote de cheques</DropdownMenuItem>
+              {canManageExpenses() && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setCopyDialogOpen(true)}><Copy className="h-4 w-4 mr-2" />Copiar despesas</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCheckDialogOpen(true)}><FileCheck className="h-4 w-4 mr-2" />Liquidar cheque</DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => { ["union-financial-transactions", "union-suppliers", "union-cash-registers"].forEach((k) => queryClient.invalidateQueries({ queryKey: [k] })); toast.success("Dados atualizados"); }}>
+                <RefreshCw className="h-4 w-4 mr-2" />Atualizar dados
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {canManageExpenses() && (
-            <>
-              <Button variant="outline" size="sm" className="h-9" onClick={() => setCopyDialogOpen(true)}>
-                <Copy className="h-4 w-4 mr-1.5" />
-                Copiar Despesas
-              </Button>
-              <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckDialogOpen(true)}>
-                <FileCheck className="h-4 w-4 mr-1.5" />
-                Liquidar Cheque
-              </Button>
-            </>
+            <Button size="sm" className="h-9" onClick={() => { setEditingTransaction(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" />Nova Despesa
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Filters Panel */}
-      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <CollapsibleContent>
-          <Card className="bg-muted/30">
-            <CardContent className="p-3">
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                <div>
-                  <Label className="text-xs">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-8 mt-1 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="overdue">Vencido</SelectItem>
-                      <SelectItem value="paid">Pago</SelectItem>
-                      <SelectItem value="cancelled">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      {/* Indicadores */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Total de despesas" value={formatCurrency(totalExpenses)} hint={`${countBy().toLocaleString("pt-BR")} lançamentos`} icon={Wallet} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
+        <KpiCard label="Pendentes" tone="warning" value={formatCurrency(pendingExpenses)} hint={`${pendingCount.toLocaleString("pt-BR")} despesas`} icon={Clock} active={statusFilter === "pending"} onClick={() => setStatusFilter("pending")} />
+        <KpiCard label="Vencidas" tone="destructive" value={formatCurrency(overdueExpenses)} hint={`${overdueCount.toLocaleString("pt-BR")} despesas`} icon={AlertCircle} active={statusFilter === "overdue"} onClick={() => setStatusFilter("overdue")} />
+        <KpiCard label="Pagas" tone="success" value={formatCurrency(paidExpenses)} hint={`${paidCount.toLocaleString("pt-BR")} despesas`} icon={CheckCircle} active={statusFilter === "paid"} onClick={() => setStatusFilter("paid")} />
+      </div>
 
-                <div>
-                  <Label className="text-xs">Fornecedor</Label>
-                  <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-                    <SelectTrigger className="h-8 mt-1 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {suppliers?.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+      {/* Abas + filtros + tabela */}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <CountTabs
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v)}
+          items={[
+            { value: "all", label: "Todas", count: countBy(), tone: "primary" },
+            { value: "pending", label: "Pendentes", count: pendingCount, tone: "warning" },
+            { value: "overdue", label: "Vencidas", count: overdueCount, tone: "destructive" },
+            { value: "paid", label: "Pagas", count: paidCount, tone: "success" },
+            ...(cancelledCount > 0 ? [{ value: "cancelled", label: "Canceladas", count: cancelledCount }] : []),
+          ]}
+        />
 
+        <div className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Buscar por descrição, fornecedor, CNPJ ou nº do documento..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 pl-8 text-sm" />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue placeholder="Categorias" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                {categoryOptions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+              <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue placeholder="Fornecedor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os fornecedores</SelectItem>
+                {suppliers?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={cashRegisterFilter} onValueChange={setCashRegisterFilter}>
+              <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue placeholder="Conta bancária" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as contas</SelectItem>
+                {cashRegisters?.map((cr) => <SelectItem key={cr.id} value={cr.id}>{cr.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1.5"><Filter className="h-4 w-4" />Mais filtros{activeExtraFilters > 0 && <span className="rounded-full bg-primary px-1.5 text-[11px] text-primary-foreground">{activeExtraFilters}</span>}</Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-64 space-y-3">
                 <div>
-                  <Label className="text-xs">Portador</Label>
-                  <Select value={cashRegisterFilter} onValueChange={setCashRegisterFilter}>
-                    <SelectTrigger className="h-8 mt-1 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {cashRegisters?.map((cr) => (
-                        <SelectItem key={cr.id} value={cr.id}>{cr.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Pagamento</Label>
+                  <Label className="text-xs">Forma de pagamento</Label>
                   <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                    <SelectTrigger className="h-8 mt-1 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
                       <SelectItem value="pix">PIX</SelectItem>
                       <SelectItem value="cash">Dinheiro</SelectItem>
                       <SelectItem value="bank_transfer">Transferência</SelectItem>
@@ -659,229 +618,107 @@ export default function UnionExpensesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
-                  <Label className="text-xs">Nº Cheque</Label>
-                  <Input
-                    placeholder="Ex: 1258"
-                    value={checkNumberFilter}
-                    onChange={(e) => setCheckNumberFilter(e.target.value)}
-                    className="h-8 mt-1 text-sm"
-                  />
+                  <Label className="text-xs">Nº do cheque</Label>
+                  <Input placeholder="Ex: 1258" value={checkNumberFilter} onChange={(e) => setCheckNumberFilter(e.target.value)} className="mt-1 h-8 text-sm" />
                 </div>
+              </PopoverContent>
+            </Popover>
+            <Button variant="link" size="sm" className="h-9 px-2" onClick={clearFilters}>Limpar filtros</Button>
+          </div>
+        </div>
 
-                <div>
-                  <Label className="text-xs">Data Início</Label>
-                  <Input
-                    type="date"
-                    value={startDateInput}
-                    onChange={(e) => setStartDateInput(e.target.value)}
-                    className="h-8 mt-1 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs">Data Fim</Label>
-                  <Input
-                    type="date"
-                    value={endDateInput}
-                    onChange={(e) => setEndDateInput(e.target.value)}
-                    className="h-8 mt-1 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="mt-2 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearFilters}>
-                  Limpar filtros
-                </Button>
-                <Button size="sm" className="h-7 text-xs" onClick={handleSearchByDate}>
-                  <Search className="h-3.5 w-3.5 mr-1" />
-                  Buscar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Expense List - Compact Professional Design */}
-      <Card>
-        <CardContent className="p-0">
-          {/* Fixed Header */}
-           <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
-             <div className="col-span-2">Descrição</div>
-             <div className="col-span-2">Fornecedor</div>
-             <div className="col-span-1">Nº Doc</div>
-             <div className="col-span-2">Categoria / Cheque</div>
-             <div className="col-span-1 text-center">Vencimento</div>
-             <div className="col-span-2 text-right">Valor</div>
-             <div className="col-span-1 text-center">Status</div>
-             <div className="col-span-1"></div>
-           </div>
-
-          <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px]">
-            {filteredTransactions && filteredTransactions.length > 0 ? (
-              <div className="divide-y divide-border/50">
-                {filteredTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className={cn(
-                      "grid grid-cols-12 gap-2 px-3 py-2 hover:bg-muted/30 transition-colors items-center text-sm",
-                      transaction.effectiveStatus === "overdue" && "bg-rose-50/30 dark:bg-rose-950/20"
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="sticky top-0 z-10 bg-card">
+              <tr className="border-b text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <th className="px-4 py-2.5 font-medium">Descrição</th>
+                <th className="px-3 py-2.5 font-medium">Fornecedor</th>
+                <th className="px-3 py-2.5 font-medium">Nº Doc</th>
+                <th className="px-3 py-2.5 font-medium">Categoria</th>
+                <th className="px-3 py-2.5 font-medium">Vencimento</th>
+                <th className="px-3 py-2.5 text-right font-medium">Valor</th>
+                <th className="px-3 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 text-right font-medium">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {pageRows.length > 0 ? pageRows.map((transaction) => (
+                <tr key={transaction.id} className="transition-colors hover:bg-muted/40">
+                  <td className="max-w-[260px] px-4 py-2.5">
+                    <p className="truncate font-medium text-foreground" title={transaction.description}>{transaction.description}</p>
+                    <p className="truncate text-xs text-muted-foreground">{getPaymentMethodLabel(transaction.payment_method)}{transaction.check_number ? ` · Cheque ${transaction.check_number}` : ""}</p>
+                  </td>
+                  <td className="max-w-[220px] px-3 py-2.5">
+                    <p className="truncate text-foreground" title={transaction.supplier?.name}>{transaction.supplier?.name || "—"}</p>
+                    {formatDoc(transaction.supplier?.cnpj || transaction.supplier?.cpf) && <p className="truncate font-mono text-[11px] text-muted-foreground">{formatDoc(transaction.supplier?.cnpj || transaction.supplier?.cpf)}</p>}
+                  </td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{transaction.document_number || "—"}</td>
+                  <td className="max-w-[180px] px-3 py-2.5">
+                    {transaction.category ? (
+                      <span className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: transaction.category.color || "hsl(var(--muted-foreground))" }} /><span className="truncate text-xs">{transaction.category.name}</span></span>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </td>
+                  <td className={cn("whitespace-nowrap px-3 py-2.5 text-xs", transaction.effectiveStatus === "overdue" ? "font-medium text-destructive" : "text-muted-foreground")}>
+                    {transaction.due_date ? (() => { try { return format(parseISO(transaction.due_date), "dd/MM/yyyy", { locale: ptBR }); } catch { return transaction.due_date; } })() : "—"}
+                  </td>
+                  <td className={cn("whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums", transaction.effectiveStatus === "paid" ? "text-success" : "text-destructive")}>
+                    {formatCurrency(amountOf(transaction))}
+                  </td>
+                  <td className="px-3 py-2.5">{getStatusBadge(transaction.effectiveStatus)}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    {canManageExpenses() && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Ações"><MoreVertical className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onClick={() => handleEdit(transaction)}><Edit className="h-3.5 w-3.5 mr-2" />Editar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCopyTransaction(transaction)}><Copy className="h-3.5 w-3.5 mr-2" />Copiar lançamento</DropdownMenuItem>
+                          {(transaction.effectiveStatus === "pending" || transaction.effectiveStatus === "overdue") && (
+                            <>
+                              <DropdownMenuItem onClick={() => liquidateMutation.mutate(transaction)}><CheckCircle className="h-3.5 w-3.5 mr-2" />Liquidar</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => cancelMutation.mutate(transaction)}><XCircle className="h-3.5 w-3.5 mr-2" />Cancelar</DropdownMenuItem>
+                            </>
+                          )}
+                          {transaction.effectiveStatus === "paid" && (
+                            <DropdownMenuItem onClick={() => undoPaymentMutation.mutate(transaction)}><Undo2 className="h-3.5 w-3.5 mr-2" />Desfazer baixa</DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(transaction)} disabled={transaction.status === "paid"}>
+                            <Trash2 className="h-3.5 w-3.5 mr-2" />Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
-                  >
-                     {/* Descrição */}
-                     <div className="col-span-2 flex items-center gap-2 min-w-0">
-                       <TrendingDown className="h-3.5 w-3.5 text-rose-500 flex-shrink-0" />
-                       <span className="font-medium truncate" title={transaction.description}>
-                         {transaction.description}
-                       </span>
-                     </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr><td colSpan={8} className="py-14 text-center text-muted-foreground">
+                  <TrendingDown className="mx-auto mb-3 h-10 w-10 opacity-40" />
+                  <p className="font-medium">Nenhuma despesa encontrada</p>
+                  <p className="text-sm">Ajuste os filtros ou clique em "Nova Despesa".</p>
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                     {/* Fornecedor */}
-                     <div className="col-span-2 flex items-start gap-1.5 min-w-0">
-                       <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
-                       <div className="min-w-0">
-                         <span className="text-muted-foreground truncate text-xs block" title={transaction.supplier?.name}>
-                           {transaction.supplier?.name || "—"}
-                         </span>
-                         {(() => {
-                           const doc = String(transaction.supplier?.cnpj || transaction.supplier?.cpf || "").replace(/\D/g, "");
-                           if (doc.length === 14) {
-                             return <span className="text-[10px] text-muted-foreground/80 font-mono block truncate">{doc.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}</span>;
-                           }
-                           if (doc.length === 11) {
-                             return <span className="text-[10px] text-muted-foreground/80 font-mono block truncate">{doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</span>;
-                           }
-                           return null;
-                         })()}
-                       </div>
-                     </div>
-
-                     {/* Nº Documento */}
-                     <div className="col-span-1 min-w-0">
-                       <span className="font-mono text-xs text-muted-foreground truncate block" title={transaction.document_number || ""}>
-                         {transaction.document_number || "—"}
-                       </span>
-                     </div>
-
-                     {/* Categoria / Cheque */}
-                     <div className="col-span-2 space-y-0.5 min-w-0">
-                       {transaction.category && (
-                         <div className="flex items-center gap-1.5">
-                           <div
-                             className="w-2 h-2 rounded-full flex-shrink-0"
-                             style={{ backgroundColor: transaction.category.color || "#6b7280" }}
-                           />
-                           <span className="text-xs truncate">{transaction.category.name}</span>
-                         </div>
-                       )}
-                       {transaction.check_number && (
-                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                           <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                             CH:{transaction.check_number}
-                           </Badge>
-                         </div>
-                       )}
-                     </div>
-
-                    {/* Vencimento */}
-                    <div className="col-span-1 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className={cn(
-                          "text-xs",
-                          transaction.effectiveStatus === "overdue" && "text-rose-600 dark:text-rose-400 font-medium"
-                        )}>
-                          {transaction.due_date
-                            ? (() => { try { return format(parseISO(transaction.due_date), "dd/MM/yy", { locale: ptBR }); } catch { return transaction.due_date; } })()
-                            : "—"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Valor */}
-                    <div className="col-span-2 text-right">
-                      <span className={cn(
-                        "font-semibold",
-                        transaction.effectiveStatus === "paid" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                      )}>
-                        {formatCurrency(Number(transaction.net_value || transaction.amount))}
-                      </span>
-                      <div className="text-[10px] text-muted-foreground flex items-center justify-end gap-1">
-                        <CreditCard className="h-2.5 w-2.5" />
-                        {getPaymentMethodLabel(transaction.payment_method)}
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="col-span-1 flex justify-center">
-                      {getStatusBadge(transaction.effectiveStatus)}
-                    </div>
-
-                    {/* Ações */}
-                    <div className="col-span-1 flex justify-end">
-                      {canManageExpenses() && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={() => handleEdit(transaction)}>
-                              <Edit className="h-3.5 w-3.5 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleCopyTransaction(transaction)}>
-                              <Copy className="h-3.5 w-3.5 mr-2" />
-                              Copiar Lançamento
-                            </DropdownMenuItem>
-                            {(transaction.effectiveStatus === "pending" ||
-                              transaction.effectiveStatus === "overdue") && (
-                              <>
-                                <DropdownMenuItem onClick={() => liquidateMutation.mutate(transaction)}>
-                                  <CheckCircle className="h-3.5 w-3.5 mr-2" />
-                                  Liquidar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => cancelMutation.mutate(transaction)}>
-                                  <XCircle className="h-3.5 w-3.5 mr-2" />
-                                  Cancelar
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {transaction.effectiveStatus === "paid" && (
-                              <DropdownMenuItem onClick={() => undoPaymentMutation.mutate(transaction)}>
-                                <Undo2 className="h-3.5 w-3.5 mr-2" />
-                                Desfazer Baixa
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => deleteMutation.mutate(transaction)}
-                              disabled={transaction.status === "paid"}
-                            >
-                              <Trash2 className="h-3.5 w-3.5 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <TrendingDown className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Nenhuma despesa encontrada</p>
-                <p className="text-sm">Clique em "Nova Despesa" para começar.</p>
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+        <div className="flex flex-col gap-2 border-t px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            {filteredTransactions.length === 0 ? "Nenhum registro" : `Mostrando ${((currentPage - 1) * pageSize + 1).toLocaleString("pt-BR")} a ${Math.min(currentPage * pageSize, filteredTransactions.length).toLocaleString("pt-BR")} de ${filteredTransactions.length.toLocaleString("pt-BR")} registros`}
+          </span>
+          <div className="flex items-center gap-2">
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="h-8 w-[120px] text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>{[15, 25, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n} por página</SelectItem>)}</SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} aria-label="Página anterior"><ChevronLeft className="h-4 w-4" /></Button>
+            <span className="min-w-[70px] text-center tabular-nums">{currentPage} / {totalPages}</span>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)} aria-label="Próxima página"><ChevronRight className="h-4 w-4" /></Button>
+          </div>
+        </div>
+      </div>
 
       <UnionTransactionDialog
         open={dialogOpen}
