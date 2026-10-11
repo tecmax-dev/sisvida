@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { buildStatementPdf, loadImageDataUrl } from "@/lib/statementPdf";
 import * as XLSX from "xlsx";
 import { UnionTransactionDialog } from "./UnionTransactionDialog";
 import { UnionCashTransferDialog } from "./UnionCashTransferDialog";
@@ -516,154 +517,26 @@ export function UnionStatementPanel() {
       currency: "BRL",
     }).format(value);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!summary || !selectedRegister) return;
-
-    const doc = new jsPDF({ orientation: "portrait" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let yPos = 15;
-
-    // Header
-    if (currentClinic?.logo_url) {
-      try {
-        doc.addImage(currentClinic.logo_url, "PNG", 20, 10, 30, 30);
-        yPos = 45;
-      } catch (e) {
-        yPos = 15;
-      }
-    }
-
-    // Title and entity info
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text(currentClinic?.name || "Entidade Sindical", pageWidth / 2, yPos, { align: "center" });
-    yPos += 6;
-    
-    if (currentClinic?.cnpj) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(currentClinic.cnpj, pageWidth / 2, yPos, { align: "center" });
-      yPos += 8;
-    }
-
-    // Report title
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("MOVIMENTAÇÃO E SALDO", pageWidth / 2, yPos, { align: "center" });
-    yPos += 8;
-
-    // Period and register info
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    const periodText = `Portador: ${selectedRegister.name} - Período: De ${format(startDate, "dd/MM/yyyy")} até ${format(endDate, "dd/MM/yyyy")}`;
-    doc.text(periodText, pageWidth / 2, yPos, { align: "center" });
-    yPos += 10;
-
-    // Previous balance table
-    autoTable(doc, {
-      startY: yPos,
-      head: [["DATA", "SALDO ANTERIOR"]],
-      body: [[previousBalanceDateLabel, formatCurrency(summary.initialBalance)]],
-      theme: "grid",
-      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
-      styles: { fontSize: 9 },
-      margin: { left: 20, right: 5 },
-      columnStyles: { 0: { cellWidth: 40 }, 1: { halign: "right" } },
+    const logoDataUrl = await loadImageDataUrl(currentClinic?.logo_url);
+    const doc = buildStatementPdf({
+      entityName: currentClinic?.name || "Entidade Sindical",
+      entityCnpj: currentClinic?.cnpj,
+      logoDataUrl,
+      accountName: selectedRegister.name,
+      startDate,
+      endDate,
+      previousBalanceDate,
+      groups: dailyGroups.map((g) => ({
+        date: g.date,
+        totalDebit: g.totalDebit,
+        totalCredit: g.totalCredit,
+        endDayBalance: g.endDayBalance,
+        transactions: g.transactions.map((t: any) => ({ ...t, lineBalance: t.lineBalance })),
+      })),
+      summary,
     });
-
-    yPos = (doc as any).lastAutoTable.finalY + 5;
-
-    // Transactions table with daily subtotals
-    const tableBody: any[] = [];
-
-    dailyGroups.forEach((group) => {
-      group.transactions.forEach((t) => {
-        tableBody.push([
-          format(group.date, "dd/MM/yyyy"),
-          t.description.toUpperCase(),
-          t.check_number || "",
-          t.supplier_name || "",
-          t.type === "expense" ? formatCurrency(t.amount) : "",
-          t.type === "income" ? formatCurrency(t.amount) : "",
-          formatCurrency((t as any).lineBalance),
-          t.is_conciliated ? "Sim" : "Não",
-        ]);
-      });
-
-      // Daily subtotal row with colored values
-      const dailyBalanceColor = group.endDayBalance >= 0 ? [22, 163, 74] : [220, 38, 38];
-      tableBody.push([
-        { content: `Total do dia ${format(group.date, "dd/MM/yyyy")}:`, colSpan: 4, styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8 } },
-        { content: formatCurrency(-group.totalDebit), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: [220, 38, 38] } },
-        { content: formatCurrency(group.totalCredit), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: [22, 163, 74] } },
-        { content: formatCurrency(group.endDayBalance), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: dailyBalanceColor } },
-        { content: "", styles: { fillColor: [241, 245, 249] } },
-      ]);
-    });
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [["DATA", "DESCRIÇÃO", "CHQ", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO", "CONC."]],
-      body: tableBody,
-      theme: "grid",
-      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold", fontSize: 7 },
-      styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
-      margin: { left: 20, right: 5 },
-      tableWidth: "auto",
-      columnStyles: {
-        0: { cellWidth: 20 },
-        1: { cellWidth: "auto" },
-        2: { cellWidth: 15 },
-        3: { cellWidth: 30 },
-        4: { cellWidth: 20, halign: "right", textColor: [220, 38, 38] },
-        5: { cellWidth: 20, halign: "right", textColor: [22, 163, 74] },
-        6: { cellWidth: 22, halign: "right" },
-        7: { cellWidth: 14, halign: "center" },
-      },
-    });
-
-    yPos = (doc as any).lastAutoTable.finalY + 8;
-
-    // Summary table
-    autoTable(doc, {
-      startY: yPos,
-      head: [["REGISTROS", "TOTAL INICIAL", "TOTAL DÉBITOS", "TOTAL CRÉDITO", "TOTAL FINAL"]],
-      body: [
-        [
-          summary.totalRecords.toString(),
-          formatCurrency(summary.initialBalance),
-          formatCurrency(summary.totalDebits),
-          formatCurrency(summary.totalCredits),
-          formatCurrency(summary.finalBalance),
-        ],
-      ],
-      theme: "grid",
-      headStyles: { fillColor: [16, 185, 129], fontStyle: "bold", fontSize: 8 },
-      styles: { fontSize: 8 },
-      margin: { left: 20, right: 5 },
-      columnStyles: {
-        0: { halign: "center" },
-        1: { halign: "right" },
-        2: { halign: "right", textColor: [220, 38, 38] },
-        3: { halign: "right", textColor: [22, 163, 74] },
-        4: { halign: "right", textColor: [37, 99, 235] },
-      },
-    });
-
-    // Footer
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        `Página ${i} de ${pageCount} - Emitido em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
-      );
-    }
-
     doc.save(`movimentacao-saldo-${format(startDate, "yyyy-MM")}.pdf`);
   };
 
