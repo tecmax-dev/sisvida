@@ -4975,92 +4975,73 @@ const updateData: Record<string, any> = {
                                   )}
                                 </div>
                               </div>
-                              <div className="text-left text-xs text-muted-foreground sm:ml-auto sm:text-right">
-                                <span className="font-medium text-primary">{activeAppointments.length} agendamento(s)</span>
-                                <br />
-                                <span>Total {totalAppointments}</span>
-                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs sm:ml-auto" onClick={(e) => e.stopPropagation()}>
+                                    {(sendingBulkReminder === group.professional.id || sendingBulkSms === group.professional.id || sendingAgenda === group.professional.id) ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Send className="h-4 w-4" />
+                                    )}
+                                    Ações
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="z-[9999] min-w-[220px] bg-popover">
+                                  <DropdownMenuLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Comunicação</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    disabled={sendingBulkReminder === group.professional.id}
+                                    onClick={() => handleBulkWhatsAppReminder(group.professional.id, group.appointments)}
+                                  >
+                                    <Send className="mr-2 h-4 w-4 text-success" />
+                                    Lembrar todos (WhatsApp)
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    disabled={sendingBulkSms === group.professional.id}
+                                    onClick={() => handleBulkSmsReminder(group.professional.id, group.appointments)}
+                                  >
+                                    <Smartphone className="mr-2 h-4 w-4 text-info" />
+                                    Lembrar todos por SMS
+                                  </DropdownMenuItem>
+                                  {(isAdmin || hasPermission("send_professional_agenda")) && (
+                                    <DropdownMenuItem
+                                      disabled={sendingAgenda === group.professional.id}
+                                      onClick={() => handleSendDailyAgenda(group.professional.id, group.appointments)}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                                      Enviar agenda ao profissional
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Cancelamentos</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    onClick={() => toggleBatchCancelMode(group.professional.id, group.appointments)}
+                                    className="text-warning focus:text-warning"
+                                  >
+                                    <UserX className="mr-2 h-4 w-4" />
+                                    {batchCancelMode === group.professional.id ? "Sair do cancelamento em lote" : "Cancelar em lote"}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                              {/* Botão de lembrete em massa */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0"
-                                disabled={sendingBulkReminder === group.professional.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBulkWhatsAppReminder(group.professional.id, group.appointments);
-                                }}
-                                title="Enviar lembrete via WhatsApp para todos"
-                              >
-                                {sendingBulkReminder === group.professional.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Send className="h-4 w-4 text-success" />
-                                )}
-                                <span className="min-w-0">Lembrar todos</span>
-                              </Button>
-                              {/* Botão de lembrete em massa via SMS */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0 text-purple-600 hover:text-purple-700"
-                                disabled={sendingBulkSms === group.professional.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBulkSmsReminder(group.professional.id, group.appointments);
-                                }}
-                                title="Enviar lembrete via SMS para todos (com link Confirmar/Cancelar)"
-                              >
-                                {sendingBulkSms === group.professional.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Smartphone className="h-4 w-4" />
-                                )}
-                                <span className="min-w-0">Lembrar todos por SMS</span>
-                              </Button>
-                              {/* Botão de cancelamento profissional em lote */}
-                              <Button
-                                variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
-                                size="sm"
-                                className={cn(
-                                  "h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0",
-                                  batchCancelMode === group.professional.id 
-                                    ? "bg-orange-600 hover:bg-orange-700 text-white" 
-                                    : "text-orange-600 hover:text-orange-700"
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleBatchCancelMode(group.professional.id, group.appointments);
-                                }}
-                                title="Cancelamento profissional em lote"
-                              >
-                                <UserX className="h-4 w-4 shrink-0" />
-                                <span className="min-w-0">{batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}</span>
-                              </Button>
-                              {/* Botão de enviar agenda do dia para o profissional */}
-                              {(isAdmin || hasPermission("send_professional_agenda")) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0 text-blue-600 hover:text-blue-700"
-                                disabled={sendingAgenda === group.professional.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSendDailyAgenda(group.professional.id, group.appointments);
-                                }}
-                                title="Enviar agenda do dia para o profissional via WhatsApp"
-                              >
-                                {sendingAgenda === group.professional.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <CalendarIcon className="h-4 w-4 shrink-0" />
-                                )}
-                                <span className="min-w-0">Enviar Agenda</span>
-                              </Button>
-                              )}
-                            </div>
+                            {(() => {
+                              const done = group.appointments.filter(a => a.status === 'completed').length;
+                              const pending = group.appointments.filter(a => ['scheduled', 'confirmed', 'arrived', 'in_progress'].includes(a.status)).length;
+                              const missed = group.appointments.filter(a => a.status === 'no_show').length;
+                              return (
+                                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                  <Badge variant="info" className="h-5 px-1.5">{activeAppointments.length} agendados</Badge>
+                                  <Badge variant="success" className="h-5 px-1.5">{done} atendidos</Badge>
+                                  <Badge variant="warning" className="h-5 px-1.5">{pending} pendentes</Badge>
+                                  {missed > 0 && <Badge variant="destructive" className="h-5 px-1.5">{missed} faltas</Badge>}
+                                  <span className="text-muted-foreground">· total {totalAppointments}</span>
+                                  {batchCancelMode === group.professional.id && (
+                                    <Button size="sm" variant="outline" className="ml-auto h-6 px-2 text-[11px]" onClick={(e) => { e.stopPropagation(); toggleBatchCancelMode(group.professional.id, group.appointments); }}>
+                                      Sair do lote
+                                    </Button>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                           
                           {/* Batch selection bar */}
