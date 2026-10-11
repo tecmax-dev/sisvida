@@ -6,6 +6,7 @@ import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { AppShell } from "@/components/layout/AppShell";
 import { 
   LayoutDashboard, 
   Building2, 
@@ -170,131 +171,37 @@ export function AdminLayout() {
     ? formatClinicId(clinicInfo.createdAt, clinicInfo.id)
     : null;
 
+  const badgeFor = (path: string) =>
+    path === "/admin/upgrades" ? pendingUpgrades : path === "/admin/addon-requests" ? pendingAddons : 0;
+  const pick = (paths: string[]) =>
+    adminNavItems.filter((i) => paths.includes(i.path)).map((i) => ({ href: i.path, icon: i.icon, label: i.label, badge: badgeFor(i.path) }));
+  const groupDefs: { id: string; label: string; icon: any; paths: string[] }[] = [
+    { id: "geral", label: "Dashboard", icon: LayoutDashboard, paths: ["/admin"] },
+    { id: "contas", label: "Contas e usuários", icon: Building2, paths: ["/admin/clinics", "/admin/union-entities", "/admin/users", "/admin/access-groups", "/admin/dependent-approvals"] },
+    { id: "planos", label: "Planos e cobrança", icon: CreditCard, paths: ["/admin/plans", "/admin/billing", "/admin/addons", "/admin/features", "/admin/upgrades", "/admin/addon-requests"] },
+    { id: "whatsapp", label: "WhatsApp", icon: MessageCircle, paths: ["/admin/whatsapp-templates", "/admin/whatsapp-status", "/admin/whatsapp-audit", "/admin/whatsapp-simulation", "/admin/meta-webhook-health"] },
+    { id: "site", label: "Site e comunicação", icon: Image, paths: ["/admin/hero", "/admin/banners", "/admin/notifications", "/admin/chat"] },
+    { id: "sistema", label: "Sistema", icon: Settings, paths: ["/admin/config", "/admin/import", "/admin/smtp", "/admin/audit"] },
+  ];
+  const grouped = new Set(groupDefs.flatMap((g) => g.paths));
+  const leftovers = adminNavItems.filter((i) => !grouped.has(i.path)).map((i) => i.path);
+  if (leftovers.length) groupDefs.push({ id: "outros", label: "Outros", icon: Layers, paths: leftovers });
+  const adminSections = [{
+    id: "admin",
+    label: "Administração",
+    categories: groupDefs.map((g) => ({ id: g.id, label: g.label, icon: g.icon, items: pick(g.paths) })).filter((c) => c.items.length),
+  }];
+
   return (
-    <div className="min-h-screen h-[100dvh] flex flex-col bg-background overflow-hidden">
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
-        <aside 
-          className="hidden lg:flex w-64 border-r border-sidebar-border bg-sidebar flex-col shadow-lg"
-        >
-          <div className="p-4 border-b border-sidebar-border">
-            <Logo size="sm" />
-            <div className="mt-3 flex items-center gap-2 text-xs">
-              <Shield className="h-3.5 w-3.5 text-warning" />
-              <span className="text-warning font-medium">Super Admin</span>
-            </div>
-          </div>
-
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {adminNavItems.map((item) => {
-              const isActive =
-                item.path === "/admin"
-                  ? location.pathname === "/admin"
-                  : location.pathname.startsWith(item.path);
-
-              const showUpgradeBadge = item.path === '/admin/upgrades' && pendingUpgrades > 0;
-              const showAddonBadge = item.path === '/admin/addon-requests' && pendingAddons > 0;
-              const badgeCount = showUpgradeBadge ? pendingUpgrades : showAddonBadge ? pendingAddons : 0;
-
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </div>
-                  {badgeCount > 0 && (
-                    <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
-                      {badgeCount}
-                    </Badge>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="p-3 border-t border-sidebar-border space-y-2">
-            <Link
-              to="/dashboard"
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-              Ir para Dashboard
-            </Link>
-
-            <div className="px-3 py-2 text-sm">
-              <p className="text-sidebar-foreground font-medium truncate">
-                {profile?.name || "Admin"}
-              </p>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="w-full justify-start text-sidebar-foreground hover:text-destructive hover:bg-destructive/10"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {/* Top bar with theme toggle */}
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 px-3 sm:px-5 lg:px-6 min-h-14 bg-card/95 backdrop-blur-md supports-[backdrop-filter]:bg-card/85 border-b border-border/80 shadow-sm">
-            <div className="flex items-center gap-2 lg:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" aria-label="Abrir navegação administrativa">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-72">
-                  <DropdownMenuLabel className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-primary" />
-                    Administração
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {adminNavItems.map((item) => (
-                    <DropdownMenuItem key={item.path} asChild>
-                      <Link to={item.path} className={cn("flex items-center gap-3", location.pathname === item.path && "bg-accent font-semibold")}>
-                        <item.icon className="h-4 w-4 text-muted-foreground" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Logo size="sm" />
-            </div>
-            <ThemeToggle />
-          </header>
-          
-          <main className="flex-1 overflow-y-auto px-3 py-4 sm:p-5 lg:p-6">
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            }>
-              <div className="mx-auto w-full max-w-[1600px] animate-enter">
-                <Outlet />
-              </div>
-            </Suspense>
-          </main>
-        </div>
-      </div>
-
-      {/* Footer */}
+    <AppShell
+      sections={adminSections}
+      actions={<>
+        <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex"><Link to="/dashboard"><ChevronRight className="h-4 w-4 mr-1" />Ir para Dashboard</Link></Button>
+        <ThemeToggle />
+        <span className="hidden md:inline text-sm font-medium truncate max-w-[160px]">{profile?.name || "Admin"}</span>
+        <Button variant="ghost" size="sm" onClick={handleSignOut} className="hover:text-destructive hover:bg-destructive/10"><LogOut className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Sair</span></Button>
+      </>}
+      footer={
       <footer className="min-h-10 bg-card border-t border-border/80 flex items-center justify-between px-3 sm:px-4 text-xs shrink-0">
         <div className="flex items-center gap-4">
           <Logo size="sm" />
@@ -343,6 +250,15 @@ export function AdminLayout() {
           </a>
         </div>
       </footer>
-    </div>
+      }
+    >
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }>
+        <Outlet />
+      </Suspense>
+    </AppShell>
   );
 }
