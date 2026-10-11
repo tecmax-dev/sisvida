@@ -100,8 +100,8 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
     <aside
       aria-label="Menu principal"
       className={cn(
-        "flex h-full flex-col bg-shell text-shell-foreground transition-[width] duration-200",
-        isCollapsed ? "w-16" : "w-60",
+        "flex h-full flex-col border-r border-shell-border bg-shell text-shell-foreground transition-[width] duration-200",
+        isCollapsed ? "w-16" : "w-56",
       )}
     >
       <div className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-shell-border px-3", isCollapsed && "justify-center px-2")}>
@@ -204,7 +204,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                         "hover:bg-shell-hover hover:text-shell-active-foreground",
                       )}
                     >
-                      <cat.icon className={cn("h-4 w-4 shrink-0", catActive && "text-shell-active")} />
+                      <cat.icon className={cn("h-4 w-4 shrink-0", catActive && "text-shell-active-foreground")} />
                       <span className="flex-1 truncate text-left">{cat.label}</span>
                       <ChevronDown className={cn("h-3.5 w-3.5 opacity-60 transition-transform", isOpen && "rotate-180")} />
                     </button>
@@ -220,7 +220,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
                                   "flex items-center gap-2 rounded-md px-2 py-1 text-[12.5px] transition-colors",
-                                  active ? "bg-shell-active/15 font-medium text-shell-active-foreground shadow-[inset_2px_0_0_hsl(var(--shell-active))]" : "text-shell-muted hover:bg-shell-hover hover:text-shell-active-foreground",
+                                  active ? "bg-shell-active/15 font-medium text-shell-active-foreground shadow-[inset_2px_0_0_hsl(var(--shell-active-foreground))]" : "text-shell-muted hover:bg-shell-hover hover:text-shell-active-foreground",
                                 )}
                               >
                                 <it.icon className="h-3.5 w-3.5 shrink-0" />
