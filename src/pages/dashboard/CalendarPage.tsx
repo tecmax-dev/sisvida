@@ -5156,24 +5156,25 @@ const updateData: Record<string, any> = {
                                     return (
                                       <div
                                         key={`blocked-${slot.time || index}-${index}`}
-                                        className="flex items-center gap-3 px-3 py-2 bg-destructive/5 border-l-2 border-destructive/40"
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-destructive/5 border-l-2 border-destructive/40"
                                       >
                                         <div className="w-14 text-center py-1 rounded text-xs font-medium bg-destructive/10 text-destructive">
                                           {slot.time || '--:--'}
                                         </div>
-                                        <div className="flex-1 text-sm text-destructive/80 italic flex items-center gap-2">
-                                          <Ban className="h-3.5 w-3.5" />
-                                          {slot.block.reason || 'Horário bloqueado'}
+                                        <div className="min-w-0 flex-1 text-xs text-destructive/80 flex items-center gap-1.5" title={slot.block.reason || 'Horário bloqueado'}>
+                                          <Ban className="h-3.5 w-3.5 shrink-0" />
+                                          <span className="truncate">{slot.block.reason || 'Horário bloqueado'}</span>
                                         </div>
                                         {isAdmin && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-7 px-2 text-xs"
+                                            className="h-7 shrink-0 px-2 text-xs"
                                             onClick={() => handleUnblockSlot(slot.block!.id)}
+                                            title="Desbloquear"
                                           >
-                                            <UnlockIcon className="h-3 w-3 mr-1" />
-                                            Desbloquear
+                                            <UnlockIcon className="h-3 w-3 sm:mr-1" />
+                                            <span className="hidden sm:inline">Desbloquear</span>
                                           </Button>
                                         )}
                                       </div>
@@ -5189,13 +5190,13 @@ const updateData: Record<string, any> = {
                                     return (
                                       <div
                                         key={`tooclose-${slotTime || index}-${index}`}
-                                        className="flex items-center gap-3 px-3 py-2 bg-muted/40 cursor-not-allowed"
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 cursor-not-allowed"
                                         title={`Agendamento requer antecedência mínima de ${minAdvanceBookingHours ?? 6}h`}
                                       >
                                         <div className="w-14 text-center py-1 rounded text-xs font-medium bg-muted text-muted-foreground/60">
                                           {slotTime || '--:--'}
                                         </div>
-                                        <div className="flex-1 text-sm text-muted-foreground/60 italic">
+                                        <div className="min-w-0 flex-1 truncate text-xs text-muted-foreground/60">
                                           Indisponível (antecedência mínima)
                                         </div>
                                       </div>
@@ -5205,13 +5206,13 @@ const updateData: Record<string, any> = {
                                   return (
                                     <div
                                       key={`free-${slotTime || index}-${index}`}
-                                      className="flex items-center gap-3 px-3 py-2 bg-success/5 border-l-2 border-success/40"
+                                      className="flex items-center gap-2 px-3 py-1.5 bg-success/5 border-l-2 border-success/40"
                                     >
                                       <div className="w-14 text-center py-1 rounded text-xs font-medium bg-success/10 text-success">
                                         {slotTime || '--:--'}
                                       </div>
-                                      <div className="flex-1 text-sm text-muted-foreground italic">
-                                        Horário disponível
+                                      <div className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                                        Livre
                                       </div>
                                       {profId && slotTime && (isAdmin || isProfessionalOnly) && (
                                         <Button
@@ -5221,8 +5222,8 @@ const updateData: Record<string, any> = {
                                           onClick={() => handleBlockSlot(profId, slotTime, slot.duration)}
                                           title="Bloquear este horário"
                                         >
-                                          <LockIcon className="h-3 w-3 mr-1" />
-                                          Bloquear
+                                          <LockIcon className="h-3 w-3 sm:mr-1" />
+                                          <span className="hidden sm:inline">Bloquear</span>
                                         </Button>
                                       )}
                                       {hasPermission('manage_calendar') && profId && slotTime && (
@@ -5235,9 +5236,10 @@ const updateData: Record<string, any> = {
                                               setFormTime(slotTime);
                                               setDialogOpen(true);
                                             }}
+                                            title="Agendar neste horário"
                                           >
-                                            <Plus className="h-3 w-3 mr-1" />
-                                            Agendar
+                                            <Plus className="h-3 w-3 sm:mr-1" />
+                                            <span className="hidden sm:inline">Agendar</span>
                                           </Button>
                                       )}
                                     </div>
