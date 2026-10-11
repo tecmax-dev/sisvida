@@ -213,6 +213,12 @@ export function buildStatementPdf(input: StatementPdfInput): jsPDF {
       6: { cellWidth: 34, halign: "right", overflow: "visible" },
       7: { cellWidth: 14, halign: "center" },
     },
+    didParseCell: (data) => {
+      if (data.section === "head") {
+        if ([4, 5, 6].includes(data.column.index)) data.cell.styles.halign = "right";
+        if (data.column.index === 7) data.cell.styles.halign = "center";
+      }
+    },
     didDrawPage: (data) => {
       // Cabeçalho reduzido nas páginas seguintes
       if (data.pageNumber > 1) {
@@ -284,7 +290,7 @@ export function buildStatementPdf(input: StatementPdfInput): jsPDF {
     doc.setFont("helvetica", "bold");
     doc.text("ProSinge", M, H - 6);
     doc.setFont("helvetica", "normal");
-    const left = ` — Gestão Sindical  |  ${input.entityName}${input.entityCnpj ? " - " + input.entityCnpj : ""}`;
+    const left = `  — Gestão Sindical  |  ${input.entityName}${input.entityCnpj ? " - " + input.entityCnpj : ""}`;
     doc.text(left, M + doc.getTextWidth("ProSinge"), H - 6);
     doc.text(`Emitido em ${emitted}    Página ${i} de ${pages}`, W - M, H - 6, { align: "right" });
   }
