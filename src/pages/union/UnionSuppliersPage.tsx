@@ -39,6 +39,7 @@ import {
   Mail,
   Settings,
 } from "lucide-react";
+import { KpiCard } from "@/components/design-system";
 import { UnionSupplierDefaultsDialog } from "@/components/union/financials/UnionSupplierDefaultsDialog";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
@@ -166,100 +167,46 @@ export default function UnionSuppliersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Fornecedores</h1>
-        <p className="text-muted-foreground">
-          Gerencie os fornecedores do módulo sindical
-        </p>
-      </div>
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowInactive(!showInactive)}
-          >
-            {showInactive ? "Ocultar inativos" : "Mostrar inativos"}
-          </Button>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Truck className="h-5 w-5" /></span>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Fornecedores</h1>
+            <p className="text-sm text-muted-foreground">Gerencie os fornecedores do módulo sindical.</p>
+          </div>
         </div>
         {canManageSuppliers() && (
-          <Button
-            onClick={() => {
-              setEditingSupplier(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Fornecedor
+          <Button size="sm" className="h-9" onClick={() => { setEditingSupplier(null); setDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" />Novo Fornecedor
           </Button>
         )}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Truck className="h-4 w-4 text-primary" />
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{suppliers?.length || 0}</p>
-            <p className="text-xs text-muted-foreground">fornecedores cadastrados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
-              Ativos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{activeCount}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-slate-500" />
-              Inativos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-slate-600">{inactiveCount}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <KpiCard label="Total" value={(suppliers?.length || 0).toLocaleString("pt-BR")} hint="fornecedores cadastrados" icon={Truck} />
+        <KpiCard label="Ativos" tone="success" value={activeCount.toLocaleString("pt-BR")} hint="disponíveis para lançamentos" icon={CheckCircle} />
+        <KpiCard label="Inativos" value={inactiveCount.toLocaleString("pt-BR")} hint={showInactive ? "exibidos na lista" : "ocultos da lista"} icon={XCircle} active={showInactive} onClick={() => setShowInactive(!showInactive)} />
       </div>
 
-      {/* Search and Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, CNPJ ou e-mail..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+      <Card className="rounded-xl shadow-sm">
+        <div className="flex flex-col gap-2 border-b p-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Buscar por nome, CNPJ ou e-mail..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 pl-8 text-sm" />
           </div>
-        </CardHeader>
+          <Button variant={showInactive ? "secondary" : "outline"} size="sm" className="h-9" onClick={() => setShowInactive(!showInactive)}>
+            {showInactive ? "Ocultar inativos" : "Mostrar inativos"}
+          </Button>
+          <span className="text-xs text-muted-foreground sm:ml-2">{(filteredSuppliers?.length || 0).toLocaleString("pt-BR")} resultado(s)</span>
+        </div>
 
         <CardContent className="p-0">
-          <ScrollArea className="max-h-[500px]">
+          <ScrollArea className="max-h-[calc(100vh-380px)] min-h-[300px]">
             {filteredSuppliers && filteredSuppliers.length > 0 ? (
               <Table>
-                <TableHeader className="sticky top-0 bg-background">
-                  <TableRow>
+                <TableHeader className="sticky top-0 bg-card">
+                  <TableRow className="text-[11px] uppercase tracking-wide">
                     <TableHead>Fornecedor</TableHead>
                     <TableHead>CNPJ</TableHead>
                     <TableHead>Contato</TableHead>
