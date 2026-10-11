@@ -95,6 +95,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -3603,7 +3604,8 @@ const updateData: Record<string, any> = {
                 </svg>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover min-w-[180px] z-[9999]" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuContent align="end" className="bg-popover min-w-[220px] z-[9999]" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Atendimento</DropdownMenuLabel>
               {/* Atender - apenas para quem tem permissão de prontuário médico */}
               {canAttend && canAttendPatient && (
                 <DropdownMenuItem onClick={() => openAppointmentPanel(appointment)}>
@@ -3703,6 +3705,8 @@ const updateData: Record<string, any> = {
                 </DropdownMenuItem>
               )}
               
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Comunicação</DropdownMenuLabel>
               {/* Telemedicina */}
               {appointment.type === "telemedicine" && (
                 <DropdownMenuItem 
@@ -3742,7 +3746,7 @@ const updateData: Record<string, any> = {
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-              
+              <DropdownMenuLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gerenciamento</DropdownMenuLabel>
               {/* Reagendar */}
               <DropdownMenuItem onClick={() => openRescheduleDialog(appointment)}>
                 <CalendarDays className="h-4 w-4 mr-2" />
@@ -3755,13 +3759,14 @@ const updateData: Record<string, any> = {
                 Editar
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator />
-              
               {/* Auditoria */}
               <DropdownMenuItem onClick={() => openAuditDialog(appointment)}>
                 <History className="h-4 w-4 mr-2" />
                 Auditoria
               </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Cancelamentos</DropdownMenuLabel>
               
               {/* Cancelamento Profissional */}
               <DropdownMenuItem 
