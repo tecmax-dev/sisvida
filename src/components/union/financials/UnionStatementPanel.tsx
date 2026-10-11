@@ -987,7 +987,7 @@ export function UnionStatementPanel() {
             <CardContent className="p-0">
               <CountTabs
                 value={typeFilter}
-                onChange={setTypeFilter}
+                onChange={(v) => setTypeFilter(v as "all" | "expense" | "income")}
                 items={(() => { const all = dailyGroups.flatMap((g) => g.transactions); return [
                   { value: "all" as const, label: "Todos", count: all.length },
                   { value: "expense" as const, label: "Débitos", count: all.filter((t) => t.type === "expense").length, tone: "destructive" as const },
