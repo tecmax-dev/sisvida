@@ -264,9 +264,9 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
       />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard label="Total de contas" value={accounts.length} icon={FolderTree} active={filterType === "all"} onClick={() => setFilterType("all")} />
-        <KpiCard label="Receitas" value={countBy("revenue")} tone="success" active={filterType === "revenue"} onClick={() => setFilterType("revenue")} />
-        <KpiCard label="Despesas" value={countBy("expense")} tone="danger" active={filterType === "expense"} onClick={() => setFilterType("expense")} />
-        <KpiCard label="Ativas" value={accounts.filter((a) => a.is_active).length} hint={`${accounts.filter((a) => !a.is_active).length} inativas`} />
+        <KpiCard label="Receitas" value={countBy("revenue")} icon={FolderTree} tone="success" active={filterType === "revenue"} onClick={() => setFilterType("revenue")} />
+        <KpiCard label="Despesas" value={countBy("expense")} icon={FolderTree} tone="destructive" active={filterType === "expense"} onClick={() => setFilterType("expense")} />
+        <KpiCard label="Ativas" icon={FolderTree} value={accounts.filter((a) => a.is_active).length} hint={`${accounts.filter((a) => !a.is_active).length} inativas`} />
       </div>
     <Card className="shadow-none">
       <CardContent className="space-y-3 p-3 sm:p-4">
@@ -533,5 +533,6 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
         </DialogContent>
       </Dialog>
     </Card>
+    </div>
   );
 }
