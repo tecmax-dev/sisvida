@@ -1,3 +1,7 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
 @import "@fontsource/outfit/400.css";
 @import "@fontsource/outfit/500.css";
 @import "@fontsource/outfit/600.css";
@@ -30,15 +34,15 @@
     --shell-foreground: 220 15% 30%;
     --shell-muted: 220 10% 50%;
     --shell-hover: 220 20% 96%;
-    --shell-active: 214 70% 95%;
-    --shell-active-foreground: 214 89% 32%;
+    --shell-active: 214 100% 97%;
+    --shell-active-foreground: 216 79% 39%;
     --shell-border: 220 15% 90%;
 
     /* Primary - Navy Trust */
     /* Primary - Prosinge Blue #094798 */
-    --primary: 214 89% 32%;
+    --primary: 216 79% 39%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 214 70% 95%;
+    --primary-soft: 214 100% 97%;
     --primary-glow: 214 90% 45%;
     --primary-dark: 214 90% 22%;
     
@@ -70,15 +74,15 @@
     --accent-foreground: 356 78% 46%;
     
     /* Destructive - alinhado com vermelho de marca */
-    --destructive: 356 78% 52%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     
     /* Success */
-    --success: 142 71% 45%;
+    --success: 161 94% 30%;
     --success-foreground: 0 0% 100%;
     
     /* Warning */
-    --warning: 38 92% 50%;
+    --warning: 32 95% 44%;
     --warning-foreground: 0 0% 100%;
     
     /* Info */
@@ -93,7 +97,7 @@
     /* Borders & Inputs */
     --border: 214 32% 91%;
     --input: 216 22% 84%;
-    --ring: 214 89% 42%;
+    --ring: 216 79% 39%;
     
     --radius: 0.625rem;
     

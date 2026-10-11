@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Outfit", "system-ui", "sans-serif"],
+        inter: ["Inter", "system-ui", "sans-serif"],
         display: ["Sora", "Outfit", "system-ui", "sans-serif"],
         body: ["Manrope", "Outfit", "system-ui", "sans-serif"],
       },
