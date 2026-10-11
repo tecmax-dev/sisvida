@@ -83,6 +83,15 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        shell: {
+          DEFAULT: "hsl(var(--shell))",
+          foreground: "hsl(var(--shell-foreground))",
+          muted: "hsl(var(--shell-muted))",
+          hover: "hsl(var(--shell-hover))",
+          active: "hsl(var(--shell-active))",
+          "active-foreground": "hsl(var(--shell-active-foreground))",
+          border: "hsl(var(--shell-border))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
