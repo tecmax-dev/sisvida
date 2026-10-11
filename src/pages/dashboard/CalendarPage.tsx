@@ -4206,10 +4206,10 @@ const updateData: Record<string, any> = {
     >
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border bg-card p-4 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <CalendarIcon className="h-6 w-6 text-primary" />
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><CalendarIcon className="h-5 w-5 text-primary" /></span>
             Agenda
           </h1>
           <p className="text-muted-foreground">
