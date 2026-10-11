@@ -698,105 +698,64 @@ export default function EmployersPage() {
         }
       />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-primary bg-primary/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-muted-foreground">Total</span>
+      {/* Indicators strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 rounded-lg border bg-card overflow-hidden">
+        {[
+          { label: "Total", value: employers.length, icon: Building2, tone: "text-primary" },
+          { label: "Ativas", value: activeCount, icon: CheckCircle2, tone: "text-success" },
+          { label: "Inativas", value: inactiveCount, icon: XCircle, tone: "text-destructive" },
+          { label: "Pendentes", value: virtualCount, icon: AlertTriangle, tone: "text-warning" },
+        ].map(({ label, value, icon: Icon, tone }) => (
+          <div key={label} className="flex items-center justify-between px-4 py-2.5">
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
+              <p className="text-xl font-semibold text-foreground leading-tight tabular-nums">{value}</p>
             </div>
-            <p className="text-xl font-bold text-foreground mt-1">{employers.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span className="text-xs font-medium text-muted-foreground">Ativas</span>
-            </div>
-            <p className="text-xl font-bold text-emerald-600 mt-1">{activeCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-rose-500" />
-              <span className="text-xs font-medium text-muted-foreground">Inativas</span>
-            </div>
-            <p className="text-xl font-bold text-rose-600 mt-1">{inactiveCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <span className="text-xs font-medium text-muted-foreground">Pendentes</span>
-            </div>
-            <p className="text-xl font-bold text-amber-600 mt-1">{virtualCount}</p>
-          </CardContent>
-        </Card>
+            <Icon className={`h-4 w-4 ${tone}`} />
+          </div>
+        ))}
       </div>
 
-      {/* Enhanced Search Card */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-6 px-1">
-        {/* Search Input with Icon */}
-        <div className="flex items-center gap-3 flex-1 w-full">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por Razão Social, Nome Fantasia, CNPJ, matrícula..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm w-full"
-            />
-          </div>
+      {/* Toolbar: search + filters in a single bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-2 rounded-lg border bg-card p-2">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por Razão Social, Nome Fantasia, CNPJ, matrícula..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-9 border-0 bg-muted/40 focus-visible:ring-1 w-full"
+          />
         </div>
 
-
-        {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
           {categories.length > 0 && (
-            <div className="flex items-center gap-2 bg-white px-3 h-11 rounded-xl border border-teal-500/20 shadow-sm">
-              <Filter className="h-4 w-4 text-teal-600" />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px] border-0 focus:ring-0 h-8 text-xs bg-transparent">
-                  <SelectValue placeholder="Filtrar categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as categorias</SelectItem>
-                  <SelectItem value="none">Sem categoria</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: cat.color }}
-                        />
-                        {cat.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[190px] h-9 text-xs">
+                <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Filtrar categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                <SelectItem value="none">Sem categoria</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                      {cat.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchEmployers}
-            className="h-11 border-teal-500/20 hover:bg-teal-50 rounded-xl shadow-sm"
-          >
+
+          <Button variant="outline" size="sm" onClick={fetchEmployers} className="h-9">
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Sincronizar
           </Button>
 
-          <Button 
-            size="sm" 
-            onClick={() => handleOpenDialog()}
-            className="h-11 bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm px-6"
-          >
+          <Button size="sm" onClick={() => handleOpenDialog()} className="h-9">
             <Plus className="h-4 w-4 mr-2" />
             Nova Empresa
           </Button>
@@ -805,7 +764,7 @@ export default function EmployersPage() {
 
       {/* Table */}
       {filteredEmployers.length === 0 ? (
-        <Card className="shadow-sm overflow-hidden">
+        <Card className="shadow-none overflow-hidden">
           <CardContent className="p-8 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
@@ -814,18 +773,18 @@ export default function EmployersPage() {
             <p className="text-muted-foreground mb-4 text-sm">
               Cadastre uma nova empresa ou verifique os filtros
             </p>
-            <Button onClick={() => handleOpenDialog()} size="sm" className="bg-teal-600 hover:bg-teal-700">
+            <Button onClick={() => handleOpenDialog()} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Cadastrar Empresa
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-teal-500/10 shadow-sm overflow-hidden">
+        <Card className="shadow-none overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow className="bg-teal-50/50 border-b border-teal-500/20">
+              <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+                <TableRow className="border-b hover:bg-transparent">
                   <TableHead className="w-[30px] p-2"></TableHead>
                   <TableHead className="font-bold text-[10px] uppercase tracking-wider w-[70px] py-2 px-2">Matrícula</TableHead>
                   <TableHead className="font-bold text-[10px] uppercase tracking-wider py-2">Empresa</TableHead>
