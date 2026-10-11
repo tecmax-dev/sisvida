@@ -1,12 +1,6 @@
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, ChevronDown, Bell, RotateCw } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { LogOut, Bell, RotateCw, ChevronRight } from "lucide-react";
 
 interface SindSystemHeaderProps {
   logoUrl?: string | null;
@@ -22,44 +16,49 @@ export function SindSystemHeader({
   onLogout,
 }: SindSystemHeaderProps) {
   return (
-    <header className="bg-[#2c5282] text-white sticky top-0 z-20">
-      <div className="flex items-center justify-between h-14 px-4">
+    <header className="bg-[#2c5282] text-white sticky top-0 z-20 shadow-sm">
+      <div className="max-w-6xl mx-auto flex items-center justify-between h-14 px-4 sm:px-6">
         {/* Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {logoUrl ? (
             <img
               src={logoUrl}
               alt="Logo"
-              className="h-8 object-contain brightness-0 invert"
+              className="h-7 object-contain brightness-0 invert shrink-0"
             />
           ) : (
-            <span className="font-bold text-lg">SindSystem</span>
+            <span className="font-bold text-base shrink-0">SindSystem</span>
           )}
+          <div className="hidden md:block min-w-0 border-l border-white/20 pl-3 ml-1">
+            <p className="text-sm font-medium leading-tight truncate max-w-[220px]">
+              {entityName}
+            </p>
+            {entityEmail && (
+              <p className="text-[11px] text-white/60 truncate max-w-[220px]">
+                {entityEmail}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-4">
-          <Bell className="h-5 w-5 text-white/80 cursor-pointer hover:text-white" />
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 bg-green-400 rounded-full" />
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium leading-tight truncate max-w-[200px]">
-                {entityName.length > 20 ? entityName.substring(0, 17) + "..." : entityName}
-              </p>
-              {entityEmail && (
-                <p className="text-xs text-white/70 truncate max-w-[200px]">
-                  {entityEmail.length > 25 ? entityEmail.substring(0, 22) + "..." : entityEmail}
-                </p>
-              )}
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button className="p-2 rounded-lg hover:bg-white/10 transition-colors" title="Notificações">
+            <Bell className="h-4.5 w-4.5 text-white/80" />
+          </button>
+          <div className="flex items-center gap-2 md:hidden mr-1">
+            <div className="h-7 w-7 rounded-full bg-white/15 flex items-center justify-center text-xs font-semibold">
+              {entityName?.charAt(0)?.toUpperCase() || "E"}
             </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onLogout}
-            className="text-white/80 hover:text-white hover:bg-white/10 p-1"
+            className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5 px-2"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Sair</span>
           </Button>
         </div>
       </div>
@@ -73,7 +72,7 @@ interface SindSystemContainerProps {
 
 export function SindSystemContainer({ children }: SindSystemContainerProps) {
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-[#f7f8fa]">
       {children}
     </div>
   );
@@ -85,7 +84,7 @@ interface SindSystemMainProps {
 
 export function SindSystemMain({ children }: SindSystemMainProps) {
   return (
-    <main className="max-w-6xl mx-auto px-4 py-6">
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8">
       {children}
     </main>
   );
@@ -105,43 +104,31 @@ export function SindSystemPageHeader({
   onBack,
 }: SindSystemPageHeaderProps) {
   return (
-    <div className="flex items-start justify-between mb-6">
-      <div className="flex items-start gap-3">
+    <div className="flex items-start justify-between gap-3 mb-5">
+      <div className="flex items-start gap-3 min-w-0">
         {icon && (
-          <span className="text-amber-500 mt-0.5">{icon}</span>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+            {icon}
+          </div>
         )}
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-800">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-semibold text-slate-800 truncate">
             {title}
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{subtitle}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2 text-slate-700 border-slate-300 hover:bg-slate-50">
-              Opções
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="cursor-pointer text-slate-400" disabled>
-              Sem opções disponíveis
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {onBack && (
-          <Button 
-            variant="outline" 
-            onClick={onBack}
-            className="gap-2 text-slate-700 border-slate-300 hover:bg-slate-50"
-          >
-            <RotateCw className="h-4 w-4" />
-            Voltar
-          </Button>
-        )}
-      </div>
+      {onBack && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onBack}
+          className="gap-1.5 text-slate-600 border-slate-200 hover:bg-slate-50 shrink-0 h-8"
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Voltar</span>
+        </Button>
+      )}
     </div>
   );
 }
@@ -163,26 +150,37 @@ export function SindSystemServiceCard({
   color,
   badge,
 }: SindSystemServiceCardProps) {
-  const colorStyles = {
-    green: "bg-[#20c997]",
-    blue: "bg-[#2c7be5]",
-    orange: "bg-[#e8a838]",
-    red: "bg-[#e35d6a]",
+  const iconStyles = {
+    green: "bg-[#20c997]/10 text-[#13946f]",
+    blue: "bg-[#2c7be5]/10 text-[#2c7be5]",
+    orange: "bg-[#e8a838]/10 text-[#b9791e]",
+    red: "bg-[#e35d6a]/10 text-[#e35d6a]",
+  };
+  const hoverBorder = {
+    green: "hover:border-[#20c997]/40",
+    blue: "hover:border-[#2c7be5]/40",
+    orange: "hover:border-[#e8a838]/40",
+    red: "hover:border-[#e35d6a]/40",
   };
 
   return (
     <button
       onClick={onClick}
-      className={`${colorStyles[color]} relative rounded-lg p-8 text-white flex flex-col items-center justify-center text-center min-h-[180px] w-full transition-all hover:opacity-90 hover:shadow-lg`}
+      className={`group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 ${hoverBorder[color]} hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 w-full`}
     >
       {badge !== undefined && badge !== null && badge !== 0 && (
-        <span className="absolute top-3 right-3 min-w-[24px] h-6 px-1.5 rounded-full bg-white text-red-600 text-xs font-bold flex items-center justify-center shadow-sm">
+        <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[10px] font-bold text-white">
           {badge}
         </span>
       )}
-      <div className="mb-4">{icon}</div>
-      <h3 className="font-bold text-lg uppercase tracking-wide">{title}</h3>
-      <p className="text-sm text-white/90 mt-1">{description}</p>
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors ${iconStyles[color]}`}>
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+        <p className="text-xs text-slate-500 mt-0.5 truncate">{description}</p>
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-slate-500" />
     </button>
   );
 }
@@ -195,9 +193,10 @@ export function SindSystemBackButton({ onClick }: SindSystemBackButtonProps) {
   return (
     <Button
       onClick={onClick}
-      className="bg-[#2c7be5] hover:bg-[#2566bf] text-white gap-2"
+      variant="outline"
+      className="gap-1.5 text-slate-600 border-slate-200 hover:bg-slate-50"
     >
-      <RotateCw className="h-4 w-4" />
+      <RotateCw className="h-3.5 w-3.5" />
       Voltar
     </Button>
   );
