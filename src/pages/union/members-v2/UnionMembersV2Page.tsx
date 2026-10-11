@@ -1,0 +1,1608 @@
+import { sendOfficialSignatureLink } from "@/lib/sendOfficialSignatureLink";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Plus,
+  Phone,
+  MoreVertical,
+  CreditCard,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  User,
+  Users,
+  UserCheck,
+  UserX,
+  Shield,
+  FileText,
+  MessageCircle,
+  Paperclip,
+  Send,
+  Calendar,
+  HeartPulse,
+  RefreshCw,
+  Receipt,
+  Upload,
+  Trash2,
+  Bell,
+  Building2,
+  Filter,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { useUnionPermissions } from "@/hooks/useUnionPermissions";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { calculateAge } from "@/lib/utils";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
+import { CpfDisplay } from "@/components/common/CpfDisplay";
+import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
+import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointmentLimitEdit";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
+import MemberContributionsTab from "@/components/union/MemberContributionsTab";
+import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
+import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
+import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
+import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialog";
+import { SendSignatureRequestDialog } from "@/components/union/members/SendSignatureRequestDialog";
+import { sendWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp";
+import { UserAvatar } from "@/components/users/UserAvatar";
+import { Pen, KeyRound } from "lucide-react";
+import { SendPatientResetDialog } from "@/components/union/members/SendPatientResetDialog";
+import { extractFunctionsError } from "@/lib/functionsError";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import { useModal } from "@/contexts/ModalContext";
+
+const ITEMS_PER_PAGE = 15;
+
+interface UnionMember {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  cpf: string | null;
+  birth_date: string | null;
+  gender: string | null;
+  address: string | null;
+  address_number: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  registration_number: string | null;
+  is_active: boolean;
+  insurance_plan_id: string | null;
+  insurance_plan?: { name: string } | null;
+  max_appointments_per_month: number | null;
+  card_expires_at?: string | null;
+  card_number?: string | null;
+  dependents_count?: number;
+  inactivation_reason?: string | null;
+  photo_url?: string | null;
+  signature_accepted?: boolean | null;
+  employer_name?: string | null;
+  employer_cnpj?: string | null;
+  employer_id?: string | null;
+}
+
+// Formatação de CPF: 000.000.000-00
+const formatCPF = (value: string | null): string => {
+  if (!value) return "";
+  const cleaned = value.replace(/\D/g, "");
+  return cleaned
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+    .substring(0, 14);
+};
+
+// Formatação de telefone: (00) 00000-0000
+const formatPhone = (value: string | null): string => {
+  if (!value) return "";
+  const cleaned = value.replace(/\D/g, "");
+  return cleaned
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2")
+    .substring(0, 15);
+};
+
+export default function UnionMembersV2Page() {
+  const navigate = useNavigate();
+  const { currentClinic, userRoles } = useAuth();
+  const { isAdmin } = usePermissions();
+  const { canManageMembers } = useUnionPermissions();
+  const { toast } = useToast();
+  const { openModal } = useModal();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+
+  // Storage keys for search persistence
+  const SEARCH_TITULARES_KEY = "union-members:search-titulares";
+  const SEARCH_DEPENDENTES_KEY = "union-members:search-dependentes";
+  const ACTIVE_TAB_KEY = "union-members:active-tab";
+
+  const getInitialSearch = (key: string): string => {
+    try {
+      return sessionStorage.getItem(key) || "";
+    } catch {
+      return "";
+    }
+  };
+
+  const getInitialTab = (): "titulares" | "dependentes" | "contribuicoes" => {
+    try {
+      const saved = sessionStorage.getItem(ACTIVE_TAB_KEY);
+      if (saved === "dependentes") return "dependentes";
+      if (saved === "contribuicoes") return "contribuicoes";
+      return "titulares";
+    } catch {
+      return "titulares";
+    }
+  };
+
+  const [members, setMembers] = useState<UnionMember[]>([]);
+  const [insurancePlans, setInsurancePlans] = useState<{ id: string; name: string }[]>([]);
+  const [clinicDefaultLimit, setClinicDefaultLimit] = useState<number | null>(null);
+
+  // Search + pagination
+  const [searchTerm, setSearchTerm] = useState(() => getInitialSearch(SEARCH_TITULARES_KEY));
+  const [debouncedSearch, setDebouncedSearch] = useState(() => getInitialSearch(SEARCH_TITULARES_KEY));
+  const [page, setPage] = useState(1);
+  const [totalMembers, setTotalMembers] = useState(0);
+  const [showInactive, setShowInactive] = useState(false);
+  const [cardFilter, setCardFilter] = useState<"all" | "valid" | "expired" | "no-card">("all");
+  const [loading, setLoading] = useState(true);
+
+
+  // Filiacao actions dialog state
+  const [filiacaoDialogOpen, setFiliacaoDialogOpen] = useState(false);
+  const [selectedMemberForFiliacao, setSelectedMemberForFiliacao] = useState<UnionMember | null>(null);
+
+  // Batch filiacao dialog state
+  const [batchFiliacaoDialogOpen, setBatchFiliacaoDialogOpen] = useState(false);
+
+  // Import members dialog state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // Delete member dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedMemberForDelete, setSelectedMemberForDelete] = useState<UnionMember | null>(null);
+
+  // Signature request dialog state
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+
+  // Patient reset dialog state
+  const [patientResetDialogOpen, setPatientResetDialogOpen] = useState(false);
+  const [selectedMemberForReset, setSelectedMemberForReset] = useState<UnionMember | null>(null);
+
+  // Delete dependent state
+  const [deleteDependentDialogOpen, setDeleteDependentDialogOpen] = useState(false);
+  const [dependentToDelete, setDependentToDelete] = useState<any>(null);
+  const [isDeletingDependent, setIsDeletingDependent] = useState(false);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
+
+  // Dependents state
+  const [dependents, setDependents] = useState<any[]>([]);
+  const [dependentsLoading, setDependentsLoading] = useState(false);
+  const [totalDependents, setTotalDependents] = useState(0);
+  const [dependentsSearch, setDependentsSearch] = useState(() => getInitialSearch(SEARCH_DEPENDENTES_KEY));
+  const [debouncedDependentsSearch, setDebouncedDependentsSearch] = useState(() => getInitialSearch(SEARCH_DEPENDENTES_KEY));
+
+  // Persist search terms
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SEARCH_TITULARES_KEY, searchTerm);
+    } catch {}
+  }, [searchTerm]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SEARCH_DEPENDENTES_KEY, dependentsSearch);
+    } catch {}
+  }, [dependentsSearch]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(ACTIVE_TAB_KEY, activeTab);
+    } catch {}
+  }, [activeTab]);
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedDependentsSearch(dependentsSearch.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [dependentsSearch]);
+
+  const normalizePhoneDigits = (value: string): string => value.replace(/\D/g, "");
+
+  const buildPhoneSearchVariants = (digitsRaw: string): string[] => {
+    if (!digitsRaw) return [];
+    const digits = digitsRaw.startsWith("55") && digitsRaw.length > 11 ? digitsRaw.slice(2) : digitsRaw;
+    const variants = new Set<string>();
+    variants.add(digits);
+    variants.add(digitsRaw);
+    if (digits.length === 11) {
+      variants.add(formatPhone(digits));
+    }
+    return Array.from(variants).filter((v) => v.length >= 3);
+  };
+
+  const fetchMembers = useCallback(async () => {
+    if (!resolvedClinic) return;
+
+    setLoading(true);
+    try {
+      const from = (page - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      const safeSearch = debouncedSearch.replace(/,/g, " ");
+      const searchDigits = normalizePhoneDigits(safeSearch);
+      const phoneVariants = buildPhoneSearchVariants(searchDigits);
+
+      let query = supabase
+        .from("patients")
+        .select(
+          `
+          id,
+          name,
+          email,
+          phone,
+          cpf,
+          gender,
+          street,
+          street_number,
+          neighborhood,
+          city,
+          state,
+          cep,
+          registration_number,
+          birth_date,
+          is_active,
+          inactivation_reason,
+          insurance_plan_id,
+          max_appointments_per_month,
+          photo_url,
+          signature_accepted,
+          employer_name,
+          employer_cnpj,
+          employer_id,
+          insurance_plan:insurance_plans ( name ),
+          patient_dependents ( id ),
+          patient_cards ( card_number, expires_at, is_active )
+        `,
+          { count: "exact" }
+        )
+        .eq("clinic_id", resolvedClinic.id)
+        .eq("is_union_member", true);
+
+      // Filter by active status
+      if (showInactive) {
+        query = query.eq("is_active", false);
+      } else {
+        query = query.eq("is_active", true);
+      }
+
+      if (safeSearch.length > 0) {
+        const text = `%${safeSearch}%`;
+        const orParts: string[] = [`name.ilike.${text}`, `email.ilike.${text}`];
+
+        if (searchDigits.length >= 3) {
+          orParts.push(`cpf.ilike.%${searchDigits}%`);
+          if (searchDigits.length >= 11) {
+            const cpfClean = searchDigits.slice(0, 11);
+            const cpfFormatted = cpfClean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            orParts.push(`cpf.eq.${cpfClean}`);
+            orParts.push(`cpf.eq.${cpfFormatted}`);
+            orParts.push(`cpf.ilike.%${cpfFormatted}%`);
+          }
+        }
+
+        orParts.push(`phone.ilike.${text}`);
+        for (const v of phoneVariants) {
+          orParts.push(`phone.ilike.%${v}%`);
+        }
+
+        query = query.or(orParts.join(","));
+      }
+
+      const { data, error, count } = await query.order("name").range(from, to);
+
+      if (error) throw error;
+
+      const today = new Date().toISOString().split('T')[0];
+      
+      let membersWithData = (data || []).map((p: any) => {
+        const activeCard = Array.isArray(p.patient_cards)
+          ? p.patient_cards.find((c: any) => c.is_active)
+          : null;
+        return {
+          ...p,
+          // Normalize address fields to the app's expected names
+          address: p.street ?? null,
+          address_number: p.street_number ?? null,
+          zip_code: p.cep ?? null,
+          dependents_count: Array.isArray(p.patient_dependents)
+            ? p.patient_dependents.filter((d: any) => d.id).length
+            : 0,
+          card_expires_at: activeCard?.expires_at || null,
+          card_number: activeCard?.card_number || null,
+          patient_dependents: undefined,
+          patient_cards: undefined,
+        };
+      });
+
+      // Apply card filter client-side (since we need to check card dates)
+      if (cardFilter === "valid") {
+        membersWithData = membersWithData.filter((m: any) => 
+          m.card_expires_at && m.card_expires_at >= today
+        );
+      } else if (cardFilter === "expired") {
+        membersWithData = membersWithData.filter((m: any) => 
+          m.card_expires_at && m.card_expires_at < today
+        );
+      } else if (cardFilter === "no-card") {
+        membersWithData = membersWithData.filter((m: any) => !m.card_number);
+      }
+
+      setMembers(membersWithData as UnionMember[]);
+      setTotalMembers(cardFilter === "all" ? (count || 0) : membersWithData.length);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+      toast({ title: "Erro ao carregar sócios", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [resolvedClinic, debouncedSearch, page, showInactive, cardFilter, toast]);
+
+  const fetchDependents = useCallback(async () => {
+    if (!resolvedClinic) return;
+
+    setDependentsLoading(true);
+    try {
+      const from = (page - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      const safeSearch = debouncedDependentsSearch.replace(/,/g, " ");
+
+      let query = supabase
+        .from("patient_dependents")
+        .select(
+          `
+          id,
+          name,
+          cpf,
+          birth_date,
+          phone,
+          relationship,
+          is_active,
+          patient_id,
+          created_at,
+          patient:patients!patient_dependents_patient_id_fkey (id, name)
+        `,
+          { count: "exact" }
+        )
+        .eq("clinic_id", resolvedClinic.id);
+
+      if (showInactive) {
+        query = query.eq("is_active", false);
+      } else {
+        query = query.eq("is_active", true);
+      }
+
+      if (safeSearch.length > 0) {
+        const text = `%${safeSearch}%`;
+        const searchDigits = safeSearch.replace(/\D/g, "");
+        const orParts: string[] = [`name.ilike.${text}`];
+        if (searchDigits.length >= 3) {
+          orParts.push(`cpf.ilike.%${searchDigits}%`);
+          // Also search formatted CPF (XXX.XXX.XXX-XX) since DB may store either format
+          if (searchDigits.length === 11) {
+            const formatted = searchDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            orParts.push(`cpf.ilike.%${formatted}%`);
+          }
+        }
+        query = query.or(orParts.join(","));
+      }
+
+      const { data, error, count } = await query.order("name").range(from, to);
+
+      if (error) throw error;
+
+      setDependents(data || []);
+      setTotalDependents(count || 0);
+    } catch (error) {
+      console.error("Error fetching dependents:", error);
+    } finally {
+      setDependentsLoading(false);
+    }
+  }, [resolvedClinic, debouncedDependentsSearch, page, showInactive]);
+
+  const handleDeleteDependent = async (mode: "inactivate" | "delete") => {
+    if (!dependentToDelete) return;
+    setIsDeletingDependent(true);
+    try {
+      if (mode === "delete") {
+        const { error } = await supabase
+          .from("patient_dependents")
+          .delete()
+          .eq("id", dependentToDelete.id);
+        if (error) throw error;
+        toast({ title: "Dependente excluído permanentemente." });
+      } else {
+        const { error } = await supabase
+          .from("patient_dependents")
+          .update({ is_active: false })
+          .eq("id", dependentToDelete.id);
+        if (error) throw error;
+        toast({ title: "Dependente inativado com sucesso." });
+      }
+      setDeleteDependentDialogOpen(false);
+      setDependentToDelete(null);
+      fetchDependents();
+    } catch (error) {
+      console.error("Error deleting dependent:", error);
+      toast({ title: "Erro ao processar dependente.", variant: "destructive" });
+    } finally {
+      setIsDeletingDependent(false);
+    }
+  };
+
+  const fetchInsurancePlans = async () => {
+    if (!resolvedClinic) return;
+    try {
+      const { data, error } = await supabase
+        .from("insurance_plans")
+        .select("id, name")
+        .eq("clinic_id", resolvedClinic.id)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      setInsurancePlans(data || []);
+    } catch (error) {
+      console.error("Error fetching insurance plans:", error);
+    }
+  };
+
+  const fetchClinicLimit = async () => {
+    if (!resolvedClinic) return;
+    try {
+      const { data } = await supabase
+        .from("clinics")
+        .select("max_appointments_per_cpf_month")
+        .eq("id", resolvedClinic.id)
+        .single();
+      setClinicDefaultLimit(data?.max_appointments_per_cpf_month ?? null);
+    } catch (error) {
+      console.error("Error fetching clinic limit:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (resolvedClinic) {
+      fetchMembers();
+      fetchInsurancePlans();
+      fetchClinicLimit();
+    }
+  }, [resolvedClinic, fetchMembers]);
+
+  useEffect(() => {
+    if (resolvedClinic && activeTab === "dependentes") {
+      fetchDependents();
+    }
+  }, [resolvedClinic, activeTab, fetchDependents]);
+
+  // Realtime subscription
+  useRealtimeSubscription({
+    table: "patients",
+    filter: resolvedClinic ? { column: "clinic_id", value: resolvedClinic.id } : undefined,
+    onInsert: () => fetchMembers(),
+    onUpdate: () => fetchMembers(),
+    onDelete: () => fetchMembers(),
+    enabled: false, // atualização ao vivo desligada para aliviar o servidor
+  });
+
+  const handleOpenEdit = (member: UnionMember) => {
+    openModal('unionMemberEdit', { memberId: member.id, onUpdate: fetchMembers });
+  };
+
+  const handleViewMember = (memberId: string) => {
+    openModal('unionMemberEdit', { memberId, onUpdate: fetchMembers });
+  };
+
+  // Enviar notificação rápida de carteirinha atualizada via WhatsApp
+  const handleSendCardNotification = async (member: UnionMember) => {
+    if (!currentClinic || !member.phone) {
+      toast({
+        title: "Erro",
+        description: "Telefone do associado não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const expiryText = member.card_expires_at 
+        ? format(parseISO(member.card_expires_at), "dd/MM/yyyy")
+        : "não definida";
+
+      const message = `✅ *Carteirinha Atualizada!*\n\nOlá ${member.name}! 👋\n\nSua carteirinha foi atualizada com sucesso!\n\n📅 *Nova validade:* ${expiryText}\n${member.card_number ? `🎫 *Número:* ${member.card_number}\n` : ""}\nAtenciosamente,\n${resolvedClinic.name}`;
+
+      const result = await sendWhatsAppMessage({
+        phone: member.phone,
+        message,
+        clinicId: resolvedClinic.id,
+        type: "custom",
+      });
+
+      if (result.success) {
+        toast({
+          title: "Notificação enviada!",
+          description: `${member.name} foi notificado(a) sobre a carteirinha.`,
+        });
+      } else {
+        toast({
+          title: "Erro ao enviar",
+          description: result.error || "Não foi possível enviar a notificação.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao enviar notificação.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Enviar solicitação de assinatura digital (email)
+  const handleSendSignatureRequest = async (member: UnionMember) => {
+    if (!currentClinic || !member.email) {
+      toast({
+        title: "Erro",
+        description: "Email do sócio não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-signature-request", {
+        body: {
+          associadoId: member.id,
+          clinicId: resolvedClinic.id,
+        },
+      });
+
+      console.log("[send-signature-request] response", { data, error, memberId: member.id });
+
+      if (error) throw error;
+
+      toast({
+        title: "Solicitação enviada!",
+        description: `Email enviado para ${member.email}`,
+      });
+    } catch (err: any) {
+      const extracted = extractFunctionsError(err);
+      console.error("[send-signature-request] error", extracted);
+
+      toast({
+        title: "Erro ao enviar",
+        description: extracted.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Enviar solicitação de assinatura digital via WhatsApp
+  const handleSendSignatureWhatsApp = async (member: UnionMember, forceResign = false) => {
+    if (!currentClinic || !member.phone) {
+      toast({
+        title: "Erro",
+        description: "Telefone do sócio não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (member.signature_accepted && !forceResign) {
+      toast({
+        title: "Assinatura já registrada",
+        description: "Este sócio já possui autorização de desconto assinada.",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-signature-whatsapp", {
+        body: {
+          associadoId: member.id,
+          clinicId: resolvedClinic.id,
+          ...(forceResign ? {
+            forceResign: true,
+            resignReason: "A assinatura anterior foi revisada e constatou-se que não ficou legível. Por favor, refaça sua assinatura com cuidado.",
+          } : {}),
+        },
+      });
+
+      console.log("[send-signature-whatsapp] response", { data, error, memberId: member.id, forceResign });
+
+      if (error) {
+        const extracted = extractFunctionsError(error);
+        throw new Error(extracted.message);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: forceResign ? "Re-assinatura solicitada!" : "WhatsApp enviado!",
+        description: `Link de assinatura enviado para ${member.phone}`,
+      });
+    } catch (err: any) {
+      console.error("[send-signature-whatsapp] error", err);
+
+      toast({
+        title: "Erro ao enviar",
+        description: err.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Enviar boas-vindas pelo WhatsApp oficial (template Meta aprovado)
+  const handleSendWelcomeOfficial = async (member: UnionMember) => {
+    if (!resolvedClinic?.id) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("send-affiliation-welcome", {
+        body: { patientId: member.id, clinicId: resolvedClinic.id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: "Boas-vindas enviadas!", description: `Mensagem oficial enviada para ${member.name}.` });
+      } else {
+        const reason = data?.reason;
+        const msg = reason === "TEMPLATE_NOT_APPROVED" ? "Modelo ainda não aprovado pela Meta."
+          : reason === "NO_CONSENT" ? "Falta autorização de WhatsApp para este telefone."
+          : reason === "OPT_OUT" ? "Este associado optou por não receber mensagens."
+          : reason === "INVALID_PHONE" ? "Telefone inválido para WhatsApp."
+          : reason === "NOT_APPROVED" ? "A filiação deste sócio não consta como aprovada."
+          : reason === "ALREADY_ATTEMPTED" ? "As boas-vindas já foram enviadas para este sócio."
+          : reason === "MEMBER_NOT_FOUND" ? "Filiação não encontrada para este sócio."
+          : reason === "ENTITY_NOT_FOUND" ? "Sindicato deste sócio não encontrado."
+          : reason === "INVALID_INPUT" ? "Dados do sócio incompletos."
+          : reason === "SEND_FAILED" ? "A Meta recusou o envio para este número."
+          : "Não foi possível enviar. Consulte a auditoria.";
+        toast({ title: "Não foi possível enviar", description: msg, variant: "destructive" });
+      }
+    } catch (err: any) {
+      const extracted = extractFunctionsError(err);
+      toast({ title: "Não foi possível enviar", description: extracted.message, variant: "destructive" });
+    }
+  };
+
+  // Gerar link de assinatura e abrir WhatsApp
+  const handleManualSendSignatureWhatsApp = async (member: UnionMember) => {
+    try {
+      await sendOfficialSignatureLink(member.id, resolvedClinic.id);
+      toast({ title: "Link de assinatura enviado pelo WhatsApp oficial." });
+    } catch (err: any) {
+      toast({ title: "Não foi possível enviar", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // Stats
+  const activeCount = useMemo(() => members.filter((m) => m.is_active !== false).length, [members]);
+  const inactiveCount = useMemo(() => totalMembers - activeCount, [totalMembers, activeCount]);
+  const withInsuranceCount = useMemo(() => members.filter((m) => m.insurance_plan_id).length, [members]);
+
+  const totalPages = Math.max(1, Math.ceil((activeTab === "titulares" ? totalMembers : totalDependents) / ITEMS_PER_PAGE));
+  const showingFrom = (activeTab === "titulares" ? totalMembers : totalDependents) === 0 ? 0 : (page - 1) * ITEMS_PER_PAGE + 1;
+  const showingTo = Math.min(page * ITEMS_PER_PAGE, activeTab === "titulares" ? totalMembers : totalDependents);
+
+  if (!isAdmin) {
+    return (
+      <div className="p-8 text-center text-sm text-muted-foreground">
+        Prévia disponível apenas para administradores.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 -m-4 md:-m-6 p-4 md:p-6 min-h-full bg-muted/40">
+      <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs text-foreground">
+        Versão de homologação — a página oficial de Sócios não foi alterada.
+      </div>
+      {/* Header */}
+      <PageHeader
+        title="Gestão de Sócios"
+        description="Cadastro e acompanhamento de associados."
+        meta={<RealtimeIndicator />}
+        moreActions={canManageMembers() ? [
+          { label: "Solicitar assinatura", icon: Pen, onClick: () => setSignatureDialogOpen(true) },
+          { label: "Importar", icon: Upload, onClick: () => setImportDialogOpen(true) },
+          { label: "Fichas em lote", icon: FileText, onClick: () => setBatchFiliacaoDialogOpen(true) },
+        ] : undefined}
+        primary={canManageMembers() ? (
+          <Button size="sm" className="h-9" onClick={() => navigate("/union/socios/novo")}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Novo Sócio
+          </Button>
+        ) : undefined}
+      />
+
+      {/* TABS - Titulares / Dependentes / Contracheques */}
+      <div className="inline-flex items-center gap-1 rounded-lg border bg-card p-1">
+        <button
+          onClick={() => {
+            setActiveTab("titulares");
+            setPage(1);
+          }}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative ${
+            activeTab === "titulares"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Titulares
+          </div>
+          {activeTab === "titulares" && (
+            null
+          )}
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("dependentes");
+            setPage(1);
+          }}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative ${
+            activeTab === "dependentes"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Dependentes
+          </div>
+          {activeTab === "dependentes" && (
+            null
+          )}
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("contribuicoes");
+            setPage(1);
+          }}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative ${
+            activeTab === "contribuicoes"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Contribuições
+          </div>
+          {activeTab === "contribuicoes" && (
+            null
+          )}
+        </button>
+        <button
+          onClick={() => navigate("/union/socios/contracheques")}
+          className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative text-muted-foreground hover:text-foreground"
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Contracheques
+          </div>
+        </button>
+      </div>
+
+      {/* Contributions Tab Content */}
+      {activeTab === "contribuicoes" && (
+        <MemberContributionsTab />
+      )}
+
+      {/* Toolbar: search + filters in a single bar */}
+      {activeTab !== "contribuicoes" && (
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2 rounded-lg border bg-card p-2">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={
+                activeTab === "titulares"
+                  ? "Buscar por nome, CPF ou telefone..."
+                  : "Buscar dependente por nome ou CPF..."
+              }
+              value={activeTab === "titulares" ? searchTerm : dependentsSearch}
+              onChange={(e) =>
+                activeTab === "titulares"
+                  ? setSearchTerm(e.target.value)
+                  : setDependentsSearch(e.target.value)
+              }
+              className="pl-9 h-9 border-0 bg-muted/40 focus-visible:ring-1 w-full"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {activeTab === "titulares" && (
+              <Select
+                value={cardFilter}
+                onValueChange={(value: "all" | "valid" | "expired" | "no-card") => {
+                  setCardFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[170px] h-9 text-xs">
+                  <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                  <SelectValue placeholder="Status Carteirinha" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Carteirinhas</SelectItem>
+                  <SelectItem value="valid">Válidas</SelectItem>
+                  <SelectItem value="expired">Vencidas</SelectItem>
+                  <SelectItem value="no-card">Sem Carteirinha</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            <div className="flex items-center gap-2 px-3 h-9 rounded-md border">
+              <Switch
+                id="show-inactive"
+                checked={showInactive}
+                onCheckedChange={(checked) => {
+                  setShowInactive(checked);
+                  setPage(1);
+                }}
+              />
+              <Label htmlFor="show-inactive" className="text-xs font-medium cursor-pointer whitespace-nowrap text-muted-foreground">
+                Inativos
+              </Label>
+            </div>
+
+            <Button variant="outline" size="sm" onClick={fetchMembers} className="h-9">
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Sincronizar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Indicators strip (only for Titulares) */}
+      {activeTab === "titulares" && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Total", value: totalMembers, icon: HeartPulse, tone: "text-primary" },
+            { label: "Ativos", value: activeCount, icon: UserCheck, tone: "text-success" },
+            { label: "Inativos", value: showInactive ? members.length : inactiveCount, icon: UserX, tone: "text-destructive" },
+            { label: "Convênios", value: withInsuranceCount, icon: Shield, tone: "text-primary" },
+          ].map(({ label, value, icon: Icon, tone }) => (
+            <div key={label} className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 shadow-sm">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
+                <p className="text-xl font-semibold text-foreground leading-tight tabular-nums">{value}</p>
+              </div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-muted"><Icon className={`h-4 w-4 ${tone}`} /></span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Alerts Panel (only for Titulares) */}
+      {activeTab === "titulares" && <PatientAlertsPanel />}
+
+      {/* Members List (Titulares) */}
+      {activeTab === "titulares" && (
+        <Card className="shadow-none overflow-hidden">
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                Carregando sócios...
+              </div>
+            ) : members.length > 0 ? (
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+                  <TableRow className="border-b hover:bg-transparent">
+                    <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-3">Sócio</TableHead>
+                    <TableHead className="hidden sm:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">CPF</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-2">Telefone</TableHead>
+                    <TableHead className="hidden lg:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Convênio</TableHead>
+                    <TableHead className="hidden md:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Carteirinha</TableHead>
+                    {isAdmin && (
+                      <TableHead className="hidden xl:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Limite</TableHead>
+                    )}
+                    <TableHead className="w-[40px] h-9"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {members.map((member) => (
+                    <TableRow
+                      key={member.id}
+                      className={`group hover:bg-muted/30 transition-colors border-b ${
+                        member.is_active === false ? "opacity-60 bg-muted/10" : ""
+                      }`}
+                    >
+                      <TableCell className="py-1.5 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <UserAvatar
+                            avatarUrl={member.photo_url}
+                            name={member.name}
+                            size="sm"
+                            className={`h-8 w-8 flex-shrink-0 border-2 border-background shadow-sm ${member.is_active === false ? "opacity-60" : ""}`}
+                          />
+                          <div className="min-w-0 flex flex-col">
+                            <button
+                              onClick={() => handleOpenEdit(member)}
+                              className="font-bold text-xs text-primary hover:underline text-left truncate max-w-[200px] leading-tight"
+                            >
+                              {member.name}
+                            </button>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              {member.birth_date && (
+                                <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-1 rounded">
+                                  {calculateAge(member.birth_date)} anos
+                                </span>
+                              )}
+                              {member.is_active === false ? (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-[9px] h-3.5 px-1 py-0 font-bold uppercase"
+                                >
+                                  Inativo
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="success"
+                                  className="text-[9px] h-3.5 px-1 py-0 font-bold uppercase"
+                                >
+                                  Ativo
+                                </Badge>
+                              )}
+                              {member.employer_name && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // We need to find the employer ID first if we don't have it in the member object
+                                    // For now, if we don't have it, we might need to fetch it or just disable the click
+                                    // Let's assume we might need to look it up if not available
+                                    if (member.employer_id) {
+                                      openModal('employerEdit', { employerId: member.employer_id, onUpdate: fetchMembers });
+                                    } else {
+                                      // Fallback or just show name
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1 rounded max-w-[130px] truncate border border-blue-100 hover:bg-blue-100 transition-colors text-left cursor-pointer"
+                                >
+                                  <Building2 className="h-2.5 w-2.5" />
+                                  <span className="truncate">{member.employer_name}</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell py-1.5 px-2">
+                        {member.cpf ? (
+                          <code className="text-[10px] font-mono bg-muted/80 text-muted-foreground px-1 py-0.5 rounded border shadow-sm">
+                            <CpfDisplay value={member.cpf} />
+                          </code>
+                        ) : (
+                          <span className="text-muted-foreground text-[10px]">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-1.5 px-2">
+                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 bg-muted/30 px-1.5 py-0.5 rounded-full w-fit border border-transparent group-hover:border-primary/20 group-hover:bg-primary/5 transition-all">
+                          <Phone className="h-2.5 w-2.5 text-primary/70" />
+                          {formatPhone(member.phone) || "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell py-1.5 px-2">
+                        {member.insurance_plan ? (
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-bold shadow-sm border-primary/10">
+                            {member.insurance_plan.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-[10px]">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell py-1.5 px-2">
+                        <div className="scale-[0.85] origin-left">
+                          <InlineCardExpiryEdit
+                            entityId={member.id}
+                            entityType="patient"
+                            currentExpiryDate={member.card_expires_at || null}
+                            cardNumber={member.card_number}
+                            insurancePlanName={member.insurance_plan?.name || null}
+                            onUpdate={fetchMembers}
+                          />
+                        </div>
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="hidden xl:table-cell py-1.5 px-2">
+                          <div className="scale-[0.85] origin-left">
+                            <InlineAppointmentLimitEdit
+                              patientId={member.id}
+                              patientName={member.name}
+                              currentLimit={member.max_appointments_per_month ?? null}
+                              clinicDefault={clinicDefaultLimit}
+                              onUpdate={fetchMembers}
+                            />
+                          </div>
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right py-1.5 pr-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuItem onClick={() => handleViewMember(member.id)}>
+                              <User className="h-4 w-4 mr-2" />
+                              Ver perfil
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenEdit(member)}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                navigate(`/union/socios/${member.id}?tab=anexos`)
+                              }
+                            >
+                              <Paperclip className="h-4 w-4 mr-2" />
+                              Anexos
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if ((member.dependents_count || 0) > 0) {
+                                  navigate(
+                                    `/union/socios/${member.id}?tab=dependentes`
+                                  );
+                                } else {
+                                  navigate(
+                                    `/union/socios/${member.id}?tab=dependentes&add=true`
+                                  );
+                                }
+                              }}
+                            >
+                              <Users className="h-4 w-4 mr-2" />
+                              {(member.dependents_count || 0) > 0
+                                ? `Dependentes (${member.dependents_count})`
+                                : "Novo dependente"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedMemberForFiliacao(member);
+                                setFiliacaoDialogOpen(true);
+                              }}
+                              className="text-primary"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Ficha de Filiação
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleSendWelcomeOfficial(member)}
+                              className="text-green-600"
+                            >
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Enviar Boas-Vindas
+                            </DropdownMenuItem>
+                            {member.card_expires_at && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendCardNotification(member)}
+                                className="text-blue-600"
+                              >
+                                <Bell className="h-4 w-4 mr-2" />
+                                Notificar Carteirinha
+                              </DropdownMenuItem>
+                            )}
+                             {member.phone && canManageMembers() && (
+                               <DropdownMenuItem
+                                 onClick={() => handleManualSendSignatureWhatsApp(member)}
+                                 className="text-emerald-600 font-medium"
+                               >
+                                 <MessageCircle className="h-4 w-4 mr-2" />
+                                 Enviar Link de Assinatura
+                               </DropdownMenuItem>
+                             )}
+                             {member.phone && canManageMembers() && !member.signature_accepted && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendSignatureWhatsApp(member)}
+                                className="text-emerald-600"
+                              >
+                                <Pen className="h-4 w-4 mr-2" />
+                                Assinar Ficha (WhatsApp)
+                              </DropdownMenuItem>
+                            )}
+                            {member.phone && canManageMembers() && member.signature_accepted && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendSignatureWhatsApp(member, true)}
+                                className="text-amber-600"
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Re-assinatura (Ilegível)
+                              </DropdownMenuItem>
+                            )}
+                            {member.email && canManageMembers() && !member.signature_accepted && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendSignatureRequest(member)}
+                                className="text-violet-600"
+                              >
+                                <Pen className="h-4 w-4 mr-2" />
+                                Assinar Ficha (Email)
+                              </DropdownMenuItem>
+                            )}
+                            {canManageMembers() && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedMemberForReset(member);
+                                  setPatientResetDialogOpen(true);
+                                }}
+                                className="text-orange-600"
+                              >
+                                <KeyRound className="h-4 w-4 mr-2" />
+                                Reset de Senha App
+                              </DropdownMenuItem>
+                            )}
+                            {canManageMembers() && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedMemberForDelete(member);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir Associado
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <HeartPulse className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="mb-4">Nenhum sócio encontrado</p>
+                {canManageMembers() && (
+                  <Button variant="outline" onClick={() => navigate("/union/socios/novo")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar sócio
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-xs text-muted-foreground">
+                Mostrando {showingFrom} a {showingTo} de {totalMembers}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={page === pageNum ? "default" : "outline"}
+                      size="icon"
+                      className="h-8 w-8 text-xs"
+                      onClick={() => setPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Dependents List */}
+      {activeTab === "dependentes" && (
+        <Card className="shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            {dependentsLoading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                Carregando dependentes...
+              </div>
+            ) : dependents.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-semibold">Dependente</TableHead>
+                    <TableHead className="hidden sm:table-cell font-semibold">CPF</TableHead>
+                    <TableHead className="font-semibold">Parentesco</TableHead>
+                    <TableHead className="font-semibold">Titular</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dependents.map((dep) => (
+                    <TableRow
+                      key={dep.id}
+                      className={`h-12 hover:bg-muted/30 transition-colors ${
+                        dep.is_active === false ? "opacity-60" : ""
+                      }`}
+                    >
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                              dep.is_active === false
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-violet-100 text-violet-600"
+                            }`}
+                          >
+                            <Users className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <button
+                              onClick={() =>
+                                navigate(
+                                  `/union/socios/${dep.patient_id}?tab=dependentes&editDependent=${dep.id}`
+                                )
+                              }
+                              className="font-medium text-sm text-primary hover:underline text-left truncate max-w-[180px] block"
+                            >
+                              {dep.name}
+                            </button>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {dep.birth_date && (
+                                <span className="text-xs text-muted-foreground">
+                                  {calculateAge(dep.birth_date)} anos
+                                </span>
+                              )}
+                              {dep.is_active === false && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  Inativo
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell py-2">
+                        {dep.cpf ? (
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            <CpfDisplay value={dep.cpf} />
+                          </code>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {dep.relationship || "—"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <button
+                          onClick={() => navigate(`/union/socios/${dep.patient_id}`)}
+                          className="text-xs text-primary hover:underline truncate max-w-[150px] block"
+                        >
+                          {dep.patient?.name || "—"}
+                        </button>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() =>
+                              navigate(
+                                `/union/socios/${dep.patient_id}?tab=dependentes&editDependent=${dep.id}`
+                              )
+                            }
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          {canManageMembers && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setDependentToDelete(dep);
+                                setDeleteDependentDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum dependente encontrado</p>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination for Dependents */}
+          {totalPages > 1 && activeTab === "dependentes" && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-xs text-muted-foreground">
+                Mostrando {showingFrom} a {showingTo} de {totalDependents}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={page === pageNum ? "default" : "outline"}
+                      size="icon"
+                      className="h-8 w-8 text-xs"
+                      onClick={() => setPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+
+      {/* Filiacao Actions Dialog */}
+      {selectedMemberForFiliacao && (
+        <MemberFiliacaoActionsDialog
+          open={filiacaoDialogOpen}
+          onOpenChange={(open) => {
+            setFiliacaoDialogOpen(open);
+            if (!open) setSelectedMemberForFiliacao(null);
+          }}
+          member={{
+            id: selectedMemberForFiliacao.id,
+            name: selectedMemberForFiliacao.name,
+            email: selectedMemberForFiliacao.email,
+            phone: selectedMemberForFiliacao.phone,
+            cpf: selectedMemberForFiliacao.cpf,
+            birth_date: selectedMemberForFiliacao.birth_date,
+            gender: selectedMemberForFiliacao.gender,
+            address: selectedMemberForFiliacao.address,
+            address_number: selectedMemberForFiliacao.address_number,
+            neighborhood: selectedMemberForFiliacao.neighborhood,
+            city: selectedMemberForFiliacao.city,
+            state: selectedMemberForFiliacao.state,
+            zip_code: selectedMemberForFiliacao.zip_code,
+            registration_number: selectedMemberForFiliacao.registration_number,
+            photo_url: selectedMemberForFiliacao.photo_url,
+            signature_accepted: selectedMemberForFiliacao.signature_accepted,
+            employer_name: selectedMemberForFiliacao.employer_name,
+            employer_cnpj: selectedMemberForFiliacao.employer_cnpj,
+          }}
+          clinicId={resolvedClinic?.id || ""}
+        />
+      )}
+
+      {/* Batch Filiacao Dialog */}
+      {resolvedClinic?.id && (
+        <BatchFiliacaoDialog
+          open={batchFiliacaoDialogOpen}
+          onOpenChange={setBatchFiliacaoDialogOpen}
+          clinicId={resolvedClinic.id}
+        />
+      )}
+
+      {/* Import Members Dialog */}
+      <ImportMembersDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+      />
+
+      {/* Delete Member Dialog */}
+      {resolvedClinic?.id && (
+        <DeleteMemberDialog
+          open={deleteDialogOpen}
+          onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) setSelectedMemberForDelete(null);
+          }}
+          member={selectedMemberForDelete ? {
+            id: selectedMemberForDelete.id,
+            name: selectedMemberForDelete.name,
+            cpf: selectedMemberForDelete.cpf,
+            phone: selectedMemberForDelete.phone,
+            dependentsCount: selectedMemberForDelete.dependents_count,
+          } : null}
+          clinicId={resolvedClinic.id}
+          onSuccess={fetchMembers}
+        />
+      )}
+
+      {/* Send Signature Request Dialog */}
+      <SendSignatureRequestDialog
+        open={signatureDialogOpen}
+        onOpenChange={setSignatureDialogOpen}
+      />
+
+      {/* Delete Dependent Dialog */}
+      <AlertDialog open={deleteDependentDialogOpen} onOpenChange={setDeleteDependentDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover dependente?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?</p>
+                <p><strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado.</p>
+                <p><strong>Excluir permanentemente:</strong> Remove todos os dados. Esta ação não pode ser desfeita.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={isDeletingDependent}>Cancelar</AlertDialogCancel>
+            <Button variant="outline" onClick={() => handleDeleteDependent("inactivate")} disabled={isDeletingDependent}>
+              {isDeletingDependent ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <UserX className="h-4 w-4 mr-1" />}
+              Inativar
+            </Button>
+            <Button variant="destructive" onClick={() => handleDeleteDependent("delete")} disabled={isDeletingDependent}>
+              {isDeletingDependent ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Excluir Permanentemente
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Patient Reset Dialog */}
+      <SendPatientResetDialog
+        open={patientResetDialogOpen}
+        onOpenChange={(open) => {
+          setPatientResetDialogOpen(open);
+          if (!open) setSelectedMemberForReset(null);
+        }}
+        patient={selectedMemberForReset ? {
+          id: selectedMemberForReset.id,
+          name: selectedMemberForReset.name,
+          email: selectedMemberForReset.email,
+          phone: selectedMemberForReset.phone,
+        } : null}
+      />
+    </div>
+  );
+}
