@@ -767,10 +767,10 @@ export default function UnionMembersListPage() {
   return (
     <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <HeartPulse className="h-6 w-6 text-primary" />
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><HeartPulse className="h-5 w-5 text-primary" /></span>
             Sócios
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -1007,7 +1007,7 @@ export default function UnionMembersListPage() {
 
       {/* Members List (Titulares) */}
       {activeTab === "titulares" && (
-        <Card>
+        <Card className="shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             {loading ? (
               <div className="text-center py-12 text-muted-foreground">
@@ -1060,15 +1060,15 @@ export default function UnionMembersListPage() {
                               )}
                               {member.is_active === false ? (
                                 <Badge
-                                  variant="outline"
-                                  className="text-[9px] h-3.5 px-1 py-0 bg-rose-50 text-rose-700 border-rose-200 font-bold uppercase"
+                                  variant="destructive"
+                                  className="text-[9px] h-3.5 px-1 py-0 font-bold uppercase"
                                 >
                                   Inativo
                                 </Badge>
                               ) : (
                                 <Badge
-                                  variant="outline"
-                                  className="text-[9px] h-3.5 px-1 py-0 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold uppercase"
+                                  variant="success"
+                                  className="text-[9px] h-3.5 px-1 py-0 font-bold uppercase"
                                 >
                                   Ativo
                                 </Badge>
@@ -1350,7 +1350,7 @@ export default function UnionMembersListPage() {
 
       {/* Dependents List */}
       {activeTab === "dependentes" && (
-        <Card>
+        <Card className="shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             {dependentsLoading ? (
               <div className="text-center py-12 text-muted-foreground">
@@ -1406,8 +1406,8 @@ export default function UnionMembersListPage() {
                               )}
                               {dep.is_active === false && (
                                 <Badge
-                                  variant="outline"
-                                  className="text-xs bg-rose-50 text-rose-700 border-rose-200"
+                                  variant="destructive"
+                                  className="text-xs"
                                 >
                                   Inativo
                                 </Badge>
