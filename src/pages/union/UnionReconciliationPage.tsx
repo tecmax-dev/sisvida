@@ -235,7 +235,7 @@ export default function UnionReconciliationPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
@@ -246,11 +246,11 @@ export default function UnionReconciliationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Conciliação Lytex</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground">Conciliação Lytex</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Verifique e concilie divergências entre o sistema e a Lytex
           </p>
         </div>
@@ -283,8 +283,8 @@ export default function UnionReconciliationPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-5">
+        <Card className="shadow-none">
+          <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <ExternalLink className="h-4 w-4 text-blue-500 dark:text-blue-400" />
               <span className="text-sm">Total com Lytex</span>
@@ -293,8 +293,8 @@ export default function UnionReconciliationPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-5">
+        <Card className="shadow-none">
+          <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               <span className="text-sm">Conciliados</span>

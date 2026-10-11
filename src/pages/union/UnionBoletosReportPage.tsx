@@ -301,11 +301,11 @@ export default function UnionBoletosReportPage() {
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FileBarChart className="h-6 w-6 text-primary" />
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground flex items-center gap-2">
+            <FileBarChart className="h-5 w-5 text-muted-foreground" />
             Relatório de Boletos
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Visão completa de boletos de sócios e empresas, com filtros, indicadores e exportação.
           </p>
         </div>

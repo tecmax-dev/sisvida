@@ -77,13 +77,13 @@ export default function UnionReportsPage() {
 
   if (!resolvedClinic) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FileBarChart className="h-6 w-6 text-blue-500" />
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground flex items-center gap-2">
+            <FileBarChart className="h-5 w-5 text-muted-foreground" />
             Relatórios Sindicais
           </h1>
-          <p className="text-muted-foreground">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Relatórios financeiros do módulo sindical
           </p>
         </div>
@@ -106,13 +106,13 @@ export default function UnionReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <FileBarChart className="h-6 w-6 text-blue-500" />
+        <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground flex items-center gap-2">
+          <FileBarChart className="h-5 w-5 text-muted-foreground" />
           Relatórios Sindicais
         </h1>
-        <p className="text-muted-foreground">
+        <p className="mt-0.5 text-sm text-muted-foreground">
           Relatórios financeiros do módulo sindical
         </p>
       </div>

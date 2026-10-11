@@ -836,11 +836,11 @@ export default function UnionPaymentHistoryPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <History className="h-6 w-6" />
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground flex items-center gap-2">
+            <History className="h-5 w-5 text-muted-foreground" />
             Histórico de Pagamentos
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Consulta de pagamentos retroativos e importados
           </p>
         </div>
