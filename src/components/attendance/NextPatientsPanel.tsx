@@ -113,22 +113,35 @@ export function NextPatientsList({
       {items.map((p, i) => {
         const st = STATUS[p.status] ?? { label: p.status, variant: "muted" as const };
         return (
-          <li key={p.id} className={cn("flex items-center gap-3 p-3", i === 0 && "bg-primary/5")}>
-            <span className="w-12 shrink-0 font-mono text-sm font-semibold text-primary">
-              {p.start_time?.slice(0, 5)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                {p.age != null && <span className="text-[11px] text-muted-foreground">{p.age}a</span>}
-                {p.isDependent && <Badge variant="muted" className="h-4 px-1 text-[10px]">DEP</Badge>}
-                <Badge variant={st.variant} className="h-4 px-1 text-[10px]">{st.label}</Badge>
+          <li key={p.id}>
+            <button
+              type="button"
+              onClick={() => onOpen(p.id)}
+              title={`Abrir atendimento de ${p.name}`}
+              className={cn(
+                "group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:outline-none",
+                i === 0 && "bg-primary/5"
+              )}
+            >
+              <span className="w-12 shrink-0 font-mono text-sm font-semibold text-primary">
+                {p.start_time?.slice(0, 5)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{p.name}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  {p.age != null && <span className="text-[11px] text-muted-foreground">{p.age}a</span>}
+                  {p.isDependent && <Badge variant="muted" className="h-4 px-1 text-[10px]">DEP</Badge>}
+                  <Badge variant={st.variant} className="h-4 px-1 text-[10px]">{st.label}</Badge>
+                </div>
               </div>
-            </div>
-            <Button size={compact ? "sm" : "sm"} variant={i === 0 ? "default" : "outline"} onClick={() => onOpen(p.id)}>
-              <Play className="h-3.5 w-3.5" />
-              <span className="ml-1">Abrir</span>
-            </Button>
+              <span className={cn(
+                "flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium",
+                i === 0 ? "bg-primary text-primary-foreground" : "border border-border text-foreground group-hover:border-primary group-hover:text-primary"
+              )}>
+                <Play className="h-3.5 w-3.5" />
+                Atender
+              </span>
+            </button>
           </li>
         );
       })}
@@ -157,7 +170,7 @@ export function NextPatientsPanel({
       </div>
     );
   return (
-    <aside className="hidden lg:flex w-80 shrink-0 flex-col border-l border-border bg-card">
+    <aside className="hidden lg:flex w-80 xl:w-96 shrink-0 min-w-0 overflow-hidden flex-col border-l border-border bg-card">
       <div className="flex items-center justify-between border-b border-border p-3">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-primary" />
@@ -168,9 +181,9 @@ export function NextPatientsPanel({
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <NextPatientsList items={items} loading={loading} onOpen={onOpen} />
-      </ScrollArea>
+      </div>
     </aside>
   );
 }
