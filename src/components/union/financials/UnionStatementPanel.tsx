@@ -24,7 +24,7 @@ import {
 import { format, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2, ArrowLeftRight, Wallet, TrendingDown, TrendingUp, Landmark } from "lucide-react";
-import { KpiCard } from "@/components/design-system";
+import { KpiCard, CountTabs } from "@/components/design-system";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,6 +106,8 @@ export function UnionStatementPanel() {
   const [startDate, setStartDate] = useState<Date>(() => startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(() => endOfMonth(new Date()));
   const [isMigrating, setIsMigrating] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<"all" | "expense" | "income">("all");
+  const [rowSearch, setRowSearch] = useState("");
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<any>(null);
@@ -974,8 +976,8 @@ export function UnionStatementPanel() {
                               <Pencil className="h-3 w-3" />
                             </button>
                           ) : null}</span>} />
-              <KpiCard label="Débitos" tone="destructive" value={formatCurrency(summary.totalDebits)} icon={TrendingDown} hint={`${summary.totalRecords} registros no período`} />
-              <KpiCard label="Créditos" tone="success" value={formatCurrency(summary.totalCredits)} icon={TrendingUp} />
+              <KpiCard label="Débitos" active={typeFilter === "expense"} onClick={() => setTypeFilter(typeFilter === "expense" ? "all" : "expense")} tone="destructive" value={formatCurrency(summary.totalDebits)} icon={TrendingDown} hint={`${summary.totalRecords} registros no período`} />
+              <KpiCard label="Créditos" active={typeFilter === "income"} onClick={() => setTypeFilter(typeFilter === "income" ? "all" : "income")} tone="success" value={formatCurrency(summary.totalCredits)} icon={TrendingUp} />
               <KpiCard label="Saldo final" tone="primary" value={formatCurrency(summary.finalBalance)} icon={Landmark} />
             </div>
           )}
@@ -983,6 +985,23 @@ export function UnionStatementPanel() {
           {/* Transactions Table */}
           <Card className="rounded-xl shadow-sm">
             <CardContent className="p-0">
+              <CountTabs
+                value={typeFilter}
+                onChange={setTypeFilter}
+                items={(() => { const all = dailyGroups.flatMap((g) => g.transactions); return [
+                  { value: "all" as const, label: "Todos", count: all.length },
+                  { value: "expense" as const, label: "Débitos", count: all.filter((t) => t.type === "expense").length, tone: "destructive" as const },
+                  { value: "income" as const, label: "Créditos", count: all.filter((t) => t.type === "income").length, tone: "success" as const },
+                ]; })()}
+              />
+              <div className="flex items-center gap-2 border-b p-2">
+                <input
+                  value={rowSearch}
+                  onChange={(e) => setRowSearch(e.target.value)}
+                  placeholder="Buscar por descrição, fornecedor ou cheque..."
+                  className="h-8 w-full max-w-sm rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
               <div className="max-h-[calc(100vh-360px)] min-h-[320px] overflow-auto">
                 <Table>
                   <TableHeader className="sticky top-0 bg-card z-10">
@@ -999,9 +1018,9 @@ export function UnionStatementPanel() {
                      </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dailyGroups.map((group) => (
+                    {dailyGroups.map((group) => { const q = rowSearch.trim().toLowerCase(); const rows = group.transactions.filter((t: any) => (typeFilter === "all" || t.type === typeFilter) && (!q || [t.description, t.supplier_name, t.check_number].some((v) => String(v || "").toLowerCase().includes(q)))); if (rows.length === 0) return null; return (
                       <Fragment key={group.dateStr}>
-                        {group.transactions.map((t, idx) => (
+                        {rows.map((t, idx) => (
                           <TableRow key={t.id}>
                             <TableCell className="font-medium">
                               {idx === 0 ? format(group.date, "dd/MM/yyyy") : ""}
