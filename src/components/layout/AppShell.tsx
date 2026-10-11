@@ -23,7 +23,7 @@ export function AppShell({ sections, actions, before, footer, children }: Props)
   const crumbs = findActiveCrumbs(sections, pathname);
 
   return (
-    <div className="flex h-[100dvh] min-h-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] min-h-screen overflow-hidden bg-background font-inter">
       <div className="hidden lg:flex">
         <AppSidebar sections={sections} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(!collapsed)} />
       </div>

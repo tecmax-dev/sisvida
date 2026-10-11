@@ -101,7 +101,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
       aria-label="Menu principal"
       className={cn(
         "flex h-full flex-col border-r border-shell-border bg-shell text-shell-foreground transition-[width] duration-200",
-        isCollapsed ? "w-16" : "w-56",
+        isCollapsed ? "w-16" : "w-60",
       )}
     >
       <div className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-shell-border px-3", isCollapsed && "justify-center px-2")}>
