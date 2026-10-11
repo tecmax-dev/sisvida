@@ -522,6 +522,8 @@ export default function UnionMemberDetailPage({
   const handleNavigateToEmployer = async () => {
     const cnpj = formData.employerCnpj?.replace(/\D/g, '');
     if (!cnpj || !resolvedClinic?.id) return;
+    // Abre em nova aba (sincronamente, para não ser bloqueada) sem fechar a tela do associado
+    const win = window.open('', '_blank');
     const { data } = await supabase
       .from("employers")
       .select("id")
@@ -530,8 +532,11 @@ export default function UnionMemberDetailPage({
       .limit(1)
       .maybeSingle();
     if (data?.id) {
-      navigate(`/union/empresas/${data.id}`);
+      const url = `${window.location.origin}/union/empresas/${data.id}`;
+      if (win) win.location.href = url;
+      else navigate(`/union/empresas/${data.id}`);
     } else {
+      win?.close();
       toast({ title: "Empresa não encontrada", description: "Nenhum cadastro de empresa encontrado com este CNPJ.", variant: "destructive" });
     }
   };
