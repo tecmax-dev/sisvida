@@ -88,3 +88,48 @@ export function AlertBar({ title, count, children, defaultOpen = false }: { titl
     </div>
   );
 }
+
+const kpiTone: Record<Tone, { box: string; icon: string }> = {
+  default: { box: "bg-card", icon: "bg-primary-soft text-primary" },
+  primary: { box: "bg-card", icon: "bg-primary-soft text-primary" },
+  success: { box: "bg-success/5 border-success/20", icon: "bg-success/10 text-success" },
+  warning: { box: "bg-warning/5 border-warning/20", icon: "bg-warning/10 text-warning" },
+  destructive: { box: "bg-destructive/5 border-destructive/20", icon: "bg-destructive/10 text-destructive" },
+};
+
+/** Indicador financeiro: ícone, rótulo, valor e quantidade. */
+export function KpiCard({ label, value, hint, icon: Icon, tone = "default", active, onClick }: {
+  label: string; value: ReactNode; hint?: ReactNode; icon: ComponentType<{ className?: string }>; tone?: Tone; active?: boolean; onClick?: () => void;
+}) {
+  const Comp = onClick ? "button" : "div";
+  return (
+    <Comp onClick={onClick} className={cn("flex w-full items-center gap-3 rounded-xl border p-4 text-left shadow-sm transition-colors", kpiTone[tone].box, onClick && "hover:border-primary/40", active && "ring-2 ring-primary/40")}>
+      <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", kpiTone[tone].icon)}><Icon className="h-5 w-5" /></span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="truncate text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</p>
+        {hint && <p className="truncate text-xs text-muted-foreground">{hint}</p>}
+      </div>
+    </Comp>
+  );
+}
+
+/** Abas horizontais com contador. */
+export function CountTabs<T extends string>({ value, onChange, items }: {
+  value: T; onChange: (v: T) => void; items: { value: T; label: string; count?: number; tone?: Tone }[];
+}) {
+  return (
+    <div role="tablist" className="flex gap-1 overflow-x-auto border-b px-2">
+      {items.map((it) => {
+        const active = it.value === value;
+        return (
+          <button key={it.value} type="button" role="tab" aria-selected={active} onClick={() => onChange(it.value)}
+            className={cn("-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors", active ? "border-primary font-medium text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            {it.label}
+            {typeof it.count === "number" && <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums", statusStyles[it.tone ?? (active ? "primary" : "default")])}>{it.count.toLocaleString("pt-BR")}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
