@@ -25,6 +25,15 @@
 
 @layer base {
   :root {
+    /* Menu lateral corporativo (AppShell) - claro */
+    --shell: 0 0% 100%;
+    --shell-foreground: 220 15% 30%;
+    --shell-muted: 220 10% 50%;
+    --shell-hover: 220 20% 96%;
+    --shell-active: 214 70% 95%;
+    --shell-active-foreground: 214 89% 32%;
+    --shell-border: 220 15% 90%;
+
     /* Primary - Navy Trust */
     /* Primary - Prosinge Blue #094798 */
     --primary: 214 89% 32%;
