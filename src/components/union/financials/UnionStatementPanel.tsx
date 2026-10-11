@@ -1106,7 +1106,7 @@ export function UnionStatementPanel() {
                           </TableCell>
                         </TableRow>
                       </Fragment>
-                    ))}
+                    ); })}
 
                     {dailyGroups.length === 0 && (
                       <TableRow>
