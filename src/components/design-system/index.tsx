@@ -108,7 +108,7 @@ export function KpiCard({ label, value, hint, icon: Icon, tone = "default", acti
       <div className="min-w-0">
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
         <p className="truncate text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</p>
-        {hint && <p className="truncate text-xs text-muted-foreground">{hint}</p>}
+        {hint && <div className="truncate text-xs text-muted-foreground">{hint}</div>}
       </div>
     </Comp>
   );
