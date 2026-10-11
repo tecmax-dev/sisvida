@@ -64,7 +64,7 @@ export function UnionMemberTabs({ activeTab, onTabChange, memberId, hiddenTabs =
             <div className="mx-2 my-1 hidden border-t lg:block" />
             <button type="button" onClick={() => navigate(`/union/socios/${memberId}/auditoria`)} className={itemClass(false)}>
               <History className="h-4 w-4 shrink-0" />
-              Histórico e auditoria
+              Contracheques e auditoria
             </button>
           </>
         )}
