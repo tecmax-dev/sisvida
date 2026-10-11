@@ -25,6 +25,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import { KpiCard, CountTabs } from "@/components/design-system";
 
 const PRESET_COLORS = [
   "#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
@@ -160,12 +161,13 @@ export default function UnionCategoriesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Categorias Financeiras</h1>
-        <p className="text-muted-foreground">
-          Gerencie as categorias de receitas e despesas sindicais
-        </p>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Tag className="h-5 w-5" /></span>
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Categorias Financeiras</h1>
+          <p className="text-sm text-muted-foreground">Gerencie as categorias de receitas e despesas sindicais.</p>
+        </div>
       </div>
 
       {/* Migration Alert */}
@@ -198,64 +200,28 @@ export default function UnionCategoriesPage() {
         </Alert>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Tag className="h-4 w-4 text-primary" />
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{categories?.length || 0}</p>
-            <p className="text-xs text-muted-foreground">categorias cadastradas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-              Receitas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{incomeCategories.length}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-rose-500" />
-              Despesas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-rose-600">{expenseCategories.length}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <KpiCard label="Total" value={(categories?.length || 0).toLocaleString("pt-BR")} hint="categorias cadastradas" icon={Tag} />
+        <KpiCard label="Receitas" tone="success" value={incomeCategories.length.toLocaleString("pt-BR")} hint="categorias de receita" icon={TrendingUp} active={activeTab === "income"} onClick={() => setActiveTab("income")} />
+        <KpiCard label="Despesas" tone="destructive" value={expenseCategories.length.toLocaleString("pt-BR")} hint="categorias de despesa" icon={TrendingDown} active={activeTab === "expense"} onClick={() => setActiveTab("expense")} />
       </div>
 
-      <Card>
-        <CardContent className="p-6">
+      <Card className="rounded-xl shadow-sm">
+        <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "income" | "expense")}>
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="income" className="gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Receitas ({incomeCategories.length})
-              </TabsTrigger>
-              <TabsTrigger value="expense" className="gap-2">
-                <TrendingDown className="h-4 w-4" />
-                Despesas ({expenseCategories.length})
-              </TabsTrigger>
-            </TabsList>
+            <CountTabs
+              value={activeTab}
+              onChange={(v) => setActiveTab(v)}
+              items={[
+                { value: "expense", label: "Despesas", count: expenseCategories.length, tone: "destructive" },
+                { value: "income", label: "Receitas", count: incomeCategories.length, tone: "success" },
+              ]}
+            />
 
-            <div className="space-y-4">
+            <div className="space-y-4 p-4">
               {/* Add new category */}
               {canManageCategories() && (
-                <div className="flex gap-2 items-end p-4 bg-muted/50 rounded-lg">
+                <div className="flex flex-wrap gap-2 items-end rounded-lg border bg-muted/30 p-3">
                   <div className="flex-1">
                     <Label>Nova Categoria</Label>
                     <Input
