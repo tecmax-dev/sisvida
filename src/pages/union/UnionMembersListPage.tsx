@@ -963,17 +963,6 @@ export default function UnionMembersListPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Sincronizar
           </Button>
-
-          {canManageMembers && (
-            <Button 
-              size="sm" 
-              onClick={() => navigate('/union/socios/novo')}
-              className="h-11 bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm px-6"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Sócio
-            </Button>
-          )}
         </div>
       </div>
       )}
