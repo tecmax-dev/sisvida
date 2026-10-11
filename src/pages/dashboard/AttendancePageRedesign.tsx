@@ -1805,6 +1805,10 @@ export default function AttendancePageRedesign() {
         </ScrollArea>
       </div>
 
+      {/* Próximos pacientes do profissional */}
+      <NextPatientsPanel items={nextPatients.items} loading={nextPatients.loading} onOpen={openNextPatient} />
+
+
       {/* Exam WhatsApp Dialog */}
       <Dialog open={showExamWhatsAppDialog} onOpenChange={setShowExamWhatsAppDialog}>
         <DialogContent>
