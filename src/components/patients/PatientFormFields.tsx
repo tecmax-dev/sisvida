@@ -35,6 +35,8 @@ interface PatientFormFieldsProps {
   canEditConvenio?: boolean;
   onNavigateToEmployer?: () => void;
   showSectionHeadings?: boolean;
+  /** Quando definido, mostra apenas esta subseção do formulário. */
+  visibleSection?: 'pessoais' | 'endereco' | 'contato' | 'profissional';
 }
 
 export interface PatientFormData {
@@ -171,6 +173,7 @@ export function PatientFormFields({
   canEditConvenio = true,
   onNavigateToEmployer,
   showSectionHeadings = false,
+  visibleSection,
 }: PatientFormFieldsProps) {
   const updateField = <K extends keyof PatientFormData>(
     field: K,
@@ -210,6 +213,8 @@ export function PatientFormFields({
       .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
   };
 
+  const show = (k: string) => !visibleSection || visibleSection === k;
+
   const calculateIMC = () => {
     const height = parseFloat(formData.heightCm);
     const weight = parseFloat(formData.weightKg);
@@ -222,6 +227,7 @@ export function PatientFormFields({
 
   return (
     <div className="space-y-6">
+      {show('pessoais') && (<>
       {showSectionHeadings && <h3 id="secao-pessoais" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dados pessoais</h3>}
       {/* Linha 1: Checkboxes, Matrícula e Código Prontuário */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
@@ -479,7 +485,9 @@ export function PatientFormFields({
           />
         </div>
       </div>
+      </>)}
 
+      {show('endereco') && (<>
       {showSectionHeadings && <h3 id="secao-endereco" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Endereço</h3>}
       {/* Linha 5: CEP, Endereço, Número, Bairro */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -576,7 +584,9 @@ export function PatientFormFields({
           />
         </div>
       </div>
+      </>)}
 
+      {show('contato') && (<>
       {showSectionHeadings && <h3 id="secao-contato" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contato e observações</h3>}
       {/* Linha 7: TAG, Indicação, Avisos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-end">
@@ -706,7 +716,9 @@ export function PatientFormFields({
           </Select>
         </div>
       </div>
+      </>)}
 
+      {show('profissional') && (<>
       {showSectionHeadings && <h3 id="secao-profissional" className="scroll-mt-4 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dados profissionais e familiares</h3>}
       {/* Linha 9: Profissão, Escolaridade, CNPJ Empresa */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -922,6 +934,7 @@ export function PatientFormFields({
           </div>
         </div>
       )}
+      </>)}
 
     </div>
   );
