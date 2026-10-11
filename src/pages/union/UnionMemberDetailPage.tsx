@@ -1,7 +1,9 @@
 import { sendOfficialSignatureLink } from "@/lib/sendOfficialSignatureLink";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
- import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText } from "lucide-react";
+import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { UserAvatar } from "@/components/users/UserAvatar";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -918,56 +920,55 @@ export default function UnionMemberDetailPage({
   const currentStatus = statusConfig[unionStatus] || statusConfig.pendente;
 
   const renderActionButtons = (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2">
       <AutoSaveIndicator status={autoSaveStatus} />
-      <Badge variant="outline" className={currentStatus.color}>
-        {currentStatus.label}
-      </Badge>
       {canManageMembers() && (
-        <Button variant="destructive" size="sm" onClick={handleUnlinkMember} disabled={saving}>
-          <UserX className="h-4 w-4 mr-2" />
-          Desvincular
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5">
+              <MoreHorizontal className="h-4 w-4" />
+              Mais ações
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onClick={handleUnlinkMember} disabled={saving} className="text-destructive focus:text-destructive">
+              <UserX className="h-4 w-4 mr-2" />
+              Desvincular associado
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      {id && resolvedClinic && (
+        <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setIsFiliacaoDialogOpen(true)}>
+          <FileText className="h-4 w-4" />
+          Ficha de Filiação
         </Button>
       )}
-      <div className="flex items-center gap-1.5">
-        {id && resolvedClinic && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 text-primary font-medium"
-            onClick={() => setIsFiliacaoDialogOpen(true)}
-          >
-            <FileText className="h-4 w-4" />
-            Ficha de Filiação
-          </Button>
-        )}
-        {!isModalMode && (
-          <Button type="button" onClick={() => handleSubmit(true)} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Salvar e Voltar
-          </Button>
-        )}
-        {isModalMode && (
-          <Button type="button" onClick={() => handleSubmit(false)} disabled={saving} className="gap-2 bg-teal-600 hover:bg-teal-700">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save size={16} />}
-            Salvar Alterações
-          </Button>
-        )}
-      </div>
+      {!isModalMode ? (
+        <Button type="button" size="sm" onClick={() => handleSubmit(true)} disabled={saving} className="h-9 gap-1.5">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Salvar e Voltar
+        </Button>
+      ) : (
+        <Button type="button" size="sm" onClick={() => handleSubmit(false)} disabled={saving} className="h-9 gap-1.5">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Salvar Alterações
+        </Button>
+      )}
     </div>
   );
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className={`flex flex-col min-h-screen bg-muted/20 ${isModalMode ? 'p-0 pb-10' : 'p-4 md:p-8'}`}>
-      <div className={`${isModalMode ? 'w-full' : 'max-w-7xl mx-auto space-y-6'}`}>
+    <div className={`flex flex-col ${isModalMode ? 'min-h-screen bg-background p-0 pb-10' : ''}`}>
+      <div className={`${isModalMode ? 'w-full' : 'w-full space-y-4'}`}>
 
 
 
@@ -982,37 +983,31 @@ export default function UnionMemberDetailPage({
 
 
         {!isModalMode && (
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/union/socios")}
-                className="hover:bg-background"
-              >
-                <ArrowLeft className="h-5 w-5" />
+          <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => navigate("/union/socios")} aria-label="Voltar à lista de sócios">
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div className="flex flex-col">
-                <h1 className="text-2xl font-bold tracking-tight text-teal-800">
-                  {loading ? 'Carregando...' : formData.name || 'Novo Sócio'}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Gerencie os dados e o histórico do sócio
+              <UserAvatar avatarUrl={patientPhotoUrl} name={formData.name || "Sócio"} size="sm" className="h-10 w-10 shrink-0" />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-lg font-semibold text-foreground">{formData.name || "Novo Sócio"}</h1>
+                  <Badge variant="outline" className={currentStatus.color}>{currentStatus.label}</Badge>
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  {formData.recordCode ? `Matrícula #${formData.recordCode} · ` : ""}Central do associado
                 </p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              {renderActionButtons}
-            </div>
+            {renderActionButtons}
           </div>
         )}
 
         {isModalMode && (
-          <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-3 mb-6 flex flex-col gap-3">
+          <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-6 py-3 mb-4 flex flex-col gap-3">
              <div className="flex items-center justify-between">
                <div className="flex items-center gap-4">
-                 <h2 className="text-lg font-bold text-teal-800 truncate max-w-[400px]">
+                 <h2 className="text-lg font-bold text-foreground truncate max-w-[400px]">
                    {formData.name || 'Novo Sócio'}
                  </h2>
                  <Badge variant="outline" className={unionStatus === 'ativo' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'}>
@@ -1025,7 +1020,7 @@ export default function UnionMemberDetailPage({
              </div>
              
              {/* Quick Search for Members */}
-             <div className="w-full bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-slate-100 shadow-sm mb-6">
+             <div className="w-full">
                 <MemberQuickSearch 
                   clinicId={resolvedClinic?.id} 
                   currentMemberId={id} 
@@ -1038,13 +1033,13 @@ export default function UnionMemberDetailPage({
 
         )}
 
-        <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-3'} gap-6 ${isModalMode ? 'px-6 pb-6' : ''}`}>
+        <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-[280px_minmax(0,1fr)]'} gap-4 ${isModalMode ? 'px-6 pb-6' : ''}`}>
 
 
 
 
 
-          <div className={isModalMode ? 'lg:col-span-4' : 'lg:col-span-1'}>
+          <div className={isModalMode ? 'lg:col-span-4' : 'space-y-3 lg:sticky lg:top-0 lg:self-start'}>
 
       {/* Inactive Alert */}
       {!isPatientActive && (
@@ -1093,10 +1088,11 @@ export default function UnionMemberDetailPage({
         </div>
 
         {/* Tab Content */}
-        <div className={isModalMode ? 'lg:col-span-8' : 'lg:col-span-2'}>
+        <div className={isModalMode ? 'lg:col-span-8' : 'min-w-0'}>
       {activeTab === 'cadastro' && (
         <div className="space-y-6">
-          <div className="bg-card rounded-lg border p-6">
+          <div className="bg-card rounded-lg border p-4 md:p-5">
+            <h2 className="mb-4 text-sm font-semibold text-foreground">Dados pessoais, contato e endereço</h2>
             <form onSubmit={handleSubmit}>
               {/* Photo Upload Section */}
               <div className="flex items-start gap-6 mb-6 pb-6 border-b">
@@ -1136,7 +1132,7 @@ export default function UnionMemberDetailPage({
               <Button 
                 onClick={() => handleSubmit(false)} 
                 disabled={saving}
-                className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+                className="min-w-[180px]"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
