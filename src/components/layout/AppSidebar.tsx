@@ -99,11 +99,11 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
     <aside
       aria-label="Menu principal"
       className={cn(
-        "flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200",
+        "flex h-full flex-col border-r border-border bg-card text-foreground transition-[width] duration-200",
         isCollapsed ? "w-[68px]" : "w-64",
       )}
     >
-      <div className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-3", isCollapsed && "justify-center px-2")}>
+      <div className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-border px-3", isCollapsed && "justify-center px-2")}>
         <img src={prosingeLogo} alt="Prosinge" className="h-7 w-auto object-contain" />
         {!isCollapsed && (
           <div className="min-w-0">
@@ -137,7 +137,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                 {section.label}
               </p>
             )}
-            {isCollapsed && sections.length > 1 && <div className="mx-3 mb-2 border-t border-sidebar-border" />}
+            {isCollapsed && sections.length > 1 && <div className="mx-3 mb-2 border-t border-border" />}
             <ul className="space-y-0.5">
               {section.categories.map((cat) => {
                 const key = `${section.id}:${cat.id}`;
@@ -157,7 +157,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                             aria-label={cat.label}
                             className={cn(
                               "mx-auto flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
-                              catActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                              catActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             )}
                           >
                             <cat.icon className="h-5 w-5" />
@@ -180,7 +180,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                         aria-current={active ? "page" : undefined}
                         className={cn(
                           "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                          active ? "bg-primary/10 font-medium text-primary" : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                          active ? "bg-primary/10 font-medium text-primary" : "text-foreground/80 hover:bg-muted hover:text-foreground",
                         )}
                       >
                         <it.icon className="h-4 w-4 shrink-0" />
@@ -198,8 +198,8 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                       aria-expanded={isOpen}
                       className={cn(
                         "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                        catActive ? "font-medium text-foreground" : "text-sidebar-foreground/80",
-                        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        catActive ? "font-medium text-foreground" : "text-foreground/80",
+                        "hover:bg-muted hover:text-foreground",
                       )}
                     >
                       <cat.icon className={cn("h-4 w-4 shrink-0", catActive && "text-primary")} />
@@ -207,7 +207,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                       <ChevronDown className={cn("h-3.5 w-3.5 opacity-60 transition-transform", isOpen && "rotate-180")} />
                     </button>
                     {isOpen && (
-                      <ul className="ml-[18px] mt-0.5 space-y-0.5 border-l border-sidebar-border pl-2">
+                      <ul className="ml-[18px] mt-0.5 space-y-0.5 border-l border-border pl-2">
                         {cat.items.map((it) => {
                           const active = isNavActive(pathname, it.href);
                           return (
@@ -218,7 +218,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
                                   "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
-                                  active ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                  active ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                                 )}
                               >
                                 <it.icon className="h-3.5 w-3.5 shrink-0" />
@@ -239,12 +239,12 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
       </nav>
 
       {!mobile && onToggleCollapsed && (
-        <div className="border-t border-sidebar-border p-2">
+        <div className="border-t border-border p-2">
           <button
             type="button"
             onClick={onToggleCollapsed}
             className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",
               isCollapsed && "justify-center",
             )}
             aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
