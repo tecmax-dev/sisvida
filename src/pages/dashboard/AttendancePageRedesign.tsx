@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { NextPatientsPanel, NextPatientsList, useNextPatients } from "@/components/attendance/NextPatientsPanel";
+import { NextPatientsPanel, NextPatientsList, NextPatientsMobileButton, useNextPatients } from "@/components/attendance/NextPatientsPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1807,6 +1807,7 @@ export default function AttendancePageRedesign() {
 
       {/* Próximos pacientes do profissional */}
       <NextPatientsPanel items={nextPatients.items} loading={nextPatients.loading} onOpen={openNextPatient} />
+      <NextPatientsMobileButton items={nextPatients.items} loading={nextPatients.loading} onOpen={openNextPatient} />
 
 
       {/* Exam WhatsApp Dialog */}

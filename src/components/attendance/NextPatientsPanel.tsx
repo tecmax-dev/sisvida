@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users, Play, ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export interface NextPatient {
   id: string;
@@ -171,5 +172,50 @@ export function NextPatientsPanel({
         <NextPatientsList items={items} loading={loading} onOpen={onOpen} />
       </ScrollArea>
     </aside>
+  );
+}
+
+/** Tablet e celular: botão flutuante que abre a lista de próximos pacientes. */
+export function NextPatientsMobileButton({
+  items,
+  loading,
+  onOpen,
+}: {
+  items: NextPatient[];
+  loading: boolean;
+  onOpen: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        className="fixed bottom-20 left-4 z-40 h-11 gap-2 rounded-full shadow-lg lg:hidden"
+        aria-label="Próximos pacientes"
+      >
+        <Users className="h-4 w-4" />
+        <span>Próximos</span>
+        <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
+      </Button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="bottom" className="max-h-[80vh] p-0">
+          <SheetHeader className="border-b p-4 text-left">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-primary" /> Próximos pacientes
+            </SheetTitle>
+          </SheetHeader>
+          <div className="max-h-[65vh] overflow-auto">
+            <NextPatientsList
+              items={items}
+              loading={loading}
+              onOpen={(id) => {
+                setOpen(false);
+                onOpen(id);
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
