@@ -27,7 +27,10 @@ import {
   Edit,
   TrendingUp,
   DollarSign,
+  Landmark,
+  MoreVertical,
 } from "lucide-react";
+import { KpiCard, StatusBadge } from "@/components/design-system";
 
 const typeLabels: Record<string, string> = {
   cash: "Dinheiro",
@@ -125,101 +128,91 @@ export default function UnionCashRegistersPage() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Contas Bancárias</h1>
-        <p className="text-muted-foreground">
-          Gerencie as contas e caixas do módulo sindical
-        </p>
-      </div>
+  const countByType = (types: string[]) => registers?.filter((r) => types.includes(r.type)).length || 0;
+  const sumByType = (types: string[]) => registers?.filter((r) => types.includes(r.type)).reduce((s, r) => s + Number(r.current_balance || 0), 0) || 0;
+  const bankTypes = ["bank", "bank_account"];
 
-      <div className="flex justify-between items-center">
-        <Card className="flex-1 max-w-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-emerald-500" />
-              Saldo Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalBalance)}</p>
-            <p className="text-xs text-muted-foreground">{registers?.length || 0} conta(s) ativa(s)</p>
-          </CardContent>
-        </Card>
-        
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary"><Landmark className="h-5 w-5" /></span>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Contas Bancárias</h1>
+            <p className="text-sm text-muted-foreground">Gerencie as contas e caixas do módulo sindical.</p>
+          </div>
+        </div>
         {canManageCashRegisters() && (
-          <Button onClick={() => {
-            setEditingRegister(null);
-            setDialogOpen(true);
-          }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Conta
+          <Button size="sm" className="h-9" onClick={() => { setEditingRegister(null); setDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" />Nova Conta
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {registers?.map((register) => (
-          <Card key={register.id}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="flex items-center gap-2">
-                {typeIcons[register.type]}
-                <CardTitle className="text-base">{register.name}</CardTitle>
-              </div>
-              {canManageCashRegisters() && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(register)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => deleteMutation.mutate(register.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remover
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Badge variant="secondary" className="mb-2">
-                {typeLabels[register.type]}
-              </Badge>
-              {register.bank_name && (
-                <p className="text-xs text-muted-foreground">
-                  {register.bank_name} - Ag: {register.agency} | CC: {register.account_number}
-                </p>
-              )}
-              <p className="text-2xl font-bold mt-2">
-                {formatCurrency(Number(register.current_balance))}
-              </p>
-              {register.initial_balance_date && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Saldo inicial: {formatCurrency(Number(register.initial_balance))} em {formatDateBR(register.initial_balance_date)}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Saldo total" tone="primary" value={formatCurrency(totalBalance)} hint={`${registers?.length || 0} conta(s) ativa(s)`} icon={DollarSign} />
+        <KpiCard label="Contas bancárias" value={formatCurrency(sumByType(bankTypes))} hint={`${countByType(bankTypes)} conta(s)`} icon={Building2} />
+        <KpiCard label="Caixa (dinheiro)" tone="success" value={formatCurrency(sumByType(["cash"]))} hint={`${countByType(["cash"])} caixa(s)`} icon={Wallet} />
+        <KpiCard label="Aplicações e outros" value={formatCurrency(sumByType(["investment", "credit_card", "other"]))} hint={`${countByType(["investment", "credit_card", "other"])} conta(s)`} icon={TrendingUp} />
+      </div>
 
-        {(!registers || registers.length === 0) && (
-          <Card className="col-span-full">
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <Wallet className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhuma conta cadastrada</p>
-              <p className="text-sm">Clique em "Nova Conta" para começar.</p>
-            </CardContent>
-          </Card>
-        )}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead>
+              <tr className="border-b text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <th className="px-4 py-2.5 font-medium">Conta</th>
+                <th className="px-3 py-2.5 font-medium">Tipo</th>
+                <th className="px-3 py-2.5 font-medium">Banco / Agência / Conta</th>
+                <th className="px-3 py-2.5 font-medium">Saldo inicial</th>
+                <th className="px-3 py-2.5 text-right font-medium">Saldo atual</th>
+                <th className="px-4 py-2.5 text-right font-medium">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {registers?.map((register) => (
+                <tr key={register.id} className="transition-colors hover:bg-muted/40">
+                  <td className="px-4 py-2.5">
+                    <span className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary [&_svg]:h-4 [&_svg]:w-4">{typeIcons[register.type] ?? <Wallet />}</span>
+                      <span className="font-medium text-foreground">{register.name}</span>
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5"><StatusBadge tone="primary">{typeLabels[register.type] ?? register.type}</StatusBadge></td>
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                    {register.bank_name ? `${register.bank_name} · Ag ${register.agency || "—"} · CC ${register.account_number || "—"}` : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                    {register.initial_balance_date ? `${formatCurrency(Number(register.initial_balance))} em ${formatDateBR(register.initial_balance_date)}` : "—"}
+                  </td>
+                  <td className={`whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums ${Number(register.current_balance) < 0 ? "text-destructive" : "text-foreground"}`}>
+                    {formatCurrency(Number(register.current_balance))}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    {canManageCashRegisters() && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Ações"><MoreVertical className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(register)}><Edit className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(register.id)}><Trash2 className="h-4 w-4 mr-2" />Remover</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {(!registers || registers.length === 0) && (
+                <tr><td colSpan={6} className="py-14 text-center text-muted-foreground">
+                  <Wallet className="mx-auto mb-3 h-10 w-10 opacity-40" />
+                  <p className="font-medium">Nenhuma conta cadastrada</p>
+                  <p className="text-sm">Clique em "Nova Conta" para começar.</p>
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <UnionCashRegisterDialog
