@@ -217,9 +217,9 @@ export default function HomologacaoConfigPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between rounded-xl border bg-card p-4 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Configurações de Homologação</h1>
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground">Configurações de Homologação</h1>
           <p className="text-muted-foreground">Configure a página pública e notificações do módulo</p>
         </div>
         <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
