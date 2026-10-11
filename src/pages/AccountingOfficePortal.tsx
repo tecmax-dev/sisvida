@@ -740,8 +740,10 @@ export default function AccountingOfficePortal() {
     );
   }
 
-  // Home View - 3 Cards (SindSystem layout)
+  // Home View - Dashboard compacto
   if (activeView === "home") {
+    const pendingBoletosCount = contributions.filter(c => c.status === "pending" || c.status === "awaiting_value").length;
+
     return (
       <SindSystemContainer>
         <SindSystemHeader
@@ -752,69 +754,119 @@ export default function AccountingOfficePortal() {
         />
         
         <SindSystemMain>
-          <SindSystemPageHeader
-            icon={<Sun className="h-6 w-6" />}
-            title="Olá, Bem-vindo de volta."
-            subtitle="Gerenciamento e consultas."
-          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Olá, bem-vindo de volta</p>
+              <h1 className="text-lg sm:text-xl font-semibold text-slate-800 mt-0.5">{accountingOffice?.name || "Escritório"}</h1>
+            </div>
+            <SindicatoWhatsappBanner />
+          </div>
 
-          <SindicatoWhatsappBanner />
           {accountingOffice?.id && <PortalAffiliationsPanel mode="alert" onOpenList={() => setActiveView("filiacoes")} portalType="accounting_office" portalId={accountingOffice.id} onPendingChange={setAffiliationPending} />}
 
-          {/* 5 Service Cards - SindSystem style */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
-            <SindSystemServiceCard
-              icon={<Barcode className="h-12 w-12" />}
-              title="BOLETOS"
-              description="Gerenciamento de boletos."
-              onClick={() => setActiveView("boletos")}
-              color="green"
-            />
-            <SindSystemServiceCard
-              icon={<AlertTriangle className="h-12 w-12" />}
-              title="COBRANÇA"
-              description="Contribuições em atraso."
-              onClick={() => setActiveView("cobranca")}
-              color="red"
-              badge={overdueContributions.length > 0 ? overdueContributions.length : undefined}
-            />
-            <SindSystemServiceCard
-              icon={<Building2 className="h-12 w-12" />}
-              title="EMPRESAS"
-              description="Gerenciamento de Empresas."
-              onClick={() => setActiveView("employers")}
-              color="blue"
-            />
-            <SindSystemServiceCard
-              icon={<FileText className="h-12 w-12" />}
-              title="ENVIO DE LISTAS"
-              description="Listas de trabalhadores de todas as empresas."
-              onClick={() => setActiveView("listas")}
-              color="green"
-            />
-            <SindSystemServiceCard
-              icon={<FileSignature className="h-12 w-12" />}
-              title="FICHAS DE FILIAÇÃO"
-              description="Filiações recebidas e ciência."
-              onClick={() => setActiveView("filiacoes")}
-              color="green"
-              badge={affiliationPending.length > 0 ? affiliationPending.length : undefined}
-            />
-            <SindSystemServiceCard
-              icon={<FolderOpen className="h-12 w-12" />}
-              title="DOCUMENTOS COLETIVOS"
-              description="Listagem de documentos coletivos."
-              onClick={() => setActiveView("documents")}
-              color="orange"
-            />
-            <SindSystemServiceCard
-              icon={<Handshake className="h-12 w-12" />}
-              title="AGENDAR HOMOLOGAÇÃO"
-              description="Agendamento de homologações."
-              onClick={() => setActiveView("homologacao")}
-              color="blue"
-            />
-          </div>
+          {/* Visão Geral */}
+          <section>
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Visão geral</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs text-slate-500">Empresas vinculadas</p>
+                <p className="text-2xl font-semibold text-slate-900 mt-1">{employers.length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs text-slate-500">Boletos pendentes</p>
+                <p className="text-2xl font-semibold text-amber-600 mt-1">{pendingBoletosCount}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs text-slate-500">Em atraso</p>
+                <p className="text-2xl font-semibold text-red-600 mt-1">{overdueContributions.length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs text-slate-500">Fichas aguardando ciência</p>
+                <p className="text-2xl font-semibold text-emerald-600 mt-1">{affiliationPending.length}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Acesso Rápido */}
+          <section>
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Acesso rápido</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button onClick={() => setActiveView("boletos")} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left hover:border-emerald-300 hover:shadow-sm active:bg-slate-50 transition-all">
+                <Barcode className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="text-sm font-medium text-slate-700">Boletos</span>
+              </button>
+              <button onClick={() => setActiveView("listas")} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left hover:border-blue-300 hover:shadow-sm active:bg-slate-50 transition-all">
+                <FileText className="h-4 w-4 text-blue-600 shrink-0" />
+                <span className="text-sm font-medium text-slate-700">Enviar lista</span>
+              </button>
+              <button onClick={() => setActiveView("filiacoes")} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left hover:border-emerald-300 hover:shadow-sm active:bg-slate-50 transition-all">
+                <FileSignature className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="text-sm font-medium text-slate-700">Fichas de filiação</span>
+              </button>
+              <button onClick={() => setActiveView("homologacao")} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left hover:border-blue-300 hover:shadow-sm active:bg-slate-50 transition-all">
+                <Handshake className="h-4 w-4 text-blue-600 shrink-0" />
+                <span className="text-sm font-medium text-slate-700">Agendar homologação</span>
+              </button>
+            </div>
+          </section>
+
+          {/* Serviços */}
+          <section>
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Serviços da empresa</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <SindSystemServiceCard
+                icon={<Barcode className="h-5 w-5" />}
+                title="Boletos"
+                description="Gerenciamento de contribuições."
+                onClick={() => setActiveView("boletos")}
+                color="green"
+              />
+              <SindSystemServiceCard
+                icon={<AlertTriangle className="h-5 w-5" />}
+                title="Cobrança"
+                description="Pendências e contribuições em atraso."
+                onClick={() => setActiveView("cobranca")}
+                color="red"
+                badge={overdueContributions.length > 0 ? overdueContributions.length : undefined}
+              />
+              <SindSystemServiceCard
+                icon={<Building2 className="h-5 w-5" />}
+                title="Empresas"
+                description="Dados e gerenciamento das empresas."
+                onClick={() => setActiveView("employers")}
+                color="blue"
+              />
+              <SindSystemServiceCard
+                icon={<FileText className="h-5 w-5" />}
+                title="Envio de listas"
+                description="Relação de trabalhadores e contribuições."
+                onClick={() => setActiveView("listas")}
+                color="green"
+              />
+              <SindSystemServiceCard
+                icon={<FileSignature className="h-5 w-5" />}
+                title="Fichas de filiação"
+                description="Documentos recebidos e ciência."
+                onClick={() => setActiveView("filiacoes")}
+                color="green"
+                badge={affiliationPending.length > 0 ? affiliationPending.length : undefined}
+              />
+              <SindSystemServiceCard
+                icon={<FolderOpen className="h-5 w-5" />}
+                title="Documentos coletivos"
+                description="Convenções e documentos disponíveis."
+                onClick={() => setActiveView("documents")}
+                color="orange"
+              />
+              <SindSystemServiceCard
+                icon={<Handshake className="h-5 w-5" />}
+                title="Homologações"
+                description="Agendamento e acompanhamento."
+                onClick={() => setActiveView("homologacao")}
+                color="blue"
+              />
+            </div>
+          </section>
         </SindSystemMain>
       </SindSystemContainer>
     );
