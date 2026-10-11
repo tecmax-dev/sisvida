@@ -484,14 +484,14 @@ export default function UnionOverdueReportPage() {
   ) => buildPDF([g], { singleCompany: true });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <AlertTriangle className="h-6 w-6 text-rose-500" />
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-muted-foreground" />
             Empresas com Contribuições Vencidas
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Gere em um clique o relatório em PDF de todas as empresas inadimplentes.
           </p>
         </div>

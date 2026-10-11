@@ -223,10 +223,10 @@ export default function UnionLytexReportsPage() {
   if (!clinicId) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Relatórios Lytex</h1>
-        <p className="text-muted-foreground">Relatórios financeiros e administrativos da conciliação</p>
+        <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground">Relatórios Lytex</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Relatórios financeiros e administrativos da conciliação</p>
       </div>
 
       <LytexReportFilters filters={filters} onFiltersChange={setFilters} showGrouping showContributionType />
@@ -247,7 +247,7 @@ export default function UnionLytexReportsPage() {
           <TabsContent value="overview" className="space-y-4">
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card><CardContent className="pt-5">
+              <Card className="shadow-none"><CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Total Faturado</p>
                 <p className="text-2xl font-bold">{reportData?.formatCurrency(reportData.totals.total)}</p>
               </CardContent></Card>

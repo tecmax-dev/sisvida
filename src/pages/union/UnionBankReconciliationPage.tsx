@@ -118,7 +118,7 @@ export default function UnionBankReconciliationPage() {
 
   if (loadingImports) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24" />)}
@@ -129,11 +129,11 @@ export default function UnionBankReconciliationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Conciliação Bancária</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-foreground">Conciliação Bancária</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Importe extratos OFX, concilie e gere lançamentos financeiros automaticamente
           </p>
         </div>
@@ -145,8 +145,8 @@ export default function UnionBankReconciliationPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-5">
+        <Card className="shadow-none">
+          <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <FileSpreadsheet className="h-4 w-4 text-blue-500" />
               <span className="text-sm">Extratos Importados</span>
@@ -154,8 +154,8 @@ export default function UnionBankReconciliationPage() {
             <p className="text-2xl font-bold mt-1">{stats.totalImports}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-5">
+        <Card className="shadow-none">
+          <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="h-4 w-4 text-amber-500" />
               <span className="text-sm">Total de Transações</span>
@@ -163,8 +163,8 @@ export default function UnionBankReconciliationPage() {
             <p className="text-2xl font-bold mt-1">{stats.totalTransactions}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-5">
+        <Card className="shadow-none">
+          <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               <span className="text-sm">Conciliadas</span>
