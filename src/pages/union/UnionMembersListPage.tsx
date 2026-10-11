@@ -33,6 +33,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -765,55 +766,24 @@ export default function UnionMembersListPage() {
   const showingTo = Math.min(page * ITEMS_PER_PAGE, activeTab === "titulares" ? totalMembers : totalDependents);
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><HeartPulse className="h-5 w-5 text-primary" /></span>
-            Sócios
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie o cadastro dos seus sócios
-          </p>
-          <RealtimeIndicator className="mt-1" />
-        </div>
-        {canManageMembers() && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              onClick={() => setSignatureDialogOpen(true)}
-              className="gap-2"
-            >
-              <Pen className="h-4 w-4" />
-              Solicitar Assinatura
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setImportDialogOpen(true)}
-              className="gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Importar
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setBatchFiliacaoDialogOpen(true)}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Fichas em Lote
-            </Button>
-            <Button
-              className="bg-primary hover:bg-primary/90"
-              onClick={() => navigate("/union/socios/novo")}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Sócio
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Sócios"
+        description="Gestão de associados e dependentes"
+        meta={<RealtimeIndicator />}
+        moreActions={canManageMembers() ? [
+          { label: "Solicitar assinatura", icon: Pen, onClick: () => setSignatureDialogOpen(true) },
+          { label: "Importar", icon: Upload, onClick: () => setImportDialogOpen(true) },
+          { label: "Fichas em lote", icon: FileText, onClick: () => setBatchFiliacaoDialogOpen(true) },
+        ] : undefined}
+        primary={canManageMembers() ? (
+          <Button size="sm" className="h-9" onClick={() => navigate("/union/socios/novo")}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Novo Sócio
+          </Button>
+        ) : undefined}
+      />
 
       {/* TABS - Titulares / Dependentes / Contracheques */}
       <div className="flex items-center gap-1 border-b">

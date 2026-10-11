@@ -74,7 +74,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
   useEffect(() => {
     // Abre automaticamente o grupo da página atual
     for (const s of sections) for (const c of s.categories) {
-      if (c.items.some((i) => isNavActive(pathname, i.href))) setOpen((o) => ({ ...o, [`${s.id}:${c.id}`]: true }));
+      if (c.items.some((i) => isNavActive(pathname, i.href))) setOpen({ [`${s.id}:${c.id}`]: true });
     }
   }, [pathname, sections]);
 
@@ -100,16 +100,16 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
     <aside
       aria-label="Menu principal"
       className={cn(
-        "flex h-full flex-col border-r border-border bg-card text-foreground transition-[width] duration-200",
-        isCollapsed ? "w-[68px]" : "w-64",
+        "flex h-full flex-col bg-shell text-shell-foreground transition-[width] duration-200",
+        isCollapsed ? "w-16" : "w-60",
       )}
     >
-      <div className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-border px-3", isCollapsed && "justify-center px-2")}>
-        <img src={prosingeLogo} alt="Prosinge" className="h-7 w-auto object-contain" />
+      <div className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-shell-border px-3", isCollapsed && "justify-center px-2")}>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-card"><img src={prosingeLogo} alt="Prosinge" className="h-6 w-6 object-contain" /></span>
         {!isCollapsed && (
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight">Prosinge</p>
-            {activeSection && <p className="truncate text-[11px] text-muted-foreground">{activeSection.label}</p>}
+            <p className="text-sm font-semibold leading-tight text-shell-active-foreground">Prosinge</p>
+            {activeSection && <p className="truncate text-[11px] text-shell-muted">{activeSection.label}</p>}
           </div>
         )}
       </div>
@@ -117,28 +117,28 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
       {!isCollapsed && (
         <div className="px-3 pt-3">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-shell-muted" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar função..."
               aria-label="Buscar função no menu"
-              className="h-9 pl-8 text-sm"
+              className="h-8 border-shell-border bg-shell-hover pl-8 text-sm text-shell-active-foreground placeholder:text-shell-muted focus-visible:ring-shell-active"
             />
           </div>
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4 [scrollbar-width:thin]">
         {filtered.map((section) => (
           <div key={section.id}>
             {!isCollapsed && (
-              <p className="mb-1 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-shell-muted">
                 {section.id === "union" ? <Building2 className="h-3.5 w-3.5" /> : section.id === "admin" ? <Shield className="h-3.5 w-3.5" /> : <HeartPulse className="h-3.5 w-3.5" />}
                 {section.label}
               </p>
             )}
-            {isCollapsed && sections.length > 1 && <div className="mx-3 mb-2 border-t border-border" />}
+            {isCollapsed && sections.length > 1 && <div className="mx-3 mb-2 border-t border-shell-border" />}
             <ul className="space-y-0.5">
               {section.categories.map((cat) => {
                 const key = `${section.id}:${cat.id}`;
@@ -158,7 +158,7 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                             aria-label={cat.label}
                             className={cn(
                               "mx-auto flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
-                              catActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                              catActive ? "bg-shell-active text-shell-active-foreground" : "text-shell-foreground hover:bg-shell-hover hover:text-shell-active-foreground",
                             )}
                           >
                             <cat.icon className="h-5 w-5" />
@@ -180,8 +180,8 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                         onClick={onNavigate}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                          active ? "bg-primary/10 font-medium text-primary" : "text-foreground/80 hover:bg-muted hover:text-foreground",
+                          "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
+                          active ? "bg-shell-active font-medium text-shell-active-foreground" : "text-shell-foreground hover:bg-shell-hover hover:text-shell-active-foreground",
                         )}
                       >
                         <it.icon className="h-4 w-4 shrink-0" />
@@ -196,20 +196,20 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                   <li key={key}>
                     <button
                       type="button"
-                      onClick={() => setOpen((o) => ({ ...o, [key]: !o[key] }))}
+                      onClick={() => setOpen((o) => (o[key] ? {} : { [key]: true }))}
                       aria-expanded={isOpen}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                        catActive ? "font-medium text-foreground" : "text-foreground/80",
-                        "hover:bg-muted hover:text-foreground",
+                        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
+                        catActive ? "font-medium text-shell-active-foreground" : "text-shell-foreground",
+                        "hover:bg-shell-hover hover:text-shell-active-foreground",
                       )}
                     >
-                      <cat.icon className={cn("h-4 w-4 shrink-0", catActive && "text-primary")} />
+                      <cat.icon className={cn("h-4 w-4 shrink-0", catActive && "text-shell-active")} />
                       <span className="flex-1 truncate text-left">{cat.label}</span>
                       <ChevronDown className={cn("h-3.5 w-3.5 opacity-60 transition-transform", isOpen && "rotate-180")} />
                     </button>
                     {isOpen && (
-                      <ul className="ml-[18px] mt-0.5 space-y-0.5 border-l border-border pl-2">
+                      <ul className="ml-[17px] mt-0.5 space-y-px border-l border-shell-border pl-2">
                         {cat.items.map((it) => {
                           const active = isNavActive(pathname, it.href);
                           return (
@@ -219,8 +219,8 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                                 onClick={onNavigate}
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
-                                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
-                                  active ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                  "flex items-center gap-2 rounded-md px-2 py-1 text-[12.5px] transition-colors",
+                                  active ? "bg-shell-active/15 font-medium text-shell-active-foreground shadow-[inset_2px_0_0_hsl(var(--shell-active))]" : "text-shell-muted hover:bg-shell-hover hover:text-shell-active-foreground",
                                 )}
                               >
                                 <it.icon className="h-3.5 w-3.5 shrink-0" />
@@ -238,16 +238,16 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
             </ul>
           </div>
         ))}
-        {q && filtered.length === 0 && <p className="px-3 text-sm text-muted-foreground">Nenhuma função encontrada.</p>}
+        {q && filtered.length === 0 && <p className="px-3 text-sm text-shell-muted">Nenhuma função encontrada.</p>}
       </nav>
 
       {!mobile && onToggleCollapsed && (
-        <div className="border-t border-border p-2">
+        <div className="border-t border-shell-border p-2">
           <button
             type="button"
             onClick={onToggleCollapsed}
             className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",
+              "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-shell-muted hover:bg-shell-hover hover:text-shell-active-foreground",
               isCollapsed && "justify-center",
             )}
             aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}

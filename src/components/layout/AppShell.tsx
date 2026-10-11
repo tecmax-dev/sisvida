@@ -23,13 +23,13 @@ export function AppShell({ sections, actions, before, footer, children }: Props)
   const crumbs = findActiveCrumbs(sections, pathname);
 
   return (
-    <div className="flex h-[100dvh] min-h-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] min-h-screen overflow-hidden bg-muted/40">
       <div className="hidden lg:flex">
         <AppSidebar sections={sections} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(!collapsed)} />
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-72 p-0">
+        <SheetContent side="left" className="w-64 border-0 bg-shell p-0">
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <AppSidebar sections={sections} collapsed={false} mobile onNavigate={() => setMobileOpen(false)} />
         </SheetContent>
@@ -37,7 +37,7 @@ export function AppShell({ sections, actions, before, footer, children }: Props)
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {before}
-        <header className="sticky top-0 z-30 flex min-h-14 items-center gap-2 border-b border-border/80 bg-card/95 px-3 backdrop-blur-md lg:px-6">
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border bg-card px-3 lg:px-5">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
             <Menu className="h-5 w-5" />
           </Button>
@@ -60,8 +60,8 @@ export function AppShell({ sections, actions, before, footer, children }: Props)
           </nav>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">{actions}</div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-16 sm:p-5 lg:p-6">
-          <div className="mx-auto w-full max-w-[1600px] animate-enter">{children}</div>
+        <main className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-16 sm:px-5 sm:py-5">
+          <div className="mx-auto w-full max-w-[1760px] animate-enter">{children}</div>
         </main>
         {footer}
       </div>
