@@ -101,7 +101,6 @@ import { extractFunctionsError } from "@/lib/functionsError";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import { useModal } from "@/contexts/ModalContext";
 
-const ITEMS_PER_PAGE = 15;
 
 interface UnionMember {
   id: string;
@@ -159,6 +158,9 @@ export default function UnionMembersV2Page() {
   const { currentClinic, userRoles } = useAuth();
   const { isAdmin } = usePermissions();
   const { canManageMembers } = useUnionPermissions();
+  const [ITEMS_PER_PAGE, setItemsPerPage] = useState(15);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const { toast } = useToast();
   const { openModal } = useModal();
 
@@ -416,7 +418,7 @@ export default function UnionMembersV2Page() {
     } finally {
       setLoading(false);
     }
-  }, [resolvedClinic, debouncedSearch, page, showInactive, cardFilter, toast]);
+  }, [resolvedClinic, debouncedSearch, page, showInactive, cardFilter, toast, ITEMS_PER_PAGE]);
 
   const fetchDependents = useCallback(async () => {
     if (!resolvedClinic) return;
@@ -479,7 +481,7 @@ export default function UnionMembersV2Page() {
     } finally {
       setDependentsLoading(false);
     }
-  }, [resolvedClinic, debouncedDependentsSearch, page, showInactive]);
+  }, [resolvedClinic, debouncedDependentsSearch, page, showInactive, ITEMS_PER_PAGE]);
 
   const handleDeleteDependent = async (mode: "inactivate" | "delete") => {
     if (!dependentToDelete) return;
@@ -761,6 +763,12 @@ export default function UnionMembersV2Page() {
   const inactiveCount = useMemo(() => totalMembers - activeCount, [totalMembers, activeCount]);
   const withInsuranceCount = useMemo(() => members.filter((m) => m.insurance_plan_id).length, [members]);
 
+  const sortedMembers = useMemo(() => {
+    if (!sortDir) return members;
+    const arr = [...members].sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR"));
+    return sortDir === "asc" ? arr : arr.reverse();
+  }, [members, sortDir]);
+
   const totalPages = Math.max(1, Math.ceil((activeTab === "titulares" ? totalMembers : totalDependents) / ITEMS_PER_PAGE));
   const showingFrom = (activeTab === "titulares" ? totalMembers : totalDependents) === 0 ? 0 : (page - 1) * ITEMS_PER_PAGE + 1;
   const showingTo = Math.min(page * ITEMS_PER_PAGE, activeTab === "titulares" ? totalMembers : totalDependents);
@@ -774,7 +782,7 @@ export default function UnionMembersV2Page() {
   }
 
   return (
-    <div className="space-y-4 -m-4 md:-m-6 p-4 md:p-6 min-h-full bg-muted/40">
+    <div className="space-y-4">
       <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs text-foreground">
         Versão de homologação — a página oficial de Sócios não foi alterada.
       </div>
@@ -797,16 +805,16 @@ export default function UnionMembersV2Page() {
       />
 
       {/* TABS - Titulares / Dependentes / Contracheques */}
-      <div className="inline-flex items-center gap-1 rounded-lg border bg-card p-1">
+      <div className="flex items-center gap-1 border-b">
         <button
           onClick={() => {
             setActiveTab("titulares");
             setPage(1);
           }}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative ${
+          className={`px-3 py-2 text-[13px] font-medium transition-colors relative ${
             activeTab === "titulares"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -814,7 +822,7 @@ export default function UnionMembersV2Page() {
             Titulares
           </div>
           {activeTab === "titulares" && (
-            null
+            <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary rounded-t" />
           )}
         </button>
         <button
@@ -822,10 +830,10 @@ export default function UnionMembersV2Page() {
             setActiveTab("dependentes");
             setPage(1);
           }}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative ${
+          className={`px-3 py-2 text-[13px] font-medium transition-colors relative ${
             activeTab === "dependentes"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -833,7 +841,7 @@ export default function UnionMembersV2Page() {
             Dependentes
           </div>
           {activeTab === "dependentes" && (
-            null
+            <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary rounded-t" />
           )}
         </button>
         <button
@@ -841,10 +849,10 @@ export default function UnionMembersV2Page() {
             setActiveTab("contribuicoes");
             setPage(1);
           }}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative ${
+          className={`px-3 py-2 text-[13px] font-medium transition-colors relative ${
             activeTab === "contribuicoes"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -852,12 +860,12 @@ export default function UnionMembersV2Page() {
             Contribuições
           </div>
           {activeTab === "contribuicoes" && (
-            null
+            <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary rounded-t" />
           )}
         </button>
         <button
           onClick={() => navigate("/union/socios/contracheques")}
-          className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative text-muted-foreground hover:text-foreground"
+          className="px-3 py-2 text-[13px] font-medium transition-colors relative text-muted-foreground hover:text-foreground"
         >
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -888,7 +896,7 @@ export default function UnionMembersV2Page() {
                   ? setSearchTerm(e.target.value)
                   : setDependentsSearch(e.target.value)
               }
-              className="pl-9 h-9 border-0 bg-muted/40 focus-visible:ring-1 w-full"
+              className="pl-9 h-9 border-0 bg-muted/50 focus-visible:ring-1 w-full text-[13px]"
               autoFocus
             />
           </div>
@@ -958,7 +966,20 @@ export default function UnionMembersV2Page() {
       )}
 
       {/* Alerts Panel (only for Titulares) */}
-      {activeTab === "titulares" && <PatientAlertsPanel />}
+      {activeTab === "titulares" && (
+        <div className="rounded-lg border bg-card">
+          <button
+            type="button"
+            onClick={() => setAlertsOpen((o) => !o)}
+            className="flex w-full items-center justify-between px-3 h-10 text-[13px] text-muted-foreground hover:text-foreground"
+            aria-expanded={alertsOpen}
+          >
+            <span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" />Alertas de cadastro e carteirinhas</span>
+            <span className="text-xs">{alertsOpen ? "Ocultar" : "Ver alertas"}</span>
+          </button>
+          {alertsOpen && <div className="border-t p-2"><PatientAlertsPanel /></div>}
+        </div>
+      )}
 
       {/* Members List (Titulares) */}
       {activeTab === "titulares" && (
@@ -971,63 +992,60 @@ export default function UnionMembersV2Page() {
               </div>
             ) : members.length > 0 ? (
               <Table>
-                <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+                <TableHeader className="sticky top-0 z-10 bg-muted/50">
                   <TableRow className="border-b hover:bg-transparent">
-                    <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-3">Sócio</TableHead>
-                    <TableHead className="hidden sm:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">CPF</TableHead>
-                    <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-2">Telefone</TableHead>
-                    <TableHead className="hidden lg:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Convênio</TableHead>
-                    <TableHead className="hidden md:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Carteirinha</TableHead>
+                    <TableHead className="font-medium text-[11px] uppercase tracking-wide text-muted-foreground h-10 px-3">
+                      <button type="button" onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))} className="inline-flex items-center gap-1 hover:text-foreground">
+                        Associado <span aria-hidden>{sortDir === "asc" ? "↑" : sortDir === "desc" ? "↓" : "↕"}</span>
+                      </button>
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell font-medium text-[11px] uppercase tracking-wide text-muted-foreground h-10 px-3">CPF</TableHead>
+                    <TableHead className="font-medium text-[11px] uppercase tracking-wide text-muted-foreground h-10 px-3">Telefone</TableHead>
+                    <TableHead className="hidden lg:table-cell font-medium text-[11px] uppercase tracking-wide text-muted-foreground h-10 px-3">Convênio</TableHead>
+                    <TableHead className="hidden md:table-cell font-medium text-[11px] uppercase tracking-wide text-muted-foreground h-10 px-3">Carteirinha</TableHead>
                     {isAdmin && (
-                      <TableHead className="hidden xl:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">Limite</TableHead>
+                      <TableHead className="hidden xl:table-cell font-medium text-[11px] uppercase tracking-wide text-muted-foreground h-10 px-3">Limite</TableHead>
                     )}
-                    <TableHead className="w-[40px] h-9"></TableHead>
+                    <TableHead className="w-[48px] h-10 text-right px-3">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.map((member) => (
+                  {sortedMembers.map((member) => (
                     <TableRow
                       key={member.id}
-                      className={`group hover:bg-muted/30 transition-colors border-b ${
+                      className={`group hover:bg-muted/40 transition-colors border-b ${
                         member.is_active === false ? "opacity-60 bg-muted/10" : ""
                       }`}
                     >
-                      <TableCell className="py-1.5 px-3">
-                        <div className="flex items-center gap-2.5">
+                      <TableCell className="py-2.5 px-3">
+                        <div className="flex items-center gap-3">
                           <UserAvatar
                             avatarUrl={member.photo_url}
                             name={member.name}
                             size="sm"
-                            className={`h-8 w-8 flex-shrink-0 border-2 border-background shadow-sm ${member.is_active === false ? "opacity-60" : ""}`}
+                            className={`h-8 w-8 flex-shrink-0 ${member.is_active === false ? "opacity-60" : ""}`}
                           />
                           <div className="min-w-0 flex flex-col">
                             <button
                               onClick={() => handleOpenEdit(member)}
-                              className="font-bold text-xs text-primary hover:underline text-left truncate max-w-[200px] leading-tight"
+                              className="font-semibold text-[13px] text-foreground hover:text-primary text-left truncate max-w-[240px] leading-tight"
                             >
                               {member.name}
                             </button>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               {member.birth_date && (
-                                <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-1 rounded">
+                                <span className="text-[11px] text-muted-foreground">
                                   {calculateAge(member.birth_date)} anos
                                 </span>
                               )}
                               {member.is_active === false ? (
                                 <Badge
                                   variant="destructive"
-                                  className="text-[9px] h-3.5 px-1 py-0 font-bold uppercase"
+                                  className="text-[10px] h-4 px-1.5 py-0 font-medium"
                                 >
                                   Inativo
                                 </Badge>
-                              ) : (
-                                <Badge
-                                  variant="success"
-                                  className="text-[9px] h-3.5 px-1 py-0 font-bold uppercase"
-                                >
-                                  Ativo
-                                </Badge>
-                              )}
+                              ) : null}
                               {member.employer_name && (
                                 <button 
                                   onClick={(e) => {
@@ -1041,9 +1059,9 @@ export default function UnionMembersV2Page() {
                                       // Fallback or just show name
                                     }
                                   }}
-                                  className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1 rounded max-w-[130px] truncate border border-blue-100 hover:bg-blue-100 transition-colors text-left cursor-pointer"
+                                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary max-w-[180px] truncate text-left cursor-pointer"
                                 >
-                                  <Building2 className="h-2.5 w-2.5" />
+                                  <Building2 className="h-3 w-3 shrink-0" />
                                   <span className="truncate">{member.employer_name}</span>
                                 </button>
                               )}
@@ -1053,7 +1071,7 @@ export default function UnionMembersV2Page() {
                       </TableCell>
                       <TableCell className="hidden sm:table-cell py-1.5 px-2">
                         {member.cpf ? (
-                          <code className="text-[10px] font-mono bg-muted/80 text-muted-foreground px-1 py-0.5 rounded border shadow-sm">
+                          <code className="text-xs font-mono text-muted-foreground tabular-nums">
                             <CpfDisplay value={member.cpf} />
                           </code>
                         ) : (
@@ -1061,14 +1079,13 @@ export default function UnionMembersV2Page() {
                         )}
                       </TableCell>
                       <TableCell className="py-1.5 px-2">
-                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 bg-muted/30 px-1.5 py-0.5 rounded-full w-fit border border-transparent group-hover:border-primary/20 group-hover:bg-primary/5 transition-all">
-                          <Phone className="h-2.5 w-2.5 text-primary/70" />
+                        <span className="text-xs text-foreground tabular-nums whitespace-nowrap">
                           {formatPhone(member.phone) || "—"}
                         </span>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell py-1.5 px-2">
                         {member.insurance_plan ? (
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-bold shadow-sm border-primary/10">
+                          <Badge variant="secondary" className="text-[11px] h-5 px-2 font-medium">
                             {member.insurance_plan.name}
                           </Badge>
                         ) : (
@@ -1250,11 +1267,17 @@ export default function UnionMembersV2Page() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-xs text-muted-foreground">
-                Mostrando {showingFrom} a {showingTo} de {totalMembers}
-              </p>
+          {totalMembers > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-t">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>Mostrando {showingFrom} a {showingTo} de {totalMembers}</span>
+                <Select value={String(ITEMS_PER_PAGE)} onValueChange={(v) => { setItemsPerPage(Number(v)); setPage(1); }}>
+                  <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[15, 25, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n} por página</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
