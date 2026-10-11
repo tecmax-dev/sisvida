@@ -16,7 +16,7 @@ import { UserAvatar } from "@/components/users/UserAvatar";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DashboardHeaderNav } from "@/components/dashboard/DashboardHeaderNav";
+import { AppShell } from "@/components/layout/AppShell";
 import { useUnionNavCategories } from "@/components/dashboard/useUnionNavCategories";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import {
@@ -459,62 +459,19 @@ export function DashboardLayout() {
     );
   };
 
+  const shellSections = [
+    ...(filteredCategories.length ? [{ id: "clinic", label: "Clínica", categories: filteredCategories }] : []),
+    ...(hasUnionEntity && unionCategories.length ? [{ id: "union", label: "Sindicato", categories: unionCategories }] : []),
+  ];
+
   return (
-    <div className="min-h-screen h-[100dvh] flex bg-background overflow-hidden">
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        {/* Maintenance Overlay - blocks access when in maintenance mode */}
-        {currentClinic?.is_maintenance && !currentClinic?.is_blocked && (
-          <MaintenanceClinicOverlay reason={currentClinic.maintenance_reason} />
-        )}
-        
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-2 lg:gap-3 px-3 lg:px-6 min-h-14 bg-card/95 backdrop-blur-md supports-[backdrop-filter]:bg-card/85 border-b border-border/80 shadow-sm">
-          <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
-            <img src={prosingeClinicaLogo} alt="Prosinge" className="h-7 w-7 object-contain" />
-            <span className="text-sm font-semibold hidden sm:inline">Prosinge</span>
-          </Link>
-
-          {/* Breadcrumb / Page indicator */}
-          <div className="hidden xl:flex items-center gap-2 text-sm shrink-0">
-            <span className="text-muted-foreground">Dashboard</span>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="font-medium text-foreground truncate max-w-[160px]">
-              {location.pathname === "/dashboard" 
-                ? "Visão Geral" 
-                : allNavItems.find(item => location.pathname.startsWith(item.href) && item.href !== "/dashboard")?.label || ""}
-            </span>
-          </div>
-
-          {/* Horizontal navigation with submenus */}
-          <div className="flex-1 min-w-0 flex justify-center overflow-hidden">
-            <DashboardHeaderNav
-              categories={filteredCategories}
-              showUnionLink={hasUnionEntity}
-              unionCategories={hasUnionEntity ? unionCategories : undefined}
-            />
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <ThemeToggle />
-            <NotificationBell />
-            <UserMenu compact showName={false} />
-          </div>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:p-5 lg:p-6 pb-16">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64" role="status" aria-label="Carregando conteúdo">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
-            </div>
-          }>
-            <div className="mx-auto w-full max-w-[1600px] animate-enter">
-              <Outlet />
-            </div>
-          </Suspense>
-        </main>
-
+    <AppShell
+      sections={shellSections}
+      before={currentClinic?.is_maintenance && !currentClinic?.is_blocked ? (
+        <MaintenanceClinicOverlay reason={currentClinic.maintenance_reason} />
+      ) : null}
+      actions={<><ThemeToggle /><NotificationBell /><UserMenu compact showName={false} /></>}
+      footer={<>
         {/* Footer */}
         <footer className="min-h-10 bg-card border-t border-border/80 flex items-center justify-between px-3 sm:px-4 text-xs shrink-0">
           <div className="flex items-center gap-4">
@@ -557,6 +514,16 @@ export function DashboardLayout() {
             </a>
           </div>
         </footer>
+      </>}
+    >
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64" role="status" aria-label="Carregando conteúdo">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        </div>
+      }>
+        <Outlet />
+      </Suspense>
+      <div className="hidden">
       </div>
 
       {/* Chat Widget */}
