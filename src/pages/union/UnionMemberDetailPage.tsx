@@ -47,7 +47,6 @@ import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAp
 import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
 import { DependentAppointmentsList } from "@/components/union/members/DependentAppointmentsList";
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
-import { MemberQuickSearch } from "@/components/union/members/MemberQuickSearch";
 import MemberContributionsTab from "@/components/union/MemberContributionsTab";
 
 
