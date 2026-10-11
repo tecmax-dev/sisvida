@@ -860,43 +860,39 @@ export default function UnionMembersListPage() {
         <MemberContributionsTab />
       )}
 
-      {/* SEARCH - Primary Focus (for titulares and dependentes) */}
+      {/* Toolbar: search + filters in a single bar */}
       {activeTab !== "contribuicoes" && (
-        <div className="flex flex-col lg:flex-row gap-4 mb-6 px-1">
-          <div className="flex items-center gap-3 flex-1 w-full">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={
-                  activeTab === "titulares"
-                    ? "Buscar por nome, CPF ou telefone..."
-                    : "Buscar dependente por nome ou CPF..."
-                }
-                value={activeTab === "titulares" ? searchTerm : dependentsSearch}
-                onChange={(e) =>
-                  activeTab === "titulares"
-                    ? setSearchTerm(e.target.value)
-                    : setDependentsSearch(e.target.value)
-                }
-                className="pl-10 h-11 text-base border-teal-500/20 focus:border-teal-500 focus:ring-teal-500/20 bg-white rounded-xl shadow-sm w-full"
-                autoFocus
-              />
-            </div>
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2 rounded-lg border bg-card p-2">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={
+                activeTab === "titulares"
+                  ? "Buscar por nome, CPF ou telefone..."
+                  : "Buscar dependente por nome ou CPF..."
+              }
+              value={activeTab === "titulares" ? searchTerm : dependentsSearch}
+              onChange={(e) =>
+                activeTab === "titulares"
+                  ? setSearchTerm(e.target.value)
+                  : setDependentsSearch(e.target.value)
+              }
+              className="pl-9 h-9 border-0 bg-muted/40 focus-visible:ring-1 w-full"
+              autoFocus
+            />
           </div>
 
-
-        <div className="flex flex-wrap items-center gap-2">
-          {activeTab === "titulares" && (
-            <div className="flex items-center gap-2 bg-white px-3 h-11 rounded-xl border border-teal-500/20 shadow-sm">
-              <Filter className="h-4 w-4 text-teal-600" />
-              <Select 
-                value={cardFilter} 
+          <div className="flex flex-wrap items-center gap-2">
+            {activeTab === "titulares" && (
+              <Select
+                value={cardFilter}
                 onValueChange={(value: "all" | "valid" | "expired" | "no-card") => {
                   setCardFilter(value);
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="w-[150px] border-0 focus:ring-0 h-8 text-xs bg-transparent">
+                <SelectTrigger className="w-[170px] h-9 text-xs">
+                  <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                   <SelectValue placeholder="Status Carteirinha" />
                 </SelectTrigger>
                 <SelectContent>
@@ -906,69 +902,47 @@ export default function UnionMembersListPage() {
                   <SelectItem value="no-card">Sem Carteirinha</SelectItem>
                 </SelectContent>
               </Select>
+            )}
+
+            <div className="flex items-center gap-2 px-3 h-9 rounded-md border">
+              <Switch
+                id="show-inactive"
+                checked={showInactive}
+                onCheckedChange={(checked) => {
+                  setShowInactive(checked);
+                  setPage(1);
+                }}
+              />
+              <Label htmlFor="show-inactive" className="text-xs font-medium cursor-pointer whitespace-nowrap text-muted-foreground">
+                Inativos
+              </Label>
             </div>
-          )}
 
-          <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-teal-500/20 shadow-sm">
-            <Switch
-              id="show-inactive"
-              checked={showInactive}
-              onCheckedChange={(checked) => {
-                setShowInactive(checked);
-                setPage(1);
-              }}
-              className="data-[state=checked]:bg-teal-500"
-            />
-            <Label htmlFor="show-inactive" className="text-xs font-medium cursor-pointer whitespace-nowrap text-muted-foreground">
-              Inativos
-            </Label>
+            <Button variant="outline" size="sm" onClick={fetchMembers} className="h-9">
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Sincronizar
+            </Button>
           </div>
-
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchMembers}
-            className="h-11 border-teal-500/20 hover:bg-teal-50 rounded-xl shadow-sm"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Sincronizar
-          </Button>
         </div>
-      </div>
       )}
-      {/* Stats Cards - Compact row (only for Titulares) */}
+
+      {/* Indicators strip (only for Titulares) */}
       {activeTab === "titulares" && (
-        <div className="grid grid-cols-4 gap-2">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
-            <HeartPulse className="h-4 w-4 text-primary" />
-            <div>
-              <span className="text-xs text-muted-foreground">Total</span>
-              <p className="text-lg font-bold text-foreground leading-none">{totalMembers}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 rounded-lg border bg-card overflow-hidden">
+          {[
+            { label: "Total", value: totalMembers, icon: HeartPulse, tone: "text-primary" },
+            { label: "Ativos", value: activeCount, icon: UserCheck, tone: "text-success" },
+            { label: "Inativos", value: showInactive ? members.length : inactiveCount, icon: UserX, tone: "text-destructive" },
+            { label: "Convênio", value: withInsuranceCount, icon: Shield, tone: "text-primary" },
+          ].map(({ label, value, icon: Icon, tone }) => (
+            <div key={label} className="flex items-center justify-between px-4 py-2.5">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
+                <p className="text-xl font-semibold text-foreground leading-tight tabular-nums">{value}</p>
+              </div>
+              <Icon className={`h-4 w-4 ${tone}`} />
             </div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-            <UserCheck className="h-4 w-4 text-emerald-500" />
-            <div>
-              <span className="text-xs text-muted-foreground">Ativos</span>
-              <p className="text-lg font-bold text-emerald-600 leading-none">{activeCount}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/5 border border-rose-500/20">
-            <UserX className="h-4 w-4 text-rose-500" />
-            <div>
-              <span className="text-xs text-muted-foreground">Inativos</span>
-              <p className="text-lg font-bold text-rose-600 leading-none">
-                {showInactive ? members.length : inactiveCount}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
-            <Shield className="h-4 w-4 text-blue-500" />
-            <div>
-              <span className="text-xs text-muted-foreground">Convênio</span>
-              <p className="text-lg font-bold text-blue-600 leading-none">{withInsuranceCount}</p>
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
@@ -977,7 +951,7 @@ export default function UnionMembersListPage() {
 
       {/* Members List (Titulares) */}
       {activeTab === "titulares" && (
-        <Card className="shadow-sm overflow-hidden">
+        <Card className="shadow-none overflow-hidden">
           <div className="overflow-x-auto">
             {loading ? (
               <div className="text-center py-12 text-muted-foreground">
@@ -986,8 +960,8 @@ export default function UnionMembersListPage() {
               </div>
             ) : members.length > 0 ? (
               <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 border-b shadow-sm">
+                <TableHeader className="sticky top-0 z-10 bg-muted/60 backdrop-blur">
+                  <TableRow className="border-b hover:bg-transparent">
                     <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-3">Sócio</TableHead>
                     <TableHead className="hidden sm:table-cell font-bold text-[11px] uppercase tracking-wider h-9 px-2">CPF</TableHead>
                     <TableHead className="font-bold text-[11px] uppercase tracking-wider h-9 px-2">Telefone</TableHead>
