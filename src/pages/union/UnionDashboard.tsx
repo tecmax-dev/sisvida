@@ -11,6 +11,7 @@ import { EmptyState, PageLoading } from "@/components/ui/page-state";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import { UnionHomePanels } from "@/components/union/home/UnionHomePanels";
 interface DashboardStats {
   totalEmployers: number;
   totalMembers: number;
@@ -216,7 +217,7 @@ export default function UnionDashboard() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className="border-b border-border/70 pb-4">
-        <p className="mb-1 text-xs font-semibold uppercase text-primary">Visão geral</p>
+        <p className="mb-1 text-xs font-semibold uppercase text-primary">{(() => { const h = new Date().getHours(); return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; })()}</p>
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Módulo Sindical</h1>
         <p className="mt-1 text-sm sm:text-base text-muted-foreground">
           Visão geral do gerenciamento sindical de {displayName}
@@ -280,32 +281,7 @@ export default function UnionDashboard() {
         </Card>
       )}
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-emerald-500" />
-              Contribuições Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EmptyState icon={Receipt} title="Nenhuma contribuição recente" description="As movimentações mais recentes aparecerão aqui." />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-purple-500" />
-              Próximos Vencimentos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EmptyState icon={Calendar} title="Nenhum vencimento próximo" description="Os próximos compromissos financeiros aparecerão aqui." />
-          </CardContent>
-        </Card>
-      </div>
+      <UnionHomePanels pendingContributions={stats?.pendingContributions ?? 0} activeNegotiations={stats?.activeNegotiations ?? 0} loading={loading} />
 
       {/* Push Notifications Setup */}
       <PushNotificationSetup 
