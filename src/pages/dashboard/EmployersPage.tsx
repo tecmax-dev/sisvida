@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Dialog,
   DialogContent,
@@ -678,60 +679,24 @@ export default function EmployersPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><Building className="h-5 w-5 text-primary" /></span>
-            Empresas
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie empresas e seus colaboradores vinculados
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleExportCSV}
-            className="gap-2"
-            title="Exportar lista filtrada para CSV"
-          >
-            <Download className="h-4 w-4" />
-            Exportar CSV
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setSyncCnpjDialogOpen(true)}
-            className="gap-2"
-            title="Sincronizar dados via CNPJ (endereço, telefone, email)"
-          >
-            <Building2 className="h-4 w-4" />
-            Sincronizar CNPJ
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setAutoCategorizeDialogOpen(true)}
-            className="gap-2"
-            title="Categorizar automaticamente por CNAE"
-          >
-            <Search className="h-4 w-4" />
-            Auto CNAE
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setCategoryDialogOpen(true)}
-            className="gap-2"
-          >
-            <Tag className="h-4 w-4" />
-            Categorias
-          </Button>
-          <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
+      <PageHeader
+        title="Empresas"
+        description="Empresas e colaboradores vinculados"
+        moreActions={[
+          { label: "Exportar CSV", icon: Download, onClick: handleExportCSV },
+          { label: "Sincronizar CNPJ", icon: Building2, onClick: () => setSyncCnpjDialogOpen(true) },
+          { label: "Auto CNAE", icon: Search, onClick: () => setAutoCategorizeDialogOpen(true) },
+          { label: "Categorias", icon: Tag, onClick: () => setCategoryDialogOpen(true) },
+        ]}
+        primary={
+          <Button size="sm" className="h-9" onClick={() => handleOpenDialog()}>
+            <Plus className="mr-1.5 h-4 w-4" />
             Nova Empresa
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
