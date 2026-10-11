@@ -523,11 +523,8 @@ export function DashboardLayout() {
       }>
         <Outlet />
       </Suspense>
-      <div className="hidden">
-      </div>
-
       {/* Chat Widget */}
       <ChatWidget />
-    </div>
+    </AppShell>
   );
 }
