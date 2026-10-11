@@ -1,7 +1,7 @@
 import { sendOfficialSignatureLink } from "@/lib/sendOfficialSignatureLink";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText, MoreHorizontal, Phone, Mail, Cake, CalendarClock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText, MoreHorizontal, Phone, Mail, Cake, CalendarClock, ShieldCheck, Building2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { extractFunctionsError } from "@/lib/functionsError";
@@ -231,6 +231,7 @@ export default function UnionMemberDetailPage({
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeTab, setActiveTab] = useState<UnionMemberTab>('cadastro');
+  const [formSection, setFormSection] = useState<'pessoais' | 'endereco' | 'contato' | 'profissional'>('pessoais');
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [initialData, setInitialData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -1033,21 +1034,12 @@ export default function UnionMemberDetailPage({
                </div>
              </div>
              
-             {/* Quick Search for Members */}
-             <div className="w-full">
-                <MemberQuickSearch 
-                  clinicId={resolvedClinic?.id} 
-                  currentMemberId={id} 
-                  className="max-w-full"
-                  isModalMode={isModalMode}
-                />
-             </div>
 
           </div>
 
         )}
 
-        <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-[280px_minmax(0,1fr)]'} gap-4 ${isModalMode ? 'px-6 pb-6' : ''}`}>
+        <div className={`grid grid-cols-1 ${isModalMode ? 'lg:grid-cols-12' : 'lg:grid-cols-[minmax(260px,28%)_minmax(0,1fr)]'} gap-4 ${isModalMode ? 'px-6 pb-6' : ''}`}>
 
 
 
@@ -1092,7 +1084,28 @@ export default function UnionMemberDetailPage({
         isAdmin={isAdmin}
       />
 
-          <div className="mt-4">
+          <div className="rounded-lg border bg-card p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-foreground"><Building2 className="h-4 w-4 text-primary" />Vínculo empregatício</p>
+              <Badge variant="outline" className={formData.employerCnpj ? 'border-success/30 bg-success/10 text-success' : 'text-muted-foreground'}>{formData.employerCnpj ? 'Vinculado' : 'Sem vínculo'}</Badge>
+            </div>
+            {formData.employerCnpj || formData.employerName ? (
+              <div className="space-y-0.5 text-xs text-muted-foreground">
+                <p className="truncate text-[13px] font-medium text-foreground" title={formData.employerName}>{formData.employerName || '—'}</p>
+                <p>CNPJ {formData.employerCnpj || '—'}</p>
+                {formData.jobFunction && <p className="truncate">Função: {formData.jobFunction}</p>}
+                {formData.admissionDate && <p>Admissão: {(() => { const d = parseDateOnlyToLocalNoon(formData.admissionDate); return isNaN(d.getTime()) ? formData.admissionDate : format(d, 'dd/MM/yyyy'); })()}</p>}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhuma empresa informada.</p>
+            )}
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              {formData.employerCnpj && <button type="button" onClick={handleNavigateToEmployer} className="text-xs font-medium text-primary hover:underline">Ver empresa</button>}
+              <button type="button" onClick={() => { handleTabChange('cadastro'); setFormSection('profissional'); }} className="text-xs font-medium text-primary hover:underline">Alterar vínculo</button>
+            </div>
+          </div>
+
+          <div className="mt-3">
             <UnionMemberTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}
@@ -1154,15 +1167,15 @@ export default function UnionMemberDetailPage({
       {activeTab === 'cadastro' && (
         <div className="space-y-6">
           <div className="bg-card rounded-lg border p-4 md:p-5">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Dados pessoais, contato e endereço</h2>
-            <div className="mb-4 flex flex-wrap gap-1.5">
-              {[['pessoais','Pessoais'],['endereco','Endereço'],['contato','Contato'],['profissional','Profissional']].map(([k,l]) => (
-                <Button key={k} type="button" variant="secondary" size="sm" className="h-7 px-2.5 text-xs" onClick={() => document.getElementById(`secao-${k}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{l}</Button>
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Dados pessoais</h2>
+            <div role="tablist" aria-label="Subseções do cadastro" className="-mx-4 mb-4 flex gap-1 overflow-x-auto border-b px-4 md:-mx-5 md:px-5">
+              {([['pessoais','Pessoais'],['contato','Contato'],['endereco','Endereço'],['profissional','Profissional']] as const).map(([k,l]) => (
+                <button key={k} type="button" role="tab" aria-selected={formSection === k} onClick={() => setFormSection(k)} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${formSection === k ? 'border-primary font-medium text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{l}</button>
               ))}
             </div>
             <form onSubmit={handleSubmit}>
               {/* Photo Upload Section */}
-              <div className="flex items-start gap-6 mb-6 pb-6 border-b">
+              <div className={formSection === 'pessoais' ? 'flex items-start gap-4 mb-4 pb-4 border-b' : 'hidden'}>
                 <PatientPhotoUpload
                   patientId={id!}
                   clinicId={resolvedClinic?.id}
@@ -1194,9 +1207,10 @@ export default function UnionMemberDetailPage({
                 canEditConvenio={canEditMemberConvenio()}
                 onNavigateToEmployer={handleNavigateToEmployer}
                 showSectionHeadings
+                visibleSection={formSection}
               />
             </form>
-            <div className="mt-8 pt-6 border-t flex justify-end">
+            <div className="mt-4 pt-4 border-t flex justify-end">
               <Button 
                 onClick={() => handleSubmit(false)} 
                 disabled={saving}
