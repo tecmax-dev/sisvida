@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ChevronDown, PanelLeftClose, PanelLeft, Search, Building2, HeartPulse } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeft, Search, Building2, HeartPulse, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ export interface SidebarNavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
+  badge?: number;
 }
 export interface SidebarNavCategory {
   id: string;
@@ -131,9 +132,9 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
         {filtered.map((section) => (
           <div key={section.id}>
-            {!isCollapsed && sections.length > 1 && (
+            {!isCollapsed && (
               <p className="mb-1 flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {section.id === "union" ? <Building2 className="h-3.5 w-3.5" /> : <HeartPulse className="h-3.5 w-3.5" />}
+                {section.id === "union" ? <Building2 className="h-3.5 w-3.5" /> : section.id === "admin" ? <Shield className="h-3.5 w-3.5" /> : <HeartPulse className="h-3.5 w-3.5" />}
                 {section.label}
               </p>
             )}
@@ -184,7 +185,8 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                         )}
                       >
                         <it.icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{it.label}</span>
+                        <span className="flex-1 truncate">{it.label}</span>
+                        {!!it.badge && <span className="rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">{it.badge}</span>}
                       </Link>
                     </li>
                   );
@@ -222,7 +224,8 @@ export function AppSidebar({ sections, collapsed, onToggleCollapsed, onNavigate,
                                 )}
                               >
                                 <it.icon className="h-3.5 w-3.5 shrink-0" />
-                                <span className="truncate">{it.label}</span>
+                                <span className="flex-1 truncate">{it.label}</span>
+                                {!!it.badge && <span className="rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">{it.badge}</span>}
                               </Link>
                             </li>
                           );
