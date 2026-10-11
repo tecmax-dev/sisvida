@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { NextPatientsPanel, NextPatientsList, useNextPatients } from "@/components/attendance/NextPatientsPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -367,6 +368,17 @@ export default function AttendancePageRedesign() {
   }, [appointmentId, currentClinic?.id, navigate, toast]);
 
   const isCompleted = appointment?.status === "completed";
+  const [showNextDialog, setShowNextDialog] = useState(false);
+  const nextPatients = useNextPatients({
+    clinicId: currentClinic?.id,
+    professionalId: appointment?.professional_id,
+    date: appointment?.appointment_date,
+    currentId: appointment?.id,
+  });
+  const openNextPatient = (id: string) => {
+    setShowNextDialog(false);
+    navigate(`/dashboard/atendimento/${id}`);
+  };
   const isInProgress = appointment?.status === "in_progress";
   const isTelemedicine = appointment?.type === "telemedicine";
 
@@ -855,7 +867,12 @@ export default function AttendancePageRedesign() {
       }
 
       toast({ title: "Atendimento finalizado", description: `Duração: ${durationMinutes} minutos` });
-      navigate("/dashboard/calendar");
+      setAppointment({ ...appointment, status: "completed", completed_at: new Date().toISOString(), duration_minutes: durationMinutes });
+      if (nextPatients.items.length > 0) {
+        setShowNextDialog(true);
+      } else {
+        navigate("/dashboard/calendar");
+      }
     }
     
     setLoading(false);
@@ -1788,6 +1805,10 @@ export default function AttendancePageRedesign() {
         </ScrollArea>
       </div>
 
+      {/* Próximos pacientes do profissional */}
+      <NextPatientsPanel items={nextPatients.items} loading={nextPatients.loading} onOpen={openNextPatient} />
+
+
       {/* Exam WhatsApp Dialog */}
       <Dialog open={showExamWhatsAppDialog} onOpenChange={setShowExamWhatsAppDialog}>
         <DialogContent>
@@ -1802,6 +1823,24 @@ export default function AttendancePageRedesign() {
               {sendingExamRequest ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
               Enviar
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showNextDialog} onOpenChange={setShowNextDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Atendimento concluído</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Escolha o próximo paciente para abrir o atendimento. A consulta só começa quando você clicar em "Iniciar atendimento".
+          </p>
+          <div className="max-h-80 overflow-auto rounded-lg border">
+            <NextPatientsList items={nextPatients.items} loading={nextPatients.loading} onOpen={openNextPatient} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => navigate("/dashboard/calendar")}>Voltar à Agenda</Button>
+            <Button variant="ghost" onClick={() => setShowNextDialog(false)}>Ficar neste paciente</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
