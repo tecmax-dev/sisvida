@@ -1050,7 +1050,7 @@ export default function AttendancePageRedesign() {
   const sidebarItems = SIDEBAR_ITEMS.filter(item => !item.dentalOnly || isDentalSpecialty);
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] bg-primary/5">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] bg-background rounded-lg border overflow-hidden">
       {/* Mobile Header */}
       {isMobile && (
         <div className="bg-card border-b border-border p-3 flex items-center justify-between">
@@ -1159,15 +1159,15 @@ export default function AttendancePageRedesign() {
             </div>
           </div>
 
-          {/* Timer Section - Clean Style */}
-          <div className="p-4 border-b border-border">
+          {/* Timer Section - Compact */}
+          <div className="p-3 border-b border-border">
             {!sidebarCollapsed && (
-              <p className="text-xs text-muted-foreground mb-3">Duração da consulta</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Duração da consulta</p>
             )}
             
             <div className={cn(
-              "flex items-center justify-center py-3 mb-4",
-              sidebarCollapsed ? "px-1" : "px-4"
+              "flex items-center py-1 mb-2",
+              sidebarCollapsed ? "justify-center px-1" : "justify-start"
             )}>
               <div className="flex items-center gap-2">
                 <Clock className={cn(
