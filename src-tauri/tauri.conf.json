@@ -42,6 +42,7 @@
     },
     "windows": [
       {
+        "url": "https://prosinge.com.br/auth",
         "fullscreen": false,
         "resizable": true,
         "title": "Prosinge - Gestão Sindical e Clínica",
