@@ -288,6 +288,7 @@ import FeaturesManagement from "./pages/admin/FeaturesManagement";
 import AccessGroupsPage from "./pages/admin/AccessGroupsPage";
 import UpgradeRequestsPage from "./pages/admin/UpgradeRequestsPage";
 import AuditLogsPage from "./pages/admin/AuditLogsPage";
+import StorageExportPage from "./pages/admin/StorageExportPage";
 import DataImportPage from "./pages/admin/DataImportPage";
 import SmtpSettingsPage from "./pages/admin/SmtpSettingsPage";
 import NotificationsPage from "./pages/admin/NotificationsPage";
@@ -587,6 +588,7 @@ function App() {
                   <Route path="import" element={<DataImportPage />} />
                   <Route path="smtp" element={<SmtpSettingsPage />} />
                   <Route path="audit" element={<AuditLogsPage />} />
+                  <Route path="storage-export" element={<StorageExportPage />} />
                   <Route path="chat" element={<ChatSupportPage />} />
                   <Route path="whatsapp-templates" element={<WhatsAppTemplatesPage />} />
                   <Route path="whatsapp-status" element={<WhatsAppStatusPage />} />

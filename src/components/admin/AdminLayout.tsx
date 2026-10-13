@@ -74,6 +74,7 @@ const adminNavItems = [
   { path: "/admin/import", label: "Importar Dados", icon: Upload },
   { path: "/admin/smtp", label: "Email SMTP", icon: Mail },
   { path: "/admin/audit", label: "Auditoria", icon: ScrollText },
+  { path: "/admin/storage-export", label: "Exportar Arquivos", icon: Upload },
 ];
 
 // Format clinic ID: year prefix + sequential number
