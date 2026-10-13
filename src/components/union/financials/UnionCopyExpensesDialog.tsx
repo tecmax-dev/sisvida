@@ -35,15 +35,24 @@ export function UnionCopyExpensesDialog({ open, onOpenChange, clinicId }: UnionC
   const { data: expenses, isLoading, isError } = useQuery({
     queryKey: ["union-copy-expenses", clinicId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_financial_transactions")
-        .select(`*, category:union_financial_categories(id, name, color), supplier:union_suppliers(id, name), cash_register:union_cash_registers(id, name)`)
-        .eq("clinic_id", clinicId)
-        .eq("type", "expense")
-        .order("due_date", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data;
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let from = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("union_financial_transactions")
+          .select(`*, category:union_financial_categories(id, name, color), supplier:union_suppliers(id, name), cash_register:union_cash_registers(id, name)`)
+          .eq("clinic_id", clinicId)
+          .eq("type", "expense")
+          .order("due_date", { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        allData = allData.concat(data || []);
+        hasMore = (data?.length || 0) === PAGE_SIZE;
+        from += PAGE_SIZE;
+      }
+      return allData;
     },
     enabled: open && !!clinicId,
   });
