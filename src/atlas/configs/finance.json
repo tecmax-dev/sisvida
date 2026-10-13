@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "templateId": "finance",
+  "locale": "pt-BR",
+  "branding": {
+    "name": "Pulso",
+    "shortName": "P",
+    "tagline": "SEU DINHEIRO, EM PERSPECTIVA"
+  },
+  "theme": {
+    "mode": "dark",
+    "accent": "#c4ee79",
+    "accentText": "#102014",
+    "background": "#10181b",
+    "surface": "#192429",
+    "text": "#eef3f2",
+    "muted": "#95a7ac",
+    "line": "#ffffff16",
+    "serif": false,
+    "radius": 14
+  },
+  "content": {
+    "headline": "Seu financeiro em boa forma.",
+    "description": "Enxergue o presente. Planeje o próximo movimento.",
+    "eyebrow": "SEU DINHEIRO, EM PERSPECTIVA",
+    "cta": "Começar agora",
+    "heroImage": ""
+  },
+  "collections": {
+    "transactions": [
+      {
+        "id": "1",
+        "title": "Projeto Aurora",
+        "category": "Recebimentos",
+        "date": "2026-09-29",
+        "value": 8400,
+        "status": "Recebido",
+        "type": "income"
+      },
+      {
+        "id": "2",
+        "title": "Assinaturas de software",
+        "category": "Ferramentas",
+        "date": "2026-09-28",
+        "value": 490,
+        "status": "Pago",
+        "type": "expense"
+      },
+      {
+        "id": "3",
+        "title": "Consultoria Vale",
+        "category": "Recebimentos",
+        "date": "2026-09-27",
+        "value": 6200,
+        "status": "Recebido",
+        "type": "income"
+      },
+      {
+        "id": "4",
+        "title": "Equipe & parceiros",
+        "category": "Pessoas",
+        "date": "2026-09-26",
+        "value": 3200,
+        "status": "Pago",
+        "type": "expense"
+      },
+      {
+        "id": "5",
+        "title": "Espaço de trabalho",
+        "category": "Operação",
+        "date": "2026-09-25",
+        "value": 1800,
+        "status": "Pago",
+        "type": "expense"
+      }
+    ]
+  }
+}
