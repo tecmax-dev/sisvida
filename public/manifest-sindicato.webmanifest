@@ -11,8 +11,8 @@
     "browser"
   ],
   "orientation": "portrait",
-  "scope": "/",
-  "start_url": "/app?source=pwa",
+  "scope": "https://prosingeweb.com.br/sindicato",
+  "start_url": "https://prosingeweb.com.br/sindicato",
   "id": "/app?v=20260428-package-final-v3",
   "prefer_related_applications": false,
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
