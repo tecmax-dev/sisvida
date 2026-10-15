@@ -203,19 +203,61 @@ export async function chatwootMirrorBotReply(
  * o envio real já saiu pela Meta Cloud API; uma mensagem pública seria
  * reentregue pelo canal e duplicaria a mensagem (risco de bloqueio Meta).
  */
+export interface ChatwootMirrorResult {
+  mirrored: boolean;
+  reason: string;
+}
+
+/**
+ * Registra em `whatsapp_compliance_logs` (intent `<INTENT>_CHATWOOT_MIRROR`)
+ * o resultado REAL da tentativa de espelhar no Chatwoot: sucesso, motivo do
+ * pulo (nao configurado / desabilitado / inbox nao selecionada) ou falha de
+ * API. Antes disso o espelho era "fire and forget": quando falhava (ou era
+ * pulado por configuracao incompleta), nada ficava visivel para o gestor
+ * conferir -- so um console.error perdido no log da function.
+ */
 export async function chatwootMirrorTemplateSent(
   supabaseAdmin: SupabaseLike,
   clinicId: string,
   phoneE164: string,
   contactName: string | null,
   content: string,
-): Promise<void> {
+  intent?: string,
+): Promise<ChatwootMirrorResult> {
+  const auditIntent = intent ? `${intent}_CHATWOOT_MIRROR` : "CHATWOOT_MIRROR";
+
+  const auditLog = async (decision: string, reason: string, extra: Record<string, unknown> = {}) => {
+    try {
+      await supabaseAdmin.from("whatsapp_compliance_logs").insert({
+        intent: auditIntent,
+        decision,
+        metadata: { clinic_id: clinicId, phone: phoneE164, reason, ...extra },
+      });
+    } catch (e) {
+      console.error(`[chatwoot] falha ao registrar auditoria do espelho: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
   try {
     const cfg = await getChatwootConfig(supabaseAdmin, clinicId);
-    if (!cfg || !cfg.enabled || !cfg.inboxId) return;
+    if (!cfg) {
+      await auditLog("SKIPPED", "CHATWOOT_NOT_CONFIGURED");
+      return { mirrored: false, reason: "CHATWOOT_NOT_CONFIGURED" };
+    }
+    if (!cfg.enabled) {
+      await auditLog("SKIPPED", "CHATWOOT_DISABLED");
+      return { mirrored: false, reason: "CHATWOOT_DISABLED" };
+    }
+    if (!cfg.inboxId) {
+      await auditLog("SKIPPED", "CHATWOOT_INBOX_NOT_SELECTED");
+      return { mirrored: false, reason: "CHATWOOT_INBOX_NOT_SELECTED" };
+    }
     const conversationId = await chatwootEnsureConversation(cfg, phoneE164, contactName);
-    if (!conversationId) return;
-    await cw(cfg, `/conversations/${conversationId}/messages`, {
+    if (!conversationId) {
+      await auditLog("FAILED", "CONTACT_OR_CONVERSATION_FAILED");
+      return { mirrored: false, reason: "CONTACT_OR_CONVERSATION_FAILED" };
+    }
+    const posted = await cw(cfg, `/conversations/${conversationId}/messages`, {
       method: "POST",
       body: {
         content,
@@ -224,8 +266,17 @@ export async function chatwootMirrorTemplateSent(
         content_attributes: { [CHATWOOT_BOT_FLAG]: true },
       },
     });
+    if (!posted) {
+      await auditLog("FAILED", "MESSAGE_POST_FAILED", { conversation_id: conversationId });
+      return { mirrored: false, reason: "MESSAGE_POST_FAILED" };
+    }
+    await auditLog("MIRRORED", "OK", { conversation_id: conversationId });
+    return { mirrored: true, reason: "OK" };
   } catch (e) {
-    console.error(`[chatwoot] mirror de template falhou: ${e instanceof Error ? e.message : String(e)}`);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[chatwoot] mirror de template falhou: ${msg}`);
+    await auditLog("FAILED", "EXCEPTION", { error: msg });
+    return { mirrored: false, reason: "EXCEPTION" };
   }
 }
 
